@@ -1,0 +1,32 @@
+{{ config(enabled=(target.type == "databricks"), materialized=("table" if var("direct_mode", "run") == "table" else "direct_check"), schema="audit_direct", tags=['finding', 'domain:storage', 'tier:deep', 'databricks_direct']) }}
+-- generated from app/queries/vendored/storage/po_clustering_column_churn.sql; fix the source query and regenerate, never edit this file.
+{%- set windows = var('windows', [7, 30, 90]) %}
+{%- for w in windows %}
+SELECT {{ w }} AS window_days, q.*
+FROM (
+SELECT workspace_id, catalog_name, schema_name, table_id, table_name,
+       operation_metrics['has_column_selection_changed'] AS has_column_selection_changed,
+       operation_metrics['old_clustering_columns']        AS old_clustering_columns,
+       operation_metrics['new_clustering_columns']        AS new_clustering_columns,
+       operation_metrics['additional_reason']             AS additional_reason,
+       MAX(end_time) AS last_selection_time,
+       COUNT(*)      AS selection_event_count,
+       -- status: worst-first band on repeated true churn events per table (field heuristic; {{ param('po_clustering_column_churn', 'warn_churn_events', 2) }} / {{ param('po_clustering_column_churn', 'crit_churn_events', 5) }}).
+       CASE
+         WHEN operation_metrics['has_column_selection_changed'] IS NULL THEN 'NOT_ASSESSED'
+         WHEN operation_metrics['has_column_selection_changed'] = 'true' AND COUNT(*) >= {{ param('po_clustering_column_churn', 'crit_churn_events', 5) }} THEN 'CRITICAL'
+         WHEN operation_metrics['has_column_selection_changed'] = 'true' AND COUNT(*) >= {{ param('po_clustering_column_churn', 'warn_churn_events', 2) }} THEN 'WARN'
+         ELSE 'OK'
+       END AS status
+FROM {{ source('system_storage', 'predictive_optimization_operations_history') }}
+WHERE operation_type = 'AUTO_CLUSTERING_COLUMN_SELECTION'
+  AND start_time >= {{ audit_today() }} - INTERVAL {{ w }} DAYS AND start_time < {{ audit_today() }}
+GROUP BY workspace_id, catalog_name, schema_name, table_id, table_name,
+         operation_metrics['has_column_selection_changed'], operation_metrics['old_clustering_columns'],
+         operation_metrics['new_clustering_columns'], operation_metrics['additional_reason']
+ORDER BY CASE status WHEN 'CRITICAL' THEN 0 WHEN 'WARN' THEN 1 WHEN 'OK' THEN 2 ELSE 3 END, selection_event_count DESC
+) q
+{%- if not loop.last %}
+UNION ALL
+{%- endif %}
+{%- endfor %}

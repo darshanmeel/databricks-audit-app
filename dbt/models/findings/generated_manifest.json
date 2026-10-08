@@ -1,0 +1,2241 @@
+{
+  "commit": "f700dd5",
+  "models": [
+    {
+      "domain": "governance_access",
+      "is_finding": true,
+      "model": "f_access_admin_role_change_events",
+      "origin": "vendored",
+      "path": "dbt/models/findings/governance_access/f_access_admin_role_change_events.sql",
+      "query_id": "access_admin_role_change_events",
+      "tags": [
+        "finding",
+        "domain:governance_access",
+        "tier:standard"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "governance_access",
+      "is_finding": true,
+      "model": "f_access_broad_grants",
+      "origin": "app",
+      "path": "dbt/models/findings/governance_access/f_access_broad_grants.sql",
+      "query_id": "access_broad_grants",
+      "tags": [
+        "finding",
+        "domain:governance_access",
+        "tier:standard"
+      ],
+      "windowed": false
+    },
+    {
+      "domain": "governance_access",
+      "is_finding": true,
+      "model": "f_access_classification_coverage",
+      "origin": "app",
+      "path": "dbt/models/findings/governance_access/f_access_classification_coverage.sql",
+      "query_id": "access_classification_coverage",
+      "tags": [
+        "finding",
+        "domain:governance_access",
+        "tier:standard"
+      ],
+      "windowed": false
+    },
+    {
+      "domain": "governance_access",
+      "is_finding": true,
+      "model": "f_access_classified_unmasked",
+      "origin": "vendored",
+      "path": "dbt/models/findings/governance_access/f_access_classified_unmasked.sql",
+      "query_id": "access_classified_unmasked",
+      "tags": [
+        "finding",
+        "domain:governance_access",
+        "tier:standard"
+      ],
+      "windowed": false
+    },
+    {
+      "domain": "governance_access",
+      "is_finding": true,
+      "model": "f_access_column_lineage_sensitive_reach",
+      "origin": "vendored",
+      "path": "dbt/models/findings/governance_access/f_access_column_lineage_sensitive_reach.sql",
+      "query_id": "access_column_lineage_sensitive_reach",
+      "tags": [
+        "finding",
+        "domain:governance_access",
+        "tier:deep"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "governance_access",
+      "is_finding": false,
+      "model": "f_access_column_masks_inventory",
+      "origin": "vendored",
+      "path": "dbt/models/findings/governance_access/f_access_column_masks_inventory.sql",
+      "query_id": "access_column_masks_inventory",
+      "tags": [
+        "inventory",
+        "domain:governance_access",
+        "tier:standard"
+      ],
+      "windowed": false
+    },
+    {
+      "domain": "governance_access",
+      "is_finding": false,
+      "model": "f_access_data_classification_inventory",
+      "origin": "vendored",
+      "path": "dbt/models/findings/governance_access/f_access_data_classification_inventory.sql",
+      "query_id": "access_data_classification_inventory",
+      "tags": [
+        "inventory",
+        "domain:governance_access",
+        "tier:standard"
+      ],
+      "windowed": false
+    },
+    {
+      "domain": "governance_access",
+      "is_finding": true,
+      "model": "f_access_dead_table_candidates",
+      "origin": "vendored",
+      "path": "dbt/models/findings/governance_access/f_access_dead_table_candidates.sql",
+      "query_id": "access_dead_table_candidates",
+      "tags": [
+        "finding",
+        "domain:governance_access",
+        "tier:standard"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "governance_access",
+      "is_finding": true,
+      "model": "f_access_delta_sharing_exposure",
+      "origin": "vendored",
+      "path": "dbt/models/findings/governance_access/f_access_delta_sharing_exposure.sql",
+      "query_id": "access_delta_sharing_exposure",
+      "tags": [
+        "finding",
+        "domain:governance_access",
+        "tier:standard"
+      ],
+      "windowed": false
+    },
+    {
+      "domain": "governance_access",
+      "is_finding": false,
+      "model": "f_access_grants_inventory",
+      "origin": "vendored",
+      "path": "dbt/models/findings/governance_access/f_access_grants_inventory.sql",
+      "query_id": "access_grants_inventory",
+      "tags": [
+        "inventory",
+        "domain:governance_access",
+        "tier:standard"
+      ],
+      "windowed": false
+    },
+    {
+      "domain": "governance_access",
+      "is_finding": false,
+      "model": "f_access_grants_inventory_extended",
+      "origin": "vendored",
+      "path": "dbt/models/findings/governance_access/f_access_grants_inventory_extended.sql",
+      "query_id": "access_grants_inventory_extended",
+      "tags": [
+        "inventory",
+        "domain:governance_access",
+        "tier:standard"
+      ],
+      "windowed": false
+    },
+    {
+      "domain": "governance_access",
+      "is_finding": true,
+      "model": "f_access_login_concentration",
+      "origin": "vendored",
+      "path": "dbt/models/findings/governance_access/f_access_login_concentration.sql",
+      "query_id": "access_login_concentration",
+      "tags": [
+        "finding",
+        "domain:governance_access",
+        "tier:standard"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "governance_access",
+      "is_finding": true,
+      "model": "f_access_network_inbound_denials",
+      "origin": "vendored",
+      "path": "dbt/models/findings/governance_access/f_access_network_inbound_denials.sql",
+      "query_id": "access_network_inbound_denials",
+      "tags": [
+        "finding",
+        "domain:governance_access",
+        "tier:deep"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "governance_access",
+      "is_finding": true,
+      "model": "f_access_network_outbound_denials",
+      "origin": "vendored",
+      "path": "dbt/models/findings/governance_access/f_access_network_outbound_denials.sql",
+      "query_id": "access_network_outbound_denials",
+      "tags": [
+        "finding",
+        "domain:governance_access",
+        "tier:deep"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "governance_access",
+      "is_finding": true,
+      "model": "f_access_pii_outside_tables",
+      "origin": "vendored",
+      "path": "dbt/models/findings/governance_access/f_access_pii_outside_tables.sql",
+      "query_id": "access_pii_outside_tables",
+      "tags": [
+        "finding",
+        "domain:governance_access",
+        "tier:standard"
+      ],
+      "windowed": false
+    },
+    {
+      "domain": "governance_access",
+      "is_finding": true,
+      "model": "f_access_pii_propagation_untagged",
+      "origin": "vendored",
+      "path": "dbt/models/findings/governance_access/f_access_pii_propagation_untagged.sql",
+      "query_id": "access_pii_propagation_untagged",
+      "tags": [
+        "finding",
+        "domain:governance_access",
+        "tier:standard"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "governance_access",
+      "is_finding": false,
+      "model": "f_access_row_filters_inventory",
+      "origin": "vendored",
+      "path": "dbt/models/findings/governance_access/f_access_row_filters_inventory.sql",
+      "query_id": "access_row_filters_inventory",
+      "tags": [
+        "inventory",
+        "domain:governance_access",
+        "tier:standard"
+      ],
+      "windowed": false
+    },
+    {
+      "domain": "governance_access",
+      "is_finding": true,
+      "model": "f_access_runas_escalation",
+      "origin": "vendored",
+      "path": "dbt/models/findings/governance_access/f_access_runas_escalation.sql",
+      "query_id": "access_runas_escalation",
+      "tags": [
+        "finding",
+        "domain:governance_access",
+        "tier:deep",
+        "stars"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "governance_access",
+      "is_finding": true,
+      "model": "f_access_sensitive_table_reads",
+      "origin": "app",
+      "path": "dbt/models/findings/governance_access/f_access_sensitive_table_reads.sql",
+      "query_id": "access_sensitive_table_reads",
+      "tags": [
+        "finding",
+        "domain:governance_access",
+        "tier:standard"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "governance_access",
+      "is_finding": true,
+      "model": "f_access_source_table_coverage",
+      "origin": "app",
+      "path": "dbt/models/findings/governance_access/f_access_source_table_coverage.sql",
+      "query_id": "access_source_table_coverage",
+      "tags": [
+        "finding",
+        "domain:governance_access",
+        "tier:lite"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "governance_access",
+      "is_finding": true,
+      "model": "f_access_table_lineage_blast_radius",
+      "origin": "vendored",
+      "path": "dbt/models/findings/governance_access/f_access_table_lineage_blast_radius.sql",
+      "query_id": "access_table_lineage_blast_radius",
+      "tags": [
+        "finding",
+        "domain:governance_access",
+        "tier:standard"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "governance_access",
+      "is_finding": false,
+      "model": "f_access_tags_inventory",
+      "origin": "vendored",
+      "path": "dbt/models/findings/governance_access/f_access_tags_inventory.sql",
+      "query_id": "access_tags_inventory",
+      "tags": [
+        "inventory",
+        "domain:governance_access",
+        "tier:standard"
+      ],
+      "windowed": false
+    },
+    {
+      "domain": "governance_access",
+      "is_finding": false,
+      "model": "f_access_vector_search_traffic",
+      "origin": "vendored",
+      "path": "dbt/models/findings/governance_access/f_access_vector_search_traffic.sql",
+      "query_id": "access_vector_search_traffic",
+      "tags": [
+        "inventory",
+        "domain:governance_access",
+        "tier:standard"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "governance_access",
+      "is_finding": false,
+      "model": "f_access_views_inventory",
+      "origin": "vendored",
+      "path": "dbt/models/findings/governance_access/f_access_views_inventory.sql",
+      "query_id": "access_views_inventory",
+      "tags": [
+        "inventory",
+        "domain:governance_access",
+        "tier:standard"
+      ],
+      "windowed": false
+    },
+    {
+      "domain": "governance_access",
+      "is_finding": true,
+      "model": "f_access_volumes_inventory",
+      "origin": "vendored",
+      "path": "dbt/models/findings/governance_access/f_access_volumes_inventory.sql",
+      "query_id": "access_volumes_inventory",
+      "tags": [
+        "finding",
+        "domain:governance_access",
+        "tier:standard"
+      ],
+      "windowed": false
+    },
+    {
+      "domain": "performance",
+      "is_finding": false,
+      "model": "f_audit_self_cost",
+      "origin": "vendored",
+      "path": "dbt/models/findings/performance/f_audit_self_cost.sql",
+      "query_id": "audit_self_cost",
+      "tags": [
+        "inventory",
+        "domain:performance",
+        "tier:lite"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "compute",
+      "is_finding": false,
+      "model": "f_classic_clusters_config_current",
+      "origin": "vendored",
+      "path": "dbt/models/findings/compute/f_classic_clusters_config_current.sql",
+      "query_id": "classic_clusters_config_current",
+      "tags": [
+        "inventory",
+        "domain:compute",
+        "tier:lite"
+      ],
+      "windowed": false
+    },
+    {
+      "domain": "serving_ai",
+      "is_finding": false,
+      "model": "f_compute_ai_gateway_usage",
+      "origin": "vendored",
+      "path": "dbt/models/findings/serving_ai/f_compute_ai_gateway_usage.sql",
+      "query_id": "compute_ai_gateway_usage",
+      "tags": [
+        "inventory",
+        "domain:serving_ai",
+        "tier:standard"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "compute",
+      "is_finding": true,
+      "model": "f_compute_cluster_config_posture",
+      "origin": "app",
+      "path": "dbt/models/findings/compute/f_compute_cluster_config_posture.sql",
+      "query_id": "compute_cluster_config_posture",
+      "tags": [
+        "finding",
+        "domain:compute",
+        "tier:standard"
+      ],
+      "windowed": false
+    },
+    {
+      "domain": "compute",
+      "is_finding": true,
+      "model": "f_compute_idle_node_ratio",
+      "origin": "vendored",
+      "path": "dbt/models/findings/compute/f_compute_idle_node_ratio.sql",
+      "query_id": "compute_idle_node_ratio",
+      "tags": [
+        "finding",
+        "domain:compute",
+        "tier:standard"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "serving_ai",
+      "is_finding": true,
+      "model": "f_compute_serving_dormant_endpoints",
+      "origin": "app",
+      "path": "dbt/models/findings/serving_ai/f_compute_serving_dormant_endpoints.sql",
+      "query_id": "compute_serving_dormant_endpoints",
+      "tags": [
+        "finding",
+        "domain:serving_ai",
+        "tier:standard"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "serving_ai",
+      "is_finding": true,
+      "model": "f_compute_serving_endpoint_cost_status",
+      "origin": "vendored",
+      "path": "dbt/models/findings/serving_ai/f_compute_serving_endpoint_cost_status.sql",
+      "query_id": "compute_serving_endpoint_cost_status",
+      "tags": [
+        "finding",
+        "domain:serving_ai",
+        "tier:standard"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "serving_ai",
+      "is_finding": false,
+      "model": "f_compute_serving_endpoint_usage",
+      "origin": "vendored",
+      "path": "dbt/models/findings/serving_ai/f_compute_serving_endpoint_usage.sql",
+      "query_id": "compute_serving_endpoint_usage",
+      "tags": [
+        "inventory",
+        "domain:serving_ai",
+        "tier:deep"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "compute",
+      "is_finding": true,
+      "model": "f_compute_warehouse_autoscale_churn",
+      "origin": "vendored",
+      "path": "dbt/models/findings/compute/f_compute_warehouse_autoscale_churn.sql",
+      "query_id": "compute_warehouse_autoscale_churn",
+      "tags": [
+        "finding",
+        "domain:compute",
+        "tier:standard"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "compute",
+      "is_finding": true,
+      "model": "f_compute_warehouse_autostop_churn",
+      "origin": "app",
+      "path": "dbt/models/findings/compute/f_compute_warehouse_autostop_churn.sql",
+      "query_id": "compute_warehouse_autostop_churn",
+      "tags": [
+        "finding",
+        "domain:compute",
+        "tier:standard"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "compute",
+      "is_finding": true,
+      "model": "f_compute_warehouse_cache_reuse",
+      "origin": "app",
+      "path": "dbt/models/findings/compute/f_compute_warehouse_cache_reuse.sql",
+      "query_id": "compute_warehouse_cache_reuse",
+      "tags": [
+        "finding",
+        "domain:compute",
+        "tier:standard"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "compute",
+      "is_finding": true,
+      "model": "f_compute_warehouse_config_posture",
+      "origin": "app",
+      "path": "dbt/models/findings/compute/f_compute_warehouse_config_posture.sql",
+      "query_id": "compute_warehouse_config_posture",
+      "tags": [
+        "finding",
+        "domain:compute",
+        "tier:standard"
+      ],
+      "windowed": false
+    },
+    {
+      "domain": "compute",
+      "is_finding": true,
+      "model": "f_compute_warehouse_idle_gaps",
+      "origin": "vendored",
+      "path": "dbt/models/findings/compute/f_compute_warehouse_idle_gaps.sql",
+      "query_id": "compute_warehouse_idle_gaps",
+      "tags": [
+        "finding",
+        "domain:compute",
+        "tier:standard",
+        "stars"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "compute",
+      "is_finding": true,
+      "model": "f_compute_warehouse_idle_minutes",
+      "origin": "app",
+      "path": "dbt/models/findings/compute/f_compute_warehouse_idle_minutes.sql",
+      "query_id": "compute_warehouse_idle_minutes",
+      "tags": [
+        "finding",
+        "domain:compute",
+        "tier:standard"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "cost",
+      "is_finding": false,
+      "model": "f_cost_account_prices_raw",
+      "origin": "vendored",
+      "path": "dbt/models/findings/cost/f_cost_account_prices_raw.sql",
+      "query_id": "cost_account_prices_raw",
+      "tags": [
+        "inventory",
+        "domain:cost",
+        "tier:lite"
+      ],
+      "windowed": false
+    },
+    {
+      "domain": "cost",
+      "is_finding": true,
+      "model": "f_cost_actual_vs_list_by_sku",
+      "origin": "vendored",
+      "path": "dbt/models/findings/cost/f_cost_actual_vs_list_by_sku.sql",
+      "query_id": "cost_actual_vs_list_by_sku",
+      "tags": [
+        "finding",
+        "domain:cost",
+        "tier:deep"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "cost",
+      "is_finding": false,
+      "model": "f_cost_audit_self_usage",
+      "origin": "app",
+      "path": "dbt/models/findings/cost/f_cost_audit_self_usage.sql",
+      "query_id": "cost_audit_self_usage",
+      "tags": [
+        "inventory",
+        "domain:cost",
+        "tier:lite"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "cost",
+      "is_finding": false,
+      "model": "f_cost_by_billing_origin_product",
+      "origin": "vendored",
+      "path": "dbt/models/findings/cost/f_cost_by_billing_origin_product.sql",
+      "query_id": "cost_by_billing_origin_product",
+      "tags": [
+        "inventory",
+        "domain:cost",
+        "tier:lite"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "cost",
+      "is_finding": true,
+      "model": "f_cost_by_compute_resource",
+      "origin": "vendored",
+      "path": "dbt/models/findings/cost/f_cost_by_compute_resource.sql",
+      "query_id": "cost_by_compute_resource",
+      "tags": [
+        "finding",
+        "domain:cost",
+        "tier:standard"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "cost",
+      "is_finding": true,
+      "model": "f_cost_by_hour_of_day",
+      "origin": "app",
+      "path": "dbt/models/findings/cost/f_cost_by_hour_of_day.sql",
+      "query_id": "cost_by_hour_of_day",
+      "tags": [
+        "finding",
+        "domain:cost",
+        "tier:standard"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "cost",
+      "is_finding": true,
+      "model": "f_cost_by_job",
+      "origin": "vendored",
+      "path": "dbt/models/findings/cost/f_cost_by_job.sql",
+      "query_id": "cost_by_job",
+      "tags": [
+        "finding",
+        "domain:cost",
+        "tier:standard",
+        "stars"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "cost",
+      "is_finding": true,
+      "model": "f_cost_by_notebook",
+      "origin": "vendored",
+      "path": "dbt/models/findings/cost/f_cost_by_notebook.sql",
+      "query_id": "cost_by_notebook",
+      "tags": [
+        "finding",
+        "domain:cost",
+        "tier:standard"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "cost",
+      "is_finding": false,
+      "model": "f_cost_by_serving_endpoint",
+      "origin": "vendored",
+      "path": "dbt/models/findings/cost/f_cost_by_serving_endpoint.sql",
+      "query_id": "cost_by_serving_endpoint",
+      "tags": [
+        "inventory",
+        "domain:cost",
+        "tier:standard"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "cost",
+      "is_finding": true,
+      "model": "f_cost_chargeback_by_allocation_tag",
+      "origin": "app",
+      "path": "dbt/models/findings/cost/f_cost_chargeback_by_allocation_tag.sql",
+      "query_id": "cost_chargeback_by_allocation_tag",
+      "tags": [
+        "finding",
+        "domain:cost",
+        "tier:standard"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "cost",
+      "is_finding": true,
+      "model": "f_cost_chargeback_by_cluster",
+      "origin": "app",
+      "path": "dbt/models/findings/cost/f_cost_chargeback_by_cluster.sql",
+      "query_id": "cost_chargeback_by_cluster",
+      "tags": [
+        "finding",
+        "domain:cost",
+        "tier:standard"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "cost",
+      "is_finding": false,
+      "model": "f_cost_chargeback_by_identity",
+      "origin": "vendored",
+      "path": "dbt/models/findings/cost/f_cost_chargeback_by_identity.sql",
+      "query_id": "cost_chargeback_by_identity",
+      "tags": [
+        "inventory",
+        "domain:cost",
+        "tier:standard"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "cost",
+      "is_finding": true,
+      "model": "f_cost_chargeback_by_job",
+      "origin": "app",
+      "path": "dbt/models/findings/cost/f_cost_chargeback_by_job.sql",
+      "query_id": "cost_chargeback_by_job",
+      "tags": [
+        "finding",
+        "domain:cost",
+        "tier:standard"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "cost",
+      "is_finding": true,
+      "model": "f_cost_chargeback_by_service",
+      "origin": "app",
+      "path": "dbt/models/findings/cost/f_cost_chargeback_by_service.sql",
+      "query_id": "cost_chargeback_by_service",
+      "tags": [
+        "finding",
+        "domain:cost",
+        "tier:standard"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "cost",
+      "is_finding": true,
+      "model": "f_cost_chargeback_by_sku",
+      "origin": "app",
+      "path": "dbt/models/findings/cost/f_cost_chargeback_by_sku.sql",
+      "query_id": "cost_chargeback_by_sku",
+      "tags": [
+        "finding",
+        "domain:cost",
+        "tier:standard"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "cost",
+      "is_finding": false,
+      "model": "f_cost_chargeback_by_tag",
+      "origin": "vendored",
+      "path": "dbt/models/findings/cost/f_cost_chargeback_by_tag.sql",
+      "query_id": "cost_chargeback_by_tag",
+      "tags": [
+        "inventory",
+        "domain:cost",
+        "tier:standard",
+        "stars"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "cost",
+      "is_finding": true,
+      "model": "f_cost_chargeback_by_tag_value",
+      "origin": "app",
+      "path": "dbt/models/findings/cost/f_cost_chargeback_by_tag_value.sql",
+      "query_id": "cost_chargeback_by_tag_value",
+      "tags": [
+        "finding",
+        "domain:cost",
+        "tier:standard"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "cost",
+      "is_finding": true,
+      "model": "f_cost_chargeback_by_warehouse",
+      "origin": "app",
+      "path": "dbt/models/findings/cost/f_cost_chargeback_by_warehouse.sql",
+      "query_id": "cost_chargeback_by_warehouse",
+      "tags": [
+        "finding",
+        "domain:cost",
+        "tier:standard"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "cost",
+      "is_finding": true,
+      "model": "f_cost_chargeback_by_workspace",
+      "origin": "app",
+      "path": "dbt/models/findings/cost/f_cost_chargeback_by_workspace.sql",
+      "query_id": "cost_chargeback_by_workspace",
+      "tags": [
+        "finding",
+        "domain:cost",
+        "tier:standard"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "cost",
+      "is_finding": true,
+      "model": "f_cost_chargeback_identity_by_source",
+      "origin": "app",
+      "path": "dbt/models/findings/cost/f_cost_chargeback_identity_by_source.sql",
+      "query_id": "cost_chargeback_identity_by_source",
+      "tags": [
+        "finding",
+        "domain:cost",
+        "tier:standard"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "cost",
+      "is_finding": true,
+      "model": "f_cost_chargeback_reconcile",
+      "origin": "app",
+      "path": "dbt/models/findings/cost/f_cost_chargeback_reconcile.sql",
+      "query_id": "cost_chargeback_reconcile",
+      "tags": [
+        "finding",
+        "domain:cost",
+        "tier:standard"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "cost",
+      "is_finding": false,
+      "model": "f_cost_cloud_infra",
+      "origin": "vendored",
+      "path": "dbt/models/findings/cost/f_cost_cloud_infra.sql",
+      "query_id": "cost_cloud_infra",
+      "tags": [
+        "inventory",
+        "domain:cost",
+        "tier:deep"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "cost",
+      "is_finding": false,
+      "model": "f_cost_daily_by_resource",
+      "origin": "app",
+      "path": "dbt/models/findings/cost/f_cost_daily_by_resource.sql",
+      "query_id": "cost_daily_by_resource",
+      "tags": [
+        "inventory",
+        "domain:cost",
+        "tier:standard"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "cost",
+      "is_finding": true,
+      "model": "f_cost_daily_spikes",
+      "origin": "app",
+      "path": "dbt/models/findings/cost/f_cost_daily_spikes.sql",
+      "query_id": "cost_daily_spikes",
+      "tags": [
+        "finding",
+        "domain:cost",
+        "tier:standard"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "cost",
+      "is_finding": false,
+      "model": "f_cost_dbsql_allocation_gap",
+      "origin": "vendored",
+      "path": "dbt/models/findings/cost/f_cost_dbsql_allocation_gap.sql",
+      "query_id": "cost_dbsql_allocation_gap",
+      "tags": [
+        "inventory",
+        "domain:cost",
+        "tier:deep"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "cost",
+      "is_finding": false,
+      "model": "f_cost_default_storage_dsu",
+      "origin": "vendored",
+      "path": "dbt/models/findings/cost/f_cost_default_storage_dsu.sql",
+      "query_id": "cost_default_storage_dsu",
+      "tags": [
+        "inventory",
+        "domain:cost",
+        "tier:standard"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "cost",
+      "is_finding": false,
+      "model": "f_cost_dollarized_by_sku_day",
+      "origin": "vendored",
+      "path": "dbt/models/findings/cost/f_cost_dollarized_by_sku_day.sql",
+      "query_id": "cost_dollarized_by_sku_day",
+      "tags": [
+        "inventory",
+        "domain:cost",
+        "tier:deep",
+        "stars"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "cost",
+      "is_finding": true,
+      "model": "f_cost_failed_statement_waste",
+      "origin": "app",
+      "path": "dbt/models/findings/cost/f_cost_failed_statement_waste.sql",
+      "query_id": "cost_failed_statement_waste",
+      "tags": [
+        "finding",
+        "domain:cost",
+        "tier:standard"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "cost",
+      "is_finding": false,
+      "model": "f_cost_genai_token_gpu",
+      "origin": "vendored",
+      "path": "dbt/models/findings/cost/f_cost_genai_token_gpu.sql",
+      "query_id": "cost_genai_token_gpu",
+      "tags": [
+        "inventory",
+        "domain:cost",
+        "tier:standard"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "cost",
+      "is_finding": false,
+      "model": "f_cost_monthly_actuals",
+      "origin": "app",
+      "path": "dbt/models/findings/cost/f_cost_monthly_actuals.sql",
+      "query_id": "cost_monthly_actuals",
+      "tags": [
+        "inventory",
+        "domain:cost",
+        "tier:standard"
+      ],
+      "windowed": false
+    },
+    {
+      "domain": "cost",
+      "is_finding": false,
+      "model": "f_cost_networking_egress",
+      "origin": "vendored",
+      "path": "dbt/models/findings/cost/f_cost_networking_egress.sql",
+      "query_id": "cost_networking_egress",
+      "tags": [
+        "inventory",
+        "domain:cost",
+        "tier:standard"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "cost",
+      "is_finding": true,
+      "model": "f_cost_period_over_period",
+      "origin": "app",
+      "path": "dbt/models/findings/cost/f_cost_period_over_period.sql",
+      "query_id": "cost_period_over_period",
+      "tags": [
+        "finding",
+        "domain:cost",
+        "tier:standard"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "cost",
+      "is_finding": false,
+      "model": "f_cost_premium_serverless_photon",
+      "origin": "vendored",
+      "path": "dbt/models/findings/cost/f_cost_premium_serverless_photon.sql",
+      "query_id": "cost_premium_serverless_photon",
+      "tags": [
+        "inventory",
+        "domain:cost",
+        "tier:standard",
+        "stars"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "cost",
+      "is_finding": false,
+      "model": "f_cost_restatement_trust_metric",
+      "origin": "vendored",
+      "path": "dbt/models/findings/cost/f_cost_restatement_trust_metric.sql",
+      "query_id": "cost_restatement_trust_metric",
+      "tags": [
+        "inventory",
+        "domain:cost",
+        "tier:lite"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "cost",
+      "is_finding": true,
+      "model": "f_cost_serving_mode_by_endpoint",
+      "origin": "vendored",
+      "path": "dbt/models/findings/cost/f_cost_serving_mode_by_endpoint.sql",
+      "query_id": "cost_serving_mode_by_endpoint",
+      "tags": [
+        "finding",
+        "domain:cost",
+        "tier:deep"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "cost",
+      "is_finding": true,
+      "model": "f_cost_sku_trend_12m",
+      "origin": "app",
+      "path": "dbt/models/findings/cost/f_cost_sku_trend_12m.sql",
+      "query_id": "cost_sku_trend_12m",
+      "tags": [
+        "finding",
+        "domain:cost",
+        "tier:standard"
+      ],
+      "windowed": false
+    },
+    {
+      "domain": "cost",
+      "is_finding": false,
+      "model": "f_cost_totals_by_sku_day",
+      "origin": "vendored",
+      "path": "dbt/models/findings/cost/f_cost_totals_by_sku_day.sql",
+      "query_id": "cost_totals_by_sku_day",
+      "tags": [
+        "inventory",
+        "domain:cost",
+        "tier:standard"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "cost",
+      "is_finding": true,
+      "model": "f_cost_unnamed_workspaces",
+      "origin": "app",
+      "path": "dbt/models/findings/cost/f_cost_unnamed_workspaces.sql",
+      "query_id": "cost_unnamed_workspaces",
+      "tags": [
+        "finding",
+        "domain:cost",
+        "tier:standard"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "cost",
+      "is_finding": true,
+      "model": "f_cost_usage_policy_coverage",
+      "origin": "vendored",
+      "path": "dbt/models/findings/cost/f_cost_usage_policy_coverage.sql",
+      "query_id": "cost_usage_policy_coverage",
+      "tags": [
+        "finding",
+        "domain:cost",
+        "tier:standard"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "cost",
+      "is_finding": true,
+      "model": "f_cost_vector_search_spend",
+      "origin": "vendored",
+      "path": "dbt/models/findings/cost/f_cost_vector_search_spend.sql",
+      "query_id": "cost_vector_search_spend",
+      "tags": [
+        "finding",
+        "domain:cost",
+        "tier:deep"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "cost",
+      "is_finding": false,
+      "model": "f_cost_workspace_names",
+      "origin": "vendored",
+      "path": "dbt/models/findings/cost/f_cost_workspace_names.sql",
+      "query_id": "cost_workspace_names",
+      "tags": [
+        "inventory",
+        "domain:cost",
+        "tier:lite"
+      ],
+      "windowed": false
+    },
+    {
+      "domain": "cost",
+      "is_finding": false,
+      "model": "f_genie_usage",
+      "origin": "app",
+      "path": "dbt/models/findings/cost/f_genie_usage.sql",
+      "query_id": "genie_usage",
+      "tags": [
+        "inventory",
+        "domain:cost",
+        "tier:standard"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "compute",
+      "is_finding": false,
+      "model": "f_instance_events_idle_active",
+      "origin": "vendored",
+      "path": "dbt/models/findings/compute/f_instance_events_idle_active.sql",
+      "query_id": "instance_events_idle_active",
+      "tags": [
+        "inventory",
+        "domain:compute",
+        "tier:lite"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "compute",
+      "is_finding": true,
+      "model": "f_instance_pools_idle_capacity",
+      "origin": "vendored",
+      "path": "dbt/models/findings/compute/f_instance_pools_idle_capacity.sql",
+      "query_id": "instance_pools_idle_capacity",
+      "tags": [
+        "finding",
+        "domain:compute",
+        "tier:standard"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "jobs_pipelines",
+      "is_finding": false,
+      "model": "f_lakeflow_daily_state",
+      "origin": "app",
+      "path": "dbt/models/findings/jobs_pipelines/f_lakeflow_daily_state.sql",
+      "query_id": "lakeflow_daily_state",
+      "tags": [
+        "inventory",
+        "domain:jobs_pipelines",
+        "tier:standard"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "jobs_pipelines",
+      "is_finding": false,
+      "model": "f_lakeflow_failed_cluster_starts",
+      "origin": "app",
+      "path": "dbt/models/findings/jobs_pipelines/f_lakeflow_failed_cluster_starts.sql",
+      "query_id": "lakeflow_failed_cluster_starts",
+      "tags": [
+        "inventory",
+        "domain:jobs_pipelines",
+        "tier:standard"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "jobs_pipelines",
+      "is_finding": true,
+      "model": "f_lakeflow_failed_jobs_wasted_dbus",
+      "origin": "vendored",
+      "path": "dbt/models/findings/jobs_pipelines/f_lakeflow_failed_jobs_wasted_dbus.sql",
+      "query_id": "lakeflow_failed_jobs_wasted_dbus",
+      "tags": [
+        "finding",
+        "domain:jobs_pipelines",
+        "tier:deep",
+        "stars"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "jobs_pipelines",
+      "is_finding": true,
+      "model": "f_lakeflow_failed_runs",
+      "origin": "vendored",
+      "path": "dbt/models/findings/jobs_pipelines/f_lakeflow_failed_runs.sql",
+      "query_id": "lakeflow_failed_runs",
+      "tags": [
+        "finding",
+        "domain:jobs_pipelines",
+        "tier:lite"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "jobs_pipelines",
+      "is_finding": true,
+      "model": "f_lakeflow_health_rule_coverage",
+      "origin": "vendored",
+      "path": "dbt/models/findings/jobs_pipelines/f_lakeflow_health_rule_coverage.sql",
+      "query_id": "lakeflow_health_rule_coverage",
+      "tags": [
+        "finding",
+        "domain:jobs_pipelines",
+        "tier:standard"
+      ],
+      "windowed": false
+    },
+    {
+      "domain": "jobs_pipelines",
+      "is_finding": true,
+      "model": "f_lakeflow_job_compute_pressure",
+      "origin": "app",
+      "path": "dbt/models/findings/jobs_pipelines/f_lakeflow_job_compute_pressure.sql",
+      "query_id": "lakeflow_job_compute_pressure",
+      "tags": [
+        "finding",
+        "domain:jobs_pipelines",
+        "tier:standard"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "jobs_pipelines",
+      "is_finding": false,
+      "model": "f_lakeflow_job_cost_summary",
+      "origin": "app",
+      "path": "dbt/models/findings/jobs_pipelines/f_lakeflow_job_cost_summary.sql",
+      "query_id": "lakeflow_job_cost_summary",
+      "tags": [
+        "inventory",
+        "domain:jobs_pipelines",
+        "tier:standard"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "jobs_pipelines",
+      "is_finding": true,
+      "model": "f_lakeflow_job_duration_regression",
+      "origin": "app",
+      "path": "dbt/models/findings/jobs_pipelines/f_lakeflow_job_duration_regression.sql",
+      "query_id": "lakeflow_job_duration_regression",
+      "tags": [
+        "finding",
+        "domain:jobs_pipelines",
+        "tier:standard"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "jobs_pipelines",
+      "is_finding": true,
+      "model": "f_lakeflow_job_oversized",
+      "origin": "app",
+      "path": "dbt/models/findings/jobs_pipelines/f_lakeflow_job_oversized.sql",
+      "query_id": "lakeflow_job_oversized",
+      "tags": [
+        "finding",
+        "domain:jobs_pipelines",
+        "tier:standard"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "jobs_pipelines",
+      "is_finding": true,
+      "model": "f_lakeflow_job_ownership_orphans",
+      "origin": "vendored",
+      "path": "dbt/models/findings/jobs_pipelines/f_lakeflow_job_ownership_orphans.sql",
+      "query_id": "lakeflow_job_ownership_orphans",
+      "tags": [
+        "finding",
+        "domain:jobs_pipelines",
+        "tier:standard"
+      ],
+      "windowed": false
+    },
+    {
+      "domain": "jobs_pipelines",
+      "is_finding": true,
+      "model": "f_lakeflow_job_queue_time",
+      "origin": "vendored",
+      "path": "dbt/models/findings/jobs_pipelines/f_lakeflow_job_queue_time.sql",
+      "query_id": "lakeflow_job_queue_time",
+      "tags": [
+        "finding",
+        "domain:jobs_pipelines",
+        "tier:standard"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "jobs_pipelines",
+      "is_finding": false,
+      "model": "f_lakeflow_job_recent_runs",
+      "origin": "app",
+      "path": "dbt/models/findings/jobs_pipelines/f_lakeflow_job_recent_runs.sql",
+      "query_id": "lakeflow_job_recent_runs",
+      "tags": [
+        "inventory",
+        "domain:jobs_pipelines",
+        "tier:standard"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "jobs_pipelines",
+      "is_finding": true,
+      "model": "f_lakeflow_job_reliability",
+      "origin": "app",
+      "path": "dbt/models/findings/jobs_pipelines/f_lakeflow_job_reliability.sql",
+      "query_id": "lakeflow_job_reliability",
+      "tags": [
+        "finding",
+        "domain:jobs_pipelines",
+        "tier:standard"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "jobs_pipelines",
+      "is_finding": false,
+      "model": "f_lakeflow_job_run_changes",
+      "origin": "app",
+      "path": "dbt/models/findings/jobs_pipelines/f_lakeflow_job_run_changes.sql",
+      "query_id": "lakeflow_job_run_changes",
+      "tags": [
+        "inventory",
+        "domain:jobs_pipelines",
+        "tier:deep"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "jobs_pipelines",
+      "is_finding": false,
+      "model": "f_lakeflow_job_run_cost",
+      "origin": "app",
+      "path": "dbt/models/findings/jobs_pipelines/f_lakeflow_job_run_cost.sql",
+      "query_id": "lakeflow_job_run_cost",
+      "tags": [
+        "inventory",
+        "domain:jobs_pipelines",
+        "tier:standard"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "jobs_pipelines",
+      "is_finding": true,
+      "model": "f_lakeflow_job_tasks_no_timeout",
+      "origin": "vendored",
+      "path": "dbt/models/findings/jobs_pipelines/f_lakeflow_job_tasks_no_timeout.sql",
+      "query_id": "lakeflow_job_tasks_no_timeout",
+      "tags": [
+        "finding",
+        "domain:jobs_pipelines",
+        "tier:standard"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "jobs_pipelines",
+      "is_finding": true,
+      "model": "f_lakeflow_jobs_no_timeout",
+      "origin": "vendored",
+      "path": "dbt/models/findings/jobs_pipelines/f_lakeflow_jobs_no_timeout.sql",
+      "query_id": "lakeflow_jobs_no_timeout",
+      "tags": [
+        "finding",
+        "domain:jobs_pipelines",
+        "tier:standard"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "jobs_pipelines",
+      "is_finding": true,
+      "model": "f_lakeflow_jobs_on_all_purpose",
+      "origin": "vendored",
+      "path": "dbt/models/findings/jobs_pipelines/f_lakeflow_jobs_on_all_purpose.sql",
+      "query_id": "lakeflow_jobs_on_all_purpose",
+      "tags": [
+        "finding",
+        "domain:jobs_pipelines",
+        "tier:standard",
+        "stars"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "jobs_pipelines",
+      "is_finding": true,
+      "model": "f_lakeflow_long_running_runs",
+      "origin": "vendored",
+      "path": "dbt/models/findings/jobs_pipelines/f_lakeflow_long_running_runs.sql",
+      "query_id": "lakeflow_long_running_runs",
+      "tags": [
+        "finding",
+        "domain:jobs_pipelines",
+        "tier:standard",
+        "drilldown"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "jobs_pipelines",
+      "is_finding": true,
+      "model": "f_lakeflow_never_started_runs",
+      "origin": "vendored",
+      "path": "dbt/models/findings/jobs_pipelines/f_lakeflow_never_started_runs.sql",
+      "query_id": "lakeflow_never_started_runs",
+      "tags": [
+        "finding",
+        "domain:jobs_pipelines",
+        "tier:lite"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "jobs_pipelines",
+      "is_finding": true,
+      "model": "f_lakeflow_phase_cold_start",
+      "origin": "vendored",
+      "path": "dbt/models/findings/jobs_pipelines/f_lakeflow_phase_cold_start.sql",
+      "query_id": "lakeflow_phase_cold_start",
+      "tags": [
+        "finding",
+        "domain:jobs_pipelines",
+        "tier:lite"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "jobs_pipelines",
+      "is_finding": true,
+      "model": "f_lakeflow_pipeline_cost",
+      "origin": "vendored",
+      "path": "dbt/models/findings/jobs_pipelines/f_lakeflow_pipeline_cost.sql",
+      "query_id": "lakeflow_pipeline_cost",
+      "tags": [
+        "finding",
+        "domain:jobs_pipelines",
+        "tier:deep"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "jobs_pipelines",
+      "is_finding": true,
+      "model": "f_lakeflow_pipeline_idle_tail_duration",
+      "origin": "vendored",
+      "path": "dbt/models/findings/jobs_pipelines/f_lakeflow_pipeline_idle_tail_duration.sql",
+      "query_id": "lakeflow_pipeline_idle_tail_duration",
+      "tags": [
+        "finding",
+        "domain:jobs_pipelines",
+        "tier:standard"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "jobs_pipelines",
+      "is_finding": true,
+      "model": "f_lakeflow_pipeline_update_failures_retries",
+      "origin": "vendored",
+      "path": "dbt/models/findings/jobs_pipelines/f_lakeflow_pipeline_update_failures_retries.sql",
+      "query_id": "lakeflow_pipeline_update_failures_retries",
+      "tags": [
+        "finding",
+        "domain:jobs_pipelines",
+        "tier:lite"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "jobs_pipelines",
+      "is_finding": false,
+      "model": "f_lakeflow_pipelines_inventory_tier",
+      "origin": "vendored",
+      "path": "dbt/models/findings/jobs_pipelines/f_lakeflow_pipelines_inventory_tier.sql",
+      "query_id": "lakeflow_pipelines_inventory_tier",
+      "tags": [
+        "inventory",
+        "domain:jobs_pipelines",
+        "tier:lite"
+      ],
+      "windowed": false
+    },
+    {
+      "domain": "jobs_pipelines",
+      "is_finding": true,
+      "model": "f_lakeflow_retries_repairs",
+      "origin": "vendored",
+      "path": "dbt/models/findings/jobs_pipelines/f_lakeflow_retries_repairs.sql",
+      "query_id": "lakeflow_retries_repairs",
+      "tags": [
+        "finding",
+        "domain:jobs_pipelines",
+        "tier:standard"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "jobs_pipelines",
+      "is_finding": true,
+      "model": "f_lakeflow_stale_zombie_jobs",
+      "origin": "vendored",
+      "path": "dbt/models/findings/jobs_pipelines/f_lakeflow_stale_zombie_jobs.sql",
+      "query_id": "lakeflow_stale_zombie_jobs",
+      "tags": [
+        "finding",
+        "domain:jobs_pipelines",
+        "tier:standard"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "jobs_pipelines",
+      "is_finding": true,
+      "model": "f_lakeflow_succeeded_with_failed_tasks",
+      "origin": "vendored",
+      "path": "dbt/models/findings/jobs_pipelines/f_lakeflow_succeeded_with_failed_tasks.sql",
+      "query_id": "lakeflow_succeeded_with_failed_tasks",
+      "tags": [
+        "finding",
+        "domain:jobs_pipelines",
+        "tier:lite"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "jobs_pipelines",
+      "is_finding": true,
+      "model": "f_lakeflow_tasks_near_timeout",
+      "origin": "vendored",
+      "path": "dbt/models/findings/jobs_pipelines/f_lakeflow_tasks_near_timeout.sql",
+      "query_id": "lakeflow_tasks_near_timeout",
+      "tags": [
+        "finding",
+        "domain:jobs_pipelines",
+        "tier:standard"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "jobs_pipelines",
+      "is_finding": false,
+      "model": "f_lakeflow_termination_taxonomy",
+      "origin": "vendored",
+      "path": "dbt/models/findings/jobs_pipelines/f_lakeflow_termination_taxonomy.sql",
+      "query_id": "lakeflow_termination_taxonomy",
+      "tags": [
+        "inventory",
+        "domain:jobs_pipelines",
+        "tier:lite"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "jobs_pipelines",
+      "is_finding": false,
+      "model": "f_lakeflow_termination_type_probe",
+      "origin": "vendored",
+      "path": "dbt/models/findings/jobs_pipelines/f_lakeflow_termination_type_probe.sql",
+      "query_id": "lakeflow_termination_type_probe",
+      "tags": [
+        "inventory",
+        "domain:jobs_pipelines",
+        "tier:lite"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "jobs_pipelines",
+      "is_finding": false,
+      "model": "f_lakeflow_workload_mix_hours",
+      "origin": "vendored",
+      "path": "dbt/models/findings/jobs_pipelines/f_lakeflow_workload_mix_hours.sql",
+      "query_id": "lakeflow_workload_mix_hours",
+      "tags": [
+        "inventory",
+        "domain:jobs_pipelines",
+        "tier:lite"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "compute",
+      "is_finding": true,
+      "model": "f_node_timeline_utilization",
+      "origin": "vendored",
+      "path": "dbt/models/findings/compute/f_node_timeline_utilization.sql",
+      "query_id": "node_timeline_utilization",
+      "tags": [
+        "finding",
+        "domain:compute",
+        "tier:lite"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "compute",
+      "is_finding": false,
+      "model": "f_node_types_reference",
+      "origin": "vendored",
+      "path": "dbt/models/findings/compute/f_node_types_reference.sql",
+      "query_id": "node_types_reference",
+      "tags": [
+        "inventory",
+        "domain:compute",
+        "tier:lite"
+      ],
+      "windowed": false
+    },
+    {
+      "domain": "cost",
+      "is_finding": false,
+      "model": "f_overview_daily_dbu_trend",
+      "origin": "app",
+      "path": "dbt/models/findings/cost/f_overview_daily_dbu_trend.sql",
+      "query_id": "overview_daily_dbu_trend",
+      "tags": [
+        "inventory",
+        "domain:cost",
+        "tier:lite"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "cost",
+      "is_finding": false,
+      "model": "f_overview_dbu_by_sku",
+      "origin": "app",
+      "path": "dbt/models/findings/cost/f_overview_dbu_by_sku.sql",
+      "query_id": "overview_dbu_by_sku",
+      "tags": [
+        "inventory",
+        "domain:cost",
+        "tier:lite"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "cost",
+      "is_finding": false,
+      "model": "f_overview_list_prices_raw",
+      "origin": "app",
+      "path": "dbt/models/findings/cost/f_overview_list_prices_raw.sql",
+      "query_id": "overview_list_prices_raw",
+      "tags": [
+        "inventory",
+        "domain:cost",
+        "tier:lite"
+      ],
+      "windowed": false
+    },
+    {
+      "domain": "cost",
+      "is_finding": false,
+      "model": "f_overview_serverless_classic_split",
+      "origin": "app",
+      "path": "dbt/models/findings/cost/f_overview_serverless_classic_split.sql",
+      "query_id": "overview_serverless_classic_split",
+      "tags": [
+        "inventory",
+        "domain:cost",
+        "tier:lite"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "cost",
+      "is_finding": false,
+      "model": "f_overview_spend_estimate",
+      "origin": "app",
+      "path": "dbt/models/findings/cost/f_overview_spend_estimate.sql",
+      "query_id": "overview_spend_estimate",
+      "tags": [
+        "inventory",
+        "domain:cost",
+        "tier:lite"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "performance",
+      "is_finding": false,
+      "model": "f_perf_daily_by_resource",
+      "origin": "app",
+      "path": "dbt/models/findings/performance/f_perf_daily_by_resource.sql",
+      "query_id": "perf_daily_by_resource",
+      "tags": [
+        "inventory",
+        "domain:performance",
+        "tier:standard"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "performance",
+      "is_finding": false,
+      "model": "f_perf_failure_causes_daily",
+      "origin": "app",
+      "path": "dbt/models/findings/performance/f_perf_failure_causes_daily.sql",
+      "query_id": "perf_failure_causes_daily",
+      "tags": [
+        "inventory",
+        "domain:performance",
+        "tier:standard"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "performance",
+      "is_finding": false,
+      "model": "f_perf_queue_by_hour",
+      "origin": "app",
+      "path": "dbt/models/findings/performance/f_perf_queue_by_hour.sql",
+      "query_id": "perf_queue_by_hour",
+      "tags": [
+        "inventory",
+        "domain:performance",
+        "tier:standard"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "storage",
+      "is_finding": true,
+      "model": "f_po_clustering_activity",
+      "origin": "vendored",
+      "path": "dbt/models/findings/storage/f_po_clustering_activity.sql",
+      "query_id": "po_clustering_activity",
+      "tags": [
+        "finding",
+        "domain:storage",
+        "tier:standard"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "storage",
+      "is_finding": true,
+      "model": "f_po_clustering_column_churn",
+      "origin": "vendored",
+      "path": "dbt/models/findings/storage/f_po_clustering_column_churn.sql",
+      "query_id": "po_clustering_column_churn",
+      "tags": [
+        "finding",
+        "domain:storage",
+        "tier:deep"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "storage",
+      "is_finding": true,
+      "model": "f_po_data_skipping_backfill",
+      "origin": "vendored",
+      "path": "dbt/models/findings/storage/f_po_data_skipping_backfill.sql",
+      "query_id": "po_data_skipping_backfill",
+      "tags": [
+        "finding",
+        "domain:storage",
+        "tier:deep"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "storage",
+      "is_finding": true,
+      "model": "f_po_failure_reasons",
+      "origin": "app",
+      "path": "dbt/models/findings/storage/f_po_failure_reasons.sql",
+      "query_id": "po_failure_reasons",
+      "tags": [
+        "finding",
+        "domain:storage",
+        "tier:standard"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "storage",
+      "is_finding": true,
+      "model": "f_po_maintenance_cost_by_table",
+      "origin": "vendored",
+      "path": "dbt/models/findings/storage/f_po_maintenance_cost_by_table.sql",
+      "query_id": "po_maintenance_cost_by_table",
+      "tags": [
+        "finding",
+        "domain:storage",
+        "tier:standard"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "storage",
+      "is_finding": true,
+      "model": "f_po_vacuum_reclaimed_bytes",
+      "origin": "vendored",
+      "path": "dbt/models/findings/storage/f_po_vacuum_reclaimed_bytes.sql",
+      "query_id": "po_vacuum_reclaimed_bytes",
+      "tags": [
+        "finding",
+        "domain:storage",
+        "tier:standard"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "cost",
+      "is_finding": false,
+      "model": "f_pricing_list_prices_raw",
+      "origin": "vendored",
+      "path": "dbt/models/findings/cost/f_pricing_list_prices_raw.sql",
+      "query_id": "pricing_list_prices_raw",
+      "tags": [
+        "inventory",
+        "domain:cost",
+        "tier:lite"
+      ],
+      "windowed": false
+    },
+    {
+      "domain": "performance",
+      "is_finding": true,
+      "model": "f_query_cache_coldstart",
+      "origin": "vendored",
+      "path": "dbt/models/findings/performance/f_query_cache_coldstart.sql",
+      "query_id": "query_cache_coldstart",
+      "tags": [
+        "finding",
+        "domain:performance",
+        "tier:standard"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "performance",
+      "is_finding": true,
+      "model": "f_query_costly_statements",
+      "origin": "vendored",
+      "path": "dbt/models/findings/performance/f_query_costly_statements.sql",
+      "query_id": "query_costly_statements",
+      "tags": [
+        "finding",
+        "domain:performance",
+        "tier:standard",
+        "stars"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "performance",
+      "is_finding": true,
+      "model": "f_query_costly_statements_grouped",
+      "origin": "vendored",
+      "path": "dbt/models/findings/performance/f_query_costly_statements_grouped.sql",
+      "query_id": "query_costly_statements_grouped",
+      "tags": [
+        "finding",
+        "domain:performance",
+        "tier:standard"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "performance",
+      "is_finding": true,
+      "model": "f_query_failed_queries_daily",
+      "origin": "vendored",
+      "path": "dbt/models/findings/performance/f_query_failed_queries_daily.sql",
+      "query_id": "query_failed_queries_daily",
+      "tags": [
+        "finding",
+        "domain:performance",
+        "tier:standard"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "performance",
+      "is_finding": true,
+      "model": "f_query_failed_statements_grouped",
+      "origin": "app",
+      "path": "dbt/models/findings/performance/f_query_failed_statements_grouped.sql",
+      "query_id": "query_failed_statements_grouped",
+      "tags": [
+        "finding",
+        "domain:performance",
+        "tier:standard"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "performance",
+      "is_finding": true,
+      "model": "f_query_local_spillage",
+      "origin": "vendored",
+      "path": "dbt/models/findings/performance/f_query_local_spillage.sql",
+      "query_id": "query_local_spillage",
+      "tags": [
+        "finding",
+        "domain:performance",
+        "tier:standard"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "performance",
+      "is_finding": false,
+      "model": "f_query_per_query_estimate_lane",
+      "origin": "vendored",
+      "path": "dbt/models/findings/performance/f_query_per_query_estimate_lane.sql",
+      "query_id": "query_per_query_estimate_lane",
+      "tags": [
+        "inventory",
+        "domain:performance",
+        "tier:deep"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "performance",
+      "is_finding": false,
+      "model": "f_query_provenance_by_source",
+      "origin": "vendored",
+      "path": "dbt/models/findings/performance/f_query_provenance_by_source.sql",
+      "query_id": "query_provenance_by_source",
+      "tags": [
+        "inventory",
+        "domain:performance",
+        "tier:standard"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "performance",
+      "is_finding": true,
+      "model": "f_query_pruning_effectiveness",
+      "origin": "vendored",
+      "path": "dbt/models/findings/performance/f_query_pruning_effectiveness.sql",
+      "query_id": "query_pruning_effectiveness",
+      "tags": [
+        "finding",
+        "domain:performance",
+        "tier:standard"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "performance",
+      "is_finding": true,
+      "model": "f_query_queuing_waits",
+      "origin": "vendored",
+      "path": "dbt/models/findings/performance/f_query_queuing_waits.sql",
+      "query_id": "query_queuing_waits",
+      "tags": [
+        "finding",
+        "domain:performance",
+        "tier:standard"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "performance",
+      "is_finding": true,
+      "model": "f_query_shuffle_write_amplification",
+      "origin": "vendored",
+      "path": "dbt/models/findings/performance/f_query_shuffle_write_amplification.sql",
+      "query_id": "query_shuffle_write_amplification",
+      "tags": [
+        "finding",
+        "domain:performance",
+        "tier:standard"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "performance",
+      "is_finding": true,
+      "model": "f_query_task_statement_breakdown",
+      "origin": "vendored",
+      "path": "dbt/models/findings/performance/f_query_task_statement_breakdown.sql",
+      "query_id": "query_task_statement_breakdown",
+      "tags": [
+        "finding",
+        "domain:performance",
+        "tier:standard",
+        "drilldown"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "performance",
+      "is_finding": true,
+      "model": "f_query_top_by_cost",
+      "origin": "app",
+      "path": "dbt/models/findings/performance/f_query_top_by_cost.sql",
+      "query_id": "query_top_by_cost",
+      "tags": [
+        "finding",
+        "domain:performance",
+        "tier:standard"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "performance",
+      "is_finding": true,
+      "model": "f_query_warehouse_pressure",
+      "origin": "app",
+      "path": "dbt/models/findings/performance/f_query_warehouse_pressure.sql",
+      "query_id": "query_warehouse_pressure",
+      "tags": [
+        "finding",
+        "domain:performance",
+        "tier:standard"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "performance",
+      "is_finding": false,
+      "model": "f_query_workload_mix_hours",
+      "origin": "vendored",
+      "path": "dbt/models/findings/performance/f_query_workload_mix_hours.sql",
+      "query_id": "query_workload_mix_hours",
+      "tags": [
+        "inventory",
+        "domain:performance",
+        "tier:standard"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "serving_ai",
+      "is_finding": false,
+      "model": "f_serving_endpoint_traffic_by_endpoint",
+      "origin": "vendored",
+      "path": "dbt/models/findings/serving_ai/f_serving_endpoint_traffic_by_endpoint.sql",
+      "query_id": "serving_endpoint_traffic_by_endpoint",
+      "tags": [
+        "inventory",
+        "domain:serving_ai",
+        "tier:deep"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "compute",
+      "is_finding": false,
+      "model": "f_sql_warehouse_config_current",
+      "origin": "vendored",
+      "path": "dbt/models/findings/compute/f_sql_warehouse_config_current.sql",
+      "query_id": "sql_warehouse_config_current",
+      "tags": [
+        "inventory",
+        "domain:compute",
+        "tier:lite"
+      ],
+      "windowed": false
+    },
+    {
+      "domain": "compute",
+      "is_finding": true,
+      "model": "f_sql_warehouse_events_activity",
+      "origin": "vendored",
+      "path": "dbt/models/findings/compute/f_sql_warehouse_events_activity.sql",
+      "query_id": "sql_warehouse_events_activity",
+      "tags": [
+        "finding",
+        "domain:compute",
+        "tier:lite"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "storage",
+      "is_finding": true,
+      "model": "f_storage_growth",
+      "origin": "app",
+      "path": "dbt/models/findings/storage/f_storage_growth.sql",
+      "query_id": "storage_growth",
+      "tags": [
+        "finding",
+        "domain:storage",
+        "tier:standard"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "storage",
+      "is_finding": true,
+      "model": "f_storage_po_coverage",
+      "origin": "app",
+      "path": "dbt/models/findings/storage/f_storage_po_coverage.sql",
+      "query_id": "storage_po_coverage",
+      "tags": [
+        "finding",
+        "domain:storage",
+        "tier:standard"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "storage",
+      "is_finding": true,
+      "model": "f_storage_small_files",
+      "origin": "app",
+      "path": "dbt/models/findings/storage/f_storage_small_files.sql",
+      "query_id": "storage_small_files",
+      "tags": [
+        "finding",
+        "domain:storage",
+        "tier:standard"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "storage",
+      "is_finding": false,
+      "model": "f_storage_target_table_discovery",
+      "origin": "app",
+      "path": "dbt/models/findings/storage/f_storage_target_table_discovery.sql",
+      "query_id": "storage_target_table_discovery",
+      "tags": [
+        "inventory",
+        "domain:storage",
+        "tier:standard"
+      ],
+      "windowed": false
+    },
+    {
+      "domain": "storage",
+      "is_finding": true,
+      "model": "f_storage_unused_table_cost",
+      "origin": "app",
+      "path": "dbt/models/findings/storage/f_storage_unused_table_cost.sql",
+      "query_id": "storage_unused_table_cost",
+      "tags": [
+        "finding",
+        "domain:storage",
+        "tier:standard"
+      ],
+      "windowed": true
+    },
+    {
+      "domain": "storage",
+      "is_finding": false,
+      "model": "f_table_inventory_type",
+      "origin": "vendored",
+      "path": "dbt/models/findings/storage/f_table_inventory_type.sql",
+      "query_id": "table_inventory_type",
+      "tags": [
+        "inventory",
+        "domain:storage",
+        "tier:deep"
+      ],
+      "windowed": false
+    },
+    {
+      "domain": "compute",
+      "is_finding": true,
+      "model": "f_task_cluster_utilization",
+      "origin": "vendored",
+      "path": "dbt/models/findings/compute/f_task_cluster_utilization.sql",
+      "query_id": "task_cluster_utilization",
+      "tags": [
+        "finding",
+        "domain:compute",
+        "tier:standard",
+        "drilldown"
+      ],
+      "windowed": true
+    }
+  ],
+  "skipped": [
+    {
+      "domain": "storage",
+      "query_id": "iceberg_uniform_metadata",
+      "reason": "reads no system table (none - DESCRIBE EXTENDED output; not a system table)"
+    },
+    {
+      "domain": "storage",
+      "query_id": "storage_breakdown_analyze",
+      "reason": "runnable: false (a DESCRIBE/ANALYZE template, not a SELECT)"
+    },
+    {
+      "domain": "storage",
+      "query_id": "table_props_time_travel_config",
+      "reason": "reads no system table (none - DESCRIBE EXTENDED / SHOW TBLPROPERTIES output; not a system table)"
+    }
+  ],
+  "ymls": [
+    "dbt/models/findings/compute/_findings__compute.yml",
+    "dbt/models/findings/cost/_findings__cost.yml",
+    "dbt/models/findings/governance_access/_findings__governance_access.yml",
+    "dbt/models/findings/jobs_pipelines/_findings__jobs_pipelines.yml",
+    "dbt/models/findings/performance/_findings__performance.yml",
+    "dbt/models/findings/serving_ai/_findings__serving_ai.yml",
+    "dbt/models/findings/storage/_findings__storage.yml"
+  ]
+}

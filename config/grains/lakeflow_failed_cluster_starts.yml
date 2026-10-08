@@ -1,0 +1,3 @@
+# lakeflow_failed_cluster_starts: one row per job and termination code of task runs that failed
+# before their code ran.
+lakeflow_failed_cluster_starts: [workspace_id, job_id, termination_code]

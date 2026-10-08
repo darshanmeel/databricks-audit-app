@@ -1,0 +1,151 @@
+/* design C's frame: a dark left rail (brand, lens, pages, theme), a
+   sticky filter bar, and the content column; plus C's cards, status pills and table heads. Loaded
+   after styles.css so these win over the older shared rules. */
+
+/* ─────────── Frame ─────────── */
+.c-app { display: grid; grid-template-columns: 232px minmax(0, 1fr); min-height: 100vh; }
+.c-main { min-width: 0; display: flex; flex-direction: column; }
+.c-content { width: 100%; max-width: 1480px; padding: 22px 32px 48px; display: flex; flex-direction: column; }
+.c-content > .scope-banner, .c-content > .honest-card { margin-bottom: 16px; }
+
+/* ─────────── Rail ─────────── */
+.c-rail {
+  position: sticky; top: 0; height: 100vh; overflow: hidden;
+  background: var(--rail); color: var(--rail-text);
+  padding: 18px 12px 16px; display: flex; flex-direction: column; gap: 18px;
+  scrollbar-width: thin; scrollbar-color: var(--rail-active) transparent;
+}
+.c-brand { padding: 0 8px; }
+.c-brand .brand-title { color: var(--rail-strong); font-size: 16px; }
+.c-rail .brand-mark { width: 24px; height: 24px; border-radius: 6px; background: #f4f1ea; color: #1b1d21; }
+.c-rail-label {
+  display: block; font-size: 11px; font-weight: 500; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--rail-muted); padding: 0 10px 6px;
+}
+.c-lens { display: flex; flex-direction: column; }
+.c-lens select {
+  width: 100%; height: 38px; padding: 0 30px 0 12px; border-radius: 8px; cursor: pointer;
+  background: var(--rail-active); border: 1px solid var(--rail-border); color: var(--rail-strong);
+  font: inherit; font-size: 14px; font-weight: 500; appearance: none; -webkit-appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, var(--rail-text) 50%), linear-gradient(135deg, var(--rail-text) 50%, transparent 50%);
+  background-position: calc(100% - 17px) 17px, calc(100% - 12px) 17px;
+  background-size: 5px 5px; background-repeat: no-repeat;
+}
+.c-lens select:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.c-lens option { color: #1c1b18; background: #fff; }
+
+.c-rail .side-nav {
+  position: static; width: auto; max-height: none; overflow: visible; padding: 0; gap: 2px;
+}
+.c-rail .side-nav-label { margin-top: 14px; }
+.c-rail .side-nav-link {
+  display: flex; align-items: center; min-height: 36px; padding: 0 10px; border-radius: 8px;
+  color: var(--rail-text); font-size: 14px; line-height: 1.25;
+}
+.c-rail .side-nav-link:hover { background: rgba(255, 255, 255, .05); color: var(--rail-strong); }
+.c-rail .side-nav-link.active { background: var(--rail-active); color: var(--rail-strong); font-weight: 500; }
+.c-rail .side-nav-subtabs { margin: 2px 0 8px 16px; padding-left: 8px; border-left: 1px solid var(--rail-border); }
+.c-rail .side-nav-sub { color: var(--rail-muted); font-size: 13px; padding: 6px 8px; line-height: 1.3; }
+.c-rail .side-nav-sub:hover { color: var(--rail-strong); background: transparent; }
+.c-rail .side-nav-sub.active { color: var(--rail-strong); background: rgba(255, 255, 255, .06); font-weight: 500; }
+/* Only the page list scrolls; brand, lens, "How it works" and the theme stay put. */
+.c-rail-nav {
+  flex: 1; min-height: 0; overflow-y: auto; margin: 0 -6px; padding: 0 6px;
+  scrollbar-width: thin; scrollbar-color: var(--rail-active) transparent;
+}
+.c-rail-foot {
+  margin-top: auto; padding: 12px 2px 0; border-top: 1px solid var(--rail-border);
+  display: flex; flex-direction: column; gap: 10px;
+}
+.c-rail .c-rail-help { width: 100%; border: 0; background: transparent; font: inherit; font-size: 14px; cursor: pointer; text-align: left; gap: 10px; }
+.c-rail-help-mark {
+  display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; flex: none;
+  border: 1px solid var(--rail-muted); color: var(--rail-text); font-size: 11px; font-weight: 600; line-height: 1;
+}
+
+.c-theme { display: flex; gap: 4px; padding: 3px; border-radius: 8px; background: rgba(255, 255, 255, .06); }
+.c-theme button {
+  flex: 1; height: 30px; border: 0; border-radius: 6px; cursor: pointer; font: inherit; font-size: 12.5px;
+  background: transparent; color: var(--rail-text);
+}
+.c-theme button[aria-pressed="true"] { background: var(--rail-active); color: var(--rail-strong); font-weight: 500; }
+/* In the mobile drawer (light surface) the toggle sits on the page colours. */
+.mobile-nav .c-theme { background: var(--surface-2); }
+.mobile-nav .c-theme button { color: var(--text-2); }
+.mobile-nav .c-theme button[aria-pressed="true"] { background: var(--text); color: var(--bg); }
+.mobile-nav .c-lens .c-rail-label { color: var(--text-3); padding-left: 0; }
+
+/* ─────────── Filter bar ─────────── */
+.c-main > .topbar {
+  position: sticky; top: 0; z-index: 30; width: auto; margin: 0; height: auto; min-height: 58px;
+  padding: 10px 32px; gap: 12px;
+  background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--border);
+}
+.c-main > .topbar .topbar-controls { flex: 1; flex-wrap: wrap; margin-left: 0; gap: 8px; row-gap: 8px; }
+.c-main > .topbar .topbar-brand { display: none; }
+.topbar .brand-mark { background: var(--text); color: var(--bg); }
+
+@media (max-width: 900px) {
+  .c-app { grid-template-columns: minmax(0, 1fr); }
+  .c-rail { display: none; }
+  .c-main > .topbar { padding: 10px 16px; }
+  .c-main > .topbar .topbar-brand { display: flex; }
+  .c-content { padding: 16px 16px 40px; }
+}
+
+/* ─────────── Surfaces ─────────── */
+.card { border-color: var(--border); border-radius: var(--radius-lg); padding: 18px 20px; }
+.table-wrap { border-color: var(--border); border-radius: var(--radius-lg); }
+.page-intro-title { font-family: var(--f-serif); font-weight: 500; letter-spacing: -.005em; }
+
+/* Status pills: a soft fill and a coloured word, no outline (a word is always shown with the colour). */
+.badge {
+  font-family: var(--f-sans); font-weight: 500; border: 1px solid transparent;
+  background: var(--surface-3); color: var(--text-2); padding: 2px 9px;
+}
+.badge.critical, .badge.error { background: var(--st-crit-tint); color: var(--st-crit-ink); border-color: transparent; }
+.badge.warn { background: var(--st-warn-tint); color: var(--st-warn-ink); border-color: transparent; }
+.badge.ok { background: var(--st-ok-tint); color: var(--st-ok-ink); border-color: transparent; }
+.badge.not_assessed { background: transparent; color: var(--st-na-ink); border: 1px dashed var(--st-na); }
+.badge.reference, .badge.ranked, .badge.inventory { background: var(--surface-3); color: var(--text-2); }
+.badge.info { background: var(--link-tint); color: var(--link); }
+.badge.solid.critical { background: var(--st-crit); color: #fff; }
+.badge.solid.warn { background: var(--st-warn); color: #fff; }
+.badge.solid.ok { background: var(--st-ok); color: #fff; }
+.badge.solid.not_assessed { background: var(--st-na); color: #fff; border-style: solid; }
+
+table.findings > thead > tr > th, table.data th {
+  background: var(--surface-2); color: var(--text-3); font-weight: 500;
+}
+
+/* While printing, lay the page out at the A4 landscape width so charts measure the paper. */
+@media screen {
+  body.print-full .c-content { width: 1031px; max-width: 1031px; padding-left: 0; padding-right: 0; }
+}
+
+/* Print / Save as PDF: the page itself, without the rail, filter bar or buttons, cards kept whole. */
+@media print {
+  /* Print what the screen shows: theme, bar fills and swatches, even with background graphics off. */
+  *, *::before, *::after { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  /* The page colour reaches the paper edge; the 12 mm margin is padding repeated on every page. */
+  html { background: var(--bg); }
+  /* No tooltips on paper, so names wrap instead of ending in "...". */
+  .hbar-list-label, .rb-label, .heat-row-label, .ref-name, .act-evidence-name, .cj-churn-name,
+  .sku-trend-name, .af-home-link, .money-env-split td:first-child, .money-waterfall-label,
+  .pqgs-problem-list-name {
+    white-space: normal !important; overflow: visible !important; text-overflow: clip !important;
+    overflow-wrap: anywhere; max-width: none !important;
+  }
+  /* A chart row label sits in a fixed-height box: two tighter lines fit where one did. */
+  .rb-label, .heat-row-label {
+    height: 100%; display: flex; align-items: center; font-size: 10.5px;
+    line-height: 1.1 !important; overflow: hidden !important;
+  }
+  @page { size: A4 landscape; margin: 0; }
+  .c-app { display: block; }
+  .c-rail, .c-main > .topbar, .copy-link-btn, .ov-link-btn, .load-more { display: none !important; }
+  .c-content { max-width: none; padding: 12mm; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+  .card, .kpi-tile, .chart-card, .gd-card, tr { break-inside: avoid; }
+  .card, .kpi-tile, .chart-card { box-shadow: none; }
+}

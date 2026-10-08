@@ -1,0 +1,8 @@
+# config/grains/lakeflow_job_duration_regression.yml -- P3-JOBHEALTH. Grain = the query's own key
+# columns ONLY; the generator prepends window_days (DEC-24). One row per job with at least one
+# completed run (an end row) in the window: the body GROUPs its end-row-deduplicated runs BY
+# (workspace_id, job_id) in agg and LEFT JOINs latest_jobs on that same pair (one row per pair by
+# construction: a QUALIFY ROW_NUMBER() = 1), so the pair is unique by construction.
+lakeflow_job_duration_regression:
+  - workspace_id
+  - job_id

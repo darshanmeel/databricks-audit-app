@@ -1,0 +1,67 @@
+# GENERATED-ish (hand-written, T-05-owned). Three targets: dev (default), test, databricks
+# (used only by tools/verify_databricks.py to check the dbt/models/databricks_direct and
+# databricks_admin copies against a live workspace; dbt-databricks is an optional extra, never in
+# requirements.txt -- DECISIONS.md DEC-67 supersedes T-04's "never invoked" note). `AUDIT_DB` / `AUDIT_SNAPSHOT_DIR` / the three DATABRICKS_* vars are all resolved
+# at call time via env_var(), never baked in (DEC-27's env-vars-at-call-time rule applies here
+# too, even though DEC-27 itself names app/core/config.py and app/core/data.py).
+#
+# `settings.temp_directory` (T-25, DEC-47 point 1: DuckDB does the work, spills to disk when
+# memory is tight): always dbt/target/tmp (repo-root relative -- every dbt invocation in this
+# repo runs with cwd = repo root). DEC-47 also allows a `memory_limit` fed from
+# AUDIT_DUCKDB_MEMORY, but profiles.yml is parsed as plain YAML BEFORE Jinja renders any string
+# value, so a conditional/bare Jinja expression cannot appear outside a quoted scalar here (an
+# unquoted `{{ ... }}` in key position is not valid YAML) -- and DuckDB 1.5.1 accepts memory_limit
+# only as an absolute size (KB/MB/GB/TB), not a percentage, so a fixed fallback like '80%' is not
+# an option either. Left deferred (v2): with AUDIT_DUCKDB_MEMORY unset, DuckDB's own default
+# memory limit applies (v1 behaviour, unchanged).
+databricks_audit:
+  target: dev
+  outputs:
+
+    dev:
+      type: duckdb
+      path: "{{ env_var('AUDIT_DB', 'data/db_audit.duckdb') }}"
+      threads: 4
+      settings:
+        TimeZone: UTC
+        temp_directory: "dbt/target/tmp"
+
+    test:
+      type: duckdb
+      # AUDIT_TEST_DB lets a macro-probe test (dbt parse / compile --inline) point at its own
+      # throwaway file instead of the shared fixture database. Everything that needs the built
+      # tables -- tools/dbt_run.py, tools/gate.py, tests/dbutil.py -- leaves it unset and gets the
+      # default, so the fixture DB is still the one place the models are built.
+      path: "{{ env_var('AUDIT_TEST_DB', 'tests/db_audit_test.duckdb') }}"
+      threads: 4
+      settings:
+        TimeZone: UTC
+        temp_directory: "dbt/target/tmp"
+
+    # DBX-DIRECT: used by tools/verify_databricks.py, the one place that ever passes
+    # --target databricks (`dbt run --select path:models/databricks_direct`) to execute the
+    # dbt/models/databricks_direct/** copies against a live workspace and report which queries
+    # still work. dbt-databricks stays OUT of requirements.txt (see requirements-databricks.txt,
+    # an optional extra) so the day-to-day DuckDB dev/test path is completely unchanged when it is
+    # not installed -- tools/verify_databricks.py checks for it itself and exits with the install
+    # command when it is missing, rather than letting dbt fail with an unclear adapter error.
+    # tools/snapshot.py remains the only script that exports a parquet snapshot; this output is a
+    # second, deliberate way to reach a live workspace (verification, not the snapshot pipeline) --
+    # see docs/DATABRICKS_VERIFY.md.
+    # The env_var(...) calls below keep every one of these schema-safe: they carry empty-string
+    # defaults purely so a full-file profile render (e.g. `dbt parse --target test`, which dbt
+    # renders the whole profiles.yml for even though only the `test` output is selected) never
+    # raises "env var required but not provided" when these vars are unset, which is the normal
+    # case for every dev machine and CI runner in this repo and for `--target databricks` itself
+    # before tools/verify_databricks.py's own preflight checks run (it reads the same four vars
+    # from the environment / the git-ignored .env and refuses with a clear, named-vars message
+    # before it ever invokes dbt, so an unset var is never dbt's cryptic "env var required" error
+    # in practice).
+    databricks:
+      type: databricks
+      host: "{{ env_var('DATABRICKS_SERVER_HOSTNAME', '') }}"
+      http_path: "{{ env_var('DATABRICKS_HTTP_PATH', '') }}"
+      token: "{{ env_var('DATABRICKS_TOKEN', '') }}"
+      catalog: "{{ env_var('AUDIT_DBX_CATALOG', '') }}"
+      schema: db_audit
+      threads: 4

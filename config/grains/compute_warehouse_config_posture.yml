@@ -1,0 +1,7 @@
+# config/grains/compute_warehouse_config_posture.yml -- P3-POSTURE. Grain = the query's own key
+# columns ONLY; the generator prepends window_days (DEC-24). One row per live (non-deleted)
+# warehouse: the body dedupes system.compute.warehouses with ROW_NUMBER() OVER (PARTITION BY
+# warehouse_id ORDER BY change_time DESC) WHERE rn = 1 AND delete_time IS NULL, the same SCD2
+# shape sql_warehouse_config_current uses (config/grains/compute_snapshots.yml) -- warehouse_id is
+# a globally-unique GUID, so no workspace_id is needed in the grain.
+compute_warehouse_config_posture: [warehouse_id]

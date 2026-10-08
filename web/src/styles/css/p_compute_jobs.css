@@ -1,0 +1,245 @@
+/* Compute + Jobs page styles (this lane's own file). */
+
+/* ─────────── KPI cards (4 per sub-tab, DEC-69: label + big mono value + 1-2 plain lines) ─────────── */
+.cj-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 14px; }
+@media (max-width: 900px) { .cj-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .cj-kpis { grid-template-columns: 1fr; } }
+.cj-kpi { display: flex; flex-direction: column; gap: 5px; }
+.cj-kpi-label { font-size: var(--fs-sm); font-weight: 600; color: var(--text-2); }
+.cj-kpi-value { font-family: var(--f-mono); font-size: 25px; font-weight: 500; letter-spacing: -.01em; color: var(--text); line-height: 1.1; }
+.cj-kpi-value.crit { color: var(--st-crit-ink); }
+.cj-kpi-value.warn { color: var(--st-warn-ink); }
+.cj-kpi-note { font-size: var(--fs-sm); line-height: 1.4; color: var(--text-3); }
+.cj-kpi-link { font-size: var(--fs-sm); font-weight: 500; background: none; border: none; padding: 0; color: var(--link); cursor: pointer; text-align: left; font: inherit; }
+.cj-kpi-link:hover { text-decoration: underline; }
+
+/* ─────────── Two-up chart row ─────────── */
+.cj-charts-2 { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 14px; margin-bottom: 14px; }
+@media (max-width: 900px) { .cj-charts-2 { grid-template-columns: 1fr; } }
+.cj-card-subtitle { display: flex; gap: 14px; font-size: 12px; color: var(--text-3); margin-bottom: 10px; flex-wrap: wrap; }
+.cj-legend-sw { display: inline-flex; align-items: center; gap: 5px; }
+.cj-legend-sw .sw { width: 9px; height: 9px; border-radius: 2px; display: inline-block; }
+
+/* ─────────── Warehouse running-time chart (busy / idle>1min / short pause) ─────────── */
+.cj-runtime-row { display: grid; grid-template-columns: minmax(110px, 200px) minmax(0, 1fr) 56px; gap: 10px; align-items: center; font-size: 12.5px; margin-bottom: 8px; }
+.cj-runtime-name { font-weight: 600; color: var(--text); overflow: hidden; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.cj-runtime-track {
+  position: relative; height: 16px; border-radius: 2px; background: var(--surface-2);
+  background-image: repeating-linear-gradient(90deg, transparent 0, transparent calc(20% - 1px), var(--border-subtle) calc(20% - 1px), var(--border-subtle) 20%);
+  overflow: hidden;
+}
+.cj-runtime-fill { display: flex; height: 100%; }
+.cj-runtime-seg-busy { background: var(--st-ok); height: 100%; }
+.cj-runtime-seg-idle { background: var(--st-crit); height: 100%; }
+.cj-runtime-seg-short { background: var(--border-strong); height: 100%; opacity: .55; }
+.cj-runtime-total { font-family: var(--f-mono); font-size: 12px; text-align: right; color: var(--text-2); }
+.cj-runtime-axis { display: flex; justify-content: space-between; font-family: var(--f-mono); font-size: 11px; color: var(--text-faint); border-top: 1px solid var(--border); padding-top: 4px; margin: 2px 0 8px 140px; }
+.cj-chart-takeaway { font-size: 12.5px; line-height: 1.5; color: var(--text-3); margin-top: 6px; }
+
+/* ─────────── Autoscale-churn mini bars ─────────── */
+.cj-churn-row { display: grid; grid-template-columns: minmax(70px, 120px) minmax(0, 1fr) 76px; gap: 10px; align-items: center; font-size: 12.5px; margin-bottom: 7px; }
+.cj-churn-name { color: var(--text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cj-churn-track { height: 8px; border-radius: 2px; background: var(--surface-2); }
+.cj-churn-fill { height: 100%; border-radius: 2px; background: var(--seq-1); }
+.cj-churn-value { font-family: var(--f-mono); font-size: 12px; text-align: right; color: var(--text-2); }
+
+/* ─────────── Caveat / known-limitation note (an inline explanation, not a status) ─────────── */
+.cj-caveat { display: flex; gap: 8px; align-items: flex-start; padding: 9px 11px; border-radius: var(--radius-sm); background: var(--surface-2); font-size: 12px; line-height: 1.5; color: var(--text-3); margin-top: 10px; }
+.cj-caveat svg { flex: none; margin-top: 2px; color: var(--text-faint); }
+
+/* ─────────── Per-warehouse table ─────────── */
+.cj-wh-table { display: flex; flex-direction: column; }
+.cj-wh-head, .cj-wh-row {
+  display: grid; grid-template-columns: minmax(120px, 1.3fr) 76px minmax(90px, 1fr) 76px 108px minmax(140px, 1.6fr);
+  gap: 12px; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--border-subtle);
+}
+.cj-wh-head { font-size: 11px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--text-3); }
+.cj-wh-row:last-child { border-bottom: none; }
+.cj-wh-name { font-weight: 600; color: var(--text); font-size: 13px; }
+.cj-wh-meta { font-size: 11.5px; color: var(--text-3); }
+.cj-wh-autostop { font-family: var(--f-mono); font-size: 12.5px; text-align: right; }
+.cj-wh-autostop.crit { color: var(--st-crit-ink); }
+.cj-wh-idle-row { display: flex; align-items: center; gap: 7px; }
+.cj-wh-idle-track { flex: 1; height: 7px; border-radius: 2px; background: var(--surface-2); }
+.cj-wh-idle-fill { height: 100%; border-radius: 2px; background: var(--st-crit); }
+.cj-wh-idle-pct { font-family: var(--f-mono); font-size: 12px; width: 34px; text-align: right; flex: none; }
+.cj-wh-usd { font-family: var(--f-mono); font-size: 13px; text-align: right; color: var(--st-crit-ink); }
+.cj-wh-fix { font-size: 12.5px; line-height: 1.4; color: var(--text-2); }
+@media (max-width: 900px) {
+  .cj-wh-head { display: none; }
+  .cj-wh-row { grid-template-columns: 1fr; gap: 4px; }
+}
+
+/* ─────────── Auto-stop churn table ─────────── */
+.cj-asc-table { display: flex; flex-direction: column; }
+.cj-asc-head, .cj-asc-row {
+  display: grid; grid-template-columns: minmax(120px, 1.3fr) 130px 118px 84px 84px 108px;
+  gap: 12px; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--border-subtle);
+}
+.cj-asc-head { font-size: 11px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--text-3); }
+.cj-asc-row:last-child { border-bottom: none; }
+.cj-asc-name { font-weight: 600; color: var(--text); font-size: 13px; }
+.cj-asc-meta { font-size: 11.5px; color: var(--text-3); }
+.cj-asc-num { font-family: var(--f-mono); font-size: 12.5px; text-align: right; }
+.cj-asc-usd { font-family: var(--f-mono); font-size: 13px; text-align: right; color: var(--st-crit-ink); }
+@media (max-width: 900px) {
+  .cj-asc-head { display: none; }
+  .cj-asc-row { grid-template-columns: 1fr; gap: 4px; }
+}
+
+/* ─────────── Cache reuse table (reuses .cj-wh-idle-* for the reuse-share bar) ─────────── */
+.cj-cr-table { display: flex; flex-direction: column; }
+.cj-cr-head, .cj-cr-row {
+  display: grid; grid-template-columns: minmax(120px, 1.3fr) 90px minmax(100px, 1fr) 108px 92px 108px;
+  gap: 12px; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--border-subtle);
+}
+.cj-cr-head { font-size: 11px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--text-3); }
+.cj-cr-row:last-child { border-bottom: none; }
+@media (max-width: 900px) {
+  .cj-cr-head { display: none; }
+  .cj-cr-row { grid-template-columns: 1fr; gap: 4px; }
+}
+
+/* ─────────── Config sub-tab: flagged-resource mini table ─────────── */
+.cj-flag-row { display: grid; grid-template-columns: 100px minmax(0, 1.3fr) minmax(0, 1fr); gap: 12px; align-items: baseline; padding: 8px 0; border-bottom: 1px solid var(--border-subtle); font-size: 12.5px; }
+.cj-flag-row:last-child { border-bottom: none; }
+.cj-flag-name { font-weight: 600; color: var(--text); min-width: 0; overflow-wrap: anywhere; }
+.cj-flag-sub { display: block; font-weight: 400; color: var(--text-3); font-size: var(--fs-xs); }
+.cj-flag-reasons { color: var(--text-2); line-height: 1.4; overflow-wrap: anywhere; min-width: 0; }
+.cj-flag-row-jobs { grid-template-columns: minmax(140px, 1fr) 140px minmax(0, 2fr); }
+/* A job name that opens the job panel, styled as the name it replaces. */
+.cj-name-link { background: none; border: 0; padding: 0; font: inherit; font-weight: 600; color: var(--text); text-align: left; cursor: pointer; }
+.cj-name-link:hover { text-decoration: underline; }
+@media (max-width: 480px) {
+  .cj-flag-row, .cj-flag-row-jobs { grid-template-columns: 1fr; }
+}
+
+/* ─────────── Jobs on bigger machines than they need (Compute fit) ─────────── */
+.cj-oversized-table { display: flex; flex-direction: column; }
+.cj-oversized-head, .cj-oversized-row {
+  display: grid; grid-template-columns: minmax(140px, 1.4fr) 104px 120px minmax(140px, 1.3fr) 92px;
+  gap: 12px; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--border-subtle);
+}
+.cj-oversized-head { font-size: 11px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--text-3); }
+.cj-oversized-row:last-child { border-bottom: none; }
+.cj-oversized-name { font-weight: 600; color: var(--text); font-size: 13px; }
+.cj-oversized-meta { font-size: 11.5px; color: var(--text-3); }
+.cj-oversized-pct { font-family: var(--f-mono); font-size: 12.5px; }
+.cj-oversized-action { font-size: 12.5px; color: var(--text-2); line-height: 1.35; }
+.cj-oversized-usd { font-family: var(--f-mono); font-size: 13px; text-align: right; color: var(--st-warn-ink); }
+@media (max-width: 900px) {
+  .cj-oversized-head { display: none; }
+  .cj-oversized-row { grid-template-columns: 1fr; gap: 4px; }
+}
+
+/* ─────────── Jobs: table of jobs with failed runs ─────────── */
+.cj-job-table { display: flex; flex-direction: column; }
+.cj-job-head {
+  display: grid; grid-template-columns: 108px minmax(140px, 1.4fr) 172px 66px minmax(120px, 1.5fr) 66px 16px;
+  gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--border-subtle);
+  font-size: 11px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--text-3);
+}
+.cj-job-row {
+  display: grid; grid-template-columns: 108px minmax(140px, 1.4fr) 172px 66px minmax(120px, 1.5fr) 66px 16px;
+  gap: 12px; align-items: center; padding: 10px 0; border: none; border-bottom: 1px solid var(--border-subtle);
+  background: none; width: 100%; text-align: left; font: inherit; color: var(--text); cursor: pointer;
+}
+.cj-job-row:last-child { border-bottom: none; }
+.cj-job-row:hover { background: var(--surface-2); }
+.cj-job-row.active { background: var(--st-na-tint); box-shadow: inset 3px 0 0 var(--accent); }
+.cj-job-name { font-weight: 600; font-size: 13px; }
+.cj-job-meta { font-size: 11.5px; color: var(--text-3); }
+.cj-job-failed { font-family: var(--f-mono); font-size: 12.5px; text-align: right; }
+.cj-job-reason { font-size: 12px; color: var(--text-2); line-height: 1.35; }
+.cj-job-usd { font-family: var(--f-mono); font-size: 12.5px; text-align: right; color: var(--st-crit-ink); }
+.cj-job-chevron { color: var(--text-faint); }
+@media (max-width: 900px) {
+  .cj-job-head { display: none; }
+  .cj-job-row { grid-template-columns: 1fr; gap: 4px; }
+}
+
+/* ─────────── Runs-by-result stacked bar + legend ─────────── */
+.cj-results-legend { display: flex; flex-wrap: wrap; gap: 8px 22px; margin-top: 10px; }
+.cj-results-legend-item { display: flex; align-items: center; gap: 7px; font-size: 12.5px; color: var(--text-2); }
+.cj-results-legend-item .sw { width: 9px; height: 9px; border-radius: 2px; display: inline-block; flex: none; }
+.cj-results-legend-item .n { font-family: var(--f-mono); font-weight: 500; }
+.cj-results-legend-item .hint { font-size: 11.5px; color: var(--text-faint); }
+
+/* ─────────── Job run panel (right drawer, ~440px) ─────────── */
+.jrp-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.32); z-index: 70; }
+.jrp-panel {
+  position: fixed; top: 0; right: 0; bottom: 0; width: 440px; max-width: 92vw; z-index: 71;
+  background: var(--surface); border-left: 1px solid var(--border); box-shadow: -12px 0 32px rgba(0,0,0,.18);
+  display: flex; flex-direction: column; overflow-y: auto;
+}
+.jrp-head { display: flex; flex-direction: column; gap: 8px; padding: 18px 20px 14px; border-bottom: 1px solid var(--border-subtle); flex: none; }
+.jrp-head-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.jrp-close { width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--text-2); cursor: pointer; flex: none; }
+.jrp-close:hover { border-color: var(--border-strong); color: var(--text); }
+.jrp-title { font-family: var(--f-serif); font-size: 21px; font-weight: 500; margin: 0; color: var(--text); }
+.jrp-sub { font-size: 12.5px; color: var(--text-3); }
+.jrp-body { display: flex; flex-direction: column; gap: 18px; padding: 16px 20px 26px; }
+.jrp-kpis { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.jrp-kpi { display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border: 1px solid var(--border-subtle); border-radius: 7px; }
+.jrp-kpi-label { font-size: 11.5px; color: var(--text-3); }
+.jrp-kpi-value { font-family: var(--f-mono); font-size: 16px; font-weight: 500; color: var(--text); }
+.jrp-kpi-value.crit { color: var(--st-crit-ink); }
+.jrp-failure { display: flex; flex-direction: column; gap: 6px; padding: 12px 14px; border-radius: 9px; background: var(--st-crit-tint); }
+.jrp-failure-label { font-size: 11px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--st-crit-ink); }
+.jrp-failure-title { font-size: 14.5px; font-weight: 600; color: var(--text); }
+.jrp-failure-body { font-size: 12.5px; line-height: 1.5; color: var(--text-2); }
+.jrp-section-head { display: flex; justify-content: space-between; align-items: baseline; padding-bottom: 6px; }
+.jrp-section-title { font-size: 13.5px; font-weight: 600; color: var(--text); margin: 0; }
+.jrp-section-hint { font-size: 11.5px; color: var(--text-3); }
+.jrp-run-row { display: grid; grid-template-columns: 10px 90px minmax(0, 1fr) 56px 60px; gap: 9px; align-items: center; padding: 6px 0; border-top: 1px solid var(--border-subtle); font-size: 12.5px; }
+.jrp-run-row:first-child { border-top: none; }
+.jrp-run-dot { width: 9px; height: 9px; border-radius: 2px; }
+.jrp-run-when { font-family: var(--f-mono); font-size: 11.5px; color: var(--text-2); }
+.jrp-run-result { font-weight: 600; }
+.jrp-run-result.fail { color: var(--st-crit-ink); }
+.jrp-run-value { font-family: var(--f-mono); font-size: 11.5px; text-align: right; color: var(--text-2); }
+.jrp-owner-grid { display: grid; grid-template-columns: 108px minmax(0, 1fr); gap: 6px 10px; font-size: 12.5px; }
+.jrp-owner-key { color: var(--text-3); }
+.jrp-todo { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 7px; font-size: 12.5px; line-height: 1.5; color: var(--text-2); }
+.jrp-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.jrp-btn-primary { height: 32px; padding: 0 13px; border: none; border-radius: 6px; background: var(--accent); color: var(--accent-contrast); font-size: 12.5px; font-weight: 500; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; }
+.jrp-btn-secondary { height: 32px; padding: 0 13px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--text-2); font-size: 12.5px; cursor: pointer; }
+.jrp-gap-note { font-size: 11.5px; color: var(--text-faint); }
+.jrp-sql-error { font-family: var(--f-mono); font-size: 11px; color: var(--text-3); padding: 2px 0 4px 19px; word-break: break-word; }
+.jrp-fail-groups { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 5px; font-size: 12.5px; line-height: 1.4; color: var(--text-2); }
+.jrp-changes-table { display: flex; flex-direction: column; }
+.jrp-changes-row {
+  display: grid; grid-template-columns: minmax(90px, 1fr) minmax(0, 2fr);
+  gap: 4px 10px; padding: 7px 0; border-top: 1px solid var(--border-subtle); font-size: 12.5px;
+}
+.jrp-changes-row:first-child { border-top: none; }
+.jrp-changes-attr { color: var(--text-3); }
+.jrp-changes-diff { color: var(--text-2); }
+.jrp-changes-diff.changed { color: var(--st-warn-ink); font-weight: 600; }
+/* Band rows (auto-stop settings, start times): one bar per band, an optional part inside it. */
+.cj-band-row { display: grid; grid-template-columns: minmax(150px, 220px) minmax(0, 1fr) minmax(170px, 250px); gap: 14px; align-items: center; padding: 8px 0; border-top: 1px solid var(--border-subtle); font-size: var(--fs-sm); }
+.cj-band-label { display: flex; flex-direction: column; min-width: 0; }
+.cj-band-label span { font-size: var(--fs-xs); color: var(--text-3); }
+.cj-band-track { height: 14px; }
+.cj-band-total { height: 100%; min-width: 2px; background: var(--border-strong); border-radius: 2px; overflow: hidden; }
+.cj-band-total.solid { background: var(--c1); }
+.cj-band-part { height: 100%; background: var(--st-crit); }
+.cj-band-val { color: var(--text-2); text-align: right; }
+.cj-band-val b { color: var(--text); }
+.cj-band-note { font-size: var(--fs-xs); color: var(--text-3); margin-top: 8px; }
+@media (max-width: 700px) {
+  .cj-band-row { grid-template-columns: 1fr; gap: 6px; }
+  .cj-band-val { text-align: left; }
+}
+/* Flagged jobs under compute pressure: the same rows as the oversized table, with a cause column. */
+.cj-oversized-head.cj-pressure-grid, .cj-oversized-row.cj-pressure-grid {
+  grid-template-columns: minmax(150px, 1.4fr) 120px 112px 112px minmax(170px, 1.5fr) 80px; align-items: start;
+}
+.cj-pressure-grid .cj-oversized-meta { overflow-wrap: anywhere; }
+@media (max-width: 900px) {
+  .cj-oversized-row.cj-pressure-grid { grid-template-columns: 1fr 1fr; }
+}
+/* Several labelled numbers in one cell, one per line; red at or over the check's limit. */
+.cj-stack { display: flex; flex-direction: column; gap: 2px; font-family: var(--f-mono); font-size: 12.5px; }
+.cj-stack-lbl { display: inline-block; min-width: 52px; font-family: var(--f-sans); font-size: 11.5px; color: var(--text-3); }
+.cj-over { color: var(--st-crit-ink); font-weight: 600; }

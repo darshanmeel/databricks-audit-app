@@ -1,0 +1,43 @@
+/* Checks list: status tabs, a Critical row's fix-now line, the materiality-floor line and muted
+   below-floor rows. Theme tokens only. */
+
+.check-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin: 10px 0 4px; }
+.check-tab {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 12px; border-radius: 999px; border: 1px solid var(--border);
+  background: var(--panel); color: var(--text-dim); font-size: 13px; cursor: pointer;
+  transition: border-color .12s ease, background .12s ease, color .12s ease;
+}
+.check-tab:hover { border-color: var(--focus); }
+.check-tab-count { font-family: var(--f-mono); font-size: 12px; color: var(--text-faint); }
+.check-tab.active { color: var(--text); background: var(--surface-2); font-weight: 600; }
+.check-tab.active .check-tab-count { color: var(--text-dim); }
+.check-tab.zero:not(.active), .check-tab.zero:not(.active) .check-tab-count { color: var(--text-3); }
+
+/* A selected tab also reads a little of its own status colour, the same pill/badge language used
+   everywhere else in the app -- never colour alone, since the bold weight and solid border above
+   already mark the active tab on their own. */
+.check-tab.tone-coral.active { border-color: var(--st-crit); background: var(--st-crit-tint); color: var(--st-crit-ink); }
+.check-tab.tone-amber.active { border-color: var(--st-warn); background: var(--st-warn-tint); color: var(--st-warn-ink); }
+.check-tab.tone-sage.active { border-color: var(--st-ok); background: var(--st-ok-tint); color: var(--st-ok-ink); }
+.check-tab.tone-lavender.active { border-color: var(--st-na); background: var(--st-na-tint); color: var(--st-na-ink); }
+.check-tab.tone-coral.active .check-tab-count,
+.check-tab.tone-amber.active .check-tab-count,
+.check-tab.tone-sage.active .check-tab-count,
+.check-tab.tone-lavender.active .check-tab-count { color: inherit; opacity: .75; }
+
+/* A Critical row's own first action, under its title -- reads like the finding page's own
+   fix-line (finding_detail.tsx), just smaller since it now sits inside a table cell. */
+.ck-fixnow { color: var(--text-2); font-size: 12.5px; margin-top: 3px; line-height: 1.4; }
+.ck-fixnow b { color: var(--text); }
+
+/* The reason a row sits in Not assessed/No data/OK-but-ranked, inline next to its title --
+   the same wording and colour findings_table.tsx's own collapsed groups used to show. */
+.ck-reason { color: var(--text-faint); font-size: 12px; margin-left: 6px; font-weight: 400; }
+
+/* The materiality-floor note under a finding's verdict line (finding_detail.tsx's FloorLine). */
+.floor-line { font-size: 12.5px; margin: 4px 0 2px; }
+
+/* A row a materiality floor suppressed (real CRITICAL/WARN, judged too small to act on) --
+   left in the raw table for a reader who wants to see everything, just visibly de-emphasised. */
+tr.row-below-floor td { color: var(--text-faint); }

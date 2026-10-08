@@ -1,0 +1,35 @@
+{{ config(enabled=(target.type == "databricks"), materialized=("table" if var("direct_mode", "run") == "table" else "direct_check"), schema="audit_direct", tags=['finding', 'domain:performance', 'tier:standard', 'databricks_direct']) }}
+-- generated from app/queries/vendored/performance/query_shuffle_write_amplification.sql; fix the source query and regenerate, never edit this file.
+{%- set windows = var('windows', [7, 30, 90]) %}
+{%- for w in windows %}
+SELECT {{ w }} AS window_days, q.*
+FROM (
+SELECT date(start_time) AS day, workspace_id, compute.type AS compute_type, compute.warehouse_id AS warehouse_id,
+       {{ mask_user('executed_by', 'MAX(executed_by_user_id)') }} AS executed_by,
+       statement_type,
+       COUNT(*) AS query_count,
+       SUM(shuffle_read_bytes) AS shuffle_read_bytes_sum,
+       SUM(written_bytes)      AS written_bytes_sum,
+       SUM(written_rows)       AS written_rows_sum,
+       SUM(written_files)      AS written_files_sum,
+       SUM(read_bytes)         AS read_bytes_sum,
+       -- status: worst-first band on shuffle volume OR small-file write amplification (field heuristic;
+       -- {{ param('query_shuffle_write_amplification', 'warn_shuffle_gb', 50) }} / {{ param('query_shuffle_write_amplification', 'crit_shuffle_gb', 200) }} / {{ param('query_shuffle_write_amplification', 'warn_avg_file_mb', 32) }} / {{ param('query_shuffle_write_amplification', 'crit_avg_file_mb', 8) }}).
+       CASE
+         WHEN SUM(shuffle_read_bytes) >= {{ param('query_shuffle_write_amplification', 'crit_shuffle_gb', 200) }} * 1e9
+           OR (SUM(written_files) > 0 AND SUM(written_bytes) / SUM(written_files) < {{ param('query_shuffle_write_amplification', 'crit_avg_file_mb', 8) }} * 1e6) THEN 'CRITICAL'
+         WHEN SUM(shuffle_read_bytes) >= {{ param('query_shuffle_write_amplification', 'warn_shuffle_gb', 50) }} * 1e9
+           OR (SUM(written_files) > 0 AND SUM(written_bytes) / SUM(written_files) < {{ param('query_shuffle_write_amplification', 'warn_avg_file_mb', 32) }} * 1e6) THEN 'WARN'
+         ELSE 'OK'
+       END AS status
+FROM {{ source('system_query', 'history') }}
+WHERE start_time >= {{ audit_today() }} - INTERVAL {{ w }} DAYS
+  AND start_time < {{ audit_today() }}
+  AND (shuffle_read_bytes > 0 OR written_bytes > 0)
+GROUP BY date(start_time), workspace_id, compute.type, compute.warehouse_id, executed_by, statement_type
+ORDER BY shuffle_read_bytes_sum DESC
+) q
+{%- if not loop.last %}
+UNION ALL
+{%- endif %}
+{%- endfor %}

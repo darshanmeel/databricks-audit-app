@@ -1,0 +1,2074 @@
+{
+  "models": [
+    {
+      "domain": "governance_access",
+      "finding_model": "f_access_admin_role_change_events",
+      "model": "d_access_admin_role_change_events",
+      "path": "dbt/models/databricks_direct/governance_access/d_access_admin_role_change_events.sql",
+      "query_id": "access_admin_role_change_events",
+      "tags": [
+        "finding",
+        "domain:governance_access",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "governance_access",
+      "finding_model": "f_access_broad_grants",
+      "model": "d_access_broad_grants",
+      "path": "dbt/models/databricks_direct/governance_access/d_access_broad_grants.sql",
+      "query_id": "access_broad_grants",
+      "tags": [
+        "finding",
+        "domain:governance_access",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "governance_access",
+      "finding_model": "f_access_classification_coverage",
+      "model": "d_access_classification_coverage",
+      "path": "dbt/models/databricks_direct/governance_access/d_access_classification_coverage.sql",
+      "query_id": "access_classification_coverage",
+      "tags": [
+        "finding",
+        "domain:governance_access",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "governance_access",
+      "finding_model": "f_access_classified_unmasked",
+      "model": "d_access_classified_unmasked",
+      "path": "dbt/models/databricks_direct/governance_access/d_access_classified_unmasked.sql",
+      "query_id": "access_classified_unmasked",
+      "tags": [
+        "finding",
+        "domain:governance_access",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "governance_access",
+      "finding_model": "f_access_column_lineage_sensitive_reach",
+      "model": "d_access_column_lineage_sensitive_reach",
+      "path": "dbt/models/databricks_direct/governance_access/d_access_column_lineage_sensitive_reach.sql",
+      "query_id": "access_column_lineage_sensitive_reach",
+      "tags": [
+        "finding",
+        "domain:governance_access",
+        "tier:deep",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "governance_access",
+      "finding_model": "f_access_column_masks_inventory",
+      "model": "d_access_column_masks_inventory",
+      "path": "dbt/models/databricks_direct/governance_access/d_access_column_masks_inventory.sql",
+      "query_id": "access_column_masks_inventory",
+      "tags": [
+        "inventory",
+        "domain:governance_access",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "governance_access",
+      "finding_model": "f_access_data_classification_inventory",
+      "model": "d_access_data_classification_inventory",
+      "path": "dbt/models/databricks_direct/governance_access/d_access_data_classification_inventory.sql",
+      "query_id": "access_data_classification_inventory",
+      "tags": [
+        "inventory",
+        "domain:governance_access",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "governance_access",
+      "finding_model": "f_access_dead_table_candidates",
+      "model": "d_access_dead_table_candidates",
+      "path": "dbt/models/databricks_direct/governance_access/d_access_dead_table_candidates.sql",
+      "query_id": "access_dead_table_candidates",
+      "tags": [
+        "finding",
+        "domain:governance_access",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "governance_access",
+      "finding_model": "f_access_delta_sharing_exposure",
+      "model": "d_access_delta_sharing_exposure",
+      "path": "dbt/models/databricks_direct/governance_access/d_access_delta_sharing_exposure.sql",
+      "query_id": "access_delta_sharing_exposure",
+      "tags": [
+        "finding",
+        "domain:governance_access",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "governance_access",
+      "finding_model": "f_access_grants_inventory",
+      "model": "d_access_grants_inventory",
+      "path": "dbt/models/databricks_direct/governance_access/d_access_grants_inventory.sql",
+      "query_id": "access_grants_inventory",
+      "tags": [
+        "inventory",
+        "domain:governance_access",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "governance_access",
+      "finding_model": "f_access_grants_inventory_extended",
+      "model": "d_access_grants_inventory_extended",
+      "path": "dbt/models/databricks_direct/governance_access/d_access_grants_inventory_extended.sql",
+      "query_id": "access_grants_inventory_extended",
+      "tags": [
+        "inventory",
+        "domain:governance_access",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "governance_access",
+      "finding_model": "f_access_login_concentration",
+      "model": "d_access_login_concentration",
+      "path": "dbt/models/databricks_direct/governance_access/d_access_login_concentration.sql",
+      "query_id": "access_login_concentration",
+      "tags": [
+        "finding",
+        "domain:governance_access",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "governance_access",
+      "finding_model": "f_access_network_inbound_denials",
+      "model": "d_access_network_inbound_denials",
+      "path": "dbt/models/databricks_direct/governance_access/d_access_network_inbound_denials.sql",
+      "query_id": "access_network_inbound_denials",
+      "tags": [
+        "finding",
+        "domain:governance_access",
+        "tier:deep",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "governance_access",
+      "finding_model": "f_access_network_outbound_denials",
+      "model": "d_access_network_outbound_denials",
+      "path": "dbt/models/databricks_direct/governance_access/d_access_network_outbound_denials.sql",
+      "query_id": "access_network_outbound_denials",
+      "tags": [
+        "finding",
+        "domain:governance_access",
+        "tier:deep",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "governance_access",
+      "finding_model": "f_access_pii_outside_tables",
+      "model": "d_access_pii_outside_tables",
+      "path": "dbt/models/databricks_direct/governance_access/d_access_pii_outside_tables.sql",
+      "query_id": "access_pii_outside_tables",
+      "tags": [
+        "finding",
+        "domain:governance_access",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "governance_access",
+      "finding_model": "f_access_pii_propagation_untagged",
+      "model": "d_access_pii_propagation_untagged",
+      "path": "dbt/models/databricks_direct/governance_access/d_access_pii_propagation_untagged.sql",
+      "query_id": "access_pii_propagation_untagged",
+      "tags": [
+        "finding",
+        "domain:governance_access",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "governance_access",
+      "finding_model": "f_access_row_filters_inventory",
+      "model": "d_access_row_filters_inventory",
+      "path": "dbt/models/databricks_direct/governance_access/d_access_row_filters_inventory.sql",
+      "query_id": "access_row_filters_inventory",
+      "tags": [
+        "inventory",
+        "domain:governance_access",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "governance_access",
+      "finding_model": "f_access_runas_escalation",
+      "model": "d_access_runas_escalation",
+      "path": "dbt/models/databricks_direct/governance_access/d_access_runas_escalation.sql",
+      "query_id": "access_runas_escalation",
+      "tags": [
+        "finding",
+        "domain:governance_access",
+        "tier:deep",
+        "stars",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "governance_access",
+      "finding_model": "f_access_sensitive_table_reads",
+      "model": "d_access_sensitive_table_reads",
+      "path": "dbt/models/databricks_direct/governance_access/d_access_sensitive_table_reads.sql",
+      "query_id": "access_sensitive_table_reads",
+      "tags": [
+        "finding",
+        "domain:governance_access",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "governance_access",
+      "finding_model": "f_access_source_table_coverage",
+      "model": "d_access_source_table_coverage",
+      "path": "dbt/models/databricks_direct/governance_access/d_access_source_table_coverage.sql",
+      "query_id": "access_source_table_coverage",
+      "tags": [
+        "finding",
+        "domain:governance_access",
+        "tier:lite",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "governance_access",
+      "finding_model": "f_access_table_lineage_blast_radius",
+      "model": "d_access_table_lineage_blast_radius",
+      "path": "dbt/models/databricks_direct/governance_access/d_access_table_lineage_blast_radius.sql",
+      "query_id": "access_table_lineage_blast_radius",
+      "tags": [
+        "finding",
+        "domain:governance_access",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "governance_access",
+      "finding_model": "f_access_tags_inventory",
+      "model": "d_access_tags_inventory",
+      "path": "dbt/models/databricks_direct/governance_access/d_access_tags_inventory.sql",
+      "query_id": "access_tags_inventory",
+      "tags": [
+        "inventory",
+        "domain:governance_access",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "governance_access",
+      "finding_model": "f_access_vector_search_traffic",
+      "model": "d_access_vector_search_traffic",
+      "path": "dbt/models/databricks_direct/governance_access/d_access_vector_search_traffic.sql",
+      "query_id": "access_vector_search_traffic",
+      "tags": [
+        "inventory",
+        "domain:governance_access",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "governance_access",
+      "finding_model": "f_access_views_inventory",
+      "model": "d_access_views_inventory",
+      "path": "dbt/models/databricks_direct/governance_access/d_access_views_inventory.sql",
+      "query_id": "access_views_inventory",
+      "tags": [
+        "inventory",
+        "domain:governance_access",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "governance_access",
+      "finding_model": "f_access_volumes_inventory",
+      "model": "d_access_volumes_inventory",
+      "path": "dbt/models/databricks_direct/governance_access/d_access_volumes_inventory.sql",
+      "query_id": "access_volumes_inventory",
+      "tags": [
+        "finding",
+        "domain:governance_access",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "performance",
+      "finding_model": "f_audit_self_cost",
+      "model": "d_audit_self_cost",
+      "path": "dbt/models/databricks_direct/performance/d_audit_self_cost.sql",
+      "query_id": "audit_self_cost",
+      "tags": [
+        "inventory",
+        "domain:performance",
+        "tier:lite",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "compute",
+      "finding_model": "f_classic_clusters_config_current",
+      "model": "d_classic_clusters_config_current",
+      "path": "dbt/models/databricks_direct/compute/d_classic_clusters_config_current.sql",
+      "query_id": "classic_clusters_config_current",
+      "tags": [
+        "inventory",
+        "domain:compute",
+        "tier:lite",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "serving_ai",
+      "finding_model": "f_compute_ai_gateway_usage",
+      "model": "d_compute_ai_gateway_usage",
+      "path": "dbt/models/databricks_direct/serving_ai/d_compute_ai_gateway_usage.sql",
+      "query_id": "compute_ai_gateway_usage",
+      "tags": [
+        "inventory",
+        "domain:serving_ai",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "compute",
+      "finding_model": "f_compute_cluster_config_posture",
+      "model": "d_compute_cluster_config_posture",
+      "path": "dbt/models/databricks_direct/compute/d_compute_cluster_config_posture.sql",
+      "query_id": "compute_cluster_config_posture",
+      "tags": [
+        "finding",
+        "domain:compute",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "compute",
+      "finding_model": "f_compute_idle_node_ratio",
+      "model": "d_compute_idle_node_ratio",
+      "path": "dbt/models/databricks_direct/compute/d_compute_idle_node_ratio.sql",
+      "query_id": "compute_idle_node_ratio",
+      "tags": [
+        "finding",
+        "domain:compute",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "serving_ai",
+      "finding_model": "f_compute_serving_dormant_endpoints",
+      "model": "d_compute_serving_dormant_endpoints",
+      "path": "dbt/models/databricks_direct/serving_ai/d_compute_serving_dormant_endpoints.sql",
+      "query_id": "compute_serving_dormant_endpoints",
+      "tags": [
+        "finding",
+        "domain:serving_ai",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "serving_ai",
+      "finding_model": "f_compute_serving_endpoint_cost_status",
+      "model": "d_compute_serving_endpoint_cost_status",
+      "path": "dbt/models/databricks_direct/serving_ai/d_compute_serving_endpoint_cost_status.sql",
+      "query_id": "compute_serving_endpoint_cost_status",
+      "tags": [
+        "finding",
+        "domain:serving_ai",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "serving_ai",
+      "finding_model": "f_compute_serving_endpoint_usage",
+      "model": "d_compute_serving_endpoint_usage",
+      "path": "dbt/models/databricks_direct/serving_ai/d_compute_serving_endpoint_usage.sql",
+      "query_id": "compute_serving_endpoint_usage",
+      "tags": [
+        "inventory",
+        "domain:serving_ai",
+        "tier:deep",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "compute",
+      "finding_model": "f_compute_warehouse_autoscale_churn",
+      "model": "d_compute_warehouse_autoscale_churn",
+      "path": "dbt/models/databricks_direct/compute/d_compute_warehouse_autoscale_churn.sql",
+      "query_id": "compute_warehouse_autoscale_churn",
+      "tags": [
+        "finding",
+        "domain:compute",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "compute",
+      "finding_model": "f_compute_warehouse_autostop_churn",
+      "model": "d_compute_warehouse_autostop_churn",
+      "path": "dbt/models/databricks_direct/compute/d_compute_warehouse_autostop_churn.sql",
+      "query_id": "compute_warehouse_autostop_churn",
+      "tags": [
+        "finding",
+        "domain:compute",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "compute",
+      "finding_model": "f_compute_warehouse_cache_reuse",
+      "model": "d_compute_warehouse_cache_reuse",
+      "path": "dbt/models/databricks_direct/compute/d_compute_warehouse_cache_reuse.sql",
+      "query_id": "compute_warehouse_cache_reuse",
+      "tags": [
+        "finding",
+        "domain:compute",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "compute",
+      "finding_model": "f_compute_warehouse_config_posture",
+      "model": "d_compute_warehouse_config_posture",
+      "path": "dbt/models/databricks_direct/compute/d_compute_warehouse_config_posture.sql",
+      "query_id": "compute_warehouse_config_posture",
+      "tags": [
+        "finding",
+        "domain:compute",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "compute",
+      "finding_model": "f_compute_warehouse_idle_gaps",
+      "model": "d_compute_warehouse_idle_gaps",
+      "path": "dbt/models/databricks_direct/compute/d_compute_warehouse_idle_gaps.sql",
+      "query_id": "compute_warehouse_idle_gaps",
+      "tags": [
+        "finding",
+        "domain:compute",
+        "tier:standard",
+        "stars",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "compute",
+      "finding_model": "f_compute_warehouse_idle_minutes",
+      "model": "d_compute_warehouse_idle_minutes",
+      "path": "dbt/models/databricks_direct/compute/d_compute_warehouse_idle_minutes.sql",
+      "query_id": "compute_warehouse_idle_minutes",
+      "tags": [
+        "finding",
+        "domain:compute",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "cost",
+      "finding_model": "f_cost_account_prices_raw",
+      "model": "d_cost_account_prices_raw",
+      "path": "dbt/models/databricks_direct/cost/d_cost_account_prices_raw.sql",
+      "query_id": "cost_account_prices_raw",
+      "tags": [
+        "inventory",
+        "domain:cost",
+        "tier:lite",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "cost",
+      "finding_model": "f_cost_actual_vs_list_by_sku",
+      "model": "d_cost_actual_vs_list_by_sku",
+      "path": "dbt/models/databricks_direct/cost/d_cost_actual_vs_list_by_sku.sql",
+      "query_id": "cost_actual_vs_list_by_sku",
+      "tags": [
+        "finding",
+        "domain:cost",
+        "tier:deep",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "cost",
+      "finding_model": "f_cost_audit_self_usage",
+      "model": "d_cost_audit_self_usage",
+      "path": "dbt/models/databricks_direct/cost/d_cost_audit_self_usage.sql",
+      "query_id": "cost_audit_self_usage",
+      "tags": [
+        "inventory",
+        "domain:cost",
+        "tier:lite",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "cost",
+      "finding_model": "f_cost_by_billing_origin_product",
+      "model": "d_cost_by_billing_origin_product",
+      "path": "dbt/models/databricks_direct/cost/d_cost_by_billing_origin_product.sql",
+      "query_id": "cost_by_billing_origin_product",
+      "tags": [
+        "inventory",
+        "domain:cost",
+        "tier:lite",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "cost",
+      "finding_model": "f_cost_by_compute_resource",
+      "model": "d_cost_by_compute_resource",
+      "path": "dbt/models/databricks_direct/cost/d_cost_by_compute_resource.sql",
+      "query_id": "cost_by_compute_resource",
+      "tags": [
+        "finding",
+        "domain:cost",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "cost",
+      "finding_model": "f_cost_by_hour_of_day",
+      "model": "d_cost_by_hour_of_day",
+      "path": "dbt/models/databricks_direct/cost/d_cost_by_hour_of_day.sql",
+      "query_id": "cost_by_hour_of_day",
+      "tags": [
+        "finding",
+        "domain:cost",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "cost",
+      "finding_model": "f_cost_by_job",
+      "model": "d_cost_by_job",
+      "path": "dbt/models/databricks_direct/cost/d_cost_by_job.sql",
+      "query_id": "cost_by_job",
+      "tags": [
+        "finding",
+        "domain:cost",
+        "tier:standard",
+        "stars",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "cost",
+      "finding_model": "f_cost_by_notebook",
+      "model": "d_cost_by_notebook",
+      "path": "dbt/models/databricks_direct/cost/d_cost_by_notebook.sql",
+      "query_id": "cost_by_notebook",
+      "tags": [
+        "finding",
+        "domain:cost",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "cost",
+      "finding_model": "f_cost_by_serving_endpoint",
+      "model": "d_cost_by_serving_endpoint",
+      "path": "dbt/models/databricks_direct/cost/d_cost_by_serving_endpoint.sql",
+      "query_id": "cost_by_serving_endpoint",
+      "tags": [
+        "inventory",
+        "domain:cost",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "cost",
+      "finding_model": "f_cost_chargeback_by_allocation_tag",
+      "model": "d_cost_chargeback_by_allocation_tag",
+      "path": "dbt/models/databricks_direct/cost/d_cost_chargeback_by_allocation_tag.sql",
+      "query_id": "cost_chargeback_by_allocation_tag",
+      "tags": [
+        "finding",
+        "domain:cost",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "cost",
+      "finding_model": "f_cost_chargeback_by_cluster",
+      "model": "d_cost_chargeback_by_cluster",
+      "path": "dbt/models/databricks_direct/cost/d_cost_chargeback_by_cluster.sql",
+      "query_id": "cost_chargeback_by_cluster",
+      "tags": [
+        "finding",
+        "domain:cost",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "cost",
+      "finding_model": "f_cost_chargeback_by_identity",
+      "model": "d_cost_chargeback_by_identity",
+      "path": "dbt/models/databricks_direct/cost/d_cost_chargeback_by_identity.sql",
+      "query_id": "cost_chargeback_by_identity",
+      "tags": [
+        "inventory",
+        "domain:cost",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "cost",
+      "finding_model": "f_cost_chargeback_by_job",
+      "model": "d_cost_chargeback_by_job",
+      "path": "dbt/models/databricks_direct/cost/d_cost_chargeback_by_job.sql",
+      "query_id": "cost_chargeback_by_job",
+      "tags": [
+        "finding",
+        "domain:cost",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "cost",
+      "finding_model": "f_cost_chargeback_by_service",
+      "model": "d_cost_chargeback_by_service",
+      "path": "dbt/models/databricks_direct/cost/d_cost_chargeback_by_service.sql",
+      "query_id": "cost_chargeback_by_service",
+      "tags": [
+        "finding",
+        "domain:cost",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "cost",
+      "finding_model": "f_cost_chargeback_by_sku",
+      "model": "d_cost_chargeback_by_sku",
+      "path": "dbt/models/databricks_direct/cost/d_cost_chargeback_by_sku.sql",
+      "query_id": "cost_chargeback_by_sku",
+      "tags": [
+        "finding",
+        "domain:cost",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "cost",
+      "finding_model": "f_cost_chargeback_by_tag",
+      "model": "d_cost_chargeback_by_tag",
+      "path": "dbt/models/databricks_direct/cost/d_cost_chargeback_by_tag.sql",
+      "query_id": "cost_chargeback_by_tag",
+      "tags": [
+        "inventory",
+        "domain:cost",
+        "tier:standard",
+        "stars",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "cost",
+      "finding_model": "f_cost_chargeback_by_tag_value",
+      "model": "d_cost_chargeback_by_tag_value",
+      "path": "dbt/models/databricks_direct/cost/d_cost_chargeback_by_tag_value.sql",
+      "query_id": "cost_chargeback_by_tag_value",
+      "tags": [
+        "finding",
+        "domain:cost",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "cost",
+      "finding_model": "f_cost_chargeback_by_warehouse",
+      "model": "d_cost_chargeback_by_warehouse",
+      "path": "dbt/models/databricks_direct/cost/d_cost_chargeback_by_warehouse.sql",
+      "query_id": "cost_chargeback_by_warehouse",
+      "tags": [
+        "finding",
+        "domain:cost",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "cost",
+      "finding_model": "f_cost_chargeback_by_workspace",
+      "model": "d_cost_chargeback_by_workspace",
+      "path": "dbt/models/databricks_direct/cost/d_cost_chargeback_by_workspace.sql",
+      "query_id": "cost_chargeback_by_workspace",
+      "tags": [
+        "finding",
+        "domain:cost",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "cost",
+      "finding_model": "f_cost_chargeback_identity_by_source",
+      "model": "d_cost_chargeback_identity_by_source",
+      "path": "dbt/models/databricks_direct/cost/d_cost_chargeback_identity_by_source.sql",
+      "query_id": "cost_chargeback_identity_by_source",
+      "tags": [
+        "finding",
+        "domain:cost",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "cost",
+      "finding_model": "f_cost_chargeback_reconcile",
+      "model": "d_cost_chargeback_reconcile",
+      "path": "dbt/models/databricks_direct/cost/d_cost_chargeback_reconcile.sql",
+      "query_id": "cost_chargeback_reconcile",
+      "tags": [
+        "finding",
+        "domain:cost",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "cost",
+      "finding_model": "f_cost_cloud_infra",
+      "model": "d_cost_cloud_infra",
+      "path": "dbt/models/databricks_direct/cost/d_cost_cloud_infra.sql",
+      "query_id": "cost_cloud_infra",
+      "tags": [
+        "inventory",
+        "domain:cost",
+        "tier:deep",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "cost",
+      "finding_model": "f_cost_daily_by_resource",
+      "model": "d_cost_daily_by_resource",
+      "path": "dbt/models/databricks_direct/cost/d_cost_daily_by_resource.sql",
+      "query_id": "cost_daily_by_resource",
+      "tags": [
+        "inventory",
+        "domain:cost",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "cost",
+      "finding_model": "f_cost_daily_spikes",
+      "model": "d_cost_daily_spikes",
+      "path": "dbt/models/databricks_direct/cost/d_cost_daily_spikes.sql",
+      "query_id": "cost_daily_spikes",
+      "tags": [
+        "finding",
+        "domain:cost",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "cost",
+      "finding_model": "f_cost_dbsql_allocation_gap",
+      "model": "d_cost_dbsql_allocation_gap",
+      "path": "dbt/models/databricks_direct/cost/d_cost_dbsql_allocation_gap.sql",
+      "query_id": "cost_dbsql_allocation_gap",
+      "tags": [
+        "inventory",
+        "domain:cost",
+        "tier:deep",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "cost",
+      "finding_model": "f_cost_default_storage_dsu",
+      "model": "d_cost_default_storage_dsu",
+      "path": "dbt/models/databricks_direct/cost/d_cost_default_storage_dsu.sql",
+      "query_id": "cost_default_storage_dsu",
+      "tags": [
+        "inventory",
+        "domain:cost",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "cost",
+      "finding_model": "f_cost_dollarized_by_sku_day",
+      "model": "d_cost_dollarized_by_sku_day",
+      "path": "dbt/models/databricks_direct/cost/d_cost_dollarized_by_sku_day.sql",
+      "query_id": "cost_dollarized_by_sku_day",
+      "tags": [
+        "inventory",
+        "domain:cost",
+        "tier:deep",
+        "stars",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "cost",
+      "finding_model": "f_cost_failed_statement_waste",
+      "model": "d_cost_failed_statement_waste",
+      "path": "dbt/models/databricks_direct/cost/d_cost_failed_statement_waste.sql",
+      "query_id": "cost_failed_statement_waste",
+      "tags": [
+        "finding",
+        "domain:cost",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "cost",
+      "finding_model": "f_cost_genai_token_gpu",
+      "model": "d_cost_genai_token_gpu",
+      "path": "dbt/models/databricks_direct/cost/d_cost_genai_token_gpu.sql",
+      "query_id": "cost_genai_token_gpu",
+      "tags": [
+        "inventory",
+        "domain:cost",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "cost",
+      "finding_model": "f_cost_monthly_actuals",
+      "model": "d_cost_monthly_actuals",
+      "path": "dbt/models/databricks_direct/cost/d_cost_monthly_actuals.sql",
+      "query_id": "cost_monthly_actuals",
+      "tags": [
+        "inventory",
+        "domain:cost",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "cost",
+      "finding_model": "f_cost_networking_egress",
+      "model": "d_cost_networking_egress",
+      "path": "dbt/models/databricks_direct/cost/d_cost_networking_egress.sql",
+      "query_id": "cost_networking_egress",
+      "tags": [
+        "inventory",
+        "domain:cost",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "cost",
+      "finding_model": "f_cost_period_over_period",
+      "model": "d_cost_period_over_period",
+      "path": "dbt/models/databricks_direct/cost/d_cost_period_over_period.sql",
+      "query_id": "cost_period_over_period",
+      "tags": [
+        "finding",
+        "domain:cost",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "cost",
+      "finding_model": "f_cost_premium_serverless_photon",
+      "model": "d_cost_premium_serverless_photon",
+      "path": "dbt/models/databricks_direct/cost/d_cost_premium_serverless_photon.sql",
+      "query_id": "cost_premium_serverless_photon",
+      "tags": [
+        "inventory",
+        "domain:cost",
+        "tier:standard",
+        "stars",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "cost",
+      "finding_model": "f_cost_restatement_trust_metric",
+      "model": "d_cost_restatement_trust_metric",
+      "path": "dbt/models/databricks_direct/cost/d_cost_restatement_trust_metric.sql",
+      "query_id": "cost_restatement_trust_metric",
+      "tags": [
+        "inventory",
+        "domain:cost",
+        "tier:lite",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "cost",
+      "finding_model": "f_cost_serving_mode_by_endpoint",
+      "model": "d_cost_serving_mode_by_endpoint",
+      "path": "dbt/models/databricks_direct/cost/d_cost_serving_mode_by_endpoint.sql",
+      "query_id": "cost_serving_mode_by_endpoint",
+      "tags": [
+        "finding",
+        "domain:cost",
+        "tier:deep",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "cost",
+      "finding_model": "f_cost_sku_trend_12m",
+      "model": "d_cost_sku_trend_12m",
+      "path": "dbt/models/databricks_direct/cost/d_cost_sku_trend_12m.sql",
+      "query_id": "cost_sku_trend_12m",
+      "tags": [
+        "finding",
+        "domain:cost",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "cost",
+      "finding_model": "f_cost_totals_by_sku_day",
+      "model": "d_cost_totals_by_sku_day",
+      "path": "dbt/models/databricks_direct/cost/d_cost_totals_by_sku_day.sql",
+      "query_id": "cost_totals_by_sku_day",
+      "tags": [
+        "inventory",
+        "domain:cost",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "cost",
+      "finding_model": "f_cost_unnamed_workspaces",
+      "model": "d_cost_unnamed_workspaces",
+      "path": "dbt/models/databricks_direct/cost/d_cost_unnamed_workspaces.sql",
+      "query_id": "cost_unnamed_workspaces",
+      "tags": [
+        "finding",
+        "domain:cost",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "cost",
+      "finding_model": "f_cost_usage_policy_coverage",
+      "model": "d_cost_usage_policy_coverage",
+      "path": "dbt/models/databricks_direct/cost/d_cost_usage_policy_coverage.sql",
+      "query_id": "cost_usage_policy_coverage",
+      "tags": [
+        "finding",
+        "domain:cost",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "cost",
+      "finding_model": "f_cost_vector_search_spend",
+      "model": "d_cost_vector_search_spend",
+      "path": "dbt/models/databricks_direct/cost/d_cost_vector_search_spend.sql",
+      "query_id": "cost_vector_search_spend",
+      "tags": [
+        "finding",
+        "domain:cost",
+        "tier:deep",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "cost",
+      "finding_model": "f_cost_workspace_names",
+      "model": "d_cost_workspace_names",
+      "path": "dbt/models/databricks_direct/cost/d_cost_workspace_names.sql",
+      "query_id": "cost_workspace_names",
+      "tags": [
+        "inventory",
+        "domain:cost",
+        "tier:lite",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "cost",
+      "finding_model": "f_genie_usage",
+      "model": "d_genie_usage",
+      "path": "dbt/models/databricks_direct/cost/d_genie_usage.sql",
+      "query_id": "genie_usage",
+      "tags": [
+        "inventory",
+        "domain:cost",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "compute",
+      "finding_model": "f_instance_events_idle_active",
+      "model": "d_instance_events_idle_active",
+      "path": "dbt/models/databricks_direct/compute/d_instance_events_idle_active.sql",
+      "query_id": "instance_events_idle_active",
+      "tags": [
+        "inventory",
+        "domain:compute",
+        "tier:lite",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "compute",
+      "finding_model": "f_instance_pools_idle_capacity",
+      "model": "d_instance_pools_idle_capacity",
+      "path": "dbt/models/databricks_direct/compute/d_instance_pools_idle_capacity.sql",
+      "query_id": "instance_pools_idle_capacity",
+      "tags": [
+        "finding",
+        "domain:compute",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "jobs_pipelines",
+      "finding_model": "f_lakeflow_daily_state",
+      "model": "d_lakeflow_daily_state",
+      "path": "dbt/models/databricks_direct/jobs_pipelines/d_lakeflow_daily_state.sql",
+      "query_id": "lakeflow_daily_state",
+      "tags": [
+        "inventory",
+        "domain:jobs_pipelines",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "jobs_pipelines",
+      "finding_model": "f_lakeflow_failed_cluster_starts",
+      "model": "d_lakeflow_failed_cluster_starts",
+      "path": "dbt/models/databricks_direct/jobs_pipelines/d_lakeflow_failed_cluster_starts.sql",
+      "query_id": "lakeflow_failed_cluster_starts",
+      "tags": [
+        "inventory",
+        "domain:jobs_pipelines",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "jobs_pipelines",
+      "finding_model": "f_lakeflow_failed_jobs_wasted_dbus",
+      "model": "d_lakeflow_failed_jobs_wasted_dbus",
+      "path": "dbt/models/databricks_direct/jobs_pipelines/d_lakeflow_failed_jobs_wasted_dbus.sql",
+      "query_id": "lakeflow_failed_jobs_wasted_dbus",
+      "tags": [
+        "finding",
+        "domain:jobs_pipelines",
+        "tier:deep",
+        "stars",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "jobs_pipelines",
+      "finding_model": "f_lakeflow_failed_runs",
+      "model": "d_lakeflow_failed_runs",
+      "path": "dbt/models/databricks_direct/jobs_pipelines/d_lakeflow_failed_runs.sql",
+      "query_id": "lakeflow_failed_runs",
+      "tags": [
+        "finding",
+        "domain:jobs_pipelines",
+        "tier:lite",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "jobs_pipelines",
+      "finding_model": "f_lakeflow_health_rule_coverage",
+      "model": "d_lakeflow_health_rule_coverage",
+      "path": "dbt/models/databricks_direct/jobs_pipelines/d_lakeflow_health_rule_coverage.sql",
+      "query_id": "lakeflow_health_rule_coverage",
+      "tags": [
+        "finding",
+        "domain:jobs_pipelines",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "jobs_pipelines",
+      "finding_model": "f_lakeflow_job_compute_pressure",
+      "model": "d_lakeflow_job_compute_pressure",
+      "path": "dbt/models/databricks_direct/jobs_pipelines/d_lakeflow_job_compute_pressure.sql",
+      "query_id": "lakeflow_job_compute_pressure",
+      "tags": [
+        "finding",
+        "domain:jobs_pipelines",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "jobs_pipelines",
+      "finding_model": "f_lakeflow_job_cost_summary",
+      "model": "d_lakeflow_job_cost_summary",
+      "path": "dbt/models/databricks_direct/jobs_pipelines/d_lakeflow_job_cost_summary.sql",
+      "query_id": "lakeflow_job_cost_summary",
+      "tags": [
+        "inventory",
+        "domain:jobs_pipelines",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "jobs_pipelines",
+      "finding_model": "f_lakeflow_job_duration_regression",
+      "model": "d_lakeflow_job_duration_regression",
+      "path": "dbt/models/databricks_direct/jobs_pipelines/d_lakeflow_job_duration_regression.sql",
+      "query_id": "lakeflow_job_duration_regression",
+      "tags": [
+        "finding",
+        "domain:jobs_pipelines",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "jobs_pipelines",
+      "finding_model": "f_lakeflow_job_oversized",
+      "model": "d_lakeflow_job_oversized",
+      "path": "dbt/models/databricks_direct/jobs_pipelines/d_lakeflow_job_oversized.sql",
+      "query_id": "lakeflow_job_oversized",
+      "tags": [
+        "finding",
+        "domain:jobs_pipelines",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "jobs_pipelines",
+      "finding_model": "f_lakeflow_job_ownership_orphans",
+      "model": "d_lakeflow_job_ownership_orphans",
+      "path": "dbt/models/databricks_direct/jobs_pipelines/d_lakeflow_job_ownership_orphans.sql",
+      "query_id": "lakeflow_job_ownership_orphans",
+      "tags": [
+        "finding",
+        "domain:jobs_pipelines",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "jobs_pipelines",
+      "finding_model": "f_lakeflow_job_queue_time",
+      "model": "d_lakeflow_job_queue_time",
+      "path": "dbt/models/databricks_direct/jobs_pipelines/d_lakeflow_job_queue_time.sql",
+      "query_id": "lakeflow_job_queue_time",
+      "tags": [
+        "finding",
+        "domain:jobs_pipelines",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "jobs_pipelines",
+      "finding_model": "f_lakeflow_job_recent_runs",
+      "model": "d_lakeflow_job_recent_runs",
+      "path": "dbt/models/databricks_direct/jobs_pipelines/d_lakeflow_job_recent_runs.sql",
+      "query_id": "lakeflow_job_recent_runs",
+      "tags": [
+        "inventory",
+        "domain:jobs_pipelines",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "jobs_pipelines",
+      "finding_model": "f_lakeflow_job_reliability",
+      "model": "d_lakeflow_job_reliability",
+      "path": "dbt/models/databricks_direct/jobs_pipelines/d_lakeflow_job_reliability.sql",
+      "query_id": "lakeflow_job_reliability",
+      "tags": [
+        "finding",
+        "domain:jobs_pipelines",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "jobs_pipelines",
+      "finding_model": "f_lakeflow_job_run_changes",
+      "model": "d_lakeflow_job_run_changes",
+      "path": "dbt/models/databricks_direct/jobs_pipelines/d_lakeflow_job_run_changes.sql",
+      "query_id": "lakeflow_job_run_changes",
+      "tags": [
+        "inventory",
+        "domain:jobs_pipelines",
+        "tier:deep",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "jobs_pipelines",
+      "finding_model": "f_lakeflow_job_run_cost",
+      "model": "d_lakeflow_job_run_cost",
+      "path": "dbt/models/databricks_direct/jobs_pipelines/d_lakeflow_job_run_cost.sql",
+      "query_id": "lakeflow_job_run_cost",
+      "tags": [
+        "inventory",
+        "domain:jobs_pipelines",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "jobs_pipelines",
+      "finding_model": "f_lakeflow_job_tasks_no_timeout",
+      "model": "d_lakeflow_job_tasks_no_timeout",
+      "path": "dbt/models/databricks_direct/jobs_pipelines/d_lakeflow_job_tasks_no_timeout.sql",
+      "query_id": "lakeflow_job_tasks_no_timeout",
+      "tags": [
+        "finding",
+        "domain:jobs_pipelines",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "jobs_pipelines",
+      "finding_model": "f_lakeflow_jobs_no_timeout",
+      "model": "d_lakeflow_jobs_no_timeout",
+      "path": "dbt/models/databricks_direct/jobs_pipelines/d_lakeflow_jobs_no_timeout.sql",
+      "query_id": "lakeflow_jobs_no_timeout",
+      "tags": [
+        "finding",
+        "domain:jobs_pipelines",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "jobs_pipelines",
+      "finding_model": "f_lakeflow_jobs_on_all_purpose",
+      "model": "d_lakeflow_jobs_on_all_purpose",
+      "path": "dbt/models/databricks_direct/jobs_pipelines/d_lakeflow_jobs_on_all_purpose.sql",
+      "query_id": "lakeflow_jobs_on_all_purpose",
+      "tags": [
+        "finding",
+        "domain:jobs_pipelines",
+        "tier:standard",
+        "stars",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "jobs_pipelines",
+      "finding_model": "f_lakeflow_long_running_runs",
+      "model": "d_lakeflow_long_running_runs",
+      "path": "dbt/models/databricks_direct/jobs_pipelines/d_lakeflow_long_running_runs.sql",
+      "query_id": "lakeflow_long_running_runs",
+      "tags": [
+        "finding",
+        "domain:jobs_pipelines",
+        "tier:standard",
+        "drilldown",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "jobs_pipelines",
+      "finding_model": "f_lakeflow_never_started_runs",
+      "model": "d_lakeflow_never_started_runs",
+      "path": "dbt/models/databricks_direct/jobs_pipelines/d_lakeflow_never_started_runs.sql",
+      "query_id": "lakeflow_never_started_runs",
+      "tags": [
+        "finding",
+        "domain:jobs_pipelines",
+        "tier:lite",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "jobs_pipelines",
+      "finding_model": "f_lakeflow_phase_cold_start",
+      "model": "d_lakeflow_phase_cold_start",
+      "path": "dbt/models/databricks_direct/jobs_pipelines/d_lakeflow_phase_cold_start.sql",
+      "query_id": "lakeflow_phase_cold_start",
+      "tags": [
+        "finding",
+        "domain:jobs_pipelines",
+        "tier:lite",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "jobs_pipelines",
+      "finding_model": "f_lakeflow_pipeline_cost",
+      "model": "d_lakeflow_pipeline_cost",
+      "path": "dbt/models/databricks_direct/jobs_pipelines/d_lakeflow_pipeline_cost.sql",
+      "query_id": "lakeflow_pipeline_cost",
+      "tags": [
+        "finding",
+        "domain:jobs_pipelines",
+        "tier:deep",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "jobs_pipelines",
+      "finding_model": "f_lakeflow_pipeline_idle_tail_duration",
+      "model": "d_lakeflow_pipeline_idle_tail_duration",
+      "path": "dbt/models/databricks_direct/jobs_pipelines/d_lakeflow_pipeline_idle_tail_duration.sql",
+      "query_id": "lakeflow_pipeline_idle_tail_duration",
+      "tags": [
+        "finding",
+        "domain:jobs_pipelines",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "jobs_pipelines",
+      "finding_model": "f_lakeflow_pipeline_update_failures_retries",
+      "model": "d_lakeflow_pipeline_update_failures_retries",
+      "path": "dbt/models/databricks_direct/jobs_pipelines/d_lakeflow_pipeline_update_failures_retries.sql",
+      "query_id": "lakeflow_pipeline_update_failures_retries",
+      "tags": [
+        "finding",
+        "domain:jobs_pipelines",
+        "tier:lite",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "jobs_pipelines",
+      "finding_model": "f_lakeflow_pipelines_inventory_tier",
+      "model": "d_lakeflow_pipelines_inventory_tier",
+      "path": "dbt/models/databricks_direct/jobs_pipelines/d_lakeflow_pipelines_inventory_tier.sql",
+      "query_id": "lakeflow_pipelines_inventory_tier",
+      "tags": [
+        "inventory",
+        "domain:jobs_pipelines",
+        "tier:lite",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "jobs_pipelines",
+      "finding_model": "f_lakeflow_retries_repairs",
+      "model": "d_lakeflow_retries_repairs",
+      "path": "dbt/models/databricks_direct/jobs_pipelines/d_lakeflow_retries_repairs.sql",
+      "query_id": "lakeflow_retries_repairs",
+      "tags": [
+        "finding",
+        "domain:jobs_pipelines",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "jobs_pipelines",
+      "finding_model": "f_lakeflow_stale_zombie_jobs",
+      "model": "d_lakeflow_stale_zombie_jobs",
+      "path": "dbt/models/databricks_direct/jobs_pipelines/d_lakeflow_stale_zombie_jobs.sql",
+      "query_id": "lakeflow_stale_zombie_jobs",
+      "tags": [
+        "finding",
+        "domain:jobs_pipelines",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "jobs_pipelines",
+      "finding_model": "f_lakeflow_succeeded_with_failed_tasks",
+      "model": "d_lakeflow_succeeded_with_failed_tasks",
+      "path": "dbt/models/databricks_direct/jobs_pipelines/d_lakeflow_succeeded_with_failed_tasks.sql",
+      "query_id": "lakeflow_succeeded_with_failed_tasks",
+      "tags": [
+        "finding",
+        "domain:jobs_pipelines",
+        "tier:lite",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "jobs_pipelines",
+      "finding_model": "f_lakeflow_tasks_near_timeout",
+      "model": "d_lakeflow_tasks_near_timeout",
+      "path": "dbt/models/databricks_direct/jobs_pipelines/d_lakeflow_tasks_near_timeout.sql",
+      "query_id": "lakeflow_tasks_near_timeout",
+      "tags": [
+        "finding",
+        "domain:jobs_pipelines",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "jobs_pipelines",
+      "finding_model": "f_lakeflow_termination_taxonomy",
+      "model": "d_lakeflow_termination_taxonomy",
+      "path": "dbt/models/databricks_direct/jobs_pipelines/d_lakeflow_termination_taxonomy.sql",
+      "query_id": "lakeflow_termination_taxonomy",
+      "tags": [
+        "inventory",
+        "domain:jobs_pipelines",
+        "tier:lite",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "jobs_pipelines",
+      "finding_model": "f_lakeflow_termination_type_probe",
+      "model": "d_lakeflow_termination_type_probe",
+      "path": "dbt/models/databricks_direct/jobs_pipelines/d_lakeflow_termination_type_probe.sql",
+      "query_id": "lakeflow_termination_type_probe",
+      "tags": [
+        "inventory",
+        "domain:jobs_pipelines",
+        "tier:lite",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "jobs_pipelines",
+      "finding_model": "f_lakeflow_workload_mix_hours",
+      "model": "d_lakeflow_workload_mix_hours",
+      "path": "dbt/models/databricks_direct/jobs_pipelines/d_lakeflow_workload_mix_hours.sql",
+      "query_id": "lakeflow_workload_mix_hours",
+      "tags": [
+        "inventory",
+        "domain:jobs_pipelines",
+        "tier:lite",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "compute",
+      "finding_model": "f_node_timeline_utilization",
+      "model": "d_node_timeline_utilization",
+      "path": "dbt/models/databricks_direct/compute/d_node_timeline_utilization.sql",
+      "query_id": "node_timeline_utilization",
+      "tags": [
+        "finding",
+        "domain:compute",
+        "tier:lite",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "compute",
+      "finding_model": "f_node_types_reference",
+      "model": "d_node_types_reference",
+      "path": "dbt/models/databricks_direct/compute/d_node_types_reference.sql",
+      "query_id": "node_types_reference",
+      "tags": [
+        "inventory",
+        "domain:compute",
+        "tier:lite",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "cost",
+      "finding_model": "f_overview_daily_dbu_trend",
+      "model": "d_overview_daily_dbu_trend",
+      "path": "dbt/models/databricks_direct/cost/d_overview_daily_dbu_trend.sql",
+      "query_id": "overview_daily_dbu_trend",
+      "tags": [
+        "inventory",
+        "domain:cost",
+        "tier:lite",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "cost",
+      "finding_model": "f_overview_dbu_by_sku",
+      "model": "d_overview_dbu_by_sku",
+      "path": "dbt/models/databricks_direct/cost/d_overview_dbu_by_sku.sql",
+      "query_id": "overview_dbu_by_sku",
+      "tags": [
+        "inventory",
+        "domain:cost",
+        "tier:lite",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "cost",
+      "finding_model": "f_overview_list_prices_raw",
+      "model": "d_overview_list_prices_raw",
+      "path": "dbt/models/databricks_direct/cost/d_overview_list_prices_raw.sql",
+      "query_id": "overview_list_prices_raw",
+      "tags": [
+        "inventory",
+        "domain:cost",
+        "tier:lite",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "cost",
+      "finding_model": "f_overview_serverless_classic_split",
+      "model": "d_overview_serverless_classic_split",
+      "path": "dbt/models/databricks_direct/cost/d_overview_serverless_classic_split.sql",
+      "query_id": "overview_serverless_classic_split",
+      "tags": [
+        "inventory",
+        "domain:cost",
+        "tier:lite",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "cost",
+      "finding_model": "f_overview_spend_estimate",
+      "model": "d_overview_spend_estimate",
+      "path": "dbt/models/databricks_direct/cost/d_overview_spend_estimate.sql",
+      "query_id": "overview_spend_estimate",
+      "tags": [
+        "inventory",
+        "domain:cost",
+        "tier:lite",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "performance",
+      "finding_model": "f_perf_daily_by_resource",
+      "model": "d_perf_daily_by_resource",
+      "path": "dbt/models/databricks_direct/performance/d_perf_daily_by_resource.sql",
+      "query_id": "perf_daily_by_resource",
+      "tags": [
+        "inventory",
+        "domain:performance",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "performance",
+      "finding_model": "f_perf_failure_causes_daily",
+      "model": "d_perf_failure_causes_daily",
+      "path": "dbt/models/databricks_direct/performance/d_perf_failure_causes_daily.sql",
+      "query_id": "perf_failure_causes_daily",
+      "tags": [
+        "inventory",
+        "domain:performance",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "performance",
+      "finding_model": "f_perf_queue_by_hour",
+      "model": "d_perf_queue_by_hour",
+      "path": "dbt/models/databricks_direct/performance/d_perf_queue_by_hour.sql",
+      "query_id": "perf_queue_by_hour",
+      "tags": [
+        "inventory",
+        "domain:performance",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "storage",
+      "finding_model": "f_po_clustering_activity",
+      "model": "d_po_clustering_activity",
+      "path": "dbt/models/databricks_direct/storage/d_po_clustering_activity.sql",
+      "query_id": "po_clustering_activity",
+      "tags": [
+        "finding",
+        "domain:storage",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "storage",
+      "finding_model": "f_po_clustering_column_churn",
+      "model": "d_po_clustering_column_churn",
+      "path": "dbt/models/databricks_direct/storage/d_po_clustering_column_churn.sql",
+      "query_id": "po_clustering_column_churn",
+      "tags": [
+        "finding",
+        "domain:storage",
+        "tier:deep",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "storage",
+      "finding_model": "f_po_data_skipping_backfill",
+      "model": "d_po_data_skipping_backfill",
+      "path": "dbt/models/databricks_direct/storage/d_po_data_skipping_backfill.sql",
+      "query_id": "po_data_skipping_backfill",
+      "tags": [
+        "finding",
+        "domain:storage",
+        "tier:deep",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "storage",
+      "finding_model": "f_po_failure_reasons",
+      "model": "d_po_failure_reasons",
+      "path": "dbt/models/databricks_direct/storage/d_po_failure_reasons.sql",
+      "query_id": "po_failure_reasons",
+      "tags": [
+        "finding",
+        "domain:storage",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "storage",
+      "finding_model": "f_po_maintenance_cost_by_table",
+      "model": "d_po_maintenance_cost_by_table",
+      "path": "dbt/models/databricks_direct/storage/d_po_maintenance_cost_by_table.sql",
+      "query_id": "po_maintenance_cost_by_table",
+      "tags": [
+        "finding",
+        "domain:storage",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "storage",
+      "finding_model": "f_po_vacuum_reclaimed_bytes",
+      "model": "d_po_vacuum_reclaimed_bytes",
+      "path": "dbt/models/databricks_direct/storage/d_po_vacuum_reclaimed_bytes.sql",
+      "query_id": "po_vacuum_reclaimed_bytes",
+      "tags": [
+        "finding",
+        "domain:storage",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "cost",
+      "finding_model": "f_pricing_list_prices_raw",
+      "model": "d_pricing_list_prices_raw",
+      "path": "dbt/models/databricks_direct/cost/d_pricing_list_prices_raw.sql",
+      "query_id": "pricing_list_prices_raw",
+      "tags": [
+        "inventory",
+        "domain:cost",
+        "tier:lite",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "performance",
+      "finding_model": "f_query_cache_coldstart",
+      "model": "d_query_cache_coldstart",
+      "path": "dbt/models/databricks_direct/performance/d_query_cache_coldstart.sql",
+      "query_id": "query_cache_coldstart",
+      "tags": [
+        "finding",
+        "domain:performance",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "performance",
+      "finding_model": "f_query_costly_statements",
+      "model": "d_query_costly_statements",
+      "path": "dbt/models/databricks_direct/performance/d_query_costly_statements.sql",
+      "query_id": "query_costly_statements",
+      "tags": [
+        "finding",
+        "domain:performance",
+        "tier:standard",
+        "stars",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "performance",
+      "finding_model": "f_query_costly_statements_grouped",
+      "model": "d_query_costly_statements_grouped",
+      "path": "dbt/models/databricks_direct/performance/d_query_costly_statements_grouped.sql",
+      "query_id": "query_costly_statements_grouped",
+      "tags": [
+        "finding",
+        "domain:performance",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "performance",
+      "finding_model": "f_query_failed_queries_daily",
+      "model": "d_query_failed_queries_daily",
+      "path": "dbt/models/databricks_direct/performance/d_query_failed_queries_daily.sql",
+      "query_id": "query_failed_queries_daily",
+      "tags": [
+        "finding",
+        "domain:performance",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "performance",
+      "finding_model": "f_query_failed_statements_grouped",
+      "model": "d_query_failed_statements_grouped",
+      "path": "dbt/models/databricks_direct/performance/d_query_failed_statements_grouped.sql",
+      "query_id": "query_failed_statements_grouped",
+      "tags": [
+        "finding",
+        "domain:performance",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "performance",
+      "finding_model": "f_query_local_spillage",
+      "model": "d_query_local_spillage",
+      "path": "dbt/models/databricks_direct/performance/d_query_local_spillage.sql",
+      "query_id": "query_local_spillage",
+      "tags": [
+        "finding",
+        "domain:performance",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "performance",
+      "finding_model": "f_query_per_query_estimate_lane",
+      "model": "d_query_per_query_estimate_lane",
+      "path": "dbt/models/databricks_direct/performance/d_query_per_query_estimate_lane.sql",
+      "query_id": "query_per_query_estimate_lane",
+      "tags": [
+        "inventory",
+        "domain:performance",
+        "tier:deep",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "performance",
+      "finding_model": "f_query_provenance_by_source",
+      "model": "d_query_provenance_by_source",
+      "path": "dbt/models/databricks_direct/performance/d_query_provenance_by_source.sql",
+      "query_id": "query_provenance_by_source",
+      "tags": [
+        "inventory",
+        "domain:performance",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "performance",
+      "finding_model": "f_query_pruning_effectiveness",
+      "model": "d_query_pruning_effectiveness",
+      "path": "dbt/models/databricks_direct/performance/d_query_pruning_effectiveness.sql",
+      "query_id": "query_pruning_effectiveness",
+      "tags": [
+        "finding",
+        "domain:performance",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "performance",
+      "finding_model": "f_query_queuing_waits",
+      "model": "d_query_queuing_waits",
+      "path": "dbt/models/databricks_direct/performance/d_query_queuing_waits.sql",
+      "query_id": "query_queuing_waits",
+      "tags": [
+        "finding",
+        "domain:performance",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "performance",
+      "finding_model": "f_query_shuffle_write_amplification",
+      "model": "d_query_shuffle_write_amplification",
+      "path": "dbt/models/databricks_direct/performance/d_query_shuffle_write_amplification.sql",
+      "query_id": "query_shuffle_write_amplification",
+      "tags": [
+        "finding",
+        "domain:performance",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "performance",
+      "finding_model": "f_query_task_statement_breakdown",
+      "model": "d_query_task_statement_breakdown",
+      "path": "dbt/models/databricks_direct/performance/d_query_task_statement_breakdown.sql",
+      "query_id": "query_task_statement_breakdown",
+      "tags": [
+        "finding",
+        "domain:performance",
+        "tier:standard",
+        "drilldown",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "performance",
+      "finding_model": "f_query_top_by_cost",
+      "model": "d_query_top_by_cost",
+      "path": "dbt/models/databricks_direct/performance/d_query_top_by_cost.sql",
+      "query_id": "query_top_by_cost",
+      "tags": [
+        "finding",
+        "domain:performance",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "performance",
+      "finding_model": "f_query_warehouse_pressure",
+      "model": "d_query_warehouse_pressure",
+      "path": "dbt/models/databricks_direct/performance/d_query_warehouse_pressure.sql",
+      "query_id": "query_warehouse_pressure",
+      "tags": [
+        "finding",
+        "domain:performance",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "performance",
+      "finding_model": "f_query_workload_mix_hours",
+      "model": "d_query_workload_mix_hours",
+      "path": "dbt/models/databricks_direct/performance/d_query_workload_mix_hours.sql",
+      "query_id": "query_workload_mix_hours",
+      "tags": [
+        "inventory",
+        "domain:performance",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "serving_ai",
+      "finding_model": "f_serving_endpoint_traffic_by_endpoint",
+      "model": "d_serving_endpoint_traffic_by_endpoint",
+      "path": "dbt/models/databricks_direct/serving_ai/d_serving_endpoint_traffic_by_endpoint.sql",
+      "query_id": "serving_endpoint_traffic_by_endpoint",
+      "tags": [
+        "inventory",
+        "domain:serving_ai",
+        "tier:deep",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "compute",
+      "finding_model": "f_sql_warehouse_config_current",
+      "model": "d_sql_warehouse_config_current",
+      "path": "dbt/models/databricks_direct/compute/d_sql_warehouse_config_current.sql",
+      "query_id": "sql_warehouse_config_current",
+      "tags": [
+        "inventory",
+        "domain:compute",
+        "tier:lite",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "compute",
+      "finding_model": "f_sql_warehouse_events_activity",
+      "model": "d_sql_warehouse_events_activity",
+      "path": "dbt/models/databricks_direct/compute/d_sql_warehouse_events_activity.sql",
+      "query_id": "sql_warehouse_events_activity",
+      "tags": [
+        "finding",
+        "domain:compute",
+        "tier:lite",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "storage",
+      "finding_model": "f_storage_growth",
+      "model": "d_storage_growth",
+      "path": "dbt/models/databricks_direct/storage/d_storage_growth.sql",
+      "query_id": "storage_growth",
+      "tags": [
+        "finding",
+        "domain:storage",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "storage",
+      "finding_model": "f_storage_po_coverage",
+      "model": "d_storage_po_coverage",
+      "path": "dbt/models/databricks_direct/storage/d_storage_po_coverage.sql",
+      "query_id": "storage_po_coverage",
+      "tags": [
+        "finding",
+        "domain:storage",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "storage",
+      "finding_model": "f_storage_small_files",
+      "model": "d_storage_small_files",
+      "path": "dbt/models/databricks_direct/storage/d_storage_small_files.sql",
+      "query_id": "storage_small_files",
+      "tags": [
+        "finding",
+        "domain:storage",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "storage",
+      "finding_model": "f_storage_target_table_discovery",
+      "model": "d_storage_target_table_discovery",
+      "path": "dbt/models/databricks_direct/storage/d_storage_target_table_discovery.sql",
+      "query_id": "storage_target_table_discovery",
+      "tags": [
+        "inventory",
+        "domain:storage",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "storage",
+      "finding_model": "f_storage_unused_table_cost",
+      "model": "d_storage_unused_table_cost",
+      "path": "dbt/models/databricks_direct/storage/d_storage_unused_table_cost.sql",
+      "query_id": "storage_unused_table_cost",
+      "tags": [
+        "finding",
+        "domain:storage",
+        "tier:standard",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "storage",
+      "finding_model": "f_table_inventory_type",
+      "model": "d_table_inventory_type",
+      "path": "dbt/models/databricks_direct/storage/d_table_inventory_type.sql",
+      "query_id": "table_inventory_type",
+      "tags": [
+        "inventory",
+        "domain:storage",
+        "tier:deep",
+        "databricks_direct"
+      ]
+    },
+    {
+      "domain": "compute",
+      "finding_model": "f_task_cluster_utilization",
+      "model": "d_task_cluster_utilization",
+      "path": "dbt/models/databricks_direct/compute/d_task_cluster_utilization.sql",
+      "query_id": "task_cluster_utilization",
+      "tags": [
+        "finding",
+        "domain:compute",
+        "tier:standard",
+        "drilldown",
+        "databricks_direct"
+      ]
+    }
+  ],
+  "skipped": [
+    {
+      "domain": "storage",
+      "query_id": "iceberg_uniform_metadata",
+      "reason": "reads no system table (none - DESCRIBE EXTENDED output; not a system table)"
+    },
+    {
+      "domain": "storage",
+      "query_id": "storage_breakdown_analyze",
+      "reason": "runnable: false (a DESCRIBE/ANALYZE template, not a SELECT)"
+    },
+    {
+      "domain": "storage",
+      "query_id": "table_props_time_travel_config",
+      "reason": "reads no system table (none - DESCRIBE EXTENDED / SHOW TBLPROPERTIES output; not a system table)"
+    }
+  ]
+}

@@ -1,0 +1,61 @@
+{{ config(enabled=(target.type == "databricks"), materialized=("table" if var("direct_mode", "run") == "table" else "direct_check"), schema="audit_direct", tags=['finding', 'domain:cost', 'tier:standard', 'databricks_direct']) }}
+-- generated from app/queries/app/cost/cost_unnamed_workspaces.sql; fix the source query and regenerate, never edit this file.
+{%- set windows = var('windows', [7, 30, 90]) %}
+{%- for w in windows %}
+SELECT {{ w }} AS window_days, q.*
+FROM (
+WITH priced AS (
+  SELECT u.workspace_id, u.usage_date, u.usage_unit, u.usage_quantity,
+         u.usage_quantity * p.list_rate AS list_cost
+  FROM {{ source('system_billing', 'usage') }} u
+  LEFT JOIN (
+    SELECT sku_name, cloud, usage_unit, price_start_time, price_end_time,
+           CAST(pricing.effective_list.default AS DOUBLE) AS list_rate   -- effective list price, DEC-66.1
+    FROM {{ list_prices() }} list_prices
+  ) p
+    ON  u.sku_name   = p.sku_name
+    AND u.cloud      = p.cloud
+    AND u.usage_unit = p.usage_unit
+    AND u.usage_end_time >= p.price_start_time
+    AND (p.price_end_time IS NULL OR u.usage_end_time < p.price_end_time)
+  WHERE u.workspace_id IS NOT NULL
+    AND datediff({{ audit_today() }}, u.usage_date) <= 365
+    AND u.usage_date < {{ audit_today() }}
+),
+by_ws AS (
+  SELECT workspace_id,
+         MIN(usage_date)                                                          AS first_used,
+         MAX(usage_date)                                                          AS last_used,
+         COUNT(DISTINCT usage_date)                                               AS active_days,
+         SUM(CASE WHEN upper(usage_unit) = 'DBU' THEN usage_quantity ELSE 0 END)  AS dbus_365d,
+         SUM(list_cost)                                                           AS net_list_cost_usd_365d,
+         SUM(CASE WHEN usage_date >= {{ audit_today() }} - INTERVAL {{ w }} DAYS
+                  THEN list_cost END)                                             AS window_cost
+  FROM priced
+  GROUP BY workspace_id
+)
+SELECT
+  b.workspace_id,
+  b.first_used,
+  b.last_used,
+  b.active_days,
+  ROUND(b.dbus_365d, 2)                          AS dbus_365d,
+  ROUND(b.net_list_cost_usd_365d, 2)             AS net_list_cost_usd_365d,
+  ROUND(COALESCE(b.window_cost, 0), 2)           AS net_list_cost_usd,
+  datediff(b.last_used, b.first_used) + 1        AS lifetime_days,
+  (datediff(b.last_used, b.first_used) + 1) < 30 AS short_lived,
+  CASE
+    WHEN COALESCE(b.window_cost, 0) > 0              THEN 'CRITICAL'
+    WHEN datediff({{ audit_today() }}, b.last_used) <= 90 THEN 'WARN'
+    ELSE 'OK'
+  END AS status
+FROM by_ws b
+LEFT JOIN {{ source('system_access', 'workspaces_latest') }} wl ON wl.workspace_id = b.workspace_id
+WHERE wl.workspace_id IS NULL
+ORDER BY CASE status WHEN 'CRITICAL' THEN 0 WHEN 'WARN' THEN 1 ELSE 2 END,
+         net_list_cost_usd DESC NULLS LAST, b.last_used DESC, b.workspace_id
+) q
+{%- if not loop.last %}
+UNION ALL
+{%- endif %}
+{%- endfor %}

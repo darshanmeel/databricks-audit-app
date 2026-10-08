@@ -1,0 +1,70 @@
+{{ config(enabled=(target.type == "databricks"), materialized=("table" if var("direct_mode", "run") == "table" else "direct_check"), schema="audit_direct", tags=['finding', 'domain:jobs_pipelines', 'tier:standard', 'databricks_direct']) }}
+-- generated from app/queries/vendored/jobs_pipelines/lakeflow_retries_repairs.sql; fix the source query and regenerate, never edit this file.
+{%- set windows = var('windows', [7, 30, 90]) %}
+{%- for w in windows %}
+SELECT {{ w }} AS window_days, q.*
+FROM (
+WITH end_rows AS (
+  SELECT workspace_id, job_id, run_id
+  FROM {{ source('system_lakeflow', 'job_run_timeline') }}
+  WHERE period_start_time >= dateadd(day, -{{ w }}, {{ audit_today() }})
+    AND period_end_time < date_trunc('DAY', {{ audit_now() }})
+    AND result_state IS NOT NULL          -- one non-NULL result_state row per attempt
+),
+per_run AS (
+  SELECT workspace_id, job_id, run_id, COUNT(*) AS attempt_rows
+  FROM end_rows GROUP BY workspace_id, job_id, run_id
+),
+price AS (
+  SELECT sku_name, cloud, usage_unit, price_start_time, price_end_time,
+         CAST(pricing.effective_list.default AS DOUBLE) AS list_rate
+  FROM {{ list_prices() }} list_prices
+),
+cost_rollup AS (
+  -- Pre-aggregated cost per (workspace_id, job_id). job_id is not globally unique, so we key on
+  -- workspace_id + job_id. Window mirrors this query's trailing window via usage_date.
+  SELECT u.workspace_id,
+         u.usage_metadata.job_id                          AS job_id,
+         SUM(u.usage_quantity)                            AS net_dbus,
+         SUM(u.usage_quantity * COALESCE(p.list_rate, 0)) AS est_usd_list,
+         CASE
+           WHEN SUM(CASE WHEN p.list_rate IS NULL AND upper(u.sku_name) NOT LIKE '%FREE_USAGE%'
+                         THEN u.usage_quantity ELSE 0 END) > 0 THEN 'unpriced'
+           WHEN SUM(CASE WHEN p.list_rate IS NOT NULL THEN u.usage_quantity ELSE 0 END) = 0 THEN 'free'
+           ELSE 'priced'
+         END                                               AS price_basis
+  FROM {{ source('system_billing', 'usage') }} u
+  LEFT JOIN price p
+    ON u.sku_name = p.sku_name AND u.cloud = p.cloud AND u.usage_unit = p.usage_unit
+   AND u.usage_end_time >= p.price_start_time
+   AND (p.price_end_time IS NULL OR u.usage_end_time < p.price_end_time)
+  WHERE upper(u.usage_unit) = 'DBU'
+    AND u.usage_metadata.job_id IS NOT NULL
+    AND u.usage_date >= dateadd(day, -{{ w }}, {{ audit_today() }})
+    AND u.usage_date <  {{ audit_today() }}
+  GROUP BY u.workspace_id, u.usage_metadata.job_id
+)
+SELECT pr.workspace_id, pr.job_id,
+       COUNT(*)             AS distinct_runs,
+       SUM(pr.attempt_rows)    AS total_attempt_rows,
+       SUM(pr.attempt_rows - 1) AS total_retries,
+       SUM(CASE WHEN pr.attempt_rows > 1 THEN 1 ELSE 0 END) AS runs_with_retry,
+       COALESCE(MAX(cr.net_dbus), 0)     AS net_dbus,
+       COALESCE(MAX(cr.est_usd_list), 0) AS est_usd_list,
+       COALESCE(MAX(cr.price_basis), 'priced') AS price_basis,
+       -- status: worst-first band on total retries in the window (field heuristic; {{ param('lakeflow_retries_repairs', 'warn_total_retries', 5) }} / {{ param('lakeflow_retries_repairs', 'crit_total_retries', 20) }}).
+       CASE
+         WHEN SUM(pr.attempt_rows - 1) >= {{ param('lakeflow_retries_repairs', 'crit_total_retries', 20) }} THEN 'CRITICAL'
+         WHEN SUM(pr.attempt_rows - 1) >= {{ param('lakeflow_retries_repairs', 'warn_total_retries', 5) }} THEN 'WARN'
+         ELSE 'OK'
+       END AS status
+FROM per_run pr
+LEFT JOIN cost_rollup cr
+  ON pr.workspace_id = cr.workspace_id AND pr.job_id = cr.job_id
+GROUP BY pr.workspace_id, pr.job_id
+ORDER BY total_retries DESC
+) q
+{%- if not loop.last %}
+UNION ALL
+{%- endif %}
+{%- endfor %}

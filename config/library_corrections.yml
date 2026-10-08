@@ -1,0 +1,1436 @@
+version: 1
+entries:
+- id: cost_actual_vs_list_by_sku-ratio-backwards
+  query_id: cost_actual_vs_list_by_sku
+  problem: It banded CRITICAL when pricing.default / pricing.effective_list.default >= :crit_realization_ratio
+    (0.90). effective_list is the promotional price, or the list price when there is no promotion, so
+    that ratio is always >= 1 and every priced SKU read CRITICAL.
+  effect: Every priced SKU this query looked at read CRITICAL, regardless of whether the account was actually
+    paying under list -- the finding's read_this/healthy text described the opposite of what the SQL computed.
+  status: fixed
+  fix: 'Fixed (T-69A, commit ad6d6cf): the query now always reads NOT_ASSESSED, with not_assessed_reason
+    ''no_negotiated_rate_source'' -- no negotiated-rate source exists anywhere in system.billing.usage/list_prices/attributed_usage,
+    so an actual-vs-list comparison can never be computed from this data. The misleading second price
+    column is dropped; only net_list_cost (the effective list price, DEC-66.1) remains, for reference.'
+  item: T-69A
+- id: lakeflow_failed_jobs_wasted_dbus-whole-job-not-failed-share
+  query_id: lakeflow_failed_jobs_wasted_dbus
+  problem: 'The header says est_usd_list turns the failed-run DBU proxy into a dollar figure, but the SELECT
+    emitted only the job''s WHOLE est_usd_list, not the failed share of it.'
+  effect: 'The "wasted $" figure this query reported overstated failed-run cost: it was the job''s total
+    spend, not spend apportioned to the runs that actually failed -- up to failed-run-share x too
+    high (e.g. a job failing 1 of 10 runs showed its FULL job cost as "wasted", not 1/10th).'
+  status: fixed
+  fix: 'Fixed (T-75B, commit a529718): added est_wasted_usd_list = est_usd_list * (failed_runs /
+    distinct_runs) -- the SAME ratio already used for wasted_dbus_proxy. est_usd_list is unchanged
+    (the job''s WHOLE list cost); read_this/caveats now say so plainly and point to
+    est_wasted_usd_list as the apportioned figure. The integrator pass also wired the app''s own UI
+    (tab_registry.jsx''s dollarCol, tab_jobs.jsx''s tile/chart/JOB_DIAG_FIELDS) to the new column --
+    T-75B''s own claim that "no app change needed" was wrong (T-75B review must_fix 9). Superseded
+    by the per-run measurement in P4-05.'
+  item: T-75B
+- id: lakeflow_failed_jobs_wasted_dbus-false-no-run-id-claim
+  query_id: lakeflow_failed_jobs_wasted_dbus
+  problem: 'The header said billing usage carries job_id but not run_id, so wasted DBUs were
+    apportioned across the whole job by its failed-run share. system.billing.usage does carry
+    usage_metadata.job_run_id (lakeflow_job_run_cost already reads it).'
+  effect: 'The "wasted" figure was a proxy - the job''s whole spend times its failed-run share - so
+    a cheap failed run on an expensive job (or the reverse) was mis-costed, and failed attempts that
+    were later repaired were not counted at all.'
+  status: fixed
+  fix: 'Fixed (P4-05, measured part): each failed run''s own usage is priced by
+    (workspace_id, job_id, job_run_id); failed attempts of runs later repaired are shared by attempt
+    time and labelled; usage with no run id is shown as est_unattributed_usd_list and never spread;
+    a job whose billing carries no run id reads NOT_ASSESSED.'
+  item: P4-05
+
+- id: cost_networking_egress-unit-caveat-wrong
+  query_id: cost_networking_egress
+  problem: The caveats say usage_unit is bytes or hours, never DBU. On billing data we've reviewed, NETWORK_BYTE
+    usage on the serverless inference SKU is actually priced in DBU.
+  effect: A reader who trusts the caveat and rolls this query's rows up as DBU-only, ignoring rows the
+    caveat implies are non-DBU, silently drops real DBU-denominated rows.
+  status: fixed
+  fix: 'The caveat no longer claims usage_unit is always bytes or hours. usd_list is now priced by
+    joining list_prices on each row''s own (sku_name, cloud, usage_unit) instead of assuming a unit,
+    and price_basis discloses free/priced/unpriced.'
+  item: P4-FIXES28
+- id: cost_genai_token_gpu-unit-caveat-wrong
+  query_id: cost_genai_token_gpu
+  problem: 'Same caveat defect as cost_networking_egress: the header says TOKEN/GPU rows are not DBU-denominated,
+    but TOKEN rows we''ve reviewed are DBU.'
+  effect: A caveat-trusting rollup of this query's rows can misclassify real DBU spend as non-DBU.
+  status: fixed
+  fix: 'The caveat no longer claims TOKEN/GPU rows are never DBU-denominated. usd_list is now priced
+    by joining list_prices on each row''s own (sku_name, cloud, usage_unit) instead of assuming a
+    unit, and price_basis discloses free/priced/unpriced.'
+  item: P4-FIXES28
+- id: cost_dollarized_by_sku_day-null-cost-is-not-always-a-gap
+  query_id: cost_dollarized_by_sku_day
+  problem: The header says a NULL cost is always a priced-coverage gap, never a real $0. But *_FREE_USAGE
+    SKUs have no list_prices row precisely because they are free, so their NULL cost is not a gap at all.
+  effect: A reader who treats every NULL cost here as 'we don't have a price for this' over-counts the
+    coverage gap and can miss that some of the NULLs are free usage that legitimately costs $0.
+  status: fixed
+  fix: 'Fixed (T-69A, commit ad6d6cf): a price_basis column (free / priced / unpriced) was added alongside
+    net_list_cost so a reader can tell a real $0 (a FREE_USAGE SKU, no list_prices row by design) apart
+    from a genuine pricing-coverage gap (a non-free SKU with no matching price row) without guessing from
+    a bare NULL.'
+  item: T-69A
+- id: cost_cloud_infra-null-cost-is-not-always-a-gap
+  query_id: cost_cloud_infra
+  problem: 'Same free-usage-SKU defect as cost_dollarized_by_sku_day: NULL cost is documented as always
+    a coverage gap, but free-usage SKUs have no price by design.'
+  effect: Overstates the priced-coverage gap on this query's own rows by the same free-usage share.
+  status: fixed
+  fix: 'Fixed (T-69A, commit ad6d6cf): a price_basis column (free / priced / unpriced) was added alongside
+    net_list_cost (renamed from net_billed_cost) so a reader can tell a real $0 (a FREE_USAGE SKU) apart
+    from a genuine pricing-coverage gap without guessing from a bare NULL.'
+  item: T-69A
+- id: cost_dbsql_allocation_gap-empty-attributed-side-not-flagged
+  query_id: cost_dbsql_allocation_gap
+  problem: The header promises NOT_ASSESSED only when the attributed_usage table itself is absent. When
+    the table exists but has zero rows in the window, the query still runs and shows only the raw side,
+    with no NOT_ASSESSED signal.
+  effect: A reader can mistake 'nothing was ever attributed in this window' for a verified finding, when
+    in fact the attributed side was never populated for this window at all.
+  status: fixed
+  fix: 'Added a window-wide coverage_status column (repeated on every row) that reads NOT_ASSESSED
+    when the "attributed" source_kind has zero rows anywhere in the window, so an unpopulated
+    attributed side is no longer indistinguishable from "nothing was ever attributed".'
+  item: P4-FIXES28
+- id: cost_serving_mode_by_endpoint-whole-window-vs-daily-threshold
+  query_id: cost_serving_mode_by_endpoint
+  problem: 'The header defines its thresholds as PER-DAY amounts, and read_this describes the grain as
+    endpoint + day + usage_type. But the SELECT/GROUP BY carried no usage_date, so the query
+    actually compared a WHOLE-WINDOW total against a per-day threshold.'
+  effect: 'The whole-window total is LARGER than any single day''s cost, so the old query OVERstated the
+    daily rate and flagged too easily (false flags), not too leniently: at a 7-day window an
+    endpoint spending only about 1/7 of the per-day threshold per day could reach WARN/CRITICAL
+    (about 1/90 at 90 days).'
+  status: fixed
+  fix: 'Fixed (T-73, commits 638db60/294ffec): added u.usage_date to the SELECT and GROUP BY, matching
+    the header''s own "endpoint + day + usage_type" grain and the sibling
+    cost_vector_search_spend''s own shape. The review-fix round corrected the caveat''s direction
+    (the first commit''s caveat had the bug''s effect backwards -- said it understated the daily
+    rate when it actually overstated it); no further SQL change was needed.'
+  item: T-73
+
+- id: compute_serving_endpoint_cost_status-entity-fan-out-and-order-by
+  query_id: compute_serving_endpoint_cost_status
+  problem: 'read_this promises one row per billed endpoint, but the query LEFT JOINs every served entity the
+    endpoint has ever had, with no delete-time or config-version filter, so one endpoint can produce
+    several rows. Its ORDER BY CASE on status also binds to an ambiguous column, and the row cap is
+    applied AFTER that fan-out join, so it can cut rows unpredictably.'
+  effect: '"Count of endpoints in each cost status" is not actually a count of endpoints -- it is inflated
+    by however many served-entity versions each endpoint has accumulated, and the capped page can
+    silently drop real endpoints.'
+  status: fixed
+  fix: 'entity_agg now rolls every served entity up to one row per (workspace_id, endpoint_id)
+    instead of fanning out one row per served entity, and the final ORDER BY''s status CASE now
+    binds to the query''s own status column instead of the ambiguous LEFT-JOINed one.'
+  item: P4-FIXES28
+
+- id: access_vector_search_traffic-endpoint-name-always-null
+  query_id: access_vector_search_traffic
+  problem: The query reads request_params['endpoint_name'] to key its rows, but the vectorSearch query/scan
+    audit events we've reviewed do not carry that key at all -- it reads NULL on every row.
+  effect: Traffic from this query can never be tied to a specific billed vector-search endpoint; every
+    row collapses under a NULL key.
+  status: fixed
+  fix: Added vector_search_key = COALESCE(request_params['index_name'], request_params['endpoint_name'])
+    as the real grouping key; endpoint_name is kept (now MAX'd per group) for compatibility and
+    distinct_index_names added as supporting context.
+  item: P4-FIXES28
+- id: lakeflow_phase_cold_start-zero-treated-as-measurement
+  query_id: lakeflow_phase_cold_start
+  problem: 'Databricks logs a literal 0 in the run-level phase-duration columns for every multi-task job
+    (the phase is simply not populated at the run level for those jobs). This query treated that 0
+    as a real cold-start measurement of 0 seconds rather than as "not reported".'
+  effect: 'Multi-task jobs read as having a perfect (0-second) cold start, which was not a measurement --
+    it silently pulled any average or "healthy" band toward a number the data never actually
+    supported.'
+  status: fixed
+  fix: 'Fixed (T-75B, commits a529718/054ecd2): setup/queue/execution/cleanup are now read as CASE WHEN
+    run_duration_seconds > 0 THEN <phase> END (not a blind NULLIF(...,0), which the review round
+    found would also fold a GENUINE 0-second phase on a legacy single-task run into "not reported",
+    biasing p95 upward). rows_setup_null counts both true-NULL and the folded multi-task case; a
+    NOT_ASSESSED gate fires when no run in the window has run_duration_seconds > 0. confidence
+    downgraded to needs_confirmation; caveats state the trade-off plainly.'
+  item: T-75B
+
+- id: lakeflow_job_queue_time-zero-treated-as-measurement
+  query_id: lakeflow_job_queue_time
+  problem: 'The same 0-as-measurement defect as lakeflow_phase_cold_start: the run-level queue-time phase
+    column read 0 for every multi-task job run, and the query treated that as a true zero-second
+    queue wait rather than "not reported".'
+  effect: 'Multi-task jobs read as never queuing, which understated real queuing pressure and could hide it
+    from the Jobs tab entirely.'
+  status: fixed
+  fix: 'Fixed (T-75B, commits a529718/054ecd2): same CASE WHEN run_duration_seconds > 0 THEN
+    queue_duration_seconds END fold as lakeflow_phase_cold_start (not a blind NULLIF(...,0), which
+    would also fold a genuine 0-second queue on a legacy single-task run into "not reported");
+    runs_queue_null counts both true-NULL and the folded case; the job-level run_duration_seconds >
+    0 NOT_ASSESSED gate is unchanged. confidence_note/caveats rewritten.'
+  item: T-75B
+
+- id: lakeflow_job_tasks_no_timeout-no-parent-job-check
+  query_id: lakeflow_job_tasks_no_timeout
+  problem: 'The query never checks whether the parent job still exists or is deleted -- it counts tasks with
+    no timeout regardless of whether the owning job row is current.'
+  effect: 'Tasks belonging to a deleted or otherwise missing job are counted as live no-timeout risk,
+    inflating the finding''s row count with tasks nobody can act on.'
+  status: fixed
+  fix: 'Joins the latest system.lakeflow.jobs row per (workspace_id, job_id) and excludes tasks
+    whose parent job is deleted or missing from tasks_no_timeout; those tasks are counted separately
+    in the new orphaned_parent_tasks column instead of silently inflating the risk count.'
+  item: P4-FIXES28
+
+- id: task_cluster_utilization-swap-before-idle
+  query_id: task_cluster_utilization
+  problem: COALESCE(eff_swap_peak,0) > 0 is checked, and fires, before the idle-utilization branch. Any
+    nonzero swap at all -- however small -- forces CRITICAL (MEMORY_PRESSURE), ahead of the idle check
+    that would otherwise apply.
+  effect: A cluster with a trivial, harmless amount of swap reads CRITICAL for memory pressure instead
+    of being judged on its actual utilization, which can crowd out the real idle/undersized verdict the
+    tile is meant to give.
+  status: fixed
+  fix: 'Fixed (T-72, commit 0639616): judges p90 worker/driver swap against a new :crit_swap_pct param
+    (default 10) instead of any-swap-at-all, matching lakeflow_job_compute_pressure''s own swap rule --
+    added to the profile CTE with a new worker_swap_p90_pct output column.'
+  item: T-72
+- id: query_costly_statements_grouped-redacted-statements-pooled
+  query_id: query_costly_statements_grouped
+  problem: 'The query has no branch for a ''<REDACTED>'' or NULL statement_text. Every redacted statement in
+    the window pools into ONE fingerprint (labelled by MAX(statement_type)), rather than being
+    treated as unreadable.'
+  effect: 'When statement_text is redacted (the snapshot principal lacks databricks_pii_access), a large
+    number of genuinely different statements collapse into a single pooled row, which can read as
+    one dominant CRITICAL shape that is really an artefact of redaction, not of one query pattern.'
+  status: fixed
+  fix: 'A redacted statement is now keyed by its own statement_id (concat(''statement:'', statement_id)),
+    never pooled with another redacted statement or with a real shape - the same keying
+    query_task_statement_breakdown already uses. is_redacted marks these rows.'
+  item: P4-FIXES28
+
+- id: query_cache_coldstart-unweighted-average-diluted
+  query_id: query_cache_coldstart
+  problem: read_io_cache_percent is averaged unweighted (plain AVG) across all statements in a group,
+    including non-scan statements that report a legitimate 0. The header's own NOT_ASSESSED branch for
+    'nothing was scanned' is unreachable as written.
+  effect: Groups with many non-scan statements get an average diluted toward 0 by statements the cache-hit
+    question does not even apply to, which can push a group to CRITICAL as an artefact of its statement
+    mix rather than real cache-cold-start pain.
+  status: fixed
+  fix: 'Added read_io_cache_percent_weighted_avg, a read_bytes-weighted average over statements with
+    read_bytes > 0 that were not a result-cache hit (NULL-safe on from_result_cache); status now bands
+    on the weighted figure and reads NOT_ASSESSED when scanned_query_count = 0. The original
+    read_io_cache_percent_avg is kept unchanged for compatibility; warehouse_name and
+    scanned_query_count were also added.'
+  item: P4-FIXES28
+- id: query_queuing_waits-null-plus-null-falls-to-ok
+  query_id: query_queuing_waits
+  problem: 'The band was built from SUM(a) + SUM(b), which is NULL (not a comparable value) whenever either
+    sum is NULL. The CASE expression then fell through to its OK branch by default.
+    SERVERLESS_COMPUTE rows report both wait sums as NULL, so they read OK without ever being
+    measured. The caveat did not mention this.'
+  effect: 'Every serverless-compute row in this finding read as a clean OK, when in fact queuing was never
+    actually measured for it -- a NOT_ASSESSED case disguised as a pass (97 rows on the real account
+    this review evidence is drawn from).'
+  status: fixed
+  fix: 'Fixed (T-75B, commits a529718/054ecd2): a first CASE branch now returns NOT_ASSESSED whenever
+    EITHER raw SUM is NULL. The review-fix round further corrected the still-measured case:
+    CRITICAL/WARN now band on COALESCE(SUM,0) + COALESCE(SUM,0) so a single reported bucket can
+    still flag CRITICAL/WARN on its own, before the either-NULL NOT_ASSESSED check. The caveat now
+    states plainly that NULL and 0 are never treated the same.'
+  item: T-75B
+
+- id: query_task_statement_breakdown-no-duration-floor
+  query_id: query_task_statement_breakdown
+  problem: The CRITICAL band has no minimum duration floor, so a short statement inside a slightly-longer
+    task can be flagged CRITICAL purely because of the share of task time it occupies, not because it
+    is slow in absolute terms.
+  effect: Short, practically-irrelevant statements can dominate the CRITICAL count, crowding out genuinely
+    slow statements a reader should prioritize.
+  status: fixed
+  fix: 'Added :min_stmt_ms (default 60000ms): a shape below it cannot band WARN/CRITICAL on share alone
+    and reads NOT_ASSESSED with not_assessed_reason below_duration_floor instead.'
+  item: P4-FIXES28
+- id: query_pruning_effectiveness-no-volume-floor-daily-grain
+  query_id: query_pruning_effectiveness
+  problem: The query has no minimum read-volume floor, and it bands per single day even though its own
+    header says one day is not a reliable signal on its own.
+  effect: A large share of this query's CRITICAL rows, in our review, came from tiny single-day groups
+    rather than a real recurring pruning problem -- the finding is dominated by noise rather than signal.
+  status: fixed
+  fix: 'Added a :min_read_bytes floor (a day below it reads NOT_ASSESSED) and days_seen/days_flagged,
+    a per-(workspace, compute_type, warehouse, identity, statement_type) recurrence count across the
+    window; a CRITICAL day below :min_recurring_flagged_days flagged days is capped to WARN instead of
+    standing alone. warehouse_name was also added.'
+  item: P4-FIXES28
+- id: audit_self_cost-undocumented-marker-and-wildcard-escape
+  query_id: audit_self_cost
+  problem: 'The query relies on statement_text containing a specific marker string, matched with ILIKE
+    ''%databricks_audit%'' -- but the header never documented that this app must emit that marker,
+    and this app''s own snapshot query builder does not emit it. ILIKE also treated ''_'' as a
+    single-character wildcard, which the query did not escape.'
+  effect: 'As written, this finding cannot actually identify this app''s own audit-query cost on any
+    account, because nothing ever writes the marker it looks for -- and the unescaped wildcard would
+    over-match any statement whose text merely resembled the marker (e.g. any "databricksXaudit" for
+    any single character X).'
+  status: fixed
+  fix: 'Partially fixed (T-75B, commits a529718/054ecd2): the wildcard is now escaped -- ILIKE
+    ''%databricks!_audit%'' ESCAPE ''!'' (the review round found ESCAPE ''\'' does not parse on
+    Databricks SQL, whose string-literal lexer treats a backslash as its own escape; ''!'' works
+    identically on both DuckDB and Databricks SQL). The header now documents the escape and states
+    plainly that this app issues no such marker itself today, so the finding still cannot produce a
+    real audit-self-cost verdict on any account -- having the snapshot''s own statement builder
+    actually emit the marker remains undone and unplanned.'
+  item: T-75B
+
+- id: node_timeline_utilization-order-by-keeps-least-busy
+  query_id: node_timeline_utilization
+  problem: 'ORDER BY avg_cpu_pct ASC LIMIT :top_n kept only the LEAST-busy groups once the cap bound.'
+  effect: 'When the row cap was reached, the finding structurally read as "everything is idle" -- the
+    busiest groups, which would read OK, were the ones the cap discarded first, so WARN counts were
+    a lower bound rather than a true count.'
+  status: fixed
+  fix: 'Fixed (T-75B, commits a529718/054ecd2): rows are now ordered CASE status WHEN ''WARN'' THEN 0
+    WHEN ''NOT_ASSESSED'' THEN 1 ELSE 2 END, avg_cpu_pct ASC, so the cap discards OK rows before
+    WARN ones (no CRITICAL exists on this id). The review round wrapped the UNION ALL in a derived
+    table so DuckDB can bind ORDER BY to that expression. :top_n''s default was also raised from 200
+    to 100000 directly in the query header (not a thresholds.yml override, per DEC-66.2/66.6), and
+    the caveat now names the old truncation risk.'
+  item: T-75B
+
+- id: lakeflow_jobs_on_all_purpose-null-vs-empty-and-cap-order
+  query_id: lakeflow_jobs_on_all_purpose
+  problem: 'The header promised to catch a NULL OR EMPTY compute_ids list, but the "dropped" CTE only tested
+    compute_ids IS NULL. Separately, the row cap was applied AFTER the UNION of the placement and
+    NOT_ASSESSED-summary branches, and the summary rows sorted last, so they were the first rows the
+    cap cut.'
+  effect: 'Jobs whose compute_ids was an empty list (rather than NULL) were missed by the "dropped" check
+    (EXPLODE() of an empty array yields zero rows, so the run vanished from BOTH branches), and on a
+    large account the NOT_ASSESSED summary explaining what the cap hid could itself be silently cut
+    by that same cap -- once the cap bound, a flagged (WARN/CRITICAL) placement could be cut before
+    an OK one.'
+  status: fixed
+  fix: 'Fixed (T-75B, commits a529718/054ecd2): dropped/task_compute now test compute_ids IS NULL OR
+    size(compute_ids) = 0 (both branches; label reworded "null or empty compute_ids"). Rows are
+    ordered CASE status WHEN ''CRITICAL'' THEN 0 WHEN ''WARN'' THEN 1 WHEN ''NOT_ASSESSED'' THEN 2
+    ELSE 3 END, est_usd_list_share DESC before LIMIT. The review round wrapped the UNION ALL in a
+    derived table so DuckDB can bind ORDER BY to that expression, and :top_n''s default was raised
+    from 500 to 100000 directly in the query header (not a thresholds.yml override, per
+    DEC-66.2/66.6).'
+  item: T-75B
+
+- id: access_views_inventory-alphabetical-cap-drops-catalogs
+  query_id: access_views_inventory
+  problem: 'This was an unbounded inventory ordered alphabetically with a default LIMIT of 500.'
+  effect: 'On an account with many catalogs, the alphabetical order plus the cap could drop entire catalogs
+    from the inventory whole -- in review, well over a hundred views were missing on one real
+    account purely because of alphabetical position, not because they didn''t exist.'
+  status: fixed
+  fix: 'Fixed (T-75B, commits a529718/054ecd2): :top_n''s default is now 100000, set directly in the
+    query header (the review round replaced a first-pass thresholds.yml override with this, per
+    DEC-66.2/66.6 -- a plain default-value change, not a fix that needed a thresholds.yml override),
+    and the caveat names the old truncation risk.'
+  item: T-75B
+
+- id: compute_warehouse_autoscale_churn-counts-starts-and-stops
+  query_id: compute_warehouse_autoscale_churn
+  problem: 'The query counts every SCALED_UP and SCALED_DOWN event, including a warehouse''s first 0->1
+    start and its 1->0 stop -- these are not autoscaling churn between running clusters, they are
+    ordinary starts and stops.'
+  effect: 'The "churn rate" this query reports is really a start/stop frequency for warehouses that never
+    ran more than one cluster, and its rung-1 action ("widen min/max clusters") cannot help a
+    warehouse whose max_clusters is already 1 -- the suggested fix does not apply to the rows it is
+    attached to.'
+  status: fixed
+  fix: 'churn_events now counts only SCALED_UP/SCALED_DOWN transitions between two already-nonzero
+    cluster counts, treating a transition from/to 0 as its own start_event/stop_event rather than
+    churn, and status bands on churn_events per observed hour instead of total scaling events.'
+  item: P4-FIXES28
+
+- id: sql_warehouse_events_activity-no-row-for-silent-warehouse
+  query_id: sql_warehouse_events_activity
+  problem: The query reads only warehouse_events. A current, non-deleted warehouse with zero events in
+    the window produces NO ROW at all, even though read_this/investigate_if both promise this query detects
+    dormancy.
+  effect: A warehouse that is silently still billed but had no activity events in the window is invisible
+    to this query -- it is not flagged, it simply never appears, which is the opposite of the dormancy
+    detection the header promises.
+  status: fixed
+  fix: 'The warehouse key set is now current (non-deleted) system.compute.warehouses rows UNION
+    warehouses seen in events, LEFT JOINed to warehouses (name, first-seen time), events, and a new
+    system.billing.usage join, so a current warehouse with zero events in the window still produces
+    one row (event_type NULL) and a deleted or never-captured warehouse keeps its event rows instead
+    of disappearing. The zero-event row reads CRITICAL only when it also billed zero DBUs in the
+    window (genuinely dormant); NOT_ASSESSED if it billed while silent or was first seen inside the
+    window. Grain change: rows now carry workspace_id, previously absent from this query''s output.'
+  item: P4-FIXES28
+- id: access_admin_role_change_events-no-action-allow-list
+  query_id: access_admin_role_change_events
+  problem: 'The only filter was a service-name filter (accounts/accountsAccessControl/unityCatalog). There
+    was no allow-list of which ACTIONS actually count as a role or permission change -- ordinary
+    reads, credential vending and token logins under those same services all counted too.'
+  effect: 'In review, more than half of the rows this query flagged as "admin role changes" were not role
+    changes at all, which drowned out the real signal on the Governance tab and in the Overview
+    governance line.'
+  status: fixed
+  fix: 'Fixed (T-73, commits 638db60/294ffec): rewrote the WHERE clause as an explicit (service_name,
+    action_name) allow-list across 5 categories -- admin-role/group-membership changes,
+    permission/grant changes, workspace security-conf edits, cluster-policy edits,
+    token/IP-access-list changes -- sourced from Databricks'' own audit-log/diagnostic-log-reference
+    documentation, and added workspace_id to the SELECT/GROUP BY. The review-fix round added the
+    missing account-admin-grant, account-owner-transfer, workspace role/permission-assignment,
+    share-permission-change and settings-API-edit actions the first pass had left out, added a
+    separate failed_event_count (denied attempts no longer count the same as a success), and removed
+    the unverified "more than half" claim from the caveat. confidence downgraded to
+    needs_confirmation since the allow-list is not yet live-cross-checked. A residual gap (category
+    5''s workspace-scoped branch) remains its own register entry, below.'
+  item: T-73
+
+- id: access_runas_escalation-volume-not-escalation
+  query_id: access_runas_escalation
+  problem: The query bands CRITICAL/WARN purely on the VOLUME of run-as events per (pair, service, action),
+    not on whether the delegation itself looks like an escalation (e.g. a service principal or automation
+    acting as a more-privileged human).
+  effect: In our review, the large majority of this query's flagged rows are simply automation that runs
+    often, not a real escalation pattern -- volume measures how much delegated automation runs, not whether
+    it is risky.
+  status: fixed
+  fix: Bands now on delegation_kind (service-principal vs human shape) and newly_seen_pair (checked
+    against this table's full retention) instead of raw event count; a known pair of any kind is OK,
+    only a newly seen human-involving pair is CRITICAL.
+  item: P4-FIXES28
+- id: po_data_skipping_backfill-wrong-gain-key
+  query_id: po_data_skipping_backfill
+  problem: '''No gain from this optimization'' is judged from operation_metrics[''new_data_skipping_columns''],
+    a key that real DATA_SKIPPING_COLUMN_SELECTION events we reviewed do not populate at all.'
+  effect: The query's WARN band for 'ran with no gain' can fire as a false positive purely because it
+    is reading a metrics key that is never actually set, not because the optimization truly had no effect.
+  status: fixed
+  fix: Judges gain from added_data_skipping_columns instead of new_data_skipping_columns (the latter
+    is never populated by real events, kept only for reference); returns NOT_ASSESSED when added,
+    removed and new are all NULL (the event carries no gain information at all).
+  item: P4-FIXES28
+- id: access_grants_inventory-inherited-not-excluded
+  query_id: access_grants_inventory
+  problem: 'The caveat said inherited privileges are excluded from the count. The query reads
+    information_schema.table_privileges, which lists inherited grants too (with inherited_from set)
+    -- it does not filter them out.'
+  effect: 'The grant counts this query reports include inherited privileges the caveat told a reader NOT to
+    expect, which overstated how many privileges were explicitly granted at this object.'
+  status: fixed
+  fix: 'Fixed (T-75B, commit a529718): rewrote the caveat to state the true pooling behavior -- TABLE
+    scope pools explicit and inherited grants together (inherited_from is not filtered); CATALOG
+    scope has no inherited_from column at all, so an inherited catalog grant is invisible here, not
+    zero. No SQL change (the simpler of two offered fixes; the still-true
+    ownership-derived-privilege gap is unchanged).'
+  item: T-75B
+
+- id: access_table_lineage_blast_radius-path-access-pools-to-null
+  query_id: access_table_lineage_blast_radius
+  problem: 'The GROUP BY omitted source_table_full_name/target_table_full_name, so every path-based, JDBC,
+    or otherwise-unresolved access (both NULL) pooled into ONE fake "UNKNOWN" edge sharing one
+    distinct_principals count -- while the caveat claimed path access was not captured at all.'
+  effect: 'Unrelated path-based accesses by many different principals could combine into a CRITICAL
+    blast-radius verdict that no single real edge earned; on a real account both WARN rows were
+    exactly such pooled artefacts.'
+  status: fixed
+  fix: 'Fixed (T-75B, commit a529718): added WHERE source_table_full_name IS NOT NULL OR
+    target_table_full_name IS NOT NULL, matching access_column_lineage_sensitive_reach''s own
+    pattern; rewrote the caveat to describe the exclusion.'
+  item: T-75B
+
+- id: access_login_concentration-distinct-ip-always-0-or-1
+  query_id: access_login_concentration
+  problem: 'COUNT(DISTINCT source_ip_address) sat inside a GROUP BY that already included source_ip_address
+    -- so within any one group there was at most one distinct IP, and the column could only ever
+    read 0 or 1.'
+  effect: 'The distinct_source_ips signal this finding exists to surface (a principal logging in from many
+    locations) was structurally incapable of reading above 1, silently disabling that part of the
+    check.'
+  status: fixed
+  fix: 'Fixed (T-75B, commits a529718/054ecd2): added a principal_ips CTE keyed on the raw (pre-mask)
+    identity alone, computing COUNT(DISTINCT source_ip_address) over the WHOLE window, then LEFT
+    JOINed back onto the query''s own principal+ip+service+action grain. The review round changed
+    that join to the portable `IS NOT DISTINCT FROM` (the original `a = b OR (a IS NULL AND b IS
+    NULL)` form is not hash-joinable on Spark). read_this/caveats rewritten to describe the
+    corrected semantics.'
+  item: T-75B
+
+- id: access_column_lineage_sensitive_reach-no-sensitivity-input
+  query_id: access_column_lineage_sensitive_reach
+  problem: The query_id and header promise a sensitivity-aware reach measurement, but the SQL has no sensitivity
+    input at all (no join to column_tags or data_classification) -- it is a plain column-lineage fan-out
+    count.
+  effect: Every row reads OK because nothing sensitive is ever actually checked -- in a real account this
+    was the single largest table this query produced, and none of it says anything about sensitive-data
+    reach.
+  status: fixed
+  fix: Joined system.information_schema.column_tags onto the source column (the same tag-name
+    heuristic access_pii_propagation_untagged uses), collapsed to one row per column first so a
+    multi-tagged column can't double-count an edge, added source_sensitivity_tags, and downgraded
+    confidence to needs_confirmation since the join depends on that same heuristic.
+  item: P4-FIXES28
+- id: access_classified_unmasked-column-masks-join-columns-wrong
+  query_id: access_classified_unmasked
+  problem: 'The join to information_schema.column_masks used cm.CATALOG_NAME/cm.SCHEMA_NAME, following the
+    published docs -- but the live system table actually exposes
+    table_catalog/table_schema/table_name (the same columns this library''s own
+    access_column_masks_inventory query already uses), so the join failed to bind.'
+  effect: 'On a real workspace the query errored with a binder error rather than ever running, so this
+    finding could never produce a real is_unmasked verdict -- it only ever surfaced as NOT_ASSESSED
+    via the error path.'
+  status: fixed
+  fix: 'Fixed (T-75B, commit a529718): joined on
+    cm.table_catalog/cm.table_schema/cm.table_name/cm.column_name, matching the live schema
+    (DEC-53). Bundled with the mask_name aliasing fix, see that entry below.'
+  item: T-75B
+
+- id: lakeflow_stale_zombie_jobs-null-last-run-reads-warn
+  query_id: lakeflow_stale_zombie_jobs
+  problem: 'A job with a NULL last_run_start reads WARN, and the stale/retention-day lookback is judged even
+    when the snapshot''s own capture window is shorter than that lookback.'
+  effect: 'A job that simply has no run history captured in this snapshot (rather than one that is truly
+    stale) can be flagged WARN, and a lookback judged against a too-short capture window understates
+    how much evidence backs the verdict.'
+  status: fixed
+  fix: 'A NULL last_run_start now reads NOT_ASSESSED (not_assessed_reason
+    too_young_to_call_stale) whenever this workspace''s own captured job_run_timeline history
+    (capture_floor_days) is shorter than :stale_days, or the job''s own create_time is more recent
+    than :stale_days ago; otherwise a NULL last_run_start still reads WARN as before, never escalated
+    to CRITICAL. Added create_time and capture_floor_days columns.'
+  item: P4-FIXES28
+
+- id: lakeflow_never_started_runs-narrow-match
+  query_id: lakeflow_never_started_runs
+  problem: The query only matches zero-length run periods as 'never started'. It is not yet confirmed
+    (pending a live-account check) whether this also captures INVALID_RUN_CONFIGURATION runs, which may
+    never start for a different reason and not produce a zero-length period.
+  effect: If INVALID_RUN_CONFIGURATION runs do not produce a zero-length period, this query undercounts
+    jobs that never actually started, in a way that is not currently visible from the finding alone.
+  status: fixed
+  fix: 'Added a second, separately-reported signature -- an INVALID_RUN_CONFIGURATION run with
+    no matching row in job_task_run_timeline -- unioned (never summed) into never_started_runs
+    alongside the original zero-length-period match. Still UNCONFIRMED against a live account
+    (confidence: needs_confirmation): read never_started_runs_zero_length and
+    never_started_runs_invalid_config_no_tasks separately until confirmed.'
+  item: P4-FIXES28
+- id: lakeflow_job_ownership_orphans-flags-service-principal-runas
+  query_id: lakeflow_job_ownership_orphans
+  problem: jobs_owner_mismatch is counted as creator_user_name <> run_as_user_name, with no distinction
+    for WHY they differ. A job a human creates and deliberately sets to run as a service principal --
+    the recommended production pattern -- counts as a mismatch exactly the same as an orphaned or abandoned
+    job.
+  effect: Well-governed workspaces that correctly run production jobs as a service principal are pushed
+    toward CRITICAL by this query, while a job that is created AND still runs as the same human (the actually
+    risky pattern for production) reads as healthy. The verdict points the wrong way on the question it
+    claims to answer.
+  status: fixed
+  fix: 'Fixed (T-72, commit 0639616): rewritten in place. run_as is now judged SERVICE_PRINCIPAL (an application-id
+    UUID shape, the same heuristic access_runas_escalation uses), HUMAN (anything else known) or missing.
+    A HUMAN run-as is now the risk signal (weighted double when the job is also scheduled, by trigger_type),
+    a SERVICE_PRINCIPAL run-as reads healthy regardless of schedule, and a missing creator_user_name or
+    run_as_user_name is its own risk signal. Params renamed warn_orphan_jobs/crit_orphan_jobs -> warn_ownership_risk_jobs/crit_ownership_risk_jobs
+    to match.'
+  item: T-72
+- id: access_admin_role_change_events-identity-masking-collision
+  query_id: access_admin_role_change_events
+  problem: The actor identity is masked to concat(substr(actor,1,2), '****@****') with no unmasked key
+    anywhere in the row. Two different people whose identity happens to share its first two characters
+    mask to the exact same value.
+  effect: 'Any chart or tile that groups this query''s rows by the masked actor (e.g. an ''admin role
+    changes by actor'' bar) can silently merge multiple real people into one bar, and ''Worst: xx****@****''
+    can name a fabricated composite actor rather than any one real person.'
+  status: fixed
+  fix: 'Fixed (T-66A, commits f5bc411/1fb9ab6): masked in-SQL to DEC-66.3''s display format instead --
+    the principal''s real id when the row carries one (e.g. a *_user_id column on the same row), otherwise
+    the first 8 lowercase hex characters of sha256(lower(trim(identity))), plus a space and the first
+    two characters of the raw identity plus ''***''; a value already shaped like a service-principal UUID
+    passes through unchanged, and NULL / ''__REDACTED__'' are kept as-is. Two different people no longer
+    collide on the same masked value.'
+  item: T-66A
+- id: access_runas_escalation-identity-masking-collision
+  query_id: access_runas_escalation
+  problem: 'Same masking-collision defect as access_admin_role_change_events: the delegation-pair identities
+    are masked with no unmasked key, so two different people who share a masked prefix are indistinguishable.'
+  effect: A reader cannot tell which two real identities a flagged delegation pair actually involves.
+  status: fixed
+  fix: 'Fixed (T-66A, commits f5bc411/1fb9ab6): masked in-SQL to DEC-66.3''s display format instead --
+    the principal''s real id when the row carries one (e.g. a *_user_id column on the same row), otherwise
+    the first 8 lowercase hex characters of sha256(lower(trim(identity))), plus a space and the first
+    two characters of the raw identity plus ''***''; a value already shaped like a service-principal UUID
+    passes through unchanged, and NULL / ''__REDACTED__'' are kept as-is. Two different people no longer
+    collide on the same masked value.'
+  item: T-66A
+- id: access_login_concentration-identity-masking-collision
+  query_id: access_login_concentration
+  problem: 'Same masking-collision defect: the actor identity is masked with no unmasked key, so different
+    people can share a masked value.'
+  effect: Login-concentration rows and any chart grouped by the masked actor can merge different real
+    people into one bar.
+  status: fixed
+  fix: 'Fixed (T-66A, commits f5bc411/1fb9ab6): masked in-SQL to DEC-66.3''s display format instead --
+    the principal''s real id when the row carries one (e.g. a *_user_id column on the same row), otherwise
+    the first 8 lowercase hex characters of sha256(lower(trim(identity))), plus a space and the first
+    two characters of the raw identity plus ''***''; a value already shaped like a service-principal UUID
+    passes through unchanged, and NULL / ''__REDACTED__'' are kept as-is. Two different people no longer
+    collide on the same masked value.'
+  item: T-66A
+- id: access_grants_inventory-identity-masking-collision
+  query_id: access_grants_inventory
+  problem: GRANTEE is masked the same way, including group names -- so a masked GRANTEE cannot reliably
+    be told apart from another grantee (person or group) that shares a masked prefix.
+  effect: A grants inventory grouped or read by the masked GRANTEE can conflate different grantees, and
+    group names -- which are not personal data and arguably should not be masked at all -- are masked
+    the same as individual people.
+  status: fixed
+  fix: 'Fixed (T-66A, commits f5bc411/1fb9ab6): masked in-SQL to DEC-66.3''s display format instead --
+    the principal''s real id when the row carries one (e.g. a *_user_id column on the same row), otherwise
+    the first 8 lowercase hex characters of sha256(lower(trim(identity))), plus a space and the first
+    two characters of the raw identity plus ''***''; a value already shaped like a service-principal UUID
+    passes through unchanged, and NULL / ''__REDACTED__'' are kept as-is. Two different people no longer
+    collide on the same masked value.'
+  item: T-66A
+- id: access_delta_sharing_exposure-identity-masking-collision
+  query_id: access_delta_sharing_exposure
+  problem: Both the share recipient and the share owner are masked with no unmasked key.
+  effect: Two different recipients or owners that share a masked prefix are indistinguishable in this
+    finding, which matters for a Delta Sharing exposure check where 'who has access' is the whole point.
+  status: fixed
+  fix: 'Fixed (T-66A, commits f5bc411/1fb9ab6): masked in-SQL to DEC-66.3''s display format instead --
+    the principal''s real id when the row carries one (e.g. a *_user_id column on the same row), otherwise
+    the first 8 lowercase hex characters of sha256(lower(trim(identity))), plus a space and the first
+    two characters of the raw identity plus ''***''; a value already shaped like a service-principal UUID
+    passes through unchanged, and NULL / ''__REDACTED__'' are kept as-is. Two different people no longer
+    collide on the same masked value.'
+  item: T-66A
+- id: access_dead_table_candidates-identity-masking-collision
+  query_id: access_dead_table_candidates
+  problem: table_owner is masked with no unmasked key.
+  effect: Two different table owners that share a masked prefix cannot be told apart when routing a dead-table
+    cleanup to the right owner.
+  status: fixed
+  fix: 'Fixed (T-66A, commits f5bc411/1fb9ab6): masked in-SQL to DEC-66.3''s display format instead --
+    the principal''s real id when the row carries one (e.g. a *_user_id column on the same row), otherwise
+    the first 8 lowercase hex characters of sha256(lower(trim(identity))), plus a space and the first
+    two characters of the raw identity plus ''***''; a value already shaped like a service-principal UUID
+    passes through unchanged, and NULL / ''__REDACTED__'' are kept as-is. Two different people no longer
+    collide on the same masked value.'
+  item: T-66A
+- id: access_pii_propagation_untagged-identity-masking-collision
+  query_id: access_pii_propagation_untagged
+  problem: created_by is masked with no unmasked key.
+  effect: Two different creators that share a masked prefix cannot be told apart when following up on
+    untagged PII.
+  status: fixed
+  fix: 'Fixed (T-66A, commits f5bc411/1fb9ab6): masked in-SQL to DEC-66.3''s display format instead --
+    the principal''s real id when the row carries one (e.g. a *_user_id column on the same row), otherwise
+    the first 8 lowercase hex characters of sha256(lower(trim(identity))), plus a space and the first
+    two characters of the raw identity plus ''***''; a value already shaped like a service-principal UUID
+    passes through unchanged, and NULL / ''__REDACTED__'' are kept as-is. Two different people no longer
+    collide on the same masked value.'
+  item: T-66A
+- id: access_classified_unmasked-mask-name-unaliased
+  query_id: access_classified_unmasked
+  problem: 'The MASK_NAME column came through the SELECT with no column alias.'
+  effect: 'Small, cosmetic: the column reached the app under a non-standard, undocumented name rather than
+    a predictable snake_case one, which any code reading it by name had to work around -- and the
+    actual case it surfaced under could differ by engine (DuckDB folds unquoted identifiers; Spark
+    is case-preserving on the literal reference).'
+  status: fixed
+  fix: 'Fixed (T-75B, commit a529718): added an explicit `cm.mask_name AS mask_name` alias, so the
+    output column name is deterministic regardless of engine. Bundled with the column_masks
+    join-columns fix, see that entry above.'
+  item: T-75B
+
+- id: access_dead_table_candidates-lineage-caveat-wrong
+  query_id: access_dead_table_candidates
+  problem: The caveat says 'a SELECT whose result is never written to another table emits no lineage row
+    at all', implying a read-only query is invisible to this check. But system.access.table_lineage does
+    record a row for a read with no write target (source_table_name set, target NULL), and this query's
+    own source_tables CTE already keeps any row with source_table_name IS NOT NULL, regardless of whether
+    a target was ever written.
+  effect: 'A table read only outside Unity Catalog lineage can look unused here; check before dropping it.'
+  status: not_fixed
+  fix: 'Correct the caveat to state plainly that a read with no write target IS captured (source_table_name
+    set, target NULL) -- the real blind spot is narrower: an access Unity Catalog''s lineage capture never
+    observed at all, not a plain read-only SELECT.'
+  item: null
+- id: query_costly_statements_grouped-distinct-warehouses-null-caveat
+  query_id: query_costly_statements_grouped
+  problem: 'The caveat said distinct_warehouses counts NULL as its own bucket, but the query''s
+    COUNT(DISTINCT ...) ignores NULL, as COUNT(DISTINCT) always does.'
+  effect: 'The caveat had the direction backwards for any serverless-touching fingerprint (NULL
+    warehouse_id): a fingerprint seen only on serverless reads distinct_warehouses = 0, and a mixed
+    fingerprint undercounts, not the "NULL is its own bucket" behavior the caveat claimed.'
+  status: fixed
+  fix: 'Fixed (T-75B, commit a529718): rewrote the caveat with the correct direction; also added a note
+    stating unredacted statement_text requires the databricks_pii_access group, and that every
+    redacted row otherwise collapses onto one shared fingerprint per statement_type (documentation
+    only, no SQL change -- the larger redacted-statement-pooling defect itself is the separate
+    register entry below, still not fixed).'
+  item: T-75B
+
+- id: lakeflow_long_running_runs-cold-start-pointer-wrong
+  query_id: lakeflow_long_running_runs
+  problem: 'The header''s investigate_if still told a reader with a high wait_share_pct to "use
+    lakeflow_phase_cold_start''s task-level view there" -- but lakeflow_phase_cold_start is
+    run-level (one row per job/run), not task-level; there is no task-level phase breakdown anywhere
+    in this library.'
+  effect: 'A reader following that pointer to break down which TASK inside a long run spent its time in
+    setup/queue/execution would not find that view at lakeflow_phase_cold_start -- it only has a
+    run-level total.'
+  status: fixed
+  fix: 'Fixed (T-75B, commit a529718): corrected the pointer to describe lakeflow_phase_cold_start as
+    the run-level p95 view of the same setup/queue breakdown, and noted it now folds the same
+    multi-task 0-sentinel this query already falls back to wall clock for.'
+  item: T-75B
+
+- id: lakeflow_workload_mix_hours-execution-zero-for-multitask
+  query_id: lakeflow_workload_mix_hours
+  problem: 'execution_s_total sums job_run_timeline.execution_duration_seconds at the RUN level. Per
+    Databricks'' own documentation (confirmed for the sibling
+    lakeflow_phase_cold_start/lakeflow_job_queue_time queries in this library), that run-level phase
+    column is populated only for legacy single-task jobs and logs a literal 0 for every multi-task
+    job -- it is not a real measurement of zero execution time.'
+  effect: 'execution_s_total read as 0 for every multi-task job''s rows, which are the majority of runs on
+    most accounts -- a reader using this query''s own workload mix to gauge how much execution time
+    a run_type/trigger_type/day combination actually used would see a number that means "not
+    reported", not "no execution time", with nothing in the header saying so.'
+  status: fixed
+  fix: 'Fixed (T-75B, commit a529718): added a caveat sentence naming the multi-task 0-sentinel. No SQL
+    change -- this inventory query does NOT fold it to NULL the way its two siblings
+    (lakeflow_phase_cold_start, lakeflow_job_queue_time) now do, because it is a pure SUM with no
+    status band to protect from the bias a fold would otherwise correct for.'
+  item: T-75B
+
+- id: compute_serving_endpoint_cost_status-retention-lookback-not-checked
+  query_id: compute_serving_endpoint_cost_status
+  problem: tracking_status reads 'usage tracking likely OFF' whenever an endpoint has spend but zero rows
+    in system.serving.endpoint_usage across the full :retention_days lookback (default 90). The query
+    never checks whether the account's own endpoint_usage history actually reaches back :retention_days
+    -- it always judges the full window regardless of how much history exists.
+  effect: On an account (or workspace) whose endpoint_usage retention or onboarding history is shorter
+    than :retention_days, a genuinely-tracked endpoint that simply has not accumulated :retention_days
+    of history yet reads WARN 'tracking off' instead of NOT_ASSESSED -- the same lookback-vs-capture-window
+    gap this library already names for lakeflow_stale_zombie_jobs.
+  status: fixed
+  fix: 'A retention_history CTE now reads each workspace''s own earliest captured endpoint_usage
+    request_time, so not_assessed_reason=insufficient_retention_history (NOT_ASSESSED) fires only
+    when some history exists but is shorter than :retention_days, leaving a workspace with no
+    history at all correctly reading WARN "tracking off".'
+  item: P4-FIXES28
+- id: cost_account_prices_raw-header-implied-wrong-comparison
+  query_id: cost_account_prices_raw
+  problem: Alongside cost_actual_vs_list_by_sku's now-corrected header, this raw price-history inventory's
+    own header did not yet state DEC-66.1's single price basis, so a reader could not tell which of the
+    two list-price columns (pricing.default, the pre-promotion rate, vs pricing.effective_list.default,
+    DEC-66.1's basis) the rest of this app actually prices with.
+  effect: A reader relying on this inventory to sanity-check another finding's dollar figure could not
+    tell which of the two raw price columns matched what the rest of the app reports, without cross-referencing
+    the SQL of every dollar-computing query.
+  status: fixed
+  fix: 'Fixed (T-69A, commit ad6d6cf): the header now states DEC-66.1''s basis explicitly (confidence_note:
+    ''DEC-66.1 fixes the basis this app uses everywhere: the effective list price ... pricing.default
+    ... is collected here raw for reference''), and points to pricing_list_prices_raw for the effective-list
+    rate this app actually prices with.'
+  item: T-69A
+- id: lakeflow_jobs_no_timeout-null-bucket-unused
+  query_id: lakeflow_jobs_no_timeout
+  problem: The query computes jobs_timeout_null (jobs whose timeout_seconds is NULL, which the header's
+    own confidence_note says is ambiguous before early Dec 2025 -- 'no timeout' vs 'not yet populated')
+    and emits it as its own column, but the status CASE never references it -- only jobs_no_timeout (NULL
+    OR 0) drives the band.
+  effect: A workspace whose jobs simply predate timeout_seconds being populated reads exactly the same
+    WARN/CRITICAL band as one with genuinely no-timeout jobs -- the header's own promised 'not assessed
+    - column not yet populated' degradation can never fire, because nothing in the SQL branches on jobs_timeout_null.
+  status: fixed
+  fix: 'jobs_timeout_null now splits into jobs_timeout_null_not_populated and
+    jobs_timeout_null_after_population by a per-workspace population_floor_time, and NOT_ASSESSED
+    fires only when the not-populated bucket is at least :null_bucket_material_share (default 0.5)
+    of jobs_no_timeout.'
+  item: P4-FIXES28
+- id: lakeflow_job_tasks_no_timeout-null-bucket-unused
+  query_id: lakeflow_job_tasks_no_timeout
+  problem: 'Same defect as lakeflow_jobs_no_timeout: tasks_timeout_null is computed and emitted, but the
+    status CASE bands only on tasks_no_timeout (NULL OR 0) and never references tasks_timeout_null.'
+  effect: A workspace whose tasks predate timeout_seconds being populated (before late Nov 2025) reads
+    the same WARN/CRITICAL band as one with genuinely untimed tasks -- the header's promised degradation
+    for a short-history account can never fire.
+  status: fixed
+  fix: 'Same population-floor split as lakeflow_jobs_no_timeout (tasks_timeout_null_not_populated
+    / tasks_timeout_null_after_population), gating NOT_ASSESSED only once the not-populated bucket is
+    at least :null_bucket_material_share (new param, default 0.5) of tasks_no_timeout.'
+  item: P4-FIXES28
+- id: lakeflow_tasks_near_timeout-null-bucket-unused
+  query_id: lakeflow_tasks_near_timeout
+  problem: The query computes runs_no_task_timeout and runs_exec_null as degradation buckets and emits
+    both, but the status CASE bands only on runs_near_timeout + runs_over_timeout and never references
+    either NULL-bucket column.
+  effect: A task whose runs mostly predate timeout_seconds or execution_duration_seconds being populated
+    (both late Nov 2025) reads the same OK/WARN/CRITICAL band as one where every run was genuinely measured
+    -- the header's own promised 'not assessed' degradation for missing data can never fire.
+  status: fixed
+  fix: 'status now reads NOT_ASSESSED when runs_no_task_timeout or runs_exec_null is at least
+    :null_bucket_material_share (new param, default 0.5) of a task''s runs, instead of silently
+    excluding them with no signal.'
+  item: P4-FIXES28
+- id: lakeflow_tasks_near_timeout-zero-timeout-not-a-gap
+  query_id: lakeflow_tasks_near_timeout
+  problem: runs_no_task_timeout counted timeout_seconds IS NULL OR = 0 together, treating an explicit
+    0-second (deliberately no bound configured) timeout the same as a NULL (not yet populated) one.
+  effect: A task whose timeout was deliberately left unset (0) was pooled into the same "not yet
+    populated" degradation bucket as genuine missing data, muddying the NOT_ASSESSED signal and
+    making a deliberate no-bound setting look like a data gap.
+  status: fixed
+  fix: 'A 0-second timeout is now its own explicit runs_no_timeout_bound column ("no bound
+    configured", not a gap); runs_no_task_timeout is now NULL-only ("not yet populated").'
+  item: P4-FIXES28
+- id: lakeflow_tasks_near_timeout-near-over-double-counted
+  query_id: lakeflow_tasks_near_timeout
+  problem: runs_near_timeout (execution >= :near_timeout_ratio of the configured timeout) had no upper
+    bound, so it already included every run counted in runs_over_timeout (execution >= the timeout
+    itself).
+  effect: status's (runs_near_timeout + runs_over_timeout) counted every over-timeout run TWICE, so
+    WARN could fire on as few as 2 genuinely over-timeout runs at the default :warn_near_timeout_runs = 3.
+  status: fixed
+  fix: 'runs_near_timeout is now >= :near_timeout_ratio AND < the timeout (exclusive of
+    runs_over_timeout), so the sum double-counts nothing.'
+  item: P4-FIXES28
+- id: lakeflow_failed_jobs_wasted_dbus-not-assessed-branch-unreachable
+  query_id: lakeflow_failed_jobs_wasted_dbus
+  problem: The status CASE opens with WHEN r.failed_runs IS NULL THEN 'NOT_ASSESSED', but failed_runs
+    is COUNT(DISTINCT ...) (never NULL) and the outer query already filters WHERE r.failed_runs > 0 --
+    so failed_runs is never NULL by the time the CASE runs, and this branch can never fire.
+  effect: The header nowhere claims a NOT_ASSESSED verdict is possible on this finding, so this is dead
+    code rather than a wrong verdict a reader sees -- but it is exactly the same never-fires defect this
+    register already discloses for the other four lakeflow headers.
+  status: fixed
+  fix: 'Fixed (P4-05): the unreachable branch is gone; NOT_ASSESSED now fires, with a
+    reason (no_billing_rows, no_run_id_in_billing, unpriced), when the failures cannot be priced.'
+- id: compute_idle_node_ratio-money-basis-was-pre-promotion
+  query_id: compute_idle_node_ratio
+  problem: Before T-69A, this query priced its net_dbus/est_usd_list column at pricing.default (the pre-promotion
+    sticker list rate) instead of pricing.effective_list.default (the effective, post-promotion list price)
+    -- one of 14 vendored queries that mixed the two bases across the library.
+  effect: Any list-price dollar estimate this query reported used the pre-promotion rate while the rest
+    of the app (DEC-66.1) used the post-promotion effective-list rate -- two different 'list price' numbers
+    for the same usage, depending only on which query a reader happened to be looking at.
+  status: fixed
+  fix: 'Fixed (T-69A, commit ad6d6cf): now prices at pricing.effective_list.default (DEC-66.1''s one basis,
+    the effective post-promotion list price) throughout, with a price_basis column (free / priced / unpriced)
+    added so the UI can tell a real $0 (a FREE_USAGE SKU) apart from a pricing-coverage gap.'
+  item: T-69A
+- id: compute_warehouse_autoscale_churn-money-basis-was-pre-promotion
+  query_id: compute_warehouse_autoscale_churn
+  problem: Before T-69A, this query priced its net_dbus/est_usd_list column at pricing.default (the pre-promotion
+    sticker list rate) instead of pricing.effective_list.default (the effective, post-promotion list price)
+    -- one of 14 vendored queries that mixed the two bases across the library.
+  effect: Any list-price dollar estimate this query reported used the pre-promotion rate while the rest
+    of the app (DEC-66.1) used the post-promotion effective-list rate -- two different 'list price' numbers
+    for the same usage, depending only on which query a reader happened to be looking at.
+  status: fixed
+  fix: 'Fixed (T-69A, commit ad6d6cf): now prices at pricing.effective_list.default (DEC-66.1''s one basis,
+    the effective post-promotion list price) throughout, with a price_basis column (free / priced / unpriced)
+    added so the UI can tell a real $0 (a FREE_USAGE SKU) apart from a pricing-coverage gap.'
+  item: T-69A
+- id: compute_warehouse_idle_gaps-money-basis-was-pre-promotion
+  query_id: compute_warehouse_idle_gaps
+  problem: Before T-69A, this query priced its net_dbus/est_usd_list column at pricing.default (the pre-promotion
+    sticker list rate) instead of pricing.effective_list.default (the effective, post-promotion list price)
+    -- one of 14 vendored queries that mixed the two bases across the library.
+  effect: Any list-price dollar estimate this query reported used the pre-promotion rate while the rest
+    of the app (DEC-66.1) used the post-promotion effective-list rate -- two different 'list price' numbers
+    for the same usage, depending only on which query a reader happened to be looking at.
+  status: fixed
+  fix: 'Fixed (T-69A, commit ad6d6cf): now prices at pricing.effective_list.default (DEC-66.1''s one basis,
+    the effective post-promotion list price) throughout, with a price_basis column (free / priced / unpriced)
+    added so the UI can tell a real $0 (a FREE_USAGE SKU) apart from a pricing-coverage gap.'
+  item: T-69A
+- id: instance_pools_idle_capacity-money-basis-was-pre-promotion
+  query_id: instance_pools_idle_capacity
+  problem: Before T-69A, this query priced its net_dbus/est_usd_list column at pricing.default (the pre-promotion
+    sticker list rate) instead of pricing.effective_list.default (the effective, post-promotion list price)
+    -- one of 14 vendored queries that mixed the two bases across the library.
+  effect: Any list-price dollar estimate this query reported used the pre-promotion rate while the rest
+    of the app (DEC-66.1) used the post-promotion effective-list rate -- two different 'list price' numbers
+    for the same usage, depending only on which query a reader happened to be looking at.
+  status: fixed
+  fix: 'Fixed (T-69A, commit ad6d6cf): now prices at pricing.effective_list.default (DEC-66.1''s one basis,
+    the effective post-promotion list price) throughout, with a price_basis column (free / priced / unpriced)
+    added so the UI can tell a real $0 (a FREE_USAGE SKU) apart from a pricing-coverage gap.'
+  item: T-69A
+- id: lakeflow_failed_jobs_wasted_dbus-money-basis-was-pre-promotion
+  query_id: lakeflow_failed_jobs_wasted_dbus
+  problem: Before T-69A, this query priced its net_dbus/est_usd_list column at pricing.default (the pre-promotion
+    sticker list rate) instead of pricing.effective_list.default (the effective, post-promotion list price)
+    -- one of 14 vendored queries that mixed the two bases across the library.
+  effect: Any list-price dollar estimate this query reported used the pre-promotion rate while the rest
+    of the app (DEC-66.1) used the post-promotion effective-list rate -- two different 'list price' numbers
+    for the same usage, depending only on which query a reader happened to be looking at.
+  status: fixed
+  fix: 'Fixed (T-69A, commit ad6d6cf): now prices at pricing.effective_list.default (DEC-66.1''s one basis,
+    the effective post-promotion list price) throughout, with a price_basis column (free / priced / unpriced)
+    added so the UI can tell a real $0 (a FREE_USAGE SKU) apart from a pricing-coverage gap.'
+  item: T-69A
+- id: lakeflow_job_tasks_no_timeout-money-basis-was-pre-promotion
+  query_id: lakeflow_job_tasks_no_timeout
+  problem: Before T-69A, this query priced its net_dbus/est_usd_list column at pricing.default (the pre-promotion
+    sticker list rate) instead of pricing.effective_list.default (the effective, post-promotion list price)
+    -- one of 14 vendored queries that mixed the two bases across the library.
+  effect: Any list-price dollar estimate this query reported used the pre-promotion rate while the rest
+    of the app (DEC-66.1) used the post-promotion effective-list rate -- two different 'list price' numbers
+    for the same usage, depending only on which query a reader happened to be looking at.
+  status: fixed
+  fix: 'Fixed (T-69A, commit ad6d6cf): now prices at pricing.effective_list.default (DEC-66.1''s one basis,
+    the effective post-promotion list price) throughout, with a price_basis column (free / priced / unpriced)
+    added so the UI can tell a real $0 (a FREE_USAGE SKU) apart from a pricing-coverage gap.'
+  item: T-69A
+- id: lakeflow_jobs_no_timeout-money-basis-was-pre-promotion
+  query_id: lakeflow_jobs_no_timeout
+  problem: Before T-69A, this query priced its net_dbus/est_usd_list column at pricing.default (the pre-promotion
+    sticker list rate) instead of pricing.effective_list.default (the effective, post-promotion list price)
+    -- one of 14 vendored queries that mixed the two bases across the library.
+  effect: Any list-price dollar estimate this query reported used the pre-promotion rate while the rest
+    of the app (DEC-66.1) used the post-promotion effective-list rate -- two different 'list price' numbers
+    for the same usage, depending only on which query a reader happened to be looking at.
+  status: fixed
+  fix: 'Fixed (T-69A, commit ad6d6cf): now prices at pricing.effective_list.default (DEC-66.1''s one basis,
+    the effective post-promotion list price) throughout, with a price_basis column (free / priced / unpriced)
+    added so the UI can tell a real $0 (a FREE_USAGE SKU) apart from a pricing-coverage gap.'
+  item: T-69A
+- id: lakeflow_jobs_on_all_purpose-money-basis-was-pre-promotion
+  query_id: lakeflow_jobs_on_all_purpose
+  problem: Before T-69A, this query priced its net_dbus/est_usd_list column at pricing.default (the pre-promotion
+    sticker list rate) instead of pricing.effective_list.default (the effective, post-promotion list price)
+    -- one of 14 vendored queries that mixed the two bases across the library.
+  effect: Any list-price dollar estimate this query reported used the pre-promotion rate while the rest
+    of the app (DEC-66.1) used the post-promotion effective-list rate -- two different 'list price' numbers
+    for the same usage, depending only on which query a reader happened to be looking at.
+  status: fixed
+  fix: 'Fixed (T-69A, commit ad6d6cf): now prices at pricing.effective_list.default (DEC-66.1''s one basis,
+    the effective post-promotion list price) throughout, with a price_basis column (free / priced / unpriced)
+    added so the UI can tell a real $0 (a FREE_USAGE SKU) apart from a pricing-coverage gap.'
+  item: T-69A
+- id: lakeflow_pipeline_idle_tail_duration-money-basis-was-pre-promotion
+  query_id: lakeflow_pipeline_idle_tail_duration
+  problem: Before T-69A, this query priced its net_dbus/est_usd_list column at pricing.default (the pre-promotion
+    sticker list rate) instead of pricing.effective_list.default (the effective, post-promotion list price)
+    -- one of 14 vendored queries that mixed the two bases across the library.
+  effect: Any list-price dollar estimate this query reported used the pre-promotion rate while the rest
+    of the app (DEC-66.1) used the post-promotion effective-list rate -- two different 'list price' numbers
+    for the same usage, depending only on which query a reader happened to be looking at.
+  status: fixed
+  fix: 'Fixed (T-69A, commit ad6d6cf): now prices at pricing.effective_list.default (DEC-66.1''s one basis,
+    the effective post-promotion list price) throughout, with a price_basis column (free / priced / unpriced)
+    added so the UI can tell a real $0 (a FREE_USAGE SKU) apart from a pricing-coverage gap.'
+  item: T-69A
+- id: lakeflow_retries_repairs-money-basis-was-pre-promotion
+  query_id: lakeflow_retries_repairs
+  problem: Before T-69A, this query priced its net_dbus/est_usd_list column at pricing.default (the pre-promotion
+    sticker list rate) instead of pricing.effective_list.default (the effective, post-promotion list price)
+    -- one of 14 vendored queries that mixed the two bases across the library.
+  effect: Any list-price dollar estimate this query reported used the pre-promotion rate while the rest
+    of the app (DEC-66.1) used the post-promotion effective-list rate -- two different 'list price' numbers
+    for the same usage, depending only on which query a reader happened to be looking at.
+  status: fixed
+  fix: 'Fixed (T-69A, commit ad6d6cf): now prices at pricing.effective_list.default (DEC-66.1''s one basis,
+    the effective post-promotion list price) throughout, with a price_basis column (free / priced / unpriced)
+    added so the UI can tell a real $0 (a FREE_USAGE SKU) apart from a pricing-coverage gap.'
+  item: T-69A
+- id: lakeflow_stale_zombie_jobs-money-basis-was-pre-promotion
+  query_id: lakeflow_stale_zombie_jobs
+  problem: Before T-69A, this query priced its net_dbus/est_usd_list column at pricing.default (the pre-promotion
+    sticker list rate) instead of pricing.effective_list.default (the effective, post-promotion list price)
+    -- one of 14 vendored queries that mixed the two bases across the library.
+  effect: Any list-price dollar estimate this query reported used the pre-promotion rate while the rest
+    of the app (DEC-66.1) used the post-promotion effective-list rate -- two different 'list price' numbers
+    for the same usage, depending only on which query a reader happened to be looking at.
+  status: fixed
+  fix: 'Fixed (T-69A, commit ad6d6cf): now prices at pricing.effective_list.default (DEC-66.1''s one basis,
+    the effective post-promotion list price) throughout, with a price_basis column (free / priced / unpriced)
+    added so the UI can tell a real $0 (a FREE_USAGE SKU) apart from a pricing-coverage gap.'
+  item: T-69A
+- id: compute_serving_endpoint_cost_status-money-basis-was-pre-promotion
+  query_id: compute_serving_endpoint_cost_status
+  problem: Before T-69A, this query priced its net_dbus/est_usd_list column at pricing.default (the pre-promotion
+    sticker list rate) instead of pricing.effective_list.default (the effective, post-promotion list price)
+    -- one of 14 vendored queries that mixed the two bases across the library.
+  effect: Any list-price dollar estimate this query reported used the pre-promotion rate while the rest
+    of the app (DEC-66.1) used the post-promotion effective-list rate -- two different 'list price' numbers
+    for the same usage, depending only on which query a reader happened to be looking at.
+  status: fixed
+  fix: 'Fixed (T-69A, commit ad6d6cf): now prices at pricing.effective_list.default (DEC-66.1''s one basis,
+    the effective post-promotion list price) throughout, with a price_basis column (free / priced / unpriced)
+    added so the UI can tell a real $0 (a FREE_USAGE SKU) apart from a pricing-coverage gap.'
+  item: T-69A
+- id: compute_serving_endpoint_usage-money-basis-was-pre-promotion
+  query_id: compute_serving_endpoint_usage
+  problem: Before T-69A, this query priced its net_dbus/est_usd_list column at pricing.default (the pre-promotion
+    sticker list rate) instead of pricing.effective_list.default (the effective, post-promotion list price)
+    -- one of 14 vendored queries that mixed the two bases across the library.
+  effect: Any list-price dollar estimate this query reported used the pre-promotion rate while the rest
+    of the app (DEC-66.1) used the post-promotion effective-list rate -- two different 'list price' numbers
+    for the same usage, depending only on which query a reader happened to be looking at.
+  status: fixed
+  fix: 'Fixed (T-69A, commit ad6d6cf): now prices at pricing.effective_list.default (DEC-66.1''s one basis,
+    the effective post-promotion list price) throughout, with a price_basis column (free / priced / unpriced)
+    added so the UI can tell a real $0 (a FREE_USAGE SKU) apart from a pricing-coverage gap.'
+  item: T-69A
+- id: serving_endpoint_traffic_by_endpoint-money-basis-was-pre-promotion
+  query_id: serving_endpoint_traffic_by_endpoint
+  problem: Before T-69A, this query priced its net_dbus/est_usd_list column at pricing.default (the pre-promotion
+    sticker list rate) instead of pricing.effective_list.default (the effective, post-promotion list price)
+    -- one of 14 vendored queries that mixed the two bases across the library.
+  effect: Any list-price dollar estimate this query reported used the pre-promotion rate while the rest
+    of the app (DEC-66.1) used the post-promotion effective-list rate -- two different 'list price' numbers
+    for the same usage, depending only on which query a reader happened to be looking at.
+  status: fixed
+  fix: 'Fixed (T-69A, commit ad6d6cf): now prices at pricing.effective_list.default (DEC-66.1''s one basis,
+    the effective post-promotion list price) throughout, with a price_basis column (free / priced / unpriced)
+    added so the UI can tell a real $0 (a FREE_USAGE SKU) apart from a pricing-coverage gap.'
+  item: T-69A
+- id: cost_cloud_infra-net-billed-cost-misleading-name
+  query_id: cost_cloud_infra
+  problem: The dollar column was named net_billed_cost, but it is not billed cost at all -- system.billing.cloud_infra_cost
+    does not exist in this workspace, so the query estimates dollar cost as usage_quantity x list_prices.pricing.*.default;
+    the name implied a real invoiced figure.
+  effect: A reader summing or trusting net_billed_cost as this account's actual cloud-infra invoice would
+    be trusting a list-price estimate that was never billed to the account at that rate.
+  status: fixed
+  fix: 'Fixed (T-69A, commit ad6d6cf): the column is renamed net_list_cost, matching the naming convention
+    every other list-price-estimate column in this library uses, and priced at pricing.effective_list.default
+    (DEC-66.1).'
+  item: T-69A
+- id: classic_clusters_config_current-identity-masking-collision
+  query_id: classic_clusters_config_current
+  problem: owned_by was masked with no unmasked key.
+  effect: Two different cluster owners that shared a masked prefix could not be told apart when routing
+    a cluster-hygiene finding to the right owner.
+  status: fixed
+  fix: 'Fixed (T-66A, commits f5bc411/1fb9ab6): masked in-SQL to DEC-66.3''s display format instead --
+    the principal''s real id when the row carries one (e.g. a *_user_id column on the same row), otherwise
+    the first 8 lowercase hex characters of sha256(lower(trim(identity))), plus a space and the first
+    two characters of the raw identity plus ''***''; a value already shaped like a service-principal UUID
+    passes through unchanged, and NULL / ''__REDACTED__'' are kept as-is. Two different people no longer
+    collide on the same masked value.'
+  item: T-66A
+- id: cost_chargeback_by_identity-identity-masking-collision
+  query_id: cost_chargeback_by_identity
+  problem: run_as, owned_by and created_by (identity_metadata) were all masked with no unmasked key.
+  effect: A chargeback rollup grouped by the masked identity could merge different real principals into
+    one bar, misattributing spend between them.
+  status: fixed
+  fix: 'Fixed (T-66A, commits f5bc411/1fb9ab6): masked in-SQL to DEC-66.3''s display format instead --
+    the principal''s real id when the row carries one (e.g. a *_user_id column on the same row), otherwise
+    the first 8 lowercase hex characters of sha256(lower(trim(identity))), plus a space and the first
+    two characters of the raw identity plus ''***''; a value already shaped like a service-principal UUID
+    passes through unchanged, and NULL / ''__REDACTED__'' are kept as-is. Two different people no longer
+    collide on the same masked value.'
+  item: T-66A
+- id: access_grants_inventory_extended-identity-masking-collision
+  query_id: access_grants_inventory_extended
+  problem: GRANTEE was masked with no unmasked key, including group names.
+  effect: A grants inventory grouped or read by the masked GRANTEE could conflate different grantees that
+    shared a masked prefix.
+  status: fixed
+  fix: 'Fixed (T-66A, commits f5bc411/1fb9ab6): masked in-SQL to DEC-66.3''s display format instead --
+    the principal''s real id when the row carries one (e.g. a *_user_id column on the same row), otherwise
+    the first 8 lowercase hex characters of sha256(lower(trim(identity))), plus a space and the first
+    two characters of the raw identity plus ''***''; a value already shaped like a service-principal UUID
+    passes through unchanged, and NULL / ''__REDACTED__'' are kept as-is. Two different people no longer
+    collide on the same masked value.'
+  item: T-66A
+- id: access_network_inbound_denials-identity-masking-collision
+  query_id: access_network_inbound_denials
+  problem: authenticated_as was masked with no unmasked key.
+  effect: Two different principals whose denials shared a masked prefix could not be told apart when investigating
+    repeated inbound denials.
+  status: fixed
+  fix: 'Fixed (T-66A, commits f5bc411/1fb9ab6): masked in-SQL to DEC-66.3''s display format instead --
+    the principal''s real id when the row carries one (e.g. a *_user_id column on the same row), otherwise
+    the first 8 lowercase hex characters of sha256(lower(trim(identity))), plus a space and the first
+    two characters of the raw identity plus ''***''; a value already shaped like a service-principal UUID
+    passes through unchanged, and NULL / ''__REDACTED__'' are kept as-is. Two different people no longer
+    collide on the same masked value.'
+  item: T-66A
+- id: access_volumes_inventory-identity-masking-collision
+  query_id: access_volumes_inventory
+  problem: VOLUME_OWNER was masked with no unmasked key.
+  effect: Two different volume owners that shared a masked prefix could not be told apart when routing
+    an untagged-volume finding to the right owner.
+  status: fixed
+  fix: 'Fixed (T-66A, commits f5bc411/1fb9ab6): masked in-SQL to DEC-66.3''s display format instead --
+    the principal''s real id when the row carries one (e.g. a *_user_id column on the same row), otherwise
+    the first 8 lowercase hex characters of sha256(lower(trim(identity))), plus a space and the first
+    two characters of the raw identity plus ''***''; a value already shaped like a service-principal UUID
+    passes through unchanged, and NULL / ''__REDACTED__'' are kept as-is. Two different people no longer
+    collide on the same masked value.'
+  item: T-66A
+- id: query_costly_statements-identity-masking-collision
+  query_id: query_costly_statements
+  problem: executed_by was masked with no unmasked key.
+  effect: Two different users whose statements shared a masked prefix could not be told apart when investigating
+    a costly statement's owner.
+  status: fixed
+  fix: 'Fixed (T-66A, commits f5bc411/1fb9ab6): masked in-SQL to DEC-66.3''s display format instead --
+    the principal''s real id when the row carries one (e.g. a *_user_id column on the same row), otherwise
+    the first 8 lowercase hex characters of sha256(lower(trim(identity))), plus a space and the first
+    two characters of the raw identity plus ''***''; a value already shaped like a service-principal UUID
+    passes through unchanged, and NULL / ''__REDACTED__'' are kept as-is. Two different people no longer
+    collide on the same masked value.'
+  item: T-66A
+- id: query_failed_queries_daily-identity-masking-collision
+  query_id: query_failed_queries_daily
+  problem: executed_by was masked with no unmasked key.
+  effect: Two different users whose failed queries shared a masked prefix could not be told apart.
+  status: fixed
+  fix: 'Fixed (T-66A, commits f5bc411/1fb9ab6): masked in-SQL to DEC-66.3''s display format instead --
+    the principal''s real id when the row carries one (e.g. a *_user_id column on the same row), otherwise
+    the first 8 lowercase hex characters of sha256(lower(trim(identity))), plus a space and the first
+    two characters of the raw identity plus ''***''; a value already shaped like a service-principal UUID
+    passes through unchanged, and NULL / ''__REDACTED__'' are kept as-is. Two different people no longer
+    collide on the same masked value.'
+  item: T-66A
+- id: query_local_spillage-identity-masking-collision
+  query_id: query_local_spillage
+  problem: executed_by was masked with no unmasked key.
+  effect: Two different users whose spilling statements shared a masked prefix could not be told apart.
+  status: fixed
+  fix: 'Fixed (T-66A, commits f5bc411/1fb9ab6): masked in-SQL to DEC-66.3''s display format instead --
+    the principal''s real id when the row carries one (e.g. a *_user_id column on the same row), otherwise
+    the first 8 lowercase hex characters of sha256(lower(trim(identity))), plus a space and the first
+    two characters of the raw identity plus ''***''; a value already shaped like a service-principal UUID
+    passes through unchanged, and NULL / ''__REDACTED__'' are kept as-is. Two different people no longer
+    collide on the same masked value.'
+  item: T-66A
+- id: query_per_query_estimate_lane-identity-masking-collision
+  query_id: query_per_query_estimate_lane
+  problem: executed_by was masked with no unmasked key.
+  effect: Two different users whose per-query cost-lane estimates shared a masked prefix could not be
+    told apart.
+  status: fixed
+  fix: 'Fixed (T-66A, commits f5bc411/1fb9ab6): masked in-SQL to DEC-66.3''s display format instead --
+    the principal''s real id when the row carries one (e.g. a *_user_id column on the same row), otherwise
+    the first 8 lowercase hex characters of sha256(lower(trim(identity))), plus a space and the first
+    two characters of the raw identity plus ''***''; a value already shaped like a service-principal UUID
+    passes through unchanged, and NULL / ''__REDACTED__'' are kept as-is. Two different people no longer
+    collide on the same masked value.'
+  item: T-66A
+- id: query_provenance_by_source-identity-masking-collision
+  query_id: query_provenance_by_source
+  problem: executed_by was masked with no unmasked key.
+  effect: Two different users whose query provenance rows shared a masked prefix could not be told apart.
+  status: fixed
+  fix: 'Fixed (T-66A, commits f5bc411/1fb9ab6): masked in-SQL to DEC-66.3''s display format instead --
+    the principal''s real id when the row carries one (e.g. a *_user_id column on the same row), otherwise
+    the first 8 lowercase hex characters of sha256(lower(trim(identity))), plus a space and the first
+    two characters of the raw identity plus ''***''; a value already shaped like a service-principal UUID
+    passes through unchanged, and NULL / ''__REDACTED__'' are kept as-is. Two different people no longer
+    collide on the same masked value.'
+  item: T-66A
+- id: query_pruning_effectiveness-identity-masking-collision
+  query_id: query_pruning_effectiveness
+  problem: executed_by was masked with no unmasked key.
+  effect: Two different users whose pruning-effectiveness rows shared a masked prefix could not be told
+    apart.
+  status: fixed
+  fix: 'Fixed (T-66A, commits f5bc411/1fb9ab6): masked in-SQL to DEC-66.3''s display format instead --
+    the principal''s real id when the row carries one (e.g. a *_user_id column on the same row), otherwise
+    the first 8 lowercase hex characters of sha256(lower(trim(identity))), plus a space and the first
+    two characters of the raw identity plus ''***''; a value already shaped like a service-principal UUID
+    passes through unchanged, and NULL / ''__REDACTED__'' are kept as-is. Two different people no longer
+    collide on the same masked value.'
+  item: T-66A
+- id: query_shuffle_write_amplification-identity-masking-collision
+  query_id: query_shuffle_write_amplification
+  problem: executed_by was masked with no unmasked key.
+  effect: Two different users whose shuffle-write-amplification rows shared a masked prefix could not
+    be told apart.
+  status: fixed
+  fix: 'Fixed (T-66A, commits f5bc411/1fb9ab6): masked in-SQL to DEC-66.3''s display format instead --
+    the principal''s real id when the row carries one (e.g. a *_user_id column on the same row), otherwise
+    the first 8 lowercase hex characters of sha256(lower(trim(identity))), plus a space and the first
+    two characters of the raw identity plus ''***''; a value already shaped like a service-principal UUID
+    passes through unchanged, and NULL / ''__REDACTED__'' are kept as-is. Two different people no longer
+    collide on the same masked value.'
+  item: T-66A
+- id: query_workload_mix_hours-identity-masking-collision
+  query_id: query_workload_mix_hours
+  problem: executed_by was masked with no unmasked key.
+  effect: Two different users whose workload-mix rows shared a masked prefix could not be told apart.
+  status: fixed
+  fix: 'Fixed (T-66A, commits f5bc411/1fb9ab6): masked in-SQL to DEC-66.3''s display format instead --
+    the principal''s real id when the row carries one (e.g. a *_user_id column on the same row), otherwise
+    the first 8 lowercase hex characters of sha256(lower(trim(identity))), plus a space and the first
+    two characters of the raw identity plus ''***''; a value already shaped like a service-principal UUID
+    passes through unchanged, and NULL / ''__REDACTED__'' are kept as-is. Two different people no longer
+    collide on the same masked value.'
+  item: T-66A
+- id: compute_ai_gateway_usage-identity-masking-collision
+  query_id: compute_ai_gateway_usage
+  problem: requester was masked with no unmasked key.
+  effect: Two different requesters whose AI Gateway usage shared a masked prefix could not be told apart
+    when investigating a usage spike.
+  status: fixed
+  fix: 'Fixed (T-66A, commits f5bc411/1fb9ab6): masked in-SQL to DEC-66.3''s display format instead --
+    the principal''s real id when the row carries one (e.g. a *_user_id column on the same row), otherwise
+    the first 8 lowercase hex characters of sha256(lower(trim(identity))), plus a space and the first
+    two characters of the raw identity plus ''***''; a value already shaped like a service-principal UUID
+    passes through unchanged, and NULL / ''__REDACTED__'' are kept as-is. Two different people no longer
+    collide on the same masked value.'
+  item: T-66A
+- id: cost_by_job-bands-on-volume-not-waste
+  query_id: cost_by_job
+  problem: status bands purely on SUM(usage_quantity) per (workspace, job) per day against :warn_job_dbus_per_day
+    / :crit_job_dbus_per_day -- a magnitude threshold with no efficiency, idle, or waste signal at all.
+  effect: A large, legitimately busy, well-utilized resource reads CRITICAL for the same reason a genuinely
+    wasteful one would -- being big -- so a CRITICAL row here does not by itself mean the resource is
+    wasteful, only that it is large; a reader has to cross-check an idle/efficiency finding before acting
+    on it.
+  status: fixed
+  fix: 'read_this/investigate_if now state plainly that status is a spend-magnitude rank, not a
+    waste or efficiency signal, and point to lakeflow_job_compute_pressure / compute_idle_node_ratio
+    for the efficiency cross-check; the band itself is unchanged.'
+  item: P4-FIXES28
+- id: cost_by_job-dbus-only-no-money
+  query_id: cost_by_job
+  problem: The query priced nothing -- SUM(usage_quantity) is a DBU count, not a dollar figure.
+  effect: A reader had no way to compare this ranking's dollar impact against any other cost_* query
+    without pricing it themselves.
+  status: fixed
+  fix: 'Added usd_list and price_basis, priced and disclosed the same way every other cost_* query
+    in this set does (usage_quantity x list_prices.pricing.effective_list.default, DEC-66.1); also
+    resolves job_id/workspace_id to names.'
+  item: P4-FIXES28
+- id: cost_by_compute_resource-bands-on-volume-not-waste
+  query_id: cost_by_compute_resource
+  problem: status bands purely on SUM(usage_quantity) per resource per day against :warn_resource_dbus_per_day
+    / :crit_resource_dbus_per_day -- a magnitude threshold with no efficiency, idle, or waste signal at
+    all.
+  effect: A large, legitimately busy, well-utilized resource reads CRITICAL for the same reason a genuinely
+    wasteful one would -- being big -- so a CRITICAL row here does not by itself mean the resource is
+    wasteful, only that it is large; a reader has to cross-check an idle/efficiency finding before acting
+    on it.
+  status: fixed
+  fix: 'read_this/investigate_if now state plainly that status is a spend-magnitude rank, not a
+    waste or efficiency signal, and point to compute_idle_node_ratio / compute_warehouse_idle_minutes
+    for the efficiency cross-check; the band itself is unchanged.'
+  item: P4-FIXES28
+- id: cost_by_compute_resource-dbus-only-no-money
+  query_id: cost_by_compute_resource
+  problem: The query priced nothing -- SUM(usage_quantity) is a DBU count, not a dollar figure.
+  effect: A reader had no way to compare this ranking's dollar impact against any other cost_* query
+    without pricing it themselves.
+  status: fixed
+  fix: 'Added usd_list and price_basis, priced and disclosed the same way every other cost_* query
+    in this set does (usage_quantity x list_prices.pricing.effective_list.default, DEC-66.1); also
+    resolves cluster_id/warehouse_id/instance_pool_id/workspace_id to names.'
+  item: P4-FIXES28
+- id: lakeflow_pipeline_cost-bands-on-size-not-waste
+  query_id: lakeflow_pipeline_cost
+  problem: status bands purely on d.net_pipeline_dbus (the pipeline's total DBUs in the window) against
+    :warn_pipeline_dbus / :crit_pipeline_dbus -- a magnitude threshold with no efficiency or idle signal.
+  effect: A large, busy, well-utilized pipeline reads CRITICAL for the same reason a genuinely wasteful
+    one would -- being big -- so a CRITICAL row here does not by itself mean the pipeline is wasteful,
+    only that it is large; a reader has to cross-check lakeflow_pipeline_idle_tail_duration or the maintenance-DBU
+    queries before acting.
+  status: fixed
+  fix: 'Added est_wasted_usd_list and nothing_delivered so a pipeline reads CRITICAL only when it
+    billed DBUs and delivered nothing all window (an in-flight or continuous pipeline reads
+    NOT_ASSESSED instead), while a large, delivering pipeline still reads WARN on size alone,
+    never CRITICAL.'
+  item: P4-FIXES28
+- id: access_pii_propagation_untagged-any-tag-counts-as-governed
+  query_id: access_pii_propagation_untagged
+  problem: The TARGET side is judged 'untagged' by an anti-join against any_tagged_column, which is EVERY
+    column carrying ANY governance tag at all (system.information_schema.column_tags), not specifically
+    a sensitivity/PII tag -- confirmed at the CTE's own comment ('Every column that carries ANY governance
+    tag').
+  effect: A target column tagged with an unrelated governance tag (e.g. an ownership or lifecycle tag,
+    not a sensitivity tag) reads as governed and is excluded from this finding, even though it carries
+    no sensitivity classification at all -- the propagation gap this query exists to catch is silently
+    missed on any target that happens to carry some other tag.
+  status: fixed
+  fix: Target now anti-joins against sensitive_tags (the same sensitivity-specific set the source
+    side already used) instead of any_tagged_column, so only a sensitivity tag on the target counts
+    as governed.
+  item: P4-FIXES28
+- id: access_pii_outside_tables-untagged-flagged-without-signal
+  query_id: access_pii_outside_tables
+  problem: Every untagged managed volume reads WARN, and every untagged EXTERNAL volume reads CRITICAL,
+    purely from the absence of any tag (COALESCE(vt.tag_count, 0) = 0) -- there is no positive signal
+    that the volume actually holds sensitive/PII data, only that nobody has tagged it for anything.
+  effect: 'Untagged volumes and schemas count even when they hold nothing sensitive; the count is an upper bound.'
+  status: not_fixed
+  fix: State this design choice plainly in the header (an untagged file store is treated as CRITICAL/WARN
+    by policy, not because sensitive data was confirmed) -- the query's own caveats already frame an untagged
+    volume as a deliberate blind spot -- or add a secondary signal before banding.
+- id: access_admin_role_change_events-token-iplist-workspace-scope-missing
+  query_id: access_admin_role_change_events
+  problem: Category (5), token and IP-access-list changes, only matches service_name = 'accounts' (generateDbToken,
+    revokeDbToken, changeDbTokenAcl, createIpAccessList, updateIpAccessList, deleteIpAccessList). Categories
+    (1)-(3) each also match the equivalent service_name = 'workspace' actions, but category (5) has no
+    workspace-scoped branch at all.
+  effect: A workspace-scoped token or IP-access-list change (if Databricks logs one under service_name
+    = 'workspace' rather than 'accounts', the same split categories 1-3 already account for) would be
+    invisible to this query -- never counted toward event_count/failed_event_count for that category,
+    understating admin/security activity the header's own read_this promises to catch.
+  status: fixed
+  fix: Added an unconfirmed (5b) branch matching service_name = 'workspace' AND action_name RLIKE
+    '(?i)token|ipaccesslist', plus a workspace_token_iplist_actions column listing every action_name
+    it actually matched so a reader can confirm each one before trusting it.
+  item: P4-FIXES28
+- id: access_login_concentration-no-workspace-id
+  query_id: access_login_concentration
+  problem: This query has no workspace_id column at all (confirmed against its own SELECT) -- system.access.audit/information_schema
+    rows are account- or metastore-wide here with no per-row workspace attribution surfaced.
+  effect: The app's workspace filter (DEC-60, the account's own workspace picker) has nothing to filter
+    this query's rows on -- selecting one workspace still shows this finding's full, account-wide rows,
+    which can read as if the filter applies here when it silently does not.
+  status: fixed
+  fix: Added workspace_id to the SELECT/GROUP BY; distinct_source_ips stays computed account-wide
+    in the principal_ips CTE since a principal's login spread is not scoped to one workspace.
+  item: P4-FIXES28
+- id: access_runas_escalation-no-workspace-id
+  query_id: access_runas_escalation
+  problem: This query has no workspace_id column at all (confirmed against its own SELECT) -- system.access.audit/information_schema
+    rows are account- or metastore-wide here with no per-row workspace attribution surfaced.
+  effect: The app's workspace filter (DEC-60, the account's own workspace picker) has nothing to filter
+    this query's rows on -- selecting one workspace still shows this finding's full, account-wide rows,
+    which can read as if the filter applies here when it silently does not.
+  status: fixed
+  fix: Added workspace_id to the SELECT/GROUP BY.
+  item: P4-FIXES28
+- id: access_network_inbound_denials-no-workspace-id
+  query_id: access_network_inbound_denials
+  problem: This query has no workspace_id column at all (confirmed against its own SELECT) -- system.access.audit/information_schema
+    rows are account- or metastore-wide here with no per-row workspace attribution surfaced.
+  effect: The app's workspace filter (DEC-60, the account's own workspace picker) has nothing to filter
+    this query's rows on -- selecting one workspace still shows this finding's full, account-wide rows,
+    which can read as if the filter applies here when it silently does not.
+  status: fixed
+  fix: Added workspace_id to the SELECT/GROUP BY; this table is already per-workspace so the app's
+    workspace filter now actually narrows this finding.
+  item: P4-FIXES28
+- id: access_grants_inventory-no-workspace-id
+  query_id: access_grants_inventory
+  problem: This query has no workspace_id column at all (confirmed against its own SELECT) -- system.access.audit/information_schema
+    rows are account- or metastore-wide here with no per-row workspace attribution surfaced.
+  effect: 'The workspace filter doesn''t narrow this list; grants belong to the metastore.'
+  status: not_fixed
+  fix: Add workspace_id to the SELECT wherever the source table carries one, so the app's existing workspace
+    filter can actually reduce this finding's rows; document plainly in the caveats when the source genuinely
+    has no workspace grain.
+- id: lakeflow_failed_runs-no-job-id
+  query_id: lakeflow_failed_runs
+  problem: The query's grain is (workspace_id, run_type, trigger_type, result_state, termination_code)
+    -- job_id is read from job_run_timeline in an inner CTE but dropped before the final SELECT, so no
+    output row can be tied to a specific job.
+  effect: This finding can never be scoped to one job -- the app's own job focus panel (tab_jobs.jsx JOB_DIAG_SPECS)
+    has to treat it as unscoped and show it account-wide, so a reader investigating one job's failures
+    cannot filter this query down to that job the way every other per-job diagnostic check can be.
+  status: fixed
+  fix: 'job_id is now carried through to the final SELECT/GROUP BY (grain now workspace_id,
+    job_id, run_type, trigger_type, result_state, termination_code), with job_name and
+    workspace_name added via LEFT JOIN.'
+  item: P4-FIXES28
+- id: lakeflow_failed_jobs_wasted_dbus-bands-on-raw-failure-count
+  query_id: lakeflow_failed_jobs_wasted_dbus
+  problem: The status band's failed_runs half fires on a raw count (>= :warn_failed_runs / :crit_failed_runs)
+    with no normalization against distinct_runs -- a job with 3 failed runs out of 3 total bands identically
+    to one with 3 failed runs out of 3,000.
+  effect: A high-volume job with a tiny failure rate can flag WARN/CRITICAL on failure count alone, at
+    the same threshold as a job that fails almost every time it runs -- the wasted_dbus_proxy half of
+    the band is at least ratio-aware, but the failed_runs half is not, so the count alone can drive a
+    misleading verdict on a job that runs very often.
+  status: fixed
+  fix: 'Fixed (P4-05): the band is now the failure RATE (final attempt failed / runs) or the
+    possible-waste dollars, above a :min_waste_usd floor - a raw failure count no longer flags a
+    high-volume job by itself.'
+- id: compute_serving_endpoint_cost_status-no-wasted-dollar-figure
+  query_id: compute_serving_endpoint_cost_status
+  problem: The query already classified a confirmed-idle billed endpoint as status=CRITICAL ('idle waste'),
+    but never put a dollar figure on that waste -- est_usd_list only ever showed the endpoint's whole
+    spend, busy or not, so a reader had to cross-reference status and est_usd_list by hand to see what
+    was actually wasted.
+  effect: A person scanning for wasted serving spend could not read the wasted dollar amount off one
+    column. A first attempt at adding one (P3-WASTEUSD's original commit) also put the endpoint's WHOLE
+    spend on every one of its served-entity rows, so any screen summing the new column over rows would
+    have over-counted an idle endpoint's waste by however many served entities it had.
+  status: fixed
+  fix: 'Fixed (P3-WASTEUSD, commits 78eaa37/2fcd087): added est_wasted_usd_list, mirroring the status
+    CASE''s own CRITICAL condition -- the endpoint''s whole ROUND(est_usd_list,2) when confirmed idle,
+    NULL (not 0) where idle cannot be confirmed (Vector Search, an endpoint missing from served_entities,
+    or spend with usage tracking off), and 0 for real (even if low) traffic. The review-fix round then
+    found and fixed the served-entity fan-out double-count: the CRITICAL amount is now divided by
+    COUNT(*) OVER (PARTITION BY workspace_id, endpoint_key) so an endpoint serving several entities has
+    its waste split evenly across its rows and a sum over rows counts it once, not once per served entity.
+    The app''s own Waste tab/Overview tile were wired to the new column via WASTE_ITEMS (P3-WASTEUSD
+    review-fix commit 2fcd087, confirmed reached by P3-UI-POSTURE-GOV''s own commit bd61f0a).'
+  item: P3-WASTEUSD
+- id: instance_pools_idle_capacity-no-honest-dollar-overlay-possible
+  query_id: instance_pools_idle_capacity
+  problem: The query has no dollar figure for the standing min_idle_instances floor -- a reader can rank
+    pools by raw min_idle_instances count but not by likely $ waste.
+  effect: 'Shows idle instances, not dollars; the VM bill is not in the export.'
+  status: not_fixed
+  fix: 'P3-WASTEUSD tried a directional overlay (est_wasted_usd_list = est_usd_list * min_idle_instances
+    / max_capacity, commit 78eaa37) and its own review caught the real defect: idle pool instances bill
+    no DBUs at all (only untracked cloud-provider VM cost, which no system table in this snapshot
+    carries) -- est_usd_list on this query is entirely real, in-use cluster DBU spend, so scaling it by
+    a configured capacity ratio mislabeled genuine work as waste (a pool with min_idle_instances ==
+    max_capacity would have read 100% of its real spend as "wasted"). The review-fix round (commit
+    2fcd087) removed the column and every header addition entirely, restoring the query to its exact
+    pre-P3-WASTEUSD (T-69A) content -- net zero change to the shipped file. No dollar overlay exists
+    for this query today because none can be honestly derived from data this snapshot captures; a real
+    fix would need cloud billing data this app does not collect.'
+  item: null
+- id: cost_by_serving_endpoint-mask-claim-stale
+  query_id: cost_by_serving_endpoint
+  problem: The caveats say endpoint_name is partial-masked in-SQL. generate_models.py's
+    strip_resource_mask now always removes that CASE (a resource name is never a privacy control),
+    so the caveat describes behaviour the compiled query no longer has.
+  effect: A reader who trusts the caveat expects endpoint_name to arrive as a first-2-chars preview
+    and may under-read how identifying the column actually is; the value shown is the plain name.
+  status: fixed
+  fix: strip_resource_mask (generate_models.py) already drops the mask for every query at build
+    time; the caveat text is stale and should say endpoint_name is a resource name, never masked.
+  item: null
+- id: cost_genai_token_gpu-mask-claim-stale
+  query_id: cost_genai_token_gpu
+  problem: Same stale claim as cost_by_serving_endpoint -- the caveats say endpoint_name is
+    partial-masked in-SQL, which strip_resource_mask no longer does.
+  effect: A reader who trusts the caveat under-reads how identifying endpoint_name is; the value
+    shown is the plain name.
+  status: fixed
+  fix: strip_resource_mask (generate_models.py) already drops the mask for every query at build
+    time; the caveat text is stale and should say endpoint_name is a resource name, never masked.
+  item: null
+- id: cost_chargeback_by_identity-mask-now-optional
+  query_id: cost_chargeback_by_identity
+  problem: The caveats say run_as/owned_by/created_by are masked in-SQL to DEC-66.3's format, as
+    if unconditionally. generate_models.py's mask_user_identities rewrite now routes that CASE
+    through the mask_user() dbt macro, which only masks when privacy.mask_user_identities is on
+    (off by default).
+  effect: A reader who trusts the caveat expects these three columns always masked; with the
+    default setting they arrive raw.
+  status: fixed
+  fix: The mask_user() macro already gates this on privacy.mask_user_identities; the caveat text
+    is stale and should say "masked only when privacy.mask_user_identities is on".
+  item: null
+- id: access_admin_role_change_events-mask-now-optional
+  query_id: access_admin_role_change_events
+  problem: The caveats say actor is masked to DEC-66.3's identity format, as if unconditionally.
+    generate_models.py's mask_user_identities rewrite now routes that CASE through the mask_user()
+    dbt macro, which only masks when privacy.mask_user_identities is on (off by default).
+  effect: A reader who trusts the caveat expects actor always masked; with the default setting it
+    arrives raw.
+  status: fixed
+  fix: The mask_user() macro already gates this on privacy.mask_user_identities; the caveat text
+    is stale and should say "masked only when privacy.mask_user_identities is on".
+  item: null

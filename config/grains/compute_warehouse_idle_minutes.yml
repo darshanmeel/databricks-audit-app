@@ -1,0 +1,8 @@
+# config/grains/compute_warehouse_idle_minutes.yml -- P4-01-W1. Grain = the query's own key
+# columns ONLY; the generator prepends window_days (DEC-24). One row per SQL warehouse
+# (workspace_id, warehouse_id) that ran or was billed in the window: `keys` is a UNION of
+# `wh_time` (one row per (workspace_id, warehouse_id) from system.compute.warehouse_events) and
+# `bill` (one row per (workspace_id, warehouse_id) from system.billing.usage), each already
+# grouped by that pair, and every other join (`running_periods`, `busy_agg`, `idle_agg`,
+# `counted_cw`, `cfg`) is at most one row per warehouse_id too.
+compute_warehouse_idle_minutes: [workspace_id, warehouse_id]

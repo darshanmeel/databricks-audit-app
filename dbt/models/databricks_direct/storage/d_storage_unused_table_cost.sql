@@ -1,0 +1,233 @@
+{{ config(enabled=(target.type == "databricks"), materialized=("table" if var("direct_mode", "run") == "table" else "direct_check"), schema="audit_direct", tags=['finding', 'domain:storage', 'tier:standard', 'databricks_direct']) }}
+-- generated from app/queries/app/storage/storage_unused_table_cost.sql; fix the source query and regenerate, never edit this file.
+{%- set windows = var('windows', [7, 30, 90]) %}
+{%- for w in windows %}
+SELECT {{ w }} AS window_days, q.*
+FROM (
+WITH lineage_window AS (
+  SELECT *
+  FROM {{ source('system_access', 'table_lineage') }}
+  WHERE event_date >= dateadd(day, -{{ w }}, {{ audit_today() }})
+    AND event_date < {{ audit_today() }}
+),
+source_tables AS (
+  SELECT DISTINCT
+         source_table_catalog AS catalog,
+         source_table_schema  AS schema,
+         source_table_name    AS name
+  FROM lineage_window
+  WHERE source_table_name IS NOT NULL
+),
+last_write AS (
+  SELECT target_table_catalog AS catalog,
+         target_table_schema  AS schema,
+         target_table_name    AS name,
+         MAX(event_time)      AS last_write_time
+  FROM {{ source('system_access', 'table_lineage') }}
+  WHERE target_table_name IS NOT NULL
+  GROUP BY target_table_catalog, target_table_schema, target_table_name
+),
+inventory AS (
+  SELECT table_catalog, table_schema, table_name, table_type, table_owner, last_altered
+  FROM {{ source('system_information_schema', 'tables') }}
+  WHERE table_catalog <> 'system'
+    AND table_schema <> 'information_schema'
+    AND table_type IN ('MANAGED', 'EXTERNAL')
+),
+unused AS (
+  SELECT inv.*
+  FROM inventory inv
+  LEFT JOIN source_tables src
+    ON  inv.table_catalog = src.catalog
+    AND inv.table_schema  = src.schema
+    AND inv.table_name    = src.name
+  WHERE src.name IS NULL          -- never appeared as a lineage source in the window
+),
+latest_size AS (
+  SELECT catalog_name, schema_name, table_name, active_bytes
+  FROM {{ source('system_storage', 'table_metrics_history') }}
+  WHERE snapshot_date >= {{ audit_today() }} - INTERVAL {{ w }} DAYS
+    AND snapshot_date < {{ audit_today() }}
+    AND table_dropped_time IS NULL
+  QUALIFY ROW_NUMBER() OVER (
+    PARTITION BY catalog_name, schema_name, table_name ORDER BY snapshot_date DESC
+  ) = 1
+),
+po_usage AS (
+  SELECT catalog_name, schema_name, table_name,
+         SUM(CAST(usage_quantity AS DOUBLE)) AS po_dbu_sum
+  FROM {{ source('system_storage', 'predictive_optimization_operations_history') }}
+  WHERE start_time >= {{ audit_today() }} - INTERVAL {{ w }} DAYS
+    AND start_time <  {{ audit_today() }}
+  GROUP BY catalog_name, schema_name, table_name
+),
+po_billed AS (
+  SELECT u.sku_name,
+         u.usage_quantity                AS usage_quantity,
+         u.usage_quantity * lp.list_rate AS list_cost,
+         lp.list_rate                    AS list_rate
+  FROM {{ source('system_billing', 'usage') }} u
+  LEFT JOIN (
+    SELECT sku_name, cloud, usage_unit, price_start_time, price_end_time,
+           CAST(pricing.effective_list.default AS DOUBLE) AS list_rate
+    FROM {{ list_prices() }} list_prices
+  ) lp
+    ON u.sku_name   = lp.sku_name
+   AND u.cloud      = lp.cloud
+   AND u.usage_unit = lp.usage_unit
+   AND u.usage_end_time >= lp.price_start_time
+   AND (lp.price_end_time IS NULL OR u.usage_end_time < lp.price_end_time)
+  WHERE u.billing_origin_product = 'PREDICTIVE_OPTIMIZATION'
+    AND u.usage_date >= dateadd(day, -{{ w }}, {{ audit_today() }})
+    AND u.usage_date <  {{ audit_today() }}
+),
+po_rate AS (
+  SELECT
+    SUM(list_cost) / NULLIF(SUM(usage_quantity), 0) AS dbu_rate,
+    -- price_basis: 'no_po_activity' when the account has no PREDICTIVE_OPTIMIZATION billing rows
+    -- in the window at all (COUNT(*) guards the SUMs below, which are NULL - not 0 - over zero
+    -- rows and would otherwise fall through to the wrong branch); otherwise the same 'unpriced' /
+    -- 'free' / 'priced' disclosure every other priced check here uses.
+    CASE
+      WHEN COUNT(*) = 0 THEN 'no_po_activity'
+      WHEN SUM(CASE WHEN list_rate IS NULL AND upper(sku_name) NOT LIKE '%FREE_USAGE%'
+                    THEN usage_quantity ELSE 0 END) > 0 THEN 'unpriced'
+      WHEN SUM(CASE WHEN list_rate IS NOT NULL THEN usage_quantity ELSE 0 END) = 0 THEN 'free'
+      ELSE 'priced'
+    END AS price_basis
+  FROM po_billed
+),
+sized AS (
+  SELECT
+    u.table_catalog, u.table_schema, u.table_name, u.table_type, u.table_owner, u.last_altered,
+    ls.active_bytes,
+    COALESCE(po.po_dbu_sum, 0) AS po_dbu_sum,
+    lw.last_write_time,
+    r.dbu_rate,
+    r.price_basis
+  FROM unused u
+  LEFT JOIN latest_size ls
+    ON  u.table_catalog = ls.catalog_name
+    AND u.table_schema  = ls.schema_name
+    AND u.table_name    = ls.table_name
+  LEFT JOIN po_usage po
+    ON  u.table_catalog = po.catalog_name
+    AND u.table_schema  = po.schema_name
+    AND u.table_name    = po.table_name
+  LEFT JOIN last_write lw
+    ON  u.table_catalog = lw.catalog
+    AND u.table_schema  = lw.schema
+    AND u.table_name    = lw.name
+  CROSS JOIN po_rate r
+),
+priced AS (
+  SELECT
+    s.*,
+    CASE WHEN s.active_bytes IS NULL THEN NULL
+         ELSE ROUND(s.active_bytes / POWER(1024.0, 3), 3) END AS active_gb,
+    CASE WHEN s.active_bytes IS NULL THEN NULL
+         ELSE ROUND(s.active_bytes / POWER(1024.0, 3) * {{ param('storage_unused_table_cost', 'storage_usd_per_gb_month', 0.02) }}, 2) END
+      AS est_storage_usd_month,
+    -- A table with zero Predictive Optimization DBUs in the window is a real, known $0, whatever
+    -- the account-wide rate reads - only a NONZERO DBU count with no derivable rate is unknown.
+    CASE WHEN s.po_dbu_sum = 0 THEN 0.0 ELSE ROUND(s.po_dbu_sum * s.dbu_rate, 2) END
+      AS po_upkeep_usd_window
+  FROM sized s
+),
+scored AS (
+  SELECT
+    p.*,
+    datediff({{ audit_today() }}, DATE(p.last_altered))     AS days_since_altered,
+    datediff({{ audit_today() }}, DATE(p.last_write_time))  AS days_since_last_write,
+    CASE
+      WHEN p.active_bytes IS NULL THEN NULL
+      WHEN p.po_dbu_sum > 0 AND p.po_upkeep_usd_window IS NULL THEN NULL
+      ELSE ROUND(p.est_storage_usd_month + COALESCE(p.po_upkeep_usd_window, 0) * 30.0 / {{ w }}, 2)
+    END AS est_total_usd_month,
+    -- No size on record is not a gap in the check: the table is unused, only its cost is unknown.
+    CASE
+      WHEN p.active_bytes IS NOT NULL AND p.po_dbu_sum > 0 AND p.po_upkeep_usd_window IS NULL
+        THEN 'po_upkeep_unpriced'
+    END AS not_assessed_reason
+  FROM priced p
+),
+banded AS (
+  SELECT
+    sc.*,
+    CASE
+      WHEN sc.not_assessed_reason IS NOT NULL      THEN 'NOT_ASSESSED'
+      WHEN sc.est_total_usd_month IS NULL          THEN 'OK'
+      WHEN sc.est_total_usd_month >= {{ param('storage_unused_table_cost', 'crit_usd_month', 100) }} THEN 'CRITICAL'
+      WHEN sc.est_total_usd_month >= {{ param('storage_unused_table_cost', 'warn_usd_month', 20) }} THEN 'WARN'
+      ELSE 'OK'
+    END AS status
+  FROM scored sc
+),
+assessed AS (
+  -- table_catalog/schema/name break a $ tie deterministically (same tiebreak style
+  -- cost_chargeback_by_warehouse's own poolable_ranked uses), so which table lands in the pooled
+  -- row is stable across runs, never arbitrary.
+  SELECT b.*, ROW_NUMBER() OVER (
+    ORDER BY b.est_total_usd_month DESC, b.table_catalog, b.table_schema, b.table_name
+  ) AS rn
+  FROM banded b
+  WHERE b.est_total_usd_month IS NOT NULL
+),
+unpriced_rows AS (
+  SELECT b.* FROM banded b WHERE b.est_total_usd_month IS NULL
+),
+kept AS (
+  SELECT
+    table_catalog, table_schema, table_name, table_type,
+    {{ mask_user('table_owner') }} AS table_owner,
+    active_gb, est_storage_usd_month, po_upkeep_usd_window, price_basis, est_total_usd_month,
+    days_since_altered, days_since_last_write,
+    FALSE AS is_other, CAST(NULL AS BIGINT) AS pooled_count,
+    not_assessed_reason, status
+  FROM assessed
+  WHERE rn <= {{ param('storage_unused_table_cost', 'top_n', 500) }}
+  UNION ALL
+  SELECT
+    table_catalog, table_schema, table_name, table_type,
+    {{ mask_user('table_owner') }} AS table_owner,
+    active_gb, est_storage_usd_month, po_upkeep_usd_window,
+    CASE WHEN active_gb IS NULL THEN 'no_size' ELSE price_basis END AS price_basis,
+    est_total_usd_month,
+    days_since_altered, days_since_last_write,
+    FALSE AS is_other, CAST(NULL AS BIGINT) AS pooled_count,
+    not_assessed_reason, status
+  FROM unpriced_rows
+),
+pooled AS (
+  -- Every remaining priced table beyond {{ param('storage_unused_table_cost', 'top_n', 500) }}, re-aggregated into one is_other row - always
+  -- status=OK (see caveats), only ever pooling rows that were already priced and below the floor.
+  SELECT
+    CAST(NULL AS STRING) AS table_catalog, CAST(NULL AS STRING) AS table_schema,
+    CAST(NULL AS STRING) AS table_name, CAST(NULL AS STRING) AS table_type,
+    CAST(NULL AS STRING) AS table_owner,
+    ROUND(SUM(active_gb), 3)              AS active_gb,
+    ROUND(SUM(est_storage_usd_month), 2)  AS est_storage_usd_month,
+    ROUND(SUM(po_upkeep_usd_window), 2)   AS po_upkeep_usd_window,
+    MAX(price_basis)                      AS price_basis,
+    ROUND(SUM(est_total_usd_month), 2)    AS est_total_usd_month,
+    CAST(NULL AS BIGINT) AS days_since_altered, CAST(NULL AS BIGINT) AS days_since_last_write,
+    TRUE AS is_other, COUNT(*) AS pooled_count,
+    CAST(NULL AS STRING) AS not_assessed_reason,
+    'OK' AS status
+  FROM assessed
+  WHERE rn > {{ param('storage_unused_table_cost', 'top_n', 500) }}
+)
+SELECT * FROM (
+  SELECT * FROM kept
+  UNION ALL
+  SELECT * FROM pooled WHERE pooled_count > 0
+) u
+ORDER BY CASE status WHEN 'CRITICAL' THEN 0 WHEN 'WARN' THEN 1 WHEN 'NOT_ASSESSED' THEN 2 ELSE 3 END,
+         is_other,
+         est_total_usd_month DESC NULLS LAST,
+         table_catalog, table_schema, table_name
+) q
+{%- if not loop.last %}
+UNION ALL
+{%- endif %}
+{%- endfor %}

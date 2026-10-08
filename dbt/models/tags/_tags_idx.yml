@@ -1,0 +1,96 @@
+# dbt/models/tags/_tags_idx.yml -- P4-T-IDX (tasks/P4-T-SPEC.md section 4.2). Hand-written (this
+# folder is never touched by tools/generate_models.py). not_null on every key column, plus
+# unique_grain (dbt/tests/generic/test_unique_grain.sql) on each model's own grain. TAG-ROLL's own
+# models are tested in dbt/models/tags/_tags_roll.yml instead -- this file also carries the tests
+# for the shared tag_workspace model (section 4.2: "put the tests for the shared tag_workspace in
+# _tags_idx.yml"), since TAG-IDX owns that file.
+version: 2
+models:
+  - name: tag_workspace
+    description: >
+      One row per (workspace_id, tag_key) that at least one billed DBU row of that workspace
+      carries -- the workspace level of the P4-T rollup, inferred from system.billing.usage
+      custom_tags (no system table holds a workspace's own tags). Shared by TAG-IDX and TAG-ROLL;
+      owned by TAG-IDX.
+    columns:
+      - name: workspace_id
+        data_tests:
+          - not_null
+      - name: tag_key
+        data_tests:
+          - not_null
+    data_tests:
+      - unique_grain:
+          arguments:
+            columns:
+              - workspace_id
+              - tag_key
+
+  - name: tag_entity
+    description: >
+      One row per (entity_type, workspace_id, entity_id, tag_key) for every place a Databricks
+      object carries a tag -- resource/job/pipeline/query tags (latest SCD2 or whole-snapshot),
+      Unity Catalog object tags, the inferred workspace level, and the DBU-weighted dominant
+      billed value per billed entity id.
+    columns:
+      - name: entity_type
+        data_tests:
+          - not_null
+      - name: entity_id
+        data_tests:
+          - not_null
+      - name: tag_key
+        data_tests:
+          - not_null
+    data_tests:
+      - unique_grain:
+          arguments:
+            columns:
+              - entity_type
+              - workspace_id
+              - entity_id
+              - tag_key
+
+  - name: tag_index
+    description: >
+      One row per (tag_key, tag_value, source) over every place a tag is seen anywhere in the
+      snapshot -- the table GET /api/tags and the tag search picker read.
+    columns:
+      - name: tag_key
+        data_tests:
+          - not_null
+      - name: tag_value
+        data_tests:
+          - not_null
+      - name: source
+        data_tests:
+          - not_null
+    data_tests:
+      - unique_grain:
+          arguments:
+            columns:
+              - tag_key
+              - tag_value
+              - source
+  - name: bill_tag_dates
+    description: >
+      First and last day each tag key is on the bill of a warehouse, an all-purpose cluster or a
+      job: the Tags page's "on the bill since" date.
+    columns:
+      - name: entity_type
+        data_tests:
+          - not_null
+      - name: tag_key
+        data_tests:
+          - not_null
+      - name: first_date
+        data_tests:
+          - not_null
+    data_tests:
+      - unique_grain:
+          arguments:
+            columns:
+              - entity_type
+              - workspace_id
+              - entity_id
+              - tag_key

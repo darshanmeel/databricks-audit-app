@@ -1,0 +1,28 @@
+snapshot/
+config/settings.local.yml
+config/app.local.yml
+data/*.duckdb
+# tools/load_direct_results.py sidecars next to a data/*.duckdb
+data/*.run_results.json
+data/*.duckdb.wal
+tests/db_audit_test.duckdb
+tests/db_audit_test.duckdb.wal
+tests/fixtures/parquet/
+dbt/target
+dbt/logs
+.env
+
+# standard Python / OS ignores
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.DS_Store
+dbt/.user.yml
+
+# Planning notes and task files stay out of the repo.
+tasks/
+PICKUP.md
+
+# web/ build tooling; the built page is committed in app/web/dist.
+web/node_modules/

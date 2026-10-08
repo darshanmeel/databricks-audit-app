@@ -1,0 +1,2 @@
+workspace_id,env,name,url,note
+2222,uat,,,manual override for T-23 parity test: acme-dev reclassifies as uat despite its name

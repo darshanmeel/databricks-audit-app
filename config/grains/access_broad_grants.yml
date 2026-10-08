@@ -1,0 +1,16 @@
+# config/grains/access_broad_grants.yml -- P3-GRANTS. Grain = the query's own key columns ONLY;
+# the generator prepends window_days (DEC-24). One row per (securable_type, securable, raw
+# grantee, privilege_type) grant record: the body reads table_privileges/catalog_privileges/
+# schema_privileges directly (UNION ALL, no GROUP BY, no join that could fan a row out), so that quadruple is unique
+# by construction on the underlying information_schema data (Databricks writes at most one grant
+# row per (object, grantee, privilege)) -- the same guarantee access_grants_inventory's own inner
+# subquery relies on before ITS GROUP BY. `grantee` below is the DEC-66.3-masked display column
+# standing in for that same raw grantee (DEC-48: safe here only because the fixture gives every
+# broad-grant row its own distinct raw grantee string, exactly as
+# config/grains/governance_inventories.yml's header records for access_grants_inventory itself --
+# not a guarantee the real masked output is collision-free on a live snapshot).
+access_broad_grants:
+  - securable_type
+  - securable
+  - grantee
+  - privilege_type

@@ -1,0 +1,24 @@
+# config/grains/compute_activity.yml -- T-14. Grain = the query's own key columns ONLY; the
+# generator prepends window_days itself (unique_grain: {columns: [window_days] + grain}, DEC-24).
+# Do not list window_days here.
+#
+# Every entry below is taken verbatim from the query body's own GROUP BY (output column names),
+# copied from the per-query contract table in tasks/T-14-compute-builder-and-activity-tests.md's
+# Inputs section, cross-checked against the vendored bodies at
+# the query library's queries/compute/*.sql:
+#   - compute_warehouse_idle_gaps and compute_warehouse_autoscale_churn GROUP BY warehouse_id
+#     alone (warehouse_id is a globally-unique GUID; workspace_id is deliberately dropped from
+#     both the query's own grain and the cost-rollup join key -- see each body's caveats).
+#   - sql_warehouse_events_activity GROUP BY warehouse_id, event_type (no workspace_id).
+#   - compute_idle_node_ratio GROUP BY cluster_id alone (cluster_id is also a globally-unique
+#     GUID; cost rollup keyed the same way).
+#   - node_timeline_utilization GROUP BY cluster_id, node_type, driver.
+#
+# None of these 5 ids mask an identity/endpoint column (DEC-48 does not apply here -- no
+# `# masked:` comment needed on any entry below).
+
+compute_warehouse_idle_gaps: [warehouse_id]
+compute_warehouse_autoscale_churn: [warehouse_id]
+sql_warehouse_events_activity: [warehouse_id, event_type]
+compute_idle_node_ratio: [cluster_id]
+node_timeline_utilization: [cluster_id, node_type, driver]

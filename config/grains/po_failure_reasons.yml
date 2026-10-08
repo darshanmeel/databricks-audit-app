@@ -1,0 +1,3 @@
+# config/grains/po_failure_reasons.yml. Grain = the query's own GROUP BY columns, verbatim
+# (output column names, in GROUP BY order); the generator prepends window_days (DEC-24).
+po_failure_reasons: [workspace_id, catalog_name, schema_name, table_id, table_name, operation_status]

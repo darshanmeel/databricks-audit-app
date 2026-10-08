@@ -1,0 +1,146 @@
+{{ config(enabled=(target.type == "databricks"), materialized=("table" if var("direct_mode", "run") == "table" else "direct_check"), schema="audit_direct", tags=['finding', 'domain:governance_access', 'tier:standard', 'databricks_direct']) }}
+-- generated from app/queries/app/governance_access/access_sensitive_table_reads.sql; fix the source query and regenerate, never edit this file.
+{%- set windows = var('windows', [7, 30, 90]) %}
+{%- for w in windows %}
+SELECT {{ w }} AS window_days, q.*
+FROM (
+WITH sensitive_table_tags AS (
+  SELECT DISTINCT catalog_name, schema_name, table_name, 'table_tag' AS basis
+  FROM {{ source('system_information_schema', 'table_tags') }}
+  WHERE tag_name  RLIKE '(?i)(pii|sensitiv|confidential|gdpr|personal|secret|restricted)'
+     OR tag_value RLIKE '(?i)(pii|sensitiv|confidential|gdpr|personal|secret|restricted)'
+),
+sensitive_column_tags AS (
+  SELECT DISTINCT catalog_name, schema_name, table_name, 'column_tag' AS basis
+  FROM {{ source('system_information_schema', 'column_tags') }}
+  WHERE tag_name  RLIKE '(?i)(pii|sensitiv|confidential|gdpr|personal|secret|restricted)'
+     OR tag_value RLIKE '(?i)(pii|sensitiv|confidential|gdpr|personal|secret|restricted)'
+),
+sensitive_classification AS (
+  SELECT DISTINCT catalog_name, schema_name, table_name, 'classification' AS basis
+  FROM {{ source('system_data_classification', 'results') }}
+  WHERE class_tag IS NOT NULL
+),
+sensitive_union AS (
+  SELECT catalog_name, schema_name, table_name, basis FROM sensitive_table_tags
+  UNION ALL
+  SELECT catalog_name, schema_name, table_name, basis FROM sensitive_column_tags
+  UNION ALL
+  SELECT catalog_name, schema_name, table_name, basis FROM sensitive_classification
+),
+sensitive_tables AS (
+  -- one row per table the account has flagged sensitive by any of the three sources above
+  SELECT catalog_name, schema_name, table_name,
+         array_join(collect_set(basis), ', ') AS sensitivity_basis
+  FROM sensitive_union
+  GROUP BY catalog_name, schema_name, table_name
+),
+sensitive_table_count AS (
+  SELECT COUNT(*) AS n FROM sensitive_tables
+),
+table_reads AS (
+  -- every table_lineage row that proves a READ of its source table (see caveats: SOURCE)
+  SELECT workspace_id,
+         source_table_catalog AS catalog_name,
+         source_table_schema  AS schema_name,
+         source_table_name    AS table_name,
+         created_by,
+         event_time,
+         event_date
+  FROM {{ source('system_access', 'table_lineage') }}
+  WHERE source_table_name IS NOT NULL
+    AND source_table_catalog <> 'system'
+    AND (direct_access IS NULL OR direct_access = true)
+    AND event_date >= dateadd(day, -{{ w }}, {{ audit_today() }})
+    AND event_date < {{ audit_today() }}
+),
+table_owners AS (
+  SELECT table_catalog AS catalog_name, table_schema AS schema_name, table_name, table_owner
+  FROM {{ source('system_information_schema', 'tables') }}
+),
+reads_agg AS (
+  SELECT r.workspace_id, r.catalog_name, r.schema_name, r.table_name, r.created_by,
+         COUNT(*)                     AS read_count,
+         MIN(r.event_time)            AS first_read_time,
+         MAX(r.event_time)            AS last_read_time,
+         COUNT(DISTINCT r.event_date) AS distinct_read_days,
+         MAX(s.sensitivity_basis)     AS sensitivity_basis
+  FROM table_reads r
+  JOIN sensitive_tables s
+    ON  s.catalog_name = r.catalog_name
+    AND s.schema_name  = r.schema_name
+    AND s.table_name   = r.table_name
+  GROUP BY r.workspace_id, r.catalog_name, r.schema_name, r.table_name, r.created_by
+),
+judged AS (
+  SELECT a.workspace_id, a.catalog_name, a.schema_name, a.table_name, a.created_by,
+         a.read_count, a.first_read_time, a.last_read_time, a.distinct_read_days,
+         a.sensitivity_basis,
+         o.table_owner,
+         -- raw, unmasked comparison so masking (below) never hides a real owner match
+         CASE
+           WHEN o.table_owner IS NOT NULL AND a.created_by IS NOT NULL
+            AND lower(trim(o.table_owner)) = lower(trim(a.created_by))
+           THEN 1 ELSE 0
+         END AS is_owner
+  FROM reads_agg a
+  LEFT JOIN table_owners o
+    ON  o.catalog_name = a.catalog_name
+    AND o.schema_name  = a.schema_name
+    AND o.table_name   = a.table_name
+),
+combined AS (
+  SELECT j.workspace_id AS workspace_id,
+         j.catalog_name AS table_catalog,
+         j.schema_name  AS table_schema,
+         j.table_name   AS table_name,
+         j.sensitivity_basis,
+         {{ mask_user('j.created_by') }} AS reader,
+         {{ mask_user('j.table_owner') }} AS table_owner,
+         CAST(j.read_count AS BIGINT)         AS read_count,
+         j.first_read_time,
+         j.last_read_time,
+         CAST(j.distinct_read_days AS BIGINT) AS distinct_read_days,
+         -- status: an owner is never flagged; a non-owner over {{ param('access_sensitive_table_reads', 'warn_reads', 20) }} reads is WARN.
+         CASE
+           WHEN j.is_owner = 1        THEN 'OK'
+           WHEN j.read_count > {{ param('access_sensitive_table_reads', 'warn_reads', 20) }} THEN 'WARN'
+           ELSE 'OK'
+         END AS status,
+         CAST(NULL AS STRING) AS not_assessed_reason
+  FROM judged j
+
+  UNION ALL
+
+  -- the one account-wide sentinel row: nothing anywhere has ever been tagged or classified
+  -- sensitive, so nothing below could have been judged in the first place (never silently OK).
+  -- No natural workspace to tie it to, so workspace_id is NULL -- it drops out under a workspace
+  -- filter rather than falsely claiming to speak for one particular workspace.
+  SELECT
+    CAST(NULL AS STRING)    AS workspace_id,
+    CAST(NULL AS STRING)    AS table_catalog,
+    CAST(NULL AS STRING)    AS table_schema,
+    CAST(NULL AS STRING)    AS table_name,
+    CAST(NULL AS STRING)    AS sensitivity_basis,
+    CAST(NULL AS STRING)    AS reader,
+    CAST(NULL AS STRING)    AS table_owner,
+    CAST(0 AS BIGINT)       AS read_count,
+    CAST(NULL AS TIMESTAMP) AS first_read_time,
+    CAST(NULL AS TIMESTAMP) AS last_read_time,
+    CAST(0 AS BIGINT)       AS distinct_read_days,
+    'NOT_ASSESSED'          AS status,
+    'no_sensitivity_signal' AS not_assessed_reason
+  FROM sensitive_table_count
+  WHERE n = 0
+)
+SELECT workspace_id, table_catalog, table_schema, table_name, sensitivity_basis, reader, table_owner,
+       read_count, first_read_time, last_read_time, distinct_read_days, status, not_assessed_reason
+FROM combined
+ORDER BY CASE status WHEN 'CRITICAL' THEN 0 WHEN 'WARN' THEN 1 WHEN 'NOT_ASSESSED' THEN 2 ELSE 3 END,
+         read_count DESC,
+         table_catalog, table_schema, table_name, reader
+) q
+{%- if not loop.last %}
+UNION ALL
+{%- endif %}
+{%- endfor %}

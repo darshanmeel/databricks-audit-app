@@ -1,0 +1,56 @@
+# config/grains/governance_inventories.yml -- T-21. Grain = the query's own key columns ONLY; the
+# generator prepends window_days itself (unique_grain: {columns: [window_days] + grain}, DEC-24).
+# Do not list window_days here.
+#
+# This file covers T-21's 10 F2 "current-state inventory" ids: 9 in domain governance_access
+# (config/grains/governance_events.yml is T-20's sibling file for the 12 F1 ids there and is left
+# untouched by any regeneration keyed off this file) plus table_inventory_type, which is domain
+# storage -- included here anyway because tools/generate_models.py looks up grains by query id
+# across every config/grains/*.yml file, not by domain (see this task's own task file, Steps 4).
+#
+# Every one of these 10 ids is windowless (no :period_days param -- PLAN.md 5.3's snapshot rule is
+# keyed on that absence, not on `params: none`; 4 of these 10 carry :top_n / threshold params and
+# are still windowless): the generator's own window_days is always 0 for every row, and
+# window_days=7/30/90 must return zero rows for all 10 (proven directly against the already-built
+# tests/db_audit_test.duckdb, not re-derived here).
+#
+# Two of these ids GROUP BY a raw GRANTEE identity but emit only its 2-character mask (the same
+# 4-branch CASE used throughout this library), per DEC-48:
+#   - access_grants_inventory: the inner subquery's own `GROUP BY 1, 2, 3` (object_scope,
+#     PRIVILEGE_TYPE, raw GRANTEE) from table_privileges/catalog_privileges groups on the RAW
+#     grantee; the outer SELECT emits only the masked GRANTEE, never the raw value.
+#   - access_grants_inventory_extended: each of the four UNION ALL branches (schema_privileges,
+#     connection_privileges, credential_privileges, external_location_privileges) has its own
+#     `GROUP BY 1, 2, GRANTEE` (raw), masked in the same outer SELECT position.
+# Both are safe on this fixture only by construction (tests/fixtures/governance.py's F2 support
+# rows give every (object_scope, privilege_type) combination its own distinct raw grantee, so no
+# two rows collide after masking here) -- not a guarantee the real vendored query provides on a
+# live snapshot, exactly as governance_events.yml's header explains for its own six masked ids.
+# DEC-48 rule (2) downgrades `unique_grain` to `warn` on the `dev` target for this reason; `test`
+# (this fixture) keeps `error`.
+#
+# The other 8 ids carry no masked column in their grain at all: table_owner / volume_owner /
+# share_owner / recipient_name are masked DISPLAY attributes on some of these ids, but never part
+# of the row's own unique key (access_volumes_inventory's key is (volume_catalog, volume_schema,
+# volume_name) -- one row per system.information_schema.volumes row, the vt tag-CTE is pre-grouped
+# to the same triple and cannot fan out; access_delta_sharing_exposure's key is (share_name) alone
+# -- recips/tbls/schs are all pre-grouped by SHARE_NAME before the LEFT JOINs). No GROUP BY at all
+# on access_column_masks_inventory, access_row_filters_inventory, access_views_inventory,
+# access_volumes_inventory, access_pii_outside_tables (its UNION ALL branches are each already
+# unique per source), access_delta_sharing_exposure -- natural unique key taken from the
+# information_schema table's own identifier columns in each case. Explicit GROUP BY (no masking)
+# on access_tags_inventory (`GROUP BY 1, 2, 3` per UNION ALL branch) and table_inventory_type
+# (`GROUP BY table_catalog, table_schema, table_type, data_source_format`).
+
+access_column_masks_inventory: [table_catalog, table_schema, table_name, column_name]
+access_row_filters_inventory: [table_catalog, table_schema, table_name]
+# masked: GRANTEE stands in for the raw pre-CASE table_privileges.GRANTEE / catalog_privileges.GRANTEE column, which the inner subquery's own GROUP BY 1,2,3 groups on before masking (DEC-48)
+access_grants_inventory: [object_scope, privilege_type, GRANTEE]
+# masked: GRANTEE stands in for the raw pre-CASE GRANTEE column across schema_privileges/connection_privileges/credential_privileges/external_location_privileges, each UNION ALL branch's own GROUP BY 1,2,GRANTEE groups on the raw value before masking (DEC-48)
+access_grants_inventory_extended: [object_scope, privilege_type, GRANTEE]
+access_tags_inventory: [object_scope, tag_name, tag_value]
+access_views_inventory: [view_catalog, view_schema, view_name]
+access_volumes_inventory: [volume_catalog, volume_schema, volume_name]
+access_pii_outside_tables: [object_type, catalog_name, schema_name, object_name]
+access_delta_sharing_exposure: [share_name]
+table_inventory_type: [table_catalog, table_schema, table_type, data_source_format]

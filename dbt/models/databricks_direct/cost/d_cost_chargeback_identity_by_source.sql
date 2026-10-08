@@ -1,0 +1,331 @@
+{{ config(enabled=(target.type == "databricks"), materialized=("table" if var("direct_mode", "run") == "table" else "direct_check"), schema="audit_direct", tags=['finding', 'domain:cost', 'tier:standard', 'databricks_direct']) }}
+-- generated from app/queries/app/cost/cost_chargeback_identity_by_source.sql; fix the source query and regenerate, never edit this file.
+{%- set windows = var('windows', [7, 30, 90]) %}
+{%- for w in windows %}
+SELECT {{ w }} AS window_days, q.*
+FROM (
+WITH snapshot AS (
+  SELECT MIN(usage_date) AS snapshot_start
+  FROM {{ source('system_billing', 'usage') }}
+),
+price AS (
+  SELECT sku_name, cloud, usage_unit, price_start_time, price_end_time,
+         CAST(pricing.effective_list.default AS DOUBLE) AS list_rate   -- effective list price, DEC-66.1
+  FROM {{ list_prices() }} list_prices
+),
+latest_clusters AS (
+  SELECT workspace_id, cluster_id, owned_by
+  FROM {{ source('system_compute', 'clusters') }}
+  QUALIFY ROW_NUMBER() OVER (PARTITION BY workspace_id, cluster_id ORDER BY change_time DESC) = 1
+),
+wh_day AS (
+  SELECT u.workspace_id, u.usage_metadata.warehouse_id AS warehouse_id, u.usage_date,
+         SUM(u.usage_quantity * p.list_rate) AS usd_list,
+         SUM(CASE WHEN p.list_rate IS NULL AND upper(u.sku_name) NOT LIKE '%FREE_USAGE%'
+                  THEN u.usage_quantity ELSE 0 END) AS unpriced_q,
+         SUM(CASE WHEN p.list_rate IS NOT NULL THEN u.usage_quantity ELSE 0 END) AS priced_q
+  FROM {{ source('system_billing', 'usage') }} u
+  LEFT JOIN price p
+    ON  u.sku_name = p.sku_name AND u.cloud = p.cloud AND u.usage_unit = p.usage_unit
+    AND u.usage_end_time >= p.price_start_time
+    AND (p.price_end_time IS NULL OR u.usage_end_time < p.price_end_time)
+  WHERE upper(u.usage_unit) = 'DBU'
+    AND u.usage_metadata.warehouse_id IS NOT NULL
+    AND u.usage_date >= dateadd(day, -({{ w }} * 2), {{ audit_today() }})
+    AND u.usage_date <  {{ audit_today() }}
+  GROUP BY u.workspace_id, u.usage_metadata.warehouse_id, u.usage_date
+),
+wh_identity_duration AS (
+  SELECT q.workspace_id, q.compute.warehouse_id AS warehouse_id, DATE(q.start_time) AS usage_date,
+         COALESCE(q.executed_by, 'unknown') AS identity_run_as,
+         SUM(COALESCE(q.total_duration_ms, 0)) AS duration_ms
+  FROM {{ source('system_query', 'history') }} q
+  WHERE q.compute.warehouse_id IS NOT NULL
+    AND q.start_time >= CAST(dateadd(day, -({{ w }} * 2), {{ audit_today() }}) AS TIMESTAMP)
+    AND q.start_time <  {{ audit_today() }}
+  GROUP BY q.workspace_id, q.compute.warehouse_id, DATE(q.start_time), COALESCE(q.executed_by, 'unknown')
+),
+wh_day_total_duration AS (
+  SELECT workspace_id, warehouse_id, usage_date, SUM(duration_ms) AS total_duration_ms
+  FROM wh_identity_duration
+  GROUP BY workspace_id, warehouse_id, usage_date
+),
+wh_split AS (
+  -- one row per warehouse-day-identity: the day's dollars times that identity's duration share, or
+  -- (when the day has no recorded query duration at all) the whole day's dollars under 'unknown'.
+  SELECT d.workspace_id, d.warehouse_id, d.usage_date,
+         COALESCE(i.identity_run_as, 'unknown') AS identity_run_as,
+         CASE WHEN t.total_duration_ms > 0 THEN d.usd_list * i.duration_ms / t.total_duration_ms
+              ELSE d.usd_list END AS usd_list
+  FROM wh_day d
+  LEFT JOIN wh_day_total_duration t
+    ON t.workspace_id = d.workspace_id AND t.warehouse_id = d.warehouse_id AND t.usage_date = d.usage_date
+  LEFT JOIN wh_identity_duration i
+    ON  i.workspace_id = d.workspace_id AND i.warehouse_id = d.warehouse_id AND i.usage_date = d.usage_date
+    AND t.total_duration_ms > 0
+),
+wh_by_identity AS (
+  SELECT workspace_id, warehouse_id, identity_run_as,
+         SUM(CASE WHEN usage_date >= dateadd(day, -{{ w }}, {{ audit_today() }}) THEN usd_list END) AS cur_usd_list,
+         SUM(CASE WHEN usage_date <  dateadd(day, -{{ w }}, {{ audit_today() }}) THEN usd_list END) AS prev_usd_list
+  FROM wh_split
+  GROUP BY workspace_id, warehouse_id, identity_run_as
+),
+wh_gate AS (
+  SELECT
+    (SUM(CASE WHEN usage_date >= dateadd(day, -{{ w }}, {{ audit_today() }}) THEN usd_list END) IS NULL
+     AND SUM(CASE WHEN usage_date >= dateadd(day, -{{ w }}, {{ audit_today() }}) THEN unpriced_q ELSE 0 END) > 0) AS current_period_unpriced,
+    (SUM(CASE WHEN usage_date <  dateadd(day, -{{ w }}, {{ audit_today() }}) THEN usd_list END) IS NULL
+     AND SUM(CASE WHEN usage_date <  dateadd(day, -{{ w }}, {{ audit_today() }}) THEN unpriced_q ELSE 0 END) > 0) AS previous_period_unpriced,
+    CASE
+      WHEN SUM(unpriced_q) > 0 THEN 'unpriced'
+      WHEN SUM(priced_q) = 0   THEN 'free'
+      ELSE 'priced'
+    END AS price_basis
+  FROM wh_day
+),
+jobs_usage AS (
+  SELECT COALESCE(u.identity_metadata.owned_by, u.identity_metadata.run_as, 'unknown') AS identity_run_as,
+         u.usage_date,
+         u.usage_quantity * p.list_rate AS usd_list,
+         CASE WHEN p.list_rate IS NULL AND upper(u.sku_name) NOT LIKE '%FREE_USAGE%'
+              THEN u.usage_quantity ELSE 0 END AS unpriced_q,
+         CASE WHEN p.list_rate IS NOT NULL THEN u.usage_quantity ELSE 0 END AS priced_q
+  FROM {{ source('system_billing', 'usage') }} u
+  LEFT JOIN price p
+    ON  u.sku_name = p.sku_name AND u.cloud = p.cloud AND u.usage_unit = p.usage_unit
+    AND u.usage_end_time >= p.price_start_time
+    AND (p.price_end_time IS NULL OR u.usage_end_time < p.price_end_time)
+  WHERE upper(u.usage_unit) = 'DBU'
+    AND u.usage_metadata.job_id IS NOT NULL
+    AND u.usage_date >= dateadd(day, -({{ w }} * 2), {{ audit_today() }})
+    AND u.usage_date <  {{ audit_today() }}
+),
+jobs_by_identity AS (
+  SELECT identity_run_as,
+         SUM(CASE WHEN usage_date >= dateadd(day, -{{ w }}, {{ audit_today() }}) THEN usd_list END) AS cur_usd_list,
+         SUM(CASE WHEN usage_date <  dateadd(day, -{{ w }}, {{ audit_today() }}) THEN usd_list END) AS prev_usd_list
+  FROM jobs_usage
+  GROUP BY identity_run_as
+),
+jobs_gate AS (
+  SELECT
+    (SUM(CASE WHEN usage_date >= dateadd(day, -{{ w }}, {{ audit_today() }}) THEN usd_list END) IS NULL
+     AND SUM(CASE WHEN usage_date >= dateadd(day, -{{ w }}, {{ audit_today() }}) THEN unpriced_q ELSE 0 END) > 0) AS current_period_unpriced,
+    (SUM(CASE WHEN usage_date <  dateadd(day, -{{ w }}, {{ audit_today() }}) THEN usd_list END) IS NULL
+     AND SUM(CASE WHEN usage_date <  dateadd(day, -{{ w }}, {{ audit_today() }}) THEN unpriced_q ELSE 0 END) > 0) AS previous_period_unpriced,
+    CASE
+      WHEN SUM(unpriced_q) > 0 THEN 'unpriced'
+      WHEN SUM(priced_q) = 0   THEN 'free'
+      ELSE 'priced'
+    END AS price_basis
+  FROM jobs_usage
+),
+other_usage AS (
+  SELECT COALESCE(u.identity_metadata.owned_by, u.identity_metadata.run_as, lc.owned_by, 'unknown') AS identity_run_as,
+         u.usage_date,
+         u.usage_quantity * p.list_rate AS usd_list,
+         CASE WHEN p.list_rate IS NULL AND upper(u.sku_name) NOT LIKE '%FREE_USAGE%'
+              THEN u.usage_quantity ELSE 0 END AS unpriced_q,
+         CASE WHEN p.list_rate IS NOT NULL THEN u.usage_quantity ELSE 0 END AS priced_q
+  FROM {{ source('system_billing', 'usage') }} u
+  LEFT JOIN price p
+    ON  u.sku_name = p.sku_name AND u.cloud = p.cloud AND u.usage_unit = p.usage_unit
+    AND u.usage_end_time >= p.price_start_time
+    AND (p.price_end_time IS NULL OR u.usage_end_time < p.price_end_time)
+  LEFT JOIN latest_clusters lc
+    ON  lc.workspace_id = u.workspace_id AND lc.cluster_id = u.usage_metadata.cluster_id
+  WHERE u.usage_metadata.warehouse_id IS NULL
+    AND u.usage_metadata.job_id IS NULL
+    AND u.usage_date >= dateadd(day, -({{ w }} * 2), {{ audit_today() }})
+    AND u.usage_date <  {{ audit_today() }}
+),
+other_by_identity AS (
+  SELECT identity_run_as,
+         SUM(CASE WHEN usage_date >= dateadd(day, -{{ w }}, {{ audit_today() }}) THEN usd_list END) AS cur_usd_list,
+         SUM(CASE WHEN usage_date <  dateadd(day, -{{ w }}, {{ audit_today() }}) THEN usd_list END) AS prev_usd_list
+  FROM other_usage
+  GROUP BY identity_run_as
+),
+other_gate AS (
+  SELECT
+    (SUM(CASE WHEN usage_date >= dateadd(day, -{{ w }}, {{ audit_today() }}) THEN usd_list END) IS NULL
+     AND SUM(CASE WHEN usage_date >= dateadd(day, -{{ w }}, {{ audit_today() }}) THEN unpriced_q ELSE 0 END) > 0) AS current_period_unpriced,
+    (SUM(CASE WHEN usage_date <  dateadd(day, -{{ w }}, {{ audit_today() }}) THEN usd_list END) IS NULL
+     AND SUM(CASE WHEN usage_date <  dateadd(day, -{{ w }}, {{ audit_today() }}) THEN unpriced_q ELSE 0 END) > 0) AS previous_period_unpriced,
+    CASE
+      WHEN SUM(unpriced_q) > 0 THEN 'unpriced'
+      WHEN SUM(priced_q) = 0   THEN 'free'
+      ELSE 'priced'
+    END AS price_basis
+  FROM other_usage
+),
+combined AS (
+  SELECT identity_run_as, 'sql_warehouse' AS source, workspace_id, warehouse_id,
+         COALESCE(cur_usd_list, 0) AS cur_raw, COALESCE(prev_usd_list, 0) AS prev_raw
+  FROM wh_by_identity
+  UNION ALL
+  SELECT identity_run_as, 'jobs' AS source, CAST(NULL AS STRING) AS workspace_id, CAST(NULL AS STRING) AS warehouse_id,
+         COALESCE(cur_usd_list, 0), COALESCE(prev_usd_list, 0)
+  FROM jobs_by_identity
+  UNION ALL
+  SELECT identity_run_as, 'other' AS source, CAST(NULL AS STRING) AS workspace_id, CAST(NULL AS STRING) AS warehouse_id,
+         COALESCE(cur_usd_list, 0), COALESCE(prev_usd_list, 0)
+  FROM other_by_identity
+),
+total AS (
+  SELECT SUM(cur_raw) AS total_usd_list FROM combined
+),
+scored AS (
+  SELECT c.identity_run_as,
+         CASE
+           WHEN c.identity_run_as = 'unknown' THEN 'unknown'
+           WHEN c.identity_run_as LIKE '%@%'   THEN 'user'
+           ELSE 'service_principal'
+         END AS identity_type,
+         c.source, c.workspace_id, c.warehouse_id,
+         c.cur_raw, c.prev_raw,
+         ROUND(c.cur_raw, 2)                                          AS usd_list,
+         ROUND(c.cur_raw * 100.0 / NULLIF(t.total_usd_list, 0), 1)    AS share_of_total_pct,
+         ROUND(c.prev_raw, 2)                                         AS prev_usd_list,
+         ROUND(c.cur_raw - c.prev_raw, 2)                             AS change_usd_list,
+         ROUND((c.cur_raw - c.prev_raw) / NULLIF(c.prev_raw, 0) * 100, 1) AS change_pct,
+         CASE c.source
+           WHEN 'sql_warehouse' THEN wg.price_basis
+           WHEN 'jobs'          THEN jg.price_basis
+           WHEN 'other'         THEN og.price_basis
+         END AS price_basis,
+         CASE
+           WHEN s.snapshot_start > dateadd(day, -({{ w }} * 2), {{ audit_today() }}) THEN 'NOT_ASSESSED'
+           WHEN c.source = 'sql_warehouse' AND (wg.current_period_unpriced OR wg.previous_period_unpriced) THEN 'NOT_ASSESSED'
+           WHEN c.source = 'jobs'          AND (jg.current_period_unpriced OR jg.previous_period_unpriced) THEN 'NOT_ASSESSED'
+           WHEN c.source = 'other'         AND (og.current_period_unpriced OR og.previous_period_unpriced) THEN 'NOT_ASSESSED'
+           WHEN COALESCE(c.cur_raw, 0) < {{ param('cost_chargeback_identity_by_source', 'min_spend_usd', 20) }} THEN 'OK'
+           WHEN c.prev_raw = 0                          THEN 'CRITICAL'
+           WHEN (c.cur_raw - c.prev_raw) / NULLIF(c.prev_raw, 0) * 100 >= {{ param('cost_chargeback_identity_by_source', 'crit_increase_pct', 50) }} THEN 'CRITICAL'
+           WHEN (c.cur_raw - c.prev_raw) / NULLIF(c.prev_raw, 0) * 100 >= {{ param('cost_chargeback_identity_by_source', 'warn_increase_pct', 25) }}  THEN 'WARN'
+           ELSE 'OK'
+         END AS status,
+         CASE
+           WHEN s.snapshot_start > dateadd(day, -({{ w }} * 2), {{ audit_today() }}) THEN 'previous_window_not_covered'
+           WHEN c.source = 'sql_warehouse' AND wg.current_period_unpriced  THEN 'current_period_unpriced'
+           WHEN c.source = 'jobs'          AND jg.current_period_unpriced  THEN 'current_period_unpriced'
+           WHEN c.source = 'other'         AND og.current_period_unpriced THEN 'current_period_unpriced'
+           WHEN c.source = 'sql_warehouse' AND wg.previous_period_unpriced  THEN 'previous_period_unpriced'
+           WHEN c.source = 'jobs'          AND jg.previous_period_unpriced  THEN 'previous_period_unpriced'
+           WHEN c.source = 'other'         AND og.previous_period_unpriced THEN 'previous_period_unpriced'
+           ELSE NULL
+         END AS not_assessed_reason
+  FROM combined c
+  CROSS JOIN snapshot s
+  CROSS JOIN total t
+  CROSS JOIN wh_gate wg
+  CROSS JOIN jobs_gate jg
+  CROSS JOIN other_gate og
+),
+flagged AS (
+  -- A real finding (WARN/CRITICAL) always keeps its own row - never pooled.
+  SELECT identity_run_as, identity_type, source, workspace_id, warehouse_id,
+         FALSE AS is_other, CAST(NULL AS BIGINT) AS pooled_count,
+         usd_list, share_of_total_pct, prev_usd_list, change_usd_list, change_pct,
+         price_basis, status, not_assessed_reason
+  FROM scored
+  WHERE status IN ('WARN', 'CRITICAL')
+),
+poolable_ranked AS (
+  -- OK and NOT_ASSESSED rows are both poolable - on an account short of 2x {{ w }} of billing
+  -- history, every row reads NOT_ASSESSED, and that list needs the same cap an OK list gets.
+  -- ranked PER STATUS, never combined - a NOT_ASSESSED row's usd_list is always NULL (sorted
+  -- last), so ranking both statuses together would push every NOT_ASSESSED row past {{ param('cost_chargeback_identity_by_source', 'top_n', 20) }} as
+  -- soon as 20+ OK rows existed anywhere, regardless of how few NOT_ASSESSED rows there are.
+  SELECT scored.*,
+         ROW_NUMBER() OVER (PARTITION BY status ORDER BY usd_list DESC NULLS LAST, identity_run_as, source) AS rn
+  FROM scored
+  WHERE status IN ('OK', 'NOT_ASSESSED')
+),
+poolable_kept AS (
+  -- The top {{ param('cost_chargeback_identity_by_source', 'top_n', 20) }} OK/NOT_ASSESSED rows by current spend, kept as their own row.
+  SELECT identity_run_as, identity_type, source, workspace_id, warehouse_id,
+         FALSE AS is_other, CAST(NULL AS BIGINT) AS pooled_count,
+         usd_list, share_of_total_pct, prev_usd_list, change_usd_list, change_pct,
+         price_basis, status, not_assessed_reason
+  FROM poolable_ranked
+  WHERE rn <= {{ param('cost_chargeback_identity_by_source', 'top_n', 20) }}
+),
+poolable_pooled_raw AS (
+  -- Every remaining OK/NOT_ASSESSED row beyond {{ param('cost_chargeback_identity_by_source', 'top_n', 20) }} - re-aggregated below into one is_other row
+  -- per status (OK rows and NOT_ASSESSED rows are never combined into one row).
+  SELECT * FROM poolable_ranked WHERE rn > {{ param('cost_chargeback_identity_by_source', 'top_n', 20) }}
+),
+other_ok_row AS (
+  SELECT
+    CAST(NULL AS STRING) AS identity_run_as,
+    'other'               AS identity_type,
+    CAST(NULL AS STRING) AS source,
+    CAST(NULL AS STRING) AS workspace_id,
+    CAST(NULL AS STRING) AS warehouse_id,
+    TRUE                  AS is_other,
+    COUNT(*)              AS pooled_count,
+    ROUND(SUM(cur_raw), 2)                                              AS usd_list,
+    ROUND(SUM(cur_raw) * 100.0 / NULLIF(MAX(t.total_usd_list), 0), 1)   AS share_of_total_pct,
+    ROUND(SUM(prev_raw), 2)                                             AS prev_usd_list,
+    ROUND(SUM(cur_raw) - SUM(prev_raw), 2)                              AS change_usd_list,
+    ROUND((SUM(cur_raw) - SUM(prev_raw)) / NULLIF(SUM(prev_raw), 0) * 100, 1) AS change_pct,
+    CASE
+      WHEN SUM(CASE WHEN price_basis = 'unpriced' THEN 1 ELSE 0 END) > 0 THEN 'unpriced'
+      WHEN SUM(CASE WHEN price_basis = 'priced'   THEN 1 ELSE 0 END) = 0 THEN 'free'
+      ELSE 'priced'
+    END AS price_basis,
+    -- Every pooled row was already status=OK on its own - a rollup of small, healthy rows is never
+    -- itself a finding, so this row always reads OK regardless of the combined dollars.
+    'OK' AS status,
+    CAST(NULL AS STRING) AS not_assessed_reason
+  FROM poolable_pooled_raw
+  CROSS JOIN total t
+  WHERE status = 'OK'
+),
+other_not_assessed_row AS (
+  SELECT
+    CAST(NULL AS STRING) AS identity_run_as,
+    'other'               AS identity_type,
+    CAST(NULL AS STRING) AS source,
+    CAST(NULL AS STRING) AS workspace_id,
+    CAST(NULL AS STRING) AS warehouse_id,
+    TRUE                  AS is_other,
+    COUNT(*)              AS pooled_count,
+    ROUND(SUM(cur_raw), 2)                                              AS usd_list,
+    ROUND(SUM(cur_raw) * 100.0 / NULLIF(MAX(t.total_usd_list), 0), 1)   AS share_of_total_pct,
+    ROUND(SUM(prev_raw), 2)                                             AS prev_usd_list,
+    ROUND(SUM(cur_raw) - SUM(prev_raw), 2)                              AS change_usd_list,
+    ROUND((SUM(cur_raw) - SUM(prev_raw)) / NULLIF(SUM(prev_raw), 0) * 100, 1) AS change_pct,
+    CASE
+      WHEN SUM(CASE WHEN price_basis = 'unpriced' THEN 1 ELSE 0 END) > 0 THEN 'unpriced'
+      WHEN SUM(CASE WHEN price_basis = 'priced'   THEN 1 ELSE 0 END) = 0 THEN 'free'
+      ELSE 'priced'
+    END AS price_basis,
+    'NOT_ASSESSED' AS status,
+    -- The pooled rows can carry different reasons; NULL here rather than pick one arbitrarily -
+    -- raise {{ param('cost_chargeback_identity_by_source', 'top_n', 20) }} to see them individually.
+    CAST(NULL AS STRING) AS not_assessed_reason
+  FROM poolable_pooled_raw
+  CROSS JOIN total t
+  WHERE status = 'NOT_ASSESSED'
+)
+SELECT * FROM (
+  SELECT * FROM flagged
+  UNION ALL
+  SELECT * FROM poolable_kept
+  UNION ALL
+  SELECT * FROM other_ok_row WHERE pooled_count > 0
+  UNION ALL
+  SELECT * FROM other_not_assessed_row WHERE pooled_count > 0
+) u
+ORDER BY CASE status WHEN 'CRITICAL' THEN 0 WHEN 'WARN' THEN 1 WHEN 'NOT_ASSESSED' THEN 2 ELSE 3 END,
+         is_other,
+         change_usd_list DESC NULLS LAST,
+         identity_run_as, source
+) q
+{%- if not loop.last %}
+UNION ALL
+{%- endif %}
+{%- endfor %}

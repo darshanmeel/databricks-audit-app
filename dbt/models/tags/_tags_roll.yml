@@ -1,0 +1,163 @@
+# dbt/models/tags/_tags_roll.yml -- P4-T-ROLL (tasks/P4-T-SPEC.md section 4.2). Schema tests for
+# the TAG-ROLL-owned tags models: not_null on every key column, plus unique_grain (the same
+# generic test every generated findings model and dims/_dims.yml already use) on each model's own
+# grain. The shared tags.tag_workspace model's own tests live in TAG-IDX's _tags_idx.yml, not here
+# (section 4.2's own instruction).
+version: 2
+models:
+  - name: cost_unit
+    description: >
+      One row per (window_days, unit_id): a slice of system.billing.usage's priced dollars,
+      already split (a warehouse's DBU bill between its queries, idle time and "not split") and
+      classified by compute_kind/compute_id and work_kind/work_id. Carries no tag columns --
+      cost_unit_tag explodes each unit's own tags separately.
+    columns:
+      - name: window_days
+        data_tests:
+          - not_null
+      - name: unit_id
+        data_tests:
+          - not_null
+      - name: compute_kind
+        data_tests:
+          - not_null
+      - name: work_kind
+        data_tests:
+          - not_null
+      - name: usage_unit
+        data_tests:
+          - not_null
+    data_tests:
+      - unique_grain:
+          arguments:
+            columns:
+              - window_days
+              - unit_id
+
+  - name: cost_unit_tag
+    description: >
+      One row per (window_days, unit_id, level, tag_key, tag_value): the REAL tag values a
+      tags.cost_unit row carries, at the compute level (the tag on the bill) and the work level
+      (the job's/pipeline's own tags, or a query unit's per-query attributed-DBU split). No
+      "untagged" row -- app/core/rollup.py computes that remainder at request time.
+    columns:
+      - name: window_days
+        data_tests:
+          - not_null
+      - name: unit_id
+        data_tests:
+          - not_null
+      - name: level
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["compute", "work"]
+      - name: tag_key
+        data_tests:
+          - not_null
+      - name: tag_value
+        data_tests:
+          - not_null
+      - name: source
+        data_tests:
+          - not_null
+    data_tests:
+      - unique_grain:
+          arguments:
+            columns:
+              - window_days
+              - unit_id
+              - level
+              - tag_key
+              - tag_value
+
+  - name: cost_reconciliation
+    description: >
+      One row per (window_days, usage_unit): the priced billing total computed independently from
+      system.billing.usage/list_prices, against tags.cost_unit's own total for the same window and
+      usage_unit -- rule 3's proof. dbt/tests/tags_cost_reconciles.sql fails the build the moment
+      they disagree by 0.005 (dollars) or 0.0001 (unpriced quantity) or more.
+    columns:
+      - name: window_days
+        data_tests:
+          - not_null
+      - name: usage_unit
+        data_tests:
+          - not_null
+      - name: billing_usd
+        data_tests:
+          - not_null
+      - name: unit_usd
+        data_tests:
+          - not_null
+    data_tests:
+      - unique_grain:
+          arguments:
+            columns:
+              - window_days
+              - usage_unit
+
+  - name: perf_unit
+    description: >
+      One row per (window_days, unit_id): system.query.history statements grouped by
+      (workspace_id, compute_kind, compute_id) over the window. No dollars (DEC-61.1).
+    columns:
+      - name: window_days
+        data_tests:
+          - not_null
+      - name: unit_id
+        data_tests:
+          - not_null
+      - name: compute_kind
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["warehouse", "cluster", "serverless"]
+      - name: statements
+        data_tests:
+          - not_null
+    data_tests:
+      - unique_grain:
+          arguments:
+            columns:
+              - window_days
+              - unit_id
+
+  - name: perf_unit_tag
+    description: >
+      One row per (window_days, unit_id, level, tag_key, tag_value): tags.perf_unit's own REAL tag
+      values, at the compute level (the resource's own latest tags, pool fallback for a cluster
+      with none of its own) and the work level (query.history.query_tags per statement).
+    columns:
+      - name: window_days
+        data_tests:
+          - not_null
+      - name: unit_id
+        data_tests:
+          - not_null
+      - name: level
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["compute", "work"]
+      - name: tag_key
+        data_tests:
+          - not_null
+      - name: tag_value
+        data_tests:
+          - not_null
+      - name: statements
+        data_tests:
+          - not_null
+    data_tests:
+      - unique_grain:
+          arguments:
+            columns:
+              - window_days
+              - unit_id
+              - level
+              - tag_key
+              - tag_value

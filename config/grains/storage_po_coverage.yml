@@ -1,0 +1,7 @@
+# config/grains/storage_po_coverage.yml. Grain = the query's own key columns ONLY; the generator
+# prepends window_days (DEC-24). Two sections unioned by `section`: catalog_summary (one row per
+# catalog_name, schema_name/table_id/table_name NULL) and largest_table_without_po (one row per
+# table_id, up to :top_n per window). `section` plus all four identity columns together are unique
+# across both sections (a catalog_summary row and a largest_table_without_po row never share a
+# (section, catalog_name, schema_name, table_id, table_name) tuple, since section differs).
+storage_po_coverage: [section, catalog_name, schema_name, table_id, table_name]

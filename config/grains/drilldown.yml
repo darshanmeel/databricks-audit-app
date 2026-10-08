@@ -1,0 +1,32 @@
+# config/grains/drilldown.yml -- T-07. Grain = the query's own key columns ONLY; the generator
+# prepends window_days itself (unique_grain: {columns: [window_days] + grain}, DEC-24). Do not
+# list window_days here.
+#
+# lakeflow_long_running_runs and task_cluster_utilization grains are exactly the two candidates
+# named in tasks/T-07-fixture-framework-drilldown.md's Inputs section, taken from each query's own
+# `read_this` header line ("One row = one job run...", "One row = one task run of one job run...").
+#
+# query_task_statement_breakdown's grain was NOT pinned by PLAN.md (see this task's Hand-off
+# notes "DECIDE" resolution). Derived here from the built fixture (tests/db_audit_test.duckdb,
+# `dbt build --target test --select tag:drilldown` against this batch's own data): the model's
+# `ranked` CTE assigns stmt_rank_in_task via
+# `ROW_NUMBER() OVER (PARTITION BY workspace_id, job_run_id, COALESCE(task_run_id,
+# stmt_task_run_id) ORDER BY total_ms DESC, shape_fingerprint)`, and its `stmt_shape` CTE GROUPs
+# BY (workspace_id, src_task_run_id, orphan_job_run_id, shape_fingerprint) before that -- so
+# (workspace_id, job_run_id, task_run_id, stmt_task_run_id, shape_fingerprint) is unique by
+# construction, covering all three row kinds: the normal one (task_run_id + shape_fingerprint),
+# the NOT_ASSESSED one (task_run_id set, shape_fingerprint NULL, stmt_task_run_id always NULL for
+# that row), and the UNATTRIBUTED one (task_run_id NULL, distinguished by stmt_task_run_id
+# and/or shape_fingerprint). A GROUP BY on the smaller 4-column candidate (without
+# stmt_task_run_id) happens to have zero duplicate groups on this specific fixture too (its two
+# UNATTRIBUTED rows under the same run have different shape_fingerprints), but that is a property
+# of this fixture's data, not a guarantee from the query's own structure -- two UNATTRIBUTED
+# statements under the same run that happened to devalue to the identical shape would collide
+# without stmt_task_run_id in the key, per the header's own JOIN KEY caveat. The 5-column key is
+# used here because it is the one actually guaranteed unique by the query's GROUP BY / PARTITION
+# BY, not merely unique on today's fixture. Verified duplicate-free (0 rows) at window_days = 30
+# against the real built table before this file was finalized.
+
+lakeflow_long_running_runs: [workspace_id, job_id, run_id]
+task_cluster_utilization: [workspace_id, job_run_id, task_run_id]
+query_task_statement_breakdown: [workspace_id, job_run_id, task_run_id, stmt_task_run_id, shape_fingerprint]

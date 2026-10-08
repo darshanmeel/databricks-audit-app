@@ -1,0 +1,147 @@
+# Per-check materiality floors -- shape: {<query_id>: {column, min, unit, label}}.
+# Applied by the app AT READ TIME (app/core/materiality.py): a CRITICAL/WARN row whose named column
+# sits under `min` reads OK instead and is flagged below_floor, so counts, the worst status, the
+# sort order and money sums all ignore it; NOT_ASSESSED/OK rows are never touched. The row's own
+# exported `status` column is never rewritten. A query_id with no entry here, or whose named column
+# the built table does not carry, behaves exactly as before. A USD `min` is PER 30 DAYS: at 7d/90d
+# it scales with the window (min * window_days / 30) so a shorter window does not flag rows a
+# 30-day view would call immaterial, and vice versa. Tunable here without a re-export or a dbt
+# rebuild -- see app/core/config.py's load_materiality()/save_materiality().
+#
+# A query already gated on this same size/count inside its own SQL (e.g. cost_by_job's
+# :min_dbus_per_day, cost_daily_spikes' :min_spend_usd) is left out here -- a config floor there
+# would be structurally redundant with the header's own :warn_*/:crit_* param. A governance/
+# existence check (a broad grant, an unmasked PII column, a stale job) is left out too -- those
+# matter at any size. A check whose own status is already based on this same column (so the floor
+# would just override the check's own WARN/CRITICAL split) is left out as well -- raise warn_*/
+# crit_* in config/thresholds.yml instead if one of those is noisy.
+
+compute_serving_endpoint_cost_status:
+  column: est_usd_list
+  min: 50
+  unit: USD
+  label: "$50 spend on an idle endpoint"
+compute_idle_node_ratio:
+  column: est_wasted_usd_list
+  min: 50
+  unit: USD
+  label: "$50 estimated wasted spend"
+compute_warehouse_idle_minutes:
+  column: est_wasted_usd_list
+  min: 50
+  unit: USD
+  label: "$50 possible waste per 30 days"
+compute_warehouse_autoscale_churn:
+  column: scaling_events
+  min: 20
+  unit: count
+  label: "20 scaling events in the window"
+cost_chargeback_by_allocation_tag:
+  column: net_list_cost_usd
+  min: 50
+  unit: USD
+  label: "$50 missing-allocation spend"
+cost_failed_statement_waste:
+  column: est_wasted_usd_list
+  min: 50
+  unit: USD
+  label: "$50 possible waste per 30 days"
+cost_usage_policy_coverage:
+  column: net_usage_quantity
+  min: 5
+  unit: DBU
+  label: "5 DBU/day uncovered serverless"
+
+lakeflow_job_tasks_no_timeout:
+  column: est_usd_list
+  min: 50
+  unit: USD
+  label: "$50 at-risk exposure"
+lakeflow_jobs_no_timeout:
+  column: est_usd_list
+  min: 50
+  unit: USD
+  label: "$50 at-risk exposure"
+lakeflow_jobs_on_all_purpose:
+  column: est_usd_list_share
+  min: 50
+  unit: USD
+  label: "$50 list-cost share"
+lakeflow_retries_repairs:
+  column: est_usd_list
+  min: 50
+  unit: USD
+  label: "$50 job cost"
+lakeflow_job_duration_regression:
+  column: recent_median_minutes
+  min: 5
+  unit: minutes
+  label: "5 min actual runtime"
+lakeflow_job_compute_pressure:
+  column: task_hours_total
+  min: 8
+  unit: hours
+  label: "8h total compute in window"
+lakeflow_pipeline_cost:
+  column: net_list_cost
+  min: 50
+  unit: USD
+  label: "$50 pipeline cost per 30 days"
+lakeflow_pipeline_idle_tail_duration:
+  column: est_usd_list
+  min: 50
+  unit: USD
+  label: "$50 possible waste per 30 days"
+lakeflow_job_queue_time:
+  column: queue_s_total
+  min: 3600
+  unit: seconds
+  label: "1 hour combined queue time in window"
+lakeflow_phase_cold_start:
+  column: setup_s_total
+  min: 3600
+  unit: seconds
+  label: "1 hour combined cold-start time in window"
+
+query_pruning_effectiveness:
+  column: read_bytes_sum
+  min: 100000000000
+  unit: bytes
+  label: "100 GB scanned"
+query_shuffle_write_amplification:
+  column: written_bytes_sum
+  min: 1000000000
+  unit: bytes
+  label: "1 GB total written"
+query_warehouse_pressure:
+  column: total_duration_s_sum
+  min: 3600
+  unit: seconds
+  label: "1 hour total statement time on the warehouse in the window"
+query_task_statement_breakdown:
+  column: total_ms
+  min: 300000
+  unit: ms
+  label: "5 min total shape runtime within the task"
+query_cache_coldstart:
+  column: query_count
+  min: 20
+  unit: count
+  label: "20 queries in the day+warehouse group"
+# Its 20%-of-warehouse rule alone flags a few dollars on a small warehouse; the floor keeps it to real money.
+query_top_by_cost:
+  column: est_cost_usd_list
+  min: 50
+  unit: USD
+  label: "$50 query-group spend per 30 days"
+query_costly_statements:
+  column: execution_duration_ms
+  min: 300000
+  unit: ms
+  label: "5 min single-statement runtime"
+
+po_data_skipping_backfill:
+  column: scanned_bytes
+  min: 100000000000
+  unit: bytes
+  label: "100 GB scanned with no new skipping columns"

@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Original attribution: hard-coded, never read from settings.yml, never shown on screen. -->
+  <meta name="author" content="Darshan Singh, Crosshire, https://crosshire.ch, darshansingh@crosshire.ch">
+  <meta name="copyright" content="Crosshire">
+  <title>Crosshire</title>
+  <!-- Empty but present -- without this the browser requests /favicon.ico anyway and logs a 404. -->
+  <link rel="icon" href="data:,">
+
+  <!-- Theme (styles.css): light or dark before first paint, so the page never flashes. A stored
+       "theme" key wins; otherwise follow the OS. try/catch: blocked storage still renders light. -->
+  <script>
+    try {
+      var storedTheme = localStorage.getItem("theme");
+      var theme = storedTheme === "light" || storedTheme === "dark"
+        ? storedTheme
+        : (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      if (theme === "dark") document.documentElement.setAttribute("data-theme", "dark");
+    } catch (e) { /* storage or matchMedia unavailable: light */ }
+  </script>
+  <script type="module" crossorigin src="/assets/index-DKqmrNFh.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-8rvPlE6L.css">
+  <meta name="source-hash" content="e104747f904dce50">
+</head>
+<body>
+  <div id="root"><div class="loading-note">Loading…</div></div>
+</body>
+</html>

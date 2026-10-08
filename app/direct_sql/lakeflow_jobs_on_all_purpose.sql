@@ -1,0 +1,159 @@
+-- generated from dbt/models/databricks_direct/jobs_pipelines/d_lakeflow_jobs_on_all_purpose.sql by tools/build_direct_sql.py; edit the query, never this file.
+-- generated from app/queries/vendored/jobs_pipelines/lakeflow_jobs_on_all_purpose.sql; fix the source query and regenerate, never edit this file.
+SELECT __WINDOW_DAYS__ AS window_days, q.*
+FROM (
+WITH task_compute AS (
+  SELECT workspace_id, job_id, run_id, task_key, EXPLODE(compute_ids) AS compute_id
+  FROM `system`.`lakeflow`.`job_task_run_timeline`
+  WHERE period_start_time >= dateadd(DAY, -__WINDOW_DAYS__, __AS_OF_DATE__)
+    AND period_end_time < date_trunc('DAY', __AS_OF_TS__)
+    AND result_state IS NOT NULL
+    AND compute_ids IS NOT NULL
+    AND size(compute_ids) > 0
+),
+dropped AS (
+  SELECT workspace_id, COUNT(DISTINCT run_id) AS dropped_runs
+  FROM `system`.`lakeflow`.`job_task_run_timeline`
+  WHERE period_start_time >= dateadd(DAY, -__WINDOW_DAYS__, __AS_OF_DATE__)
+    AND period_end_time < date_trunc('DAY', __AS_OF_TS__)
+    AND result_state IS NOT NULL
+    AND (compute_ids IS NULL OR size(compute_ids) = 0)
+  GROUP BY workspace_id
+),
+warehouse_compute AS (
+  SELECT DISTINCT workspace_id, w.warehouse_id AS compute_id
+  FROM (
+    SELECT workspace_id, EXPLODE(compute) AS w
+    FROM `system`.`lakeflow`.`job_task_run_timeline`
+    WHERE period_start_time >= dateadd(DAY, -__WINDOW_DAYS__, __AS_OF_DATE__)
+      AND period_end_time < date_trunc('DAY', __AS_OF_TS__)
+      AND result_state IS NOT NULL
+      AND compute IS NOT NULL
+      AND size(compute) > 0
+  ) exploded
+  WHERE w.warehouse_id IS NOT NULL
+),
+cluster_jobs AS (
+  SELECT workspace_id, compute_id, COUNT(DISTINCT job_id) AS jobs_sharing_cluster
+  FROM task_compute
+  GROUP BY workspace_id, compute_id
+),
+price AS (
+  SELECT sku_name, cloud, usage_unit, price_start_time, price_end_time,
+         CAST(pricing.effective_list.default AS DOUBLE) AS list_rate
+  FROM 
+(
+    SELECT account_id, sku_name, cloud, currency_code, usage_unit, pricing,
+           price_start_time, effective_end AS price_end_time
+    FROM (
+        SELECT account_id, sku_name, cloud, currency_code, usage_unit, pricing,
+               price_start_time, price_end_time, next_start_time,
+               -- CASE, not LEAST, so a NULL end/next behaves the same on DuckDB and Databricks.
+               CASE
+                   WHEN price_end_time IS NULL THEN next_start_time
+                   WHEN next_start_time IS NULL THEN price_end_time
+                   WHEN price_end_time <= next_start_time THEN price_end_time
+                   ELSE next_start_time
+               END AS effective_end
+        FROM (
+            SELECT account_id, sku_name, cloud, currency_code, usage_unit, pricing,
+                   price_start_time, price_end_time,
+                   LEAD(price_start_time) OVER (
+                       PARTITION BY sku_name, cloud, usage_unit
+                       ORDER BY price_start_time, price_end_time NULLS LAST
+                   ) AS next_start_time
+            FROM `system`.`billing`.`list_prices`
+            WHERE currency_code = 'USD'
+        ) ranked
+    ) capped
+    WHERE effective_end IS NULL OR effective_end > price_start_time
+)
+ list_prices
+),
+cost_rollup AS (
+  -- Pre-aggregated per (cluster, job) over the SAME window as the finding, from usage_metadata.
+  -- job_id: this job's OWN billed usage on the cluster, not the cluster's whole bill - notebook
+  -- or another job's usage on the same shared cluster carries a different (or no) job_id and is
+  -- excluded here, never folded into this job's row.
+  SELECT u.workspace_id,
+         u.usage_metadata.cluster_id                      AS cluster_id,
+         u.usage_metadata.job_id                           AS job_id,
+         SUM(u.usage_quantity)                            AS net_dbus,
+         SUM(u.usage_quantity * COALESCE(p.list_rate, 0)) AS est_usd_list,
+         CASE
+           WHEN SUM(CASE WHEN p.list_rate IS NULL AND upper(u.sku_name) NOT LIKE '%FREE_USAGE%'
+                         THEN u.usage_quantity ELSE 0 END) > 0 THEN 'unpriced'
+           WHEN SUM(CASE WHEN p.list_rate IS NOT NULL THEN u.usage_quantity ELSE 0 END) = 0 THEN 'free'
+           ELSE 'priced'
+         END                                               AS price_basis
+  FROM `system`.`billing`.`usage` u
+  LEFT JOIN price p
+    ON u.sku_name = p.sku_name AND u.cloud = p.cloud AND u.usage_unit = p.usage_unit
+   AND u.usage_end_time >= p.price_start_time
+   AND (p.price_end_time IS NULL OR u.usage_end_time < p.price_end_time)
+  WHERE upper(u.usage_unit) = 'DBU'
+    AND u.usage_metadata.cluster_id IS NOT NULL
+    AND u.usage_metadata.job_id IS NOT NULL
+    AND u.usage_date >= dateadd(DAY, -__WINDOW_DAYS__, __AS_OF_DATE__)
+    AND u.usage_date <  __AS_OF_DATE__
+  GROUP BY u.workspace_id, u.usage_metadata.cluster_id, u.usage_metadata.job_id
+),
+finding AS (
+  SELECT tc.workspace_id,
+         CAST(tc.job_id AS STRING)         AS job_id,
+         CAST(tc.compute_id AS STRING)     AS compute_id,
+         COALESCE(c.cluster_source, CASE WHEN wc.compute_id IS NOT NULL THEN 'WAREHOUSE' END) AS cluster_source,
+         COUNT(DISTINCT tc.run_id)          AS task_runs,
+         COALESCE(MAX(cr.net_dbus), 0)      AS net_dbus,
+         COALESCE(MAX(cr.est_usd_list), 0)  AS est_usd_list,
+         COALESCE(MAX(cr.price_basis), 'priced') AS price_basis,
+         MAX(cj.jobs_sharing_cluster)       AS jobs_sharing_cluster
+  FROM task_compute tc
+  LEFT JOIN (
+    SELECT workspace_id, cluster_id, cluster_source
+    FROM `system`.`compute`.`clusters`
+    QUALIFY ROW_NUMBER() OVER (PARTITION BY workspace_id, cluster_id ORDER BY change_time DESC) = 1
+  ) c
+    ON tc.workspace_id = c.workspace_id AND tc.compute_id = c.cluster_id
+  LEFT JOIN warehouse_compute wc
+    ON tc.workspace_id = wc.workspace_id AND tc.compute_id = wc.compute_id
+  LEFT JOIN cost_rollup cr
+    ON tc.workspace_id = cr.workspace_id AND tc.compute_id = cr.cluster_id AND tc.job_id = cr.job_id
+  LEFT JOIN cluster_jobs cj
+    ON tc.workspace_id = cj.workspace_id AND tc.compute_id = cj.compute_id
+  GROUP BY tc.workspace_id, tc.job_id, tc.compute_id, c.cluster_source, wc.compute_id
+)
+SELECT * FROM (
+  SELECT
+    workspace_id, job_id, compute_id, cluster_source, task_runs,
+    net_dbus, est_usd_list, price_basis, jobs_sharing_cluster,
+    -- kept under its old name (the app's discount/column logic reads it) - now just this job's
+    -- own metered $ (est_usd_list), not a further even split.
+    est_usd_list                                                           AS est_usd_list_share,
+    CASE
+      WHEN cluster_source IS NULL THEN 'NOT_ASSESSED'
+      WHEN cluster_source IN ('UI', 'API') AND est_usd_list >= 100 THEN 'CRITICAL'
+      WHEN cluster_source IN ('UI', 'API') THEN 'WARN'
+      ELSE 'OK'
+    END AS status
+  FROM finding
+  UNION ALL
+  SELECT
+    workspace_id,
+    CAST(NULL AS STRING)                       AS job_id,
+    CAST(NULL AS STRING)                       AS compute_id,
+    'null or empty compute_ids'                AS cluster_source,
+    dropped_runs                               AS task_runs,
+    CAST(NULL AS DOUBLE)                       AS net_dbus,
+    CAST(NULL AS DOUBLE)                       AS est_usd_list,
+    CAST(NULL AS STRING)                       AS price_basis,
+    CAST(NULL AS BIGINT)                       AS jobs_sharing_cluster,
+    CAST(NULL AS DOUBLE)                       AS est_usd_list_share,
+    'NOT_ASSESSED'                             AS status
+  FROM dropped
+) placements
+ORDER BY
+  CASE status WHEN 'CRITICAL' THEN 0 WHEN 'WARN' THEN 1 WHEN 'NOT_ASSESSED' THEN 2 ELSE 3 END,
+  est_usd_list_share DESC
+LIMIT 100000
+) q

@@ -1,0 +1,729 @@
+# config/databricks_docs.yml -- Databricks documentation links for the Guide tab (GUIDE-SPEC 3.4).
+# Only Databricks pages. URLs are never written in .jsx; app/core/databricks_docs.py loads this file.
+# URL rule: the same relative path on each cloud (checked on 30+ pages). AWS https://docs.databricks.com/aws/en/<path>,
+# Azure https://learn.microsoft.com/en-us/azure/databricks/<path>, GCP https://docs.databricks.com/gcp/en/<path>.
+# One known exception: OpenSharing (aws path delta-sharing/, azure and gcp path opensharing/).
+#
+# Fields: key, title, aws, azure, gcp, anchor (no '#'), verified (true = every URL was opened;
+# a list = only those clouds were opened), what (<=120 chars), enable (<=120 chars), note,
+# and on concepts: areas, queries, guide_sections. Tables may carry guide_sections too.
+# A link shows for a cloud only when that cloud is verified; else the AWS page, marked '(AWS page)'.
+# Checked 2026-09-25: the researcher opened 59 entries; the review opened 10 more URLs
+# (7 Azure concept pages, 2 per-view information_schema pages, the system tables overview).
+
+version: 1
+default_cloud: aws
+default_enable: "An admin grants USE CATALOG on system, then USE SCHEMA and SELECT on the schema."
+
+system_tables:
+
+  - key: system.billing.usage
+    title: "Billable usage system table reference"
+    what: "Every billed usage record: DBUs by SKU, day, workspace and resource, with tags."
+    aws: "https://docs.databricks.com/aws/en/admin/system-tables/billing"
+    azure: "https://learn.microsoft.com/en-us/azure/databricks/admin/system-tables/billing"
+    gcp: "https://docs.databricks.com/gcp/en/admin/system-tables/billing"
+    anchor: "billable-usage-table-schema"
+    verified: true
+    guide_sections: [money, tags]
+
+  - key: system.billing.list_prices
+    title: "Pricing system table reference"
+    what: "Databricks list price per SKU over time. The app prices usage with it."
+    aws: "https://docs.databricks.com/aws/en/admin/system-tables/pricing"
+    azure: "https://learn.microsoft.com/en-us/azure/databricks/admin/system-tables/pricing"
+    gcp: "https://docs.databricks.com/gcp/en/admin/system-tables/pricing"
+    anchor: "pricing-table-schema"
+    verified: true
+    guide_sections: [money]
+
+  - key: system.billing.attributed_usage
+    title: null
+    what: "Attributed usage. The app compares it with billable usage for SQL warehouses."
+    aws: null
+    azure: null
+    gcp: null
+    anchor: null
+    verified: []
+    note: "No public Databricks page documents this table (checked on all 3 clouds, 2026-09-25)."
+
+  - key: system.query.history
+    title: "Query history system table reference"
+    what: "One row per SQL statement on SQL warehouses and serverless compute. Classic clusters are not captured."
+    aws: "https://docs.databricks.com/aws/en/admin/system-tables/query-history"
+    azure: "https://learn.microsoft.com/en-us/azure/databricks/admin/system-tables/query-history"
+    gcp: "https://docs.databricks.com/gcp/en/admin/system-tables/query-history"
+    anchor: "query-history-system-table-schema"
+    verified: true
+
+  - key: system.lakeflow.jobs
+    title: "Jobs system table reference"
+    what: "Every job and its settings, with a history of changes."
+    aws: "https://docs.databricks.com/aws/en/admin/system-tables/jobs"
+    azure: "https://learn.microsoft.com/en-us/azure/databricks/admin/system-tables/jobs"
+    gcp: "https://docs.databricks.com/gcp/en/admin/system-tables/jobs"
+    anchor: "jobs-table-schema"
+    verified: true
+
+  - key: system.lakeflow.job_tasks
+    title: "Jobs system table reference"
+    what: "Every task of every job, with its settings."
+    aws: "https://docs.databricks.com/aws/en/admin/system-tables/jobs"
+    azure: "https://learn.microsoft.com/en-us/azure/databricks/admin/system-tables/jobs"
+    gcp: "https://docs.databricks.com/gcp/en/admin/system-tables/jobs"
+    anchor: "job-task-table-schema"
+    verified: true
+
+  - key: system.lakeflow.job_run_timeline
+    title: "Jobs system table reference"
+    what: "Start, end, result and termination code of every job run."
+    aws: "https://docs.databricks.com/aws/en/admin/system-tables/jobs"
+    azure: "https://learn.microsoft.com/en-us/azure/databricks/admin/system-tables/jobs"
+    gcp: "https://docs.databricks.com/gcp/en/admin/system-tables/jobs"
+    anchor: "job-run-timeline-table-schema"
+    verified: true
+
+  - key: system.lakeflow.job_task_run_timeline
+    title: "Jobs system table reference"
+    what: "Start, end, result and compute of every task run."
+    aws: "https://docs.databricks.com/aws/en/admin/system-tables/jobs"
+    azure: "https://learn.microsoft.com/en-us/azure/databricks/admin/system-tables/jobs"
+    gcp: "https://docs.databricks.com/gcp/en/admin/system-tables/jobs"
+    anchor: "job-task-run-timeline-table-schema"
+    verified: true
+
+  - key: system.lakeflow.pipelines
+    title: "Jobs system table reference"
+    what: "Every pipeline and its settings, with a history of changes."
+    aws: "https://docs.databricks.com/aws/en/admin/system-tables/jobs"
+    azure: "https://learn.microsoft.com/en-us/azure/databricks/admin/system-tables/jobs"
+    gcp: "https://docs.databricks.com/gcp/en/admin/system-tables/jobs"
+    anchor: "pipelines-table-schema"
+    verified: true
+
+  - key: system.lakeflow.pipeline_update_timeline
+    title: "Jobs system table reference"
+    what: "Start, end and result of every pipeline update."
+    aws: "https://docs.databricks.com/aws/en/admin/system-tables/jobs"
+    azure: "https://learn.microsoft.com/en-us/azure/databricks/admin/system-tables/jobs"
+    gcp: "https://docs.databricks.com/gcp/en/admin/system-tables/jobs"
+    anchor: "pipeline-update-timeline-table-schema"
+    verified: true
+
+  - key: system.compute.clusters
+    title: "Compute system tables reference"
+    what: "Every classic cluster and its settings, with a history of changes."
+    aws: "https://docs.databricks.com/aws/en/admin/system-tables/compute"
+    azure: "https://learn.microsoft.com/en-us/azure/databricks/admin/system-tables/compute"
+    gcp: "https://docs.databricks.com/gcp/en/admin/system-tables/compute"
+    anchor: "cluster-table-schema"
+    verified: true
+    guide_sections: [names]
+
+  - key: system.compute.node_types
+    title: "Compute system tables reference"
+    what: "Each instance type with its cores, memory and GPUs."
+    aws: "https://docs.databricks.com/aws/en/admin/system-tables/compute"
+    azure: "https://learn.microsoft.com/en-us/azure/databricks/admin/system-tables/compute"
+    gcp: "https://docs.databricks.com/gcp/en/admin/system-tables/compute"
+    anchor: "node-types-table-schema"
+    verified: true
+
+  - key: system.compute.node_timeline
+    title: "Compute system tables reference"
+    what: "Per-minute CPU, memory and network use of each node of classic compute."
+    aws: "https://docs.databricks.com/aws/en/admin/system-tables/compute"
+    azure: "https://learn.microsoft.com/en-us/azure/databricks/admin/system-tables/compute"
+    gcp: "https://docs.databricks.com/gcp/en/admin/system-tables/compute"
+    anchor: "node-timeline-table-schema"
+    verified: true
+
+  - key: system.compute.instance_events
+    title: "Compute system tables reference"
+    what: "Events of the cloud instances behind classic compute."
+    aws: "https://docs.databricks.com/aws/en/admin/system-tables/compute"
+    azure: "https://learn.microsoft.com/en-us/azure/databricks/admin/system-tables/compute"
+    gcp: "https://docs.databricks.com/gcp/en/admin/system-tables/compute"
+    anchor: "instance-events-table-schema"
+    verified: true
+
+  - key: system.compute.instance_pools
+    title: "Compute system tables reference"
+    what: "Every instance pool and its settings, with a history of changes."
+    aws: "https://docs.databricks.com/aws/en/admin/system-tables/compute"
+    azure: "https://learn.microsoft.com/en-us/azure/databricks/admin/system-tables/compute"
+    gcp: "https://docs.databricks.com/gcp/en/admin/system-tables/compute"
+    anchor: "instance-pools-table-schema"
+    verified: true
+
+  - key: system.compute.warehouses
+    title: "Warehouses system table reference"
+    what: "Every SQL warehouse and its settings, with a history of changes."
+    aws: "https://docs.databricks.com/aws/en/admin/system-tables/warehouses"
+    azure: "https://learn.microsoft.com/en-us/azure/databricks/admin/system-tables/warehouses"
+    gcp: "https://docs.databricks.com/gcp/en/admin/system-tables/warehouses"
+    anchor: "warehouses-table-schema"
+    verified: true
+    guide_sections: [names]
+
+  - key: system.compute.warehouse_events
+    title: "Warehouse events system table reference"
+    what: "Start, stop and scaling events of every SQL warehouse."
+    aws: "https://docs.databricks.com/aws/en/admin/system-tables/warehouse-events"
+    azure: "https://learn.microsoft.com/en-us/azure/databricks/admin/system-tables/warehouse-events"
+    gcp: "https://docs.databricks.com/gcp/en/admin/system-tables/warehouse-events"
+    anchor: "warehouse-events-schema"
+    verified: true
+
+  - key: system.access.audit
+    title: "Audit log system table reference"
+    what: "Audit events: who did what, in which workspace, and when."
+    aws: "https://docs.databricks.com/aws/en/admin/system-tables/audit-logs"
+    azure: "https://learn.microsoft.com/en-us/azure/databricks/admin/system-tables/audit-logs"
+    gcp: "https://docs.databricks.com/gcp/en/admin/system-tables/audit-logs"
+    anchor: "audit-log-system-table-schema"
+    verified: true
+
+  - key: system.access.table_lineage
+    title: "Lineage system tables reference"
+    what: "Which tables were read or written, by which job, notebook, query or user."
+    aws: "https://docs.databricks.com/aws/en/admin/system-tables/lineage"
+    azure: "https://learn.microsoft.com/en-us/azure/databricks/admin/system-tables/lineage"
+    gcp: "https://docs.databricks.com/gcp/en/admin/system-tables/lineage"
+    anchor: "table-lineage-schema"
+    verified: true
+
+  - key: system.access.column_lineage
+    title: "Lineage system tables reference"
+    what: "Which columns flowed into which other columns."
+    aws: "https://docs.databricks.com/aws/en/admin/system-tables/lineage"
+    azure: "https://learn.microsoft.com/en-us/azure/databricks/admin/system-tables/lineage"
+    gcp: "https://docs.databricks.com/gcp/en/admin/system-tables/lineage"
+    anchor: "column-lineage-schema"
+    verified: true
+
+  - key: system.access.inbound_network
+    title: "Network access events system table reference"
+    what: "Inbound requests that a network policy denied."
+    enable: "Rows appear only where network policies are set and block traffic."
+    aws: "https://docs.databricks.com/aws/en/admin/system-tables/network"
+    azure: "https://learn.microsoft.com/en-us/azure/databricks/admin/system-tables/network"
+    gcp: "https://docs.databricks.com/gcp/en/admin/system-tables/network"
+    anchor: "inbound-network-access-events-system-table-schema"
+    verified: true
+
+  - key: system.access.outbound_network
+    title: "Network access events system table reference"
+    what: "Outbound connections from serverless compute that a network policy denied."
+    enable: "Rows appear only where network policies are set and block traffic."
+    aws: "https://docs.databricks.com/aws/en/admin/system-tables/network"
+    azure: "https://learn.microsoft.com/en-us/azure/databricks/admin/system-tables/network"
+    gcp: "https://docs.databricks.com/gcp/en/admin/system-tables/network"
+    anchor: "outbound-network-access-events-system-table-schema"
+    verified: true
+
+  - key: system.access.workspaces_latest
+    title: "Workspaces system table reference"
+    what: "Every workspace in the account, with its name and status."
+    aws: "https://docs.databricks.com/aws/en/admin/system-tables/workspaces"
+    azure: "https://learn.microsoft.com/en-us/azure/databricks/admin/system-tables/workspaces"
+    gcp: "https://docs.databricks.com/gcp/en/admin/system-tables/workspaces"
+    anchor: "workspaces-table-schema"
+    verified: true
+    guide_sections: [names]
+
+  - key: system.ai_gateway.usage
+    title: "Track model usage (usage tracking table)"
+    what: "Requests, tokens and latency of model calls made through AI Gateway."
+    enable: "Account admins can read it. Other readers need a grant from an account admin."
+    aws: "https://docs.databricks.com/aws/en/ai-gateway/usage-tracking"
+    azure: "https://learn.microsoft.com/en-us/azure/databricks/ai-gateway/usage-tracking"
+    gcp: "https://docs.databricks.com/gcp/en/ai-gateway/usage-tracking"
+    anchor: "usage-table-schema"
+    verified: true
+
+  - key: system.serving.endpoint_usage
+    title: "Configure governance on model serving endpoints (legacy)"
+    what: "Requests and tokens per model serving endpoint."
+    enable: "Turn on usage tracking on each serving endpoint. Endpoints without it add no rows."
+    aws: "https://docs.databricks.com/aws/en/ai-gateway/configure-ai-gateway-endpoints"
+    azure: "https://learn.microsoft.com/en-us/azure/databricks/ai-gateway/configure-ai-gateway-endpoints"
+    gcp: "https://docs.databricks.com/gcp/en/ai-gateway/configure-ai-gateway-endpoints"
+    anchor: "usage-schema"
+    verified: true
+
+  - key: system.serving.served_entities
+    title: "Configure governance on model serving endpoints (legacy)"
+    what: "Each model or entity an endpoint serves, with its settings."
+    aws: "https://docs.databricks.com/aws/en/ai-gateway/configure-ai-gateway-endpoints"
+    azure: "https://learn.microsoft.com/en-us/azure/databricks/ai-gateway/configure-ai-gateway-endpoints"
+    gcp: "https://docs.databricks.com/gcp/en/ai-gateway/configure-ai-gateway-endpoints"
+    anchor: "usage-schema"
+    verified: true
+
+  - key: system.storage.predictive_optimization_operations_history
+    title: "Predictive optimization system table reference"
+    what: "Each predictive optimization run: operation, table, result and cost."
+    enable: "Rows appear only where predictive optimization is on, for Unity Catalog managed tables."
+    aws: "https://docs.databricks.com/aws/en/admin/system-tables/predictive-optimization"
+    azure: "https://learn.microsoft.com/en-us/azure/databricks/admin/system-tables/predictive-optimization"
+    gcp: "https://docs.databricks.com/gcp/en/admin/system-tables/predictive-optimization"
+    anchor: "predictive-optimization-table-schema"
+    verified: true
+
+  - key: system.storage.table_metrics_history
+    title: null
+    what: "Per-table, per-day storage metrics: file count, bytes, owner and predictive optimization coverage."
+    aws: null
+    azure: null
+    gcp: null
+    anchor: null
+    verified: []
+    note: "No public Databricks page documents this table (checked on all 3 clouds); confirmed by DESCRIBE on an account that has it enabled."
+
+  - key: system.data_classification.results
+    title: "Data classification system table reference"
+    what: "Columns that Data Classification found to hold sensitive data."
+    enable: "Turn on Data Classification per catalog. Only account admins can read it by default, from serverless compute."
+    aws: "https://docs.databricks.com/aws/en/admin/system-tables/data-classification"
+    azure: "https://learn.microsoft.com/en-us/azure/databricks/admin/system-tables/data-classification"
+    gcp: "https://docs.databricks.com/gcp/en/admin/system-tables/data-classification"
+    anchor: "data-classification-results-table-schema"
+    verified: true
+
+  # system.information_schema.*: 19 views. They point at the shared overview page, verified on all
+  # 3 clouds, which links each view's own page. Per-view pages exist at
+  # sql/language-manual/information-schema/<view> (opened: column_masks on AWS, table_privileges on
+  # GCP, row_filters on Azure). Switch to them only after one pass opens all 57 URLs.
+
+  - key: system.information_schema.abac_policy_definitions
+    title: "Information schema"
+    what: "Attribute-based access control (ABAC) policies: row filters and column masks set by tag."
+    enable: "No setup. A reader sees only the objects they have permission to see."
+    aws: "https://docs.databricks.com/aws/en/sql/language-manual/sql-ref-information-schema"
+    azure: "https://learn.microsoft.com/en-us/azure/databricks/sql/language-manual/sql-ref-information-schema"
+    gcp: "https://docs.databricks.com/gcp/en/sql/language-manual/sql-ref-information-schema"
+    anchor: null
+    verified: true
+
+  - key: system.information_schema.catalog_privileges
+    title: "Information schema"
+    what: "Grants on catalogs."
+    enable: "No setup. A reader sees only the objects they have permission to see."
+    aws: "https://docs.databricks.com/aws/en/sql/language-manual/sql-ref-information-schema"
+    azure: "https://learn.microsoft.com/en-us/azure/databricks/sql/language-manual/sql-ref-information-schema"
+    gcp: "https://docs.databricks.com/gcp/en/sql/language-manual/sql-ref-information-schema"
+    anchor: null
+    verified: true
+
+  - key: system.information_schema.column_masks
+    title: "Information schema"
+    what: "Column masks set on table columns."
+    enable: "No setup. A reader sees only the objects they have permission to see."
+    aws: "https://docs.databricks.com/aws/en/sql/language-manual/sql-ref-information-schema"
+    azure: "https://learn.microsoft.com/en-us/azure/databricks/sql/language-manual/sql-ref-information-schema"
+    gcp: "https://docs.databricks.com/gcp/en/sql/language-manual/sql-ref-information-schema"
+    anchor: null
+    verified: true
+
+  - key: system.information_schema.column_tags
+    title: "Information schema"
+    what: "Tags on columns."
+    enable: "No setup. A reader sees only the objects they have permission to see."
+    aws: "https://docs.databricks.com/aws/en/sql/language-manual/sql-ref-information-schema"
+    azure: "https://learn.microsoft.com/en-us/azure/databricks/sql/language-manual/sql-ref-information-schema"
+    gcp: "https://docs.databricks.com/gcp/en/sql/language-manual/sql-ref-information-schema"
+    anchor: null
+    verified: true
+
+  - key: system.information_schema.connection_privileges
+    title: "Information schema"
+    what: "Grants on connections."
+    enable: "No setup. A reader sees only the objects they have permission to see."
+    aws: "https://docs.databricks.com/aws/en/sql/language-manual/sql-ref-information-schema"
+    azure: "https://learn.microsoft.com/en-us/azure/databricks/sql/language-manual/sql-ref-information-schema"
+    gcp: "https://docs.databricks.com/gcp/en/sql/language-manual/sql-ref-information-schema"
+    anchor: null
+    verified: true
+
+  - key: system.information_schema.credential_privileges
+    title: "Information schema"
+    what: "Grants on credentials."
+    enable: "No setup. A reader sees only the objects they have permission to see."
+    aws: "https://docs.databricks.com/aws/en/sql/language-manual/sql-ref-information-schema"
+    azure: "https://learn.microsoft.com/en-us/azure/databricks/sql/language-manual/sql-ref-information-schema"
+    gcp: "https://docs.databricks.com/gcp/en/sql/language-manual/sql-ref-information-schema"
+    anchor: null
+    verified: true
+
+  - key: system.information_schema.external_location_privileges
+    title: "Information schema"
+    what: "Grants on external locations."
+    enable: "No setup. A reader sees only the objects they have permission to see."
+    aws: "https://docs.databricks.com/aws/en/sql/language-manual/sql-ref-information-schema"
+    azure: "https://learn.microsoft.com/en-us/azure/databricks/sql/language-manual/sql-ref-information-schema"
+    gcp: "https://docs.databricks.com/gcp/en/sql/language-manual/sql-ref-information-schema"
+    anchor: null
+    verified: true
+
+  - key: system.information_schema.row_filters
+    title: "Information schema"
+    what: "Row filters set on tables."
+    enable: "No setup. A reader sees only the objects they have permission to see."
+    aws: "https://docs.databricks.com/aws/en/sql/language-manual/sql-ref-information-schema"
+    azure: "https://learn.microsoft.com/en-us/azure/databricks/sql/language-manual/sql-ref-information-schema"
+    gcp: "https://docs.databricks.com/gcp/en/sql/language-manual/sql-ref-information-schema"
+    anchor: null
+    verified: true
+
+  - key: system.information_schema.schema_privileges
+    title: "Information schema"
+    what: "Grants on schemas."
+    enable: "No setup. A reader sees only the objects they have permission to see."
+    aws: "https://docs.databricks.com/aws/en/sql/language-manual/sql-ref-information-schema"
+    azure: "https://learn.microsoft.com/en-us/azure/databricks/sql/language-manual/sql-ref-information-schema"
+    gcp: "https://docs.databricks.com/gcp/en/sql/language-manual/sql-ref-information-schema"
+    anchor: null
+    verified: true
+
+  - key: system.information_schema.schema_share_usage
+    title: "Information schema"
+    what: "Schemas included in shares."
+    enable: "No setup. A reader sees only the objects they have permission to see."
+    aws: "https://docs.databricks.com/aws/en/sql/language-manual/sql-ref-information-schema"
+    azure: "https://learn.microsoft.com/en-us/azure/databricks/sql/language-manual/sql-ref-information-schema"
+    gcp: "https://docs.databricks.com/gcp/en/sql/language-manual/sql-ref-information-schema"
+    anchor: null
+    verified: true
+
+  - key: system.information_schema.schema_tags
+    title: "Information schema"
+    what: "Tags on schemas."
+    enable: "No setup. A reader sees only the objects they have permission to see."
+    aws: "https://docs.databricks.com/aws/en/sql/language-manual/sql-ref-information-schema"
+    azure: "https://learn.microsoft.com/en-us/azure/databricks/sql/language-manual/sql-ref-information-schema"
+    gcp: "https://docs.databricks.com/gcp/en/sql/language-manual/sql-ref-information-schema"
+    anchor: null
+    verified: true
+
+  - key: system.information_schema.share_recipient_privileges
+    title: "Information schema"
+    what: "Which recipients can read which shares."
+    enable: "No setup. A reader sees only the objects they have permission to see."
+    aws: "https://docs.databricks.com/aws/en/sql/language-manual/sql-ref-information-schema"
+    azure: "https://learn.microsoft.com/en-us/azure/databricks/sql/language-manual/sql-ref-information-schema"
+    gcp: "https://docs.databricks.com/gcp/en/sql/language-manual/sql-ref-information-schema"
+    anchor: null
+    verified: true
+
+  - key: system.information_schema.shares
+    title: "Information schema"
+    what: "Every share in the metastore."
+    enable: "No setup. A reader sees only the objects they have permission to see."
+    aws: "https://docs.databricks.com/aws/en/sql/language-manual/sql-ref-information-schema"
+    azure: "https://learn.microsoft.com/en-us/azure/databricks/sql/language-manual/sql-ref-information-schema"
+    gcp: "https://docs.databricks.com/gcp/en/sql/language-manual/sql-ref-information-schema"
+    anchor: null
+    verified: true
+
+  - key: system.information_schema.table_privileges
+    title: "Information schema"
+    what: "Grants on tables and views."
+    enable: "No setup. A reader sees only the objects they have permission to see."
+    aws: "https://docs.databricks.com/aws/en/sql/language-manual/sql-ref-information-schema"
+    azure: "https://learn.microsoft.com/en-us/azure/databricks/sql/language-manual/sql-ref-information-schema"
+    gcp: "https://docs.databricks.com/gcp/en/sql/language-manual/sql-ref-information-schema"
+    anchor: null
+    verified: true
+
+  - key: system.information_schema.table_share_usage
+    title: "Information schema"
+    what: "Tables included in shares."
+    enable: "No setup. A reader sees only the objects they have permission to see."
+    aws: "https://docs.databricks.com/aws/en/sql/language-manual/sql-ref-information-schema"
+    azure: "https://learn.microsoft.com/en-us/azure/databricks/sql/language-manual/sql-ref-information-schema"
+    gcp: "https://docs.databricks.com/gcp/en/sql/language-manual/sql-ref-information-schema"
+    anchor: null
+    verified: true
+
+  - key: system.information_schema.table_tags
+    title: "Information schema"
+    what: "Tags on tables."
+    enable: "No setup. A reader sees only the objects they have permission to see."
+    aws: "https://docs.databricks.com/aws/en/sql/language-manual/sql-ref-information-schema"
+    azure: "https://learn.microsoft.com/en-us/azure/databricks/sql/language-manual/sql-ref-information-schema"
+    gcp: "https://docs.databricks.com/gcp/en/sql/language-manual/sql-ref-information-schema"
+    anchor: null
+    verified: true
+
+  - key: system.information_schema.tables
+    title: "Information schema"
+    what: "Every table and view, with its type, format and owner."
+    enable: "No setup. A reader sees only the objects they have permission to see."
+    aws: "https://docs.databricks.com/aws/en/sql/language-manual/sql-ref-information-schema"
+    azure: "https://learn.microsoft.com/en-us/azure/databricks/sql/language-manual/sql-ref-information-schema"
+    gcp: "https://docs.databricks.com/gcp/en/sql/language-manual/sql-ref-information-schema"
+    anchor: null
+    verified: true
+
+  - key: system.information_schema.views
+    title: "Information schema"
+    what: "Every view and its definition."
+    enable: "No setup. A reader sees only the objects they have permission to see."
+    aws: "https://docs.databricks.com/aws/en/sql/language-manual/sql-ref-information-schema"
+    azure: "https://learn.microsoft.com/en-us/azure/databricks/sql/language-manual/sql-ref-information-schema"
+    gcp: "https://docs.databricks.com/gcp/en/sql/language-manual/sql-ref-information-schema"
+    anchor: null
+    verified: true
+
+  - key: system.information_schema.volume_tags
+    title: "Information schema"
+    what: "Tags on volumes."
+    enable: "No setup. A reader sees only the objects they have permission to see."
+    aws: "https://docs.databricks.com/aws/en/sql/language-manual/sql-ref-information-schema"
+    azure: "https://learn.microsoft.com/en-us/azure/databricks/sql/language-manual/sql-ref-information-schema"
+    gcp: "https://docs.databricks.com/gcp/en/sql/language-manual/sql-ref-information-schema"
+    anchor: null
+    verified: true
+
+  - key: system.information_schema.volumes
+    title: "Information schema"
+    what: "Every volume (files kept in Unity Catalog)."
+    enable: "No setup. A reader sees only the objects they have permission to see."
+    aws: "https://docs.databricks.com/aws/en/sql/language-manual/sql-ref-information-schema"
+    azure: "https://learn.microsoft.com/en-us/azure/databricks/sql/language-manual/sql-ref-information-schema"
+    gcp: "https://docs.databricks.com/gcp/en/sql/language-manual/sql-ref-information-schema"
+    anchor: null
+    verified: true
+
+concepts:
+
+  - key: concept.dbu_and_pricing
+    title: "Databricks technical terminology glossary (DBU)"
+    aws: "https://docs.databricks.com/aws/en/resources/glossary"
+    azure: "https://learn.microsoft.com/en-us/azure/databricks/resources/glossary"
+    gcp: "https://docs.databricks.com/gcp/en/resources/glossary"
+    anchor: null
+    verified: true
+    areas: [cost]
+    guide_sections: [money]
+
+  - key: concept.sql_warehouse_types_sizing_scaling
+    title: "SQL warehouse sizing, scaling, and queuing behavior"
+    aws: "https://docs.databricks.com/aws/en/compute/sql-warehouse/warehouse-behavior"
+    azure: "https://learn.microsoft.com/en-us/azure/databricks/compute/sql-warehouse/warehouse-behavior"
+    gcp: "https://docs.databricks.com/gcp/en/compute/sql-warehouse/warehouse-behavior"
+    anchor: null
+    verified: true
+    areas: [compute, performance]
+    queries: [query_warehouse_pressure, query_queuing_waits, query_local_spillage, compute_warehouse_autoscale_churn, compute_warehouse_config_posture, sql_warehouse_config_current]
+
+  - key: concept.sql_warehouse_auto_stop
+    title: "Create a SQL warehouse (Auto Stop setting)"
+    aws: "https://docs.databricks.com/aws/en/compute/sql-warehouse/create"
+    azure: "https://learn.microsoft.com/en-us/azure/databricks/compute/sql-warehouse/create"
+    gcp: "https://docs.databricks.com/gcp/en/compute/sql-warehouse/create"
+    anchor: null
+    verified: [aws, gcp]
+    areas: [compute]
+    queries: [compute_warehouse_idle_gaps, compute_warehouse_config_posture, compute_warehouse_idle_minutes]
+
+  - key: concept.serverless_compute
+    title: "Connect to serverless compute"
+    aws: "https://docs.databricks.com/aws/en/compute/serverless/"
+    azure: "https://learn.microsoft.com/en-us/azure/databricks/compute/serverless/"
+    gcp: "https://docs.databricks.com/gcp/en/compute/serverless/"
+    anchor: null
+    verified: true
+    areas: [compute, cost]
+    queries: [overview_serverless_classic_split, cost_premium_serverless_photon]
+
+  - key: concept.job_vs_allpurpose_compute
+    title: "Configure compute for jobs"
+    aws: "https://docs.databricks.com/aws/en/jobs/compute"
+    azure: "https://learn.microsoft.com/en-us/azure/databricks/jobs/compute"
+    gcp: "https://docs.databricks.com/gcp/en/jobs/compute"
+    anchor: null
+    verified: true
+    areas: [jobs_pipelines]
+    queries: [lakeflow_jobs_on_all_purpose, lakeflow_job_compute_pressure, task_cluster_utilization]
+
+  - key: concept.cluster_policies
+    title: "Create and manage compute policies"
+    aws: "https://docs.databricks.com/aws/en/admin/clusters/policies"
+    azure: "https://learn.microsoft.com/en-us/azure/databricks/admin/clusters/policies"
+    gcp: "https://docs.databricks.com/gcp/en/admin/clusters/policies"
+    anchor: null
+    verified: true
+    areas: [compute]
+    queries: [compute_cluster_config_posture, classic_clusters_config_current]
+
+  - key: concept.compute_tags_and_tag_propagation
+    title: "Use tags to attribute and track usage"
+    aws: "https://docs.databricks.com/aws/en/admin/account-settings/usage-detail-tags"
+    azure: "https://learn.microsoft.com/en-us/azure/databricks/admin/account-settings/usage-detail-tags"
+    gcp: "https://docs.databricks.com/gcp/en/admin/account-settings/usage-detail-tags"
+    anchor: null
+    verified: true
+    areas: [cost]
+    queries: [cost_chargeback_by_tag, cost_chargeback_by_allocation_tag]
+    guide_sections: [tags]
+
+  - key: concept.budget_policies
+    title: "Attribute usage with serverless usage policies"
+    aws: "https://docs.databricks.com/aws/en/admin/usage/budget-policies"
+    azure: "https://learn.microsoft.com/en-us/azure/databricks/admin/usage/budget-policies"
+    gcp: "https://docs.databricks.com/gcp/en/admin/usage/budget-policies"
+    anchor: null
+    verified: true
+    areas: [cost]
+    queries: [cost_usage_policy_coverage]
+    guide_sections: [tags]
+
+  - key: concept.query_tags
+    title: "Query tags"
+    aws: "https://docs.databricks.com/aws/en/sql/user/queries/query-tags"
+    azure: "https://learn.microsoft.com/en-us/azure/databricks/sql/user/queries/query-tags"
+    gcp: "https://docs.databricks.com/gcp/en/sql/user/queries/query-tags"
+    anchor: null
+    verified: true
+    areas: [performance]
+    guide_sections: [tags]
+
+  - key: concept.job_run_result_states_and_termination_codes
+    title: "Jobs system table reference (result states, termination codes)"
+    aws: "https://docs.databricks.com/aws/en/admin/system-tables/jobs"
+    azure: "https://learn.microsoft.com/en-us/azure/databricks/admin/system-tables/jobs"
+    gcp: "https://docs.databricks.com/gcp/en/admin/system-tables/jobs"
+    anchor: "job-run-timeline-table-schema"
+    verified: true
+    areas: [jobs_pipelines]
+    queries: [lakeflow_failed_runs, lakeflow_termination_taxonomy, lakeflow_failed_jobs_wasted_dbus, lakeflow_termination_type_probe, lakeflow_job_reliability]
+
+  - key: concept.lakeflow_declarative_pipelines
+    title: "Spark Declarative Pipelines (Lakeflow pipelines)"
+    aws: "https://docs.databricks.com/aws/en/ldp/"
+    azure: "https://learn.microsoft.com/en-us/azure/databricks/ldp/"
+    gcp: "https://docs.databricks.com/gcp/en/ldp/"
+    anchor: null
+    verified: true
+    areas: [jobs_pipelines]
+    queries: [lakeflow_pipeline_cost, lakeflow_pipeline_idle_tail_duration, lakeflow_pipeline_update_failures_retries, lakeflow_pipelines_inventory_tier]
+
+  - key: concept.uc_privileges_and_grants
+    title: "Manage privileges in Unity Catalog"
+    aws: "https://docs.databricks.com/aws/en/data-governance/unity-catalog/manage-privileges/"
+    azure: "https://learn.microsoft.com/en-us/azure/databricks/data-governance/unity-catalog/manage-privileges/"
+    gcp: "https://docs.databricks.com/gcp/en/data-governance/unity-catalog/manage-privileges/"
+    anchor: null
+    verified: true
+    areas: [governance_access]
+    queries: [access_broad_grants, access_grants_inventory, access_grants_inventory_extended]
+
+  - key: concept.row_filters_and_column_masks
+    title: "Row filters and column masks"
+    aws: "https://docs.databricks.com/aws/en/data-governance/unity-catalog/filters-and-masks/"
+    azure: "https://learn.microsoft.com/en-us/azure/databricks/data-governance/unity-catalog/filters-and-masks/"
+    gcp: "https://docs.databricks.com/gcp/en/data-governance/unity-catalog/filters-and-masks/"
+    anchor: null
+    verified: true
+    areas: [governance_access]
+    queries: [access_column_masks_inventory, access_row_filters_inventory, access_classified_unmasked]
+
+  - key: concept.uc_tags
+    title: "Apply tags to Unity Catalog securable objects"
+    aws: "https://docs.databricks.com/aws/en/data-governance/unity-catalog/tags"
+    azure: "https://learn.microsoft.com/en-us/azure/databricks/data-governance/unity-catalog/tags"
+    gcp: "https://docs.databricks.com/gcp/en/data-governance/unity-catalog/tags"
+    anchor: null
+    verified: [aws, gcp]
+    areas: [governance_access]
+    queries: [access_tags_inventory, access_pii_outside_tables, access_pii_propagation_untagged]
+
+  - key: concept.data_classification
+    title: "Data Classification"
+    aws: "https://docs.databricks.com/aws/en/data-governance/unity-catalog/data-classification"
+    azure: "https://learn.microsoft.com/en-us/azure/databricks/data-governance/unity-catalog/data-classification"
+    gcp: "https://docs.databricks.com/gcp/en/data-governance/unity-catalog/data-classification"
+    anchor: null
+    verified: true
+    areas: [governance_access]
+    queries: [access_classification_coverage, access_data_classification_inventory, access_classified_unmasked, access_sensitive_table_reads]
+
+  - key: concept.lineage
+    title: "Lineage in Unity Catalog"
+    aws: "https://docs.databricks.com/aws/en/data-governance/unity-catalog/data-lineage"
+    azure: "https://learn.microsoft.com/en-us/azure/databricks/data-governance/unity-catalog/data-lineage"
+    gcp: "https://docs.databricks.com/gcp/en/data-governance/unity-catalog/data-lineage"
+    anchor: null
+    verified: [aws, gcp]
+    areas: [governance_access]
+    queries: [access_table_lineage_blast_radius, access_column_lineage_sensitive_reach, access_dead_table_candidates, access_pii_propagation_untagged]
+
+  - key: concept.audit_log_events
+    title: "Audit log reference"
+    aws: "https://docs.databricks.com/aws/en/admin/account-settings/audit-logs"
+    azure: "https://learn.microsoft.com/en-us/azure/databricks/admin/account-settings/audit-logs"
+    gcp: "https://docs.databricks.com/gcp/en/admin/account-settings/audit-logs"
+    anchor: null
+    verified: true
+    areas: [governance_access]
+    queries: [access_admin_role_change_events, access_login_concentration, access_runas_escalation, access_vector_search_traffic]
+
+  - key: concept.predictive_optimization
+    title: "Predictive optimization for Unity Catalog managed tables"
+    aws: "https://docs.databricks.com/aws/en/optimizations/predictive-optimization"
+    azure: "https://learn.microsoft.com/en-us/azure/databricks/optimizations/predictive-optimization"
+    gcp: "https://docs.databricks.com/gcp/en/optimizations/predictive-optimization"
+    anchor: null
+    verified: true
+    areas: [storage]
+    queries: [po_clustering_activity, po_clustering_column_churn, po_data_skipping_backfill, po_maintenance_cost_by_table, po_vacuum_reclaimed_bytes]
+
+  - key: concept.model_serving
+    title: "Deploy models using Model Serving"
+    aws: "https://docs.databricks.com/aws/en/machine-learning/model-serving/"
+    azure: "https://learn.microsoft.com/en-us/azure/databricks/machine-learning/model-serving/"
+    gcp: "https://docs.databricks.com/gcp/en/machine-learning/model-serving/"
+    anchor: null
+    verified: true
+    areas: [serving_ai]
+    queries: [compute_serving_dormant_endpoints, compute_serving_endpoint_cost_status, compute_serving_endpoint_usage, serving_endpoint_traffic_by_endpoint, cost_serving_mode_by_endpoint, cost_by_serving_endpoint]
+
+  - key: concept.ai_gateway
+    title: "AI governance with Unity Gateway"
+    aws: "https://docs.databricks.com/aws/en/ai-gateway/"
+    azure: "https://learn.microsoft.com/en-us/azure/databricks/ai-gateway/"
+    gcp: "https://docs.databricks.com/gcp/en/ai-gateway/"
+    anchor: null
+    verified: true
+    areas: [serving_ai]
+    queries: [compute_ai_gateway_usage]
+
+  - key: concept.system_tables_overview_and_enabling
+    title: "System tables reference (enable and grant access)"
+    aws: "https://docs.databricks.com/aws/en/admin/system-tables/"
+    azure: "https://learn.microsoft.com/en-us/azure/databricks/admin/system-tables/"
+    gcp: "https://docs.databricks.com/gcp/en/admin/system-tables/"
+    anchor: "enable-system-tables"
+    verified: true
+    guide_sections: [flow, coverage]
+
+  - key: concept.system_tables_regional_scope
+    title: "System tables reference (regional and global data)"
+    aws: "https://docs.databricks.com/aws/en/admin/system-tables/"
+    azure: "https://learn.microsoft.com/en-us/azure/databricks/admin/system-tables/"
+    gcp: "https://docs.databricks.com/gcp/en/admin/system-tables/"
+    anchor: "do-system-tables-contain-data-for-all-workspaces-in-your-account"
+    verified: true
+    guide_sections: [coverage]
+
+  - key: concept.delta_sharing
+    title: "What is OpenSharing? (built on the Delta Sharing protocol)"
+    aws: "https://docs.databricks.com/aws/en/delta-sharing/"
+    azure: "https://learn.microsoft.com/en-us/azure/databricks/opensharing/"
+    gcp: "https://docs.databricks.com/gcp/en/opensharing/"
+    anchor: null
+    verified: true
+    areas: [governance_access]
+    queries: [access_delta_sharing_exposure]

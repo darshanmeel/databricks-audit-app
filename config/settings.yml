@@ -1,0 +1,85 @@
+# App settings.
+#
+# To change one, put just that line in config/settings.local.yml (create it if missing) and edit
+# it there. That file is git-ignored, so a new version of the app never overwrites it, and its
+# values win over this file. For a block (ui, brand, privacy), copy the whole block.
+#
+# When a change shows:
+#   page refresh  - reload the page in the browser.
+#   next export   - run python tools/first_run.py again, or click Refresh in the app.
+#
+# The top-bar tag filters are set in config/tag_aliases.yml, not here.
+
+# Your discount off Databricks list price, as a fraction: 0.15 = 15%. At 0 every dollar figure is
+# list price; above 0 they are marked "what-if". Page refresh.
+discount_pct: 0.0
+
+# Days exported when first_run.py is run without --windows: 7, 30 or 90. Next export.
+default_window: 30
+
+# true: the export takes in today up to the moment it runs, and the app marks today partial.
+# false: complete days only. Next export.
+include_today: true
+
+# The most rows a table loads at once, and the most bars or slices in a chart before the rest
+# are grouped as "Other". Page refresh.
+ui:
+  max_rows: 500
+  max_chart_categories: 8
+
+# Up to 5 tags every query, job, pipeline, cluster, warehouse and workspace should carry. The Tags
+# page lists what misses each one. Case, spaces, _ and - are ignored. Page refresh.
+# Use your own keys: one company tags cost_center and domain, another department and project,
+# another business_unit, team and owner. For example:
+#   mandatory_tag_keys: [department, project, environment]
+#   mandatory_tag_keys: [business_unit, team, owner]
+mandatory_tag_keys: [cost_center, domain, environment]
+
+# Keep only these tags in the export, to make it smaller. Left out (the default), every tag is
+# kept. The tags above and the top tags in config/tag_aliases.yml are always kept. A tag not kept
+# still shows in the Tag filter, but picking it leaves the check tables empty ($0); Money,
+# Allocation and spend totals are not affected. Next export.
+# export_tag_keys: [project, owner]
+
+# The local database (tools/load_direct_results.py, Refresh, and the app reading it):
+# - memory_limit and threads cap what DuckDB uses, in the load and in the app; lower both on a
+#   busy laptop. The app picks them up when it restarts.
+# - The per-object tags behind the Tag filter and tag search keep only tag_keys, or, left out,
+#   the top_tag_keys keys with the most spend. Mandatory tags, top tags and Unity Catalog tags
+#   are always kept. Picking a key that was left out gives empty check tables ($0); Money,
+#   Allocation and spend totals are not affected.
+# Next load; no new export needed.
+load:
+  memory_limit: 1GB
+  threads: 4
+  top_tag_keys: 10
+  # tag_keys: [project, owner]
+
+# How a workspace gets one value for a top tag in the top-bar filter: at least tag_coverage_floor
+# of its billed DBUs without a usage policy must carry the tag, and tag_share_floor of those must carry one
+# value. Otherwise it reads "not tagged" or "mixed". Fractions from 0 to 1. Next export.
+tag_coverage_floor: 0.5
+tag_share_floor: 0.6
+
+# Groups expected to hold broad grants, such as your admin groups. Their grants read OK in
+# Overly broad grants (Access) instead of Warn. Exact group names; case is ignored. Page refresh.
+# admin_groups: [platform-admins]
+
+# Name, link and contact shown in the header and footer. Page refresh.
+brand:
+  name: Crosshire
+  url: https://crosshire.ch
+  contact_name: Darshan Singh
+  contact_email: ""
+
+# true: user emails and names are replaced with a short code, in the export files and on screen.
+# Groups, service principals and resource names (workspaces, warehouses, jobs, tables) stay
+# readable. Off by default. Takes effect at the next export, or when the loader is rerun; data
+# loaded while it was on stays masked.
+privacy:
+  mask_user_identities: false
+
+# The "Source" tag on every query this app runs, shown in Databricks query history; the app finds
+# its own cost by it. Letters, digits, _ or -, at most 40. Left out, the brand name is used.
+# Next export.
+# query_source: MyCompanyAudit

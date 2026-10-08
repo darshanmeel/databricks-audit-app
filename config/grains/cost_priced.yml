@@ -1,0 +1,84 @@
+# config/grains/cost_priced.yml -- T-13 (batch A2: the 9 priced/lookup cost queries -- the ones
+# that join system.billing.usage or system.billing.attributed_usage against list_prices for a
+# dollarized figure, plus the two raw price inventories and the workspace-name lookup). Owned by
+# T-13 per DEC-19 (PLAN.md 7.3's T-13 bullet names only test_cost_priced.py; DEC-19 settles that
+# T-13 also owns this grains file, following T-12's config/grains/cost_usage_only.yml naming
+# pattern). Grain = the query's own key columns ONLY; the generator prepends window_days itself
+# (unique_grain: {columns: [window_days] + grain}, DEC-24). Do not list window_days here.
+#
+# Every entry below is taken verbatim from the vendored body's own GROUP BY / SELECT (output
+# column names), cross-checked against app/queries/vendored/cost/<query_id>.sql and against
+# tasks/T-13-cost-priced-tests.md's Inputs section (which itself copies the GROUP BY):
+#   - cost_actual_vs_list_by_sku groups by workspace_id, cloud, sku_name, usage_unit,
+#     billing_origin_product. workspace_id added so this check obeys the workspace/env filter.
+#   - cost_cloud_infra groups by workspace_id, usage_date, cloud, lp.currency_code (inventory, no
+#     status). workspace_id added for the same reason, sourced from system.billing.usage -- the
+#     only side of the join that carries it.
+#   - cost_dollarized_by_sku_day groups by workspace_id, usage_date, cloud, sku_name,
+#     billing_origin_product, usage_type, usage_unit, lp.currency_code (inventory, no status).
+#     workspace_id added P4-47, so the Cost tab's own $ tiles obey the workspace/env filter.
+#   - cost_serving_mode_by_endpoint groups by usage_date, usage_metadata.endpoint_id, cloud,
+#     sku_name, usage_type, usage_unit, product_features.serving_type, the is_launch_sku CASE, and
+#     the RAW usage_metadata.endpoint_name (SELECT emits only its 2-character mask). usage_date was
+#     added to the SELECT/GROUP BY (T-73 upstream fix: the query used to compare a whole-window
+#     total against a per-day threshold) and is therefore now part of the grain too.
+#   - cost_vector_search_spend groups by usage_date, cloud, sku_name, usage_type, usage_unit, the
+#     RAW usage_metadata.endpoint_name (masked in SELECT), usage_metadata.endpoint_id,
+#     lp.currency_code.
+#   - cost_account_prices_raw / pricing_list_prices_raw: windowless inventories, ORDER BY
+#     sku_name, cloud, currency_code, price_start_time -- one row per SKU price change, so that
+#     tuple is the natural key (no GROUP BY in either body; both SELECT it as plain columns).
+#   - cost_dbsql_allocation_gap: UNION ALL of two GROUP BYs (raw: workspace_id,
+#     usage_metadata.warehouse_id, usage_date, cloud, billing_origin_product, usage_unit from
+#     system.billing.usage; attributed: the same six from system.billing.attributed_usage), each
+#     row additionally labelled by the literal source_kind ('raw' / 'attributed') -- source_kind
+#     must be in the grain or the two branches' matching rows would look like a grain collision.
+#     workspace_id/warehouse_id added so the raw-vs-attributed gap can be narrowed to the actual
+#     shared warehouse driving it, not just a whole cloud/day.
+#   - cost_workspace_names: windowless inventory, one row per system.access.workspaces_latest
+#     workspace, ORDER BY workspace_name, workspace_id -- workspace_id is the natural key.
+#
+# cost_serving_mode_by_endpoint and cost_vector_search_spend BOTH also carry the query's own
+# usage_metadata.endpoint_id (never masked, never re-derived) in the same GROUP BY as the masked
+# endpoint_name. A prior version of this file argued endpoint_id makes the masked endpoint_name
+# redundant as a disambiguator (mirroring config/grains/cost_usage_only.yml's own header for
+# cost_by_serving_endpoint / cost_genai_token_gpu, T-12) and omitted the `# masked:` comment on
+# that basis -- WRONG, per review round 2 (item 7): DEC-48 rule (1) grants no such exception, and
+# unlike cost_by_serving_endpoint's endpoint_id (always populated -- every MODEL_SERVING/
+# VECTOR_SEARCH usage row has one), endpoint_id here is NULLABLE and IS demonstrably NULL on a
+# real row in the live build (findings.f_cost_serving_mode_by_endpoint: endpoint_id=NULL,
+# sku_name='bl_MODEL_SERVING_STANDARD', status='OK', confirmed against
+# tests/db_audit_test.duckdb) -- when endpoint_id is NULL, the tuple's uniqueness genuinely does
+# fall back onto the masked endpoint_name, exactly the DEC-48 hazard. Both entries below now carry
+# the required comment; the "endpoint_id is usually a disambiguator" note is kept as a second line
+# only as context, not as grounds to omit it.
+
+cost_actual_vs_list_by_sku: [workspace_id, cloud, sku_name, usage_unit, billing_origin_product]
+cost_cloud_infra: [workspace_id, usage_date, cloud, currency_code]
+#   - P4-47: cost_dollarized_by_sku_day now also groups by workspace_id (so the Cost tab's own
+#     dollar tiles obey the workspace/env filter) and its price join now also keys on usage_unit
+#     (matching cost_actual_vs_list_by_sku/cost_cloud_infra's own join, below).
+cost_dollarized_by_sku_day: [workspace_id, usage_date, cloud, sku_name, billing_origin_product, usage_type, usage_unit, currency_code]
+# masked: endpoint_name stands in for the raw usage_metadata.endpoint_name (DEC-48)
+# endpoint_id is also in this grain and disambiguates most rows, but endpoint_id is nullable and
+# is demonstrably NULL on a real row in the live build -- see the header note above; it is not a
+# substitute for the comment.
+cost_serving_mode_by_endpoint: [usage_date, endpoint_id, cloud, sku_name, usage_type, usage_unit, serving_type, is_launch_sku, endpoint_name]
+# masked: endpoint_name stands in for the raw usage_metadata.endpoint_name (DEC-48)
+# endpoint_id is also in this grain and disambiguates most rows, but per the header note above
+# that is not a substitute for the comment (endpoint_id is nullable there too).
+cost_vector_search_spend: [usage_date, cloud, sku_name, usage_type, usage_unit, endpoint_name, endpoint_id, currency_code]
+# LATENT NOTE (review round 2, item 16): system.billing.list_prices' real key is (sku_name, cloud,
+# currency_code, usage_unit, price_start_time) -- usage_unit is part of it (a sku_name can in
+# principle be priced in more than one usage_unit). The two grains below omit usage_unit, which is
+# STRICTER than the source: on a real snapshot with two usage_units for one sku_name/cloud/
+# currency_code/price_start_time, the generated unique_grain test would raise a false duplicate
+# that the source data does not actually have. This matches tasks/T-13-cost-priced-tests.md's
+# Inputs section verbatim and is clean on this fixture (no such SKU exists in
+# tests/fixtures/billing.py) -- recorded here as a latent gap, not fixed, since widening the grain
+# is a task-file-level decision (T-13's Inputs section fixes this exact tuple), not this task's to
+# make unilaterally; see tasks/T-13-cost-priced-tests.md's Hand-off notes.
+cost_account_prices_raw: [sku_name, cloud, currency_code, price_start_time]
+pricing_list_prices_raw: [sku_name, cloud, currency_code, price_start_time]
+cost_dbsql_allocation_gap: [source_kind, workspace_id, warehouse_id, usage_date, cloud, billing_origin_product, usage_unit]
+cost_workspace_names: [workspace_id]

@@ -1,0 +1,38 @@
+# config/grains/performance.yml -- T-19. Grain = the query's own key columns ONLY; the
+# generator prepends window_days itself (unique_grain: {columns: [window_days] + grain},
+# DEC-24). Do not list window_days here.
+#
+# query_task_statement_breakdown (this domain's 13th id, T-07's drill-down port) is NOT listed
+# here -- it already has its own entry in dbt/models/findings/performance/_findings__performance.yml
+# (committed by T-06/T-07), and this file's --only regeneration (Step 6) must leave that entry
+# untouched.
+#
+# Every entry below is taken verbatim from the query body's own GROUP BY (output column names,
+# in GROUP BY order), never guessed -- see app/queries/vendored/performance/<id>.sql:
+#   - query_costly_statements and query_per_query_estimate_lane have no GROUP BY at all (one row
+#     per statement); their grain is the row's own natural unique key, statement_id.
+#   - query_costly_statements_grouped groups by workspace_id, statement_fingerprint.
+#   - audit_self_cost groups by workspace_id, statement_type.
+#   - query_provenance_by_source groups by workspace_id, compute.type, compute.warehouse_id,
+#     source_kind, the identity_type CASE, the executed_by CASE, and the three query_source
+#     scalars (job_id, dashboard_id, notebook_id) extracted ahead of the GROUP BY -- listed here
+#     by their SELECT-list output names (workspace_id, compute_type, warehouse_id, identity_type,
+#     executed_by, source_kind, job_id, dashboard_id, notebook_id).
+#   - The remaining 6 (query_cache_coldstart, query_failed_queries_daily, query_local_spillage,
+#     query_pruning_effectiveness, query_queuing_waits, query_shuffle_write_amplification,
+#     query_workload_mix_hours) group by date(start_time) (aliased `day`), workspace_id,
+#     compute.type, compute.warehouse_id, plus whichever of executed_by / statement_type /
+#     execution_status / hour(start_time) that body's own GROUP BY also lists.
+
+audit_self_cost: [workspace_id, statement_type]
+query_cache_coldstart: [day, workspace_id, compute_type, warehouse_id]
+query_costly_statements: [statement_id]
+query_costly_statements_grouped: [workspace_id, statement_fingerprint]
+query_failed_queries_daily: [day, workspace_id, compute_type, warehouse_id, execution_status, statement_type, executed_by]
+query_local_spillage: [day, workspace_id, compute_type, warehouse_id, executed_by]
+query_per_query_estimate_lane: [statement_id]
+query_provenance_by_source: [workspace_id, compute_type, warehouse_id, identity_type, executed_by, source_kind, job_id, dashboard_id, notebook_id]
+query_pruning_effectiveness: [day, workspace_id, compute_type, warehouse_id, executed_by, statement_type]
+query_queuing_waits: [day, workspace_id, compute_type, warehouse_id]
+query_shuffle_write_amplification: [day, workspace_id, compute_type, warehouse_id, executed_by, statement_type]
+query_workload_mix_hours: [day, workspace_id, hour_of_day, compute_type, warehouse_id, statement_type, executed_by]

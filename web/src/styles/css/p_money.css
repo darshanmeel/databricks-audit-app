@@ -1,0 +1,52 @@
+/* the executive overview page (CFO's Money, CTO's Overview,
+   tab_money.tsx) layout only. Every visible piece (Kpi, Card, RankedBars, ChartFrame) is a shared
+   component already styled by styles.css; this file only fixes this one page's own vertical
+   rhythm, the env-breakdown table and the Performance section heading. Tokens only, so it matches
+   Paper/Ledger and light/dark unchanged. */
+.money-page > .kpi-row + .card,
+.money-page > .card + .grid-2,
+.money-page > .grid-2 + .card,
+.money-page > .card + .money-section-title {
+  margin-top: 14px;
+}
+
+.money-section-title { font-size: var(--fs-lg); font-weight: 600; color: var(--text); margin: 22px 0 4px; }
+.money-perf-line { color: var(--text-2); font-size: var(--fs-sm); margin-bottom: 10px; }
+
+.money-env-table { margin-top: 12px; }
+.money-env-row { cursor: pointer; }
+.money-env-row:hover td { background: var(--surface-2); }
+.money-env-row td.tone-amber { color: var(--st-warn-ink); font-weight: 600; }
+.money-env-caret { color: var(--text-3); width: 18px; text-align: center; }
+.money-env-detail td { color: var(--text-2); font-size: var(--fs-xs); background: var(--surface-2); }
+.money-env-split { width: 100%; }
+.money-env-split td:first-child { max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.money-queue-part { margin-top: 12px; }
+.money-queue-part + .money-queue-part { border-top: 1px solid var(--border-subtle); padding-top: 12px; }
+.money-queue-title { font-size: var(--fs-sm); margin-bottom: 6px; }
+
+/* "What moved spend": a horizontal waterfall, each delta bar floating where the running total left
+   off; the two period totals are full bars from zero. Reuses --div-up/--div-down (already "more/
+   less than before" everywhere else) and the chart-neutral --c-other for the totals -- no new
+   colour meaning. tab_overview.tsx sits outside .money-page, so the card carries its own bottom
+   margin rather than relying on that page's own adjacency rules. */
+.money-movers-card { margin-bottom: 14px; }
+.money-mover-note { color: var(--text-2); font-size: var(--fs-sm); margin-bottom: 10px; }
+.money-waterfall { display: flex; flex-direction: column; gap: 6px; }
+.money-waterfall-row { display: grid; grid-template-columns: 168px 1fr 84px; align-items: center; gap: 10px; }
+.money-waterfall-row.is-total .money-waterfall-label,
+.money-waterfall-row.is-total .money-waterfall-value { font-weight: 600; color: var(--text); }
+.money-waterfall-label { font-size: var(--fs-sm); color: var(--text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.money-waterfall-track { position: relative; height: 16px; background: var(--surface-2); border-radius: var(--radius-sm); }
+.money-waterfall-bar { position: absolute; top: 0; height: 100%; min-width: 2px; border-radius: var(--radius-sm); }
+.money-waterfall-bar.tone-total { background: var(--c-other); }
+.money-waterfall-bar.tone-up { background: var(--div-up); }
+.money-waterfall-bar.tone-down { background: var(--div-down); }
+.money-waterfall-value { font-size: var(--fs-sm); color: var(--text-2); text-align: right; font-variant-numeric: tabular-nums; }
+@media (max-width: 640px) {
+  .money-waterfall-row { grid-template-columns: 108px 1fr 70px; }
+  /* A long workspace name wraps instead of being cut. */
+  .money-waterfall-label { white-space: normal; line-height: 1.2; }
+}
+/* The month bars' values in words, under the chart (tab_cost.tsx MonthChartSummary). */
+.month-chart-summary { font-size: var(--fs-sm); margin-top: 8px; }

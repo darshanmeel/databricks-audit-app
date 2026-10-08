@@ -1,0 +1,73 @@
+{{ config(enabled=(target.type == "databricks"), materialized=("table" if var("direct_mode", "run") == "table" else "direct_check"), schema="audit_direct", tags=['finding', 'domain:compute', 'tier:standard', 'databricks_direct']) }}
+-- generated from app/queries/app/compute/compute_cluster_config_posture.sql; fix the source query and regenerate, never edit this file.
+SELECT 0 AS window_days, q.*
+FROM (
+WITH latest AS (
+  SELECT *,
+         ROW_NUMBER() OVER (PARTITION BY cluster_id ORDER BY change_time DESC) AS rn
+  FROM {{ source('system_compute', 'clusters') }}
+),
+current_clusters AS (
+  SELECT * FROM latest WHERE rn = 1 AND delete_time IS NULL
+),
+flagged AS (
+  SELECT
+    cluster_id, workspace_id, account_id, cluster_name, owned_by, cluster_source, dbr_version,
+    data_security_mode, policy_id, worker_count, min_autoscale_workers, max_autoscale_workers,
+    auto_termination_minutes, create_time, change_time,
+    (cluster_source IN ('UI', 'API')) AS is_all_purpose,
+    (data_security_mode = 'NONE' OR data_security_mode LIKE 'LEGACY_%')  AS flag_no_isolation,
+    (dbr_version RLIKE '^([0-9]|1[0-3])[.]' OR dbr_version RLIKE '^14[.][0-2][.]'
+     OR dbr_version RLIKE '^1[56][.][0-3][.]')                                AS flag_eol_runtime,
+    (policy_id IS NULL)                                                       AS flag_no_policy,
+    ((cluster_source IN ('UI', 'API'))
+     AND (auto_termination_minutes IS NULL OR auto_termination_minutes = 0
+          OR auto_termination_minutes > {{ param('compute_cluster_config_posture', 'max_autoterm_minutes', 120) }}))               AS flag_auto_term_risk
+  FROM current_clusters
+)
+SELECT
+  cluster_id,
+  workspace_id,
+  cluster_name,
+  {{ mask_user('owned_by') }}                                                                         AS owned_by,
+  cluster_source,
+  is_all_purpose,
+  dbr_version,
+  data_security_mode,
+  policy_id,
+  worker_count, min_autoscale_workers, max_autoscale_workers, auto_termination_minutes,
+  flag_eol_runtime,
+  flag_no_isolation,
+  flag_no_policy,
+  flag_auto_term_risk,
+  CONCAT_WS('; ',
+    CASE WHEN flag_no_isolation THEN
+      CONCAT('access mode ', data_security_mode, ' bypasses Unity Catalog (no user isolation)')
+    END,
+    CASE WHEN data_security_mode IS NULL THEN
+      'access mode not recorded, so Unity Catalog isolation could not be checked'
+    END,
+    CASE WHEN flag_eol_runtime THEN
+      CONCAT('runtime ', dbr_version, ' is past Databricks end-of-support')
+    END,
+    CASE WHEN flag_no_policy THEN 'no cluster policy attached' END,
+    CASE WHEN flag_auto_term_risk THEN
+      CASE
+        WHEN auto_termination_minutes IS NULL OR auto_termination_minutes = 0
+          THEN 'auto-termination is off'
+        ELSE CONCAT('auto-termination ', CAST(auto_termination_minutes AS STRING),
+                     ' min, above the ', CAST({{ param('compute_cluster_config_posture', 'max_autoterm_minutes', 120) }} AS STRING), ' min limit')
+      END
+    END
+  )                                                                           AS reasons,
+  CASE
+    WHEN flag_no_isolation THEN 'CRITICAL'
+    WHEN flag_eol_runtime OR flag_no_policy OR flag_auto_term_risk THEN 'WARN'
+    WHEN data_security_mode IS NULL THEN 'NOT_ASSESSED'
+    ELSE 'OK'
+  END                                                                         AS status,
+  create_time, change_time
+FROM flagged
+ORDER BY CASE status WHEN 'CRITICAL' THEN 0 WHEN 'WARN' THEN 1 WHEN 'NOT_ASSESSED' THEN 2 ELSE 3 END,
+         cluster_id
+) q

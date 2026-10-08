@@ -1,0 +1,8 @@
+{
+  "node_timeline_utilization": {
+    "min_slices": 15
+  },
+  "task_cluster_utilization": {
+    "top_n": 100000
+  }
+}

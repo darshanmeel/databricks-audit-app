@@ -1,0 +1,40 @@
+{{ config(enabled=(target.type == "databricks"), materialized=("table" if var("direct_mode", "run") == "table" else "direct_check"), schema="audit_direct", tags=['finding', 'domain:jobs_pipelines', 'tier:standard', 'databricks_direct']) }}
+-- generated from app/queries/vendored/jobs_pipelines/lakeflow_job_queue_time.sql; fix the source query and regenerate, never edit this file.
+{%- set windows = var('windows', [7, 30, 90]) %}
+{%- for w in windows %}
+SELECT {{ w }} AS window_days, q.*
+FROM (
+WITH end_rows AS (
+  SELECT workspace_id, job_id, run_id, queue_duration_seconds, run_duration_seconds
+  FROM {{ source('system_lakeflow', 'job_run_timeline') }}
+  WHERE period_start_time >= dateadd(day, -{{ w }}, {{ audit_today() }})
+    AND period_end_time < date_trunc('DAY', {{ audit_now() }})   -- drop incomplete current day
+    AND result_state IS NOT NULL                                   -- end row only
+)
+SELECT workspace_id, job_id,
+       COUNT(DISTINCT run_id)                                   AS distinct_runs,
+       SUM(CASE WHEN run_duration_seconds > 0 THEN queue_duration_seconds END)                   AS queue_s_total,
+       percentile(CASE WHEN run_duration_seconds > 0 THEN queue_duration_seconds END, 0.95) AS queue_s_p95,
+       SUM(CASE WHEN run_duration_seconds > 0 AND queue_duration_seconds IS NOT NULL THEN 0 ELSE 1 END) AS runs_queue_null,
+       -- status: worst-first band on p95 queue seconds (field heuristic; {{ param('lakeflow_job_queue_time', 'warn_queue_p95_s', 60) }} / {{ param('lakeflow_job_queue_time', 'crit_queue_p95_s', 300) }}).
+       -- A job with no run reporting real wall-clock time has nothing to band on -> NOT_ASSESSED,
+       -- distinct from every observed run's queue phase folding to NULL (also NOT_ASSESSED, via
+       -- the p95-is-NULL branch below). Reading queue_duration_seconds only where
+       -- run_duration_seconds > 0 keeps a genuine 0-second queue on a legacy single-task job as a
+       -- real 0 (OK), instead of NULLIF(queue_duration_seconds, 0) folding EVERY 0 to NULL and
+       -- inflating p95 off queued runs alone.
+       CASE
+         WHEN SUM(CASE WHEN run_duration_seconds > 0 THEN 1 ELSE 0 END) = 0 THEN 'NOT_ASSESSED'
+         WHEN percentile(CASE WHEN run_duration_seconds > 0 THEN queue_duration_seconds END, 0.95) IS NULL THEN 'NOT_ASSESSED'
+         WHEN percentile(CASE WHEN run_duration_seconds > 0 THEN queue_duration_seconds END, 0.95) >= {{ param('lakeflow_job_queue_time', 'crit_queue_p95_s', 300) }} THEN 'CRITICAL'
+         WHEN percentile(CASE WHEN run_duration_seconds > 0 THEN queue_duration_seconds END, 0.95) >= {{ param('lakeflow_job_queue_time', 'warn_queue_p95_s', 60) }} THEN 'WARN'
+         ELSE 'OK'
+       END AS status
+FROM end_rows
+GROUP BY workspace_id, job_id
+ORDER BY queue_s_p95 DESC
+) q
+{%- if not loop.last %}
+UNION ALL
+{%- endif %}
+{%- endfor %}

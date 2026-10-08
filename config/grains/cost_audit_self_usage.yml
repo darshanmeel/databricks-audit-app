@@ -1,0 +1,4 @@
+# config/grains/cost_audit_self_usage.yml -- grain = the query's own key columns only; the
+# generator prepends window_days. One row per (workspace_id, warehouse_id) this export's own
+# statements ran on (matched_agg's own GROUP BY).
+cost_audit_self_usage: [workspace_id, warehouse_id]

@@ -1,0 +1,18 @@
+# Tags shown as top-bar filters and as "Spend by" on Money and Cost > Allocation, in this order.
+# Key: the tag key as it is in Databricks, written in lower case with underscores. Case, spaces,
+# hyphens and underscores are ignored, so cost_center also matches "Cost Center" and "costcenter".
+# Value: the name shown on screen; leave it empty to show the key.
+# Only tags that have values are shown, at most 4.
+# Put your own keys here, whatever your company calls them, for example:
+#   top_tags:
+#     department: Department
+#     project: Project
+# Each top tag filters workspaces: a workspace takes the value most of its classic-compute spend
+# carries (tag_coverage_floor in settings.yml), and you can pick one or more values. For tags on
+# single jobs, warehouses or queries use the Tag filter instead: one or more tags, each with one
+# or more values (values of one tag widen, different tags narrow). Any key works there.
+top_tags:
+  cost_center: Cost center
+  domain: Domain
+  team: Team
+  business_unit: Business unit

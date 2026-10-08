@@ -1,0 +1,4 @@
+# config/grains/compute_warehouse_autostop_churn.yml -- grain = the query's own key columns only;
+# the generator prepends window_days. One row per SQL warehouse over the whole window (rolled up
+# from one row per day; see the query's own worst_day columns for the single worst day).
+compute_warehouse_autostop_churn: [workspace_id, warehouse_id]

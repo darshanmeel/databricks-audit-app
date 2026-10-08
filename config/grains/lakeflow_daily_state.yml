@@ -1,0 +1,3 @@
+# lakeflow_daily_state: one row per day, resource type (job or pipeline) and resource
+# (workspace_id:job_id or workspace_id:pipeline_id).
+lakeflow_daily_state: [usage_date, resource_type, resource_key]

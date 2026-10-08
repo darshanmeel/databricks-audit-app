@@ -1,0 +1,3 @@
+# config/grains/query_failed_statements_grouped.yml. Grain = the query's own key columns ONLY;
+# the generator prepends window_days itself (DEC-24). Taken verbatim from the body's own GROUP BY.
+query_failed_statements_grouped: [workspace_id, warehouse_id, execution_status, error_class, source_kind, source_id]

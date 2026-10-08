@@ -1,0 +1,86 @@
+/* Queries + Governance & PII + Storage page styles (this
+   lane's own file). Every rule reads an existing token from styles.css; nothing here defines a new
+   colour. */
+
+.pqgs-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 14px;
+  margin-bottom: 14px;
+}
+.pqgs-card-value {
+  font-family: var(--f-mono);
+  font-size: var(--fs-kpi);
+  line-height: var(--lh-kpi);
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.pqgs-card-value.crit { color: var(--st-crit-ink); }
+.pqgs-card-value.warn { color: var(--st-warn-ink); }
+.pqgs-card-value.ok { color: var(--st-ok-ink); }
+.pqgs-card-unit { font-family: var(--f-sans); font-size: var(--fs-sm); color: var(--text-3); }
+.pqgs-card-note {
+  font-size: var(--fs-sm);
+  line-height: var(--lh-sm);
+  color: var(--text-2);
+  margin-top: 4px;
+}
+
+/* Ranked problem cards (Queries > Efficiency) */
+.pqgs-problem-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 14px;
+  margin-bottom: 14px;
+}
+.pqgs-problem { display: flex; flex-direction: column; gap: 10px; }
+.pqgs-problem-head { display: flex; align-items: center; gap: 10px; }
+.pqgs-problem-rank {
+  width: 24px; height: 24px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--f-mono); font-size: 12px; font-weight: 500;
+  background: var(--surface-2); color: var(--text);
+  flex: none;
+}
+.pqgs-problem-rank.top { background: var(--text); color: var(--surface); }
+.pqgs-problem-list {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px 12px; padding: 8px 0; align-items: baseline;
+  border-top: 1px solid var(--border-subtle); border-bottom: 1px solid var(--border-subtle);
+  font-size: var(--fs-sm);
+}
+.pqgs-problem-list-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); }
+.pqgs-problem-list-value { text-align: right; color: var(--text); white-space: nowrap; }
+.pqgs-problem-fix { font-size: var(--fs-xs); line-height: 16px; color: var(--text-2); }
+.pqgs-problem-link, .pqgs-inline-link {
+  align-self: flex-start;
+  border: none; background: none; padding: 0;
+  font: inherit; font-size: var(--fs-sm); font-weight: 500; color: var(--link); cursor: pointer;
+}
+.pqgs-problem-link:hover, .pqgs-inline-link:hover { text-decoration: underline; }
+
+/* Small row tables (Maintenance: small files / PO coverage / PO failure reasons) -- one grid
+   shape shared by every check, sized per check by a -cols-N modifier next to it. */
+.pqgs-rt { display: flex; flex-direction: column; }
+.pqgs-rt-head, .pqgs-rt-row { display: grid; gap: 12px; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--border-subtle); }
+.pqgs-rt-head { font-size: 11px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--text-3); }
+.pqgs-rt-row:last-child { border-bottom: none; }
+.pqgs-rt-name { font-weight: 600; color: var(--text); font-size: 13px; }
+/* grid cells may shrink and long names (table paths) wrap instead of running into the next column */
+.pqgs-rt-row > span, .pqgs-rt-head > span { min-width: 0; }
+.pqgs-rt-name { overflow-wrap: anywhere; }
+.pqgs-rt-num { font-family: var(--f-mono); font-size: 12.5px; text-align: right; }
+.pqgs-rt-note { font-size: 12.5px; color: var(--text-2); line-height: 1.4; }
+.pqgs-rt-cols-4 { grid-template-columns: minmax(140px, 1.6fr) 100px 100px 78px; }
+.pqgs-rt-cols-5 { grid-template-columns: minmax(130px, 1.4fr) minmax(160px, 1.8fr) 90px 100px 78px; }
+@media (max-width: 900px) {
+  .pqgs-rt-head { display: none; }
+  .pqgs-rt-row { grid-template-columns: 1fr !important; gap: 4px; }
+}
+
+/* ABAC: the asterisk on a count that leaves policies out, and the policy type chip */
+.abac-star { color: var(--st-crit-ink); }
+.pqgs-card-value .abac-star { font-size: 0.6em; vertical-align: super; margin-left: 2px; }
+.abac-type { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: var(--fs-sm); white-space: nowrap; background: var(--surface-2); color: var(--text-2); }
+.abac-type.filter { background: var(--st-warn-tint); color: var(--st-warn-ink); }
+.abac-type.mask { background: var(--st-ref-tint); color: var(--st-ref-ink); }

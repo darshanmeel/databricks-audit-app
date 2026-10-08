@@ -1,0 +1,85 @@
+# config/grains/cost_usage_only.yml -- T-12 (batch A1: the 14 usage-only cost queries, billed in
+# native units straight off system.billing.usage, no list_prices join). Grain = the query's own
+# key columns ONLY; the generator prepends window_days itself
+# (unique_grain: {columns: [window_days] + grain}, DEC-24). Do not list window_days here.
+#
+# Every entry below is taken verbatim from the vendored body's own GROUP BY (output column
+# names), cross-checked against app/queries/vendored/cost/<query_id>.sql and against
+# tasks/T-12-cost-usage-tests.md's Inputs section (which itself copies the GROUP BY):
+#   - cost_by_billing_origin_product groups by billing_origin_product, usage_unit, cloud, workspace_id.
+#   - cost_by_compute_resource groups by usage_date, cloud, workspace_id, billing_origin_product,
+#     usage_metadata.{cluster_id, warehouse_id, instance_pool_id}, product_features.is_serverless.
+#   - cost_by_job groups by usage_date, cloud, workspace_id, billing_origin_product,
+#     usage_metadata.job_id, product_features.is_serverless.
+#   - cost_by_notebook groups by usage_date, cloud, workspace_id, billing_origin_product,
+#     usage_metadata.notebook_id, product_features.is_serverless.
+#   - cost_by_serving_endpoint groups by usage_date, cloud, workspace_id, billing_origin_product,
+#     usage_metadata.endpoint_id, usage_metadata.endpoint_name, usage_type.
+#   - cost_chargeback_by_identity groups by usage_date, cloud, workspace_id,
+#     billing_origin_product, the identity_type CASE, and the RAW (pre-mask)
+#     identity_metadata.{run_as, owned_by, created_by} -- but the SELECT list emits only the
+#     masked identity_run_as/identity_owned_by/identity_created_by projections of those three
+#     columns, never the raw value. Per DEC-48 this is the masked-grain case the task file calls
+#     "the obvious candidate": uniqueness on the three masked columns below holds on this fixture
+#     only because every scenario row (bl_u_id_email/bl_u_id_sp/bl_u_id_unknown, one masked value
+#     each) was deliberately given a non-colliding masked prefix, not because the query's own
+#     SELECT exposes a raw, collision-proof key. A live snapshot with two different run_as values
+#     sharing their first two characters inside the same (date, cloud, workspace, product,
+#     identity_type) group would emit duplicate-looking rows here.
+#   - cost_chargeback_by_tag groups by usage_date, cloud, workspace_id, billing_origin_product,
+#     and the LATERAL VIEW OUTER explode(custom_tags) t AS tag_key, tag_value pair (OUTER so an
+#     empty/NULL custom_tags map still emits one tag_key/tag_value = NULL row instead of being
+#     dropped).
+#   - cost_default_storage_dsu groups by usage_date, cloud, sku_name, usage_type, usage_unit,
+#     usage_metadata.{storage_api_type, catalog_id}.
+#   - cost_genai_token_gpu groups by usage_date, cloud, sku_name, billing_origin_product,
+#     usage_type, usage_unit, product_features.serving_type, usage_metadata.{endpoint_name,
+#     endpoint_id}.
+#   - cost_networking_egress groups by usage_date, cloud, sku_name, usage_type, usage_unit,
+#     usage_metadata.{source_region, destination_region, networking_client, recipient_id}.
+#   - cost_premium_serverless_photon groups by usage_date, cloud, workspace_id, sku_name,
+#     billing_origin_product, product_features.{is_serverless, is_photon, jobs_tier, sql_tier,
+#     dlt_tier, performance_target}.
+#   - cost_restatement_trust_metric groups by workspace_id, cloud (one row per workspace + cloud
+#     per window).
+#   - cost_totals_by_sku_day groups by usage_date, cloud, workspace_id, sku_name,
+#     billing_origin_product, usage_type, usage_unit, product_features.is_serverless.
+#   - cost_usage_policy_coverage groups by usage_date, cloud, workspace_id, billing_origin_product,
+#     product_features.is_serverless, the policy_coverage CASE, the tag_coverage CASE.
+#
+# cost_by_serving_endpoint and cost_genai_token_gpu ALSO emit a masked usage_metadata.endpoint_name
+# projection (GROUP BY is on the raw usage_metadata.endpoint_name, SELECT emits
+# substr(name,1,2) || '****'), and endpoint_name is named explicitly in DEC-48's own list of
+# masked columns -- so, per DEC-48 rule (1), both entries below carry a `# masked:` comment too.
+# REVIEW CORRECTION (T-12 round 2): this file previously argued an exception here on the grounds
+# that both grains also carry the query's own usage_metadata.endpoint_id (never masked) in the
+# same GROUP BY. That argument is kept below as a secondary note, but DEC-48 grants no such
+# exception, and the argument is not airtight on its own: endpoint_id is nullable, and is
+# demonstrably NULL on a real row in the live build (f_cost_serving_mode_by_endpoint has a row
+# with endpoint_id = NULL from bl_u_acct_level), so the "unmasked disambiguator" the argument
+# leans on can itself collapse to NULL for a group that also lacks a distinguishing endpoint_name.
+# Kept as a secondary note because it is still true and still worth knowing: three of this
+# fixture's endpoints (bl_launch_ep, bl_normal_ep, bl_genai_ep) deliberately collide on the same
+# masked value "bl****" in tests/test_findings/test_cost_usage_only.py's
+# cost_by_serving_endpoint/cost_genai_token_gpu tests, and stay distinct there only because
+# endpoint_id happens to be non-NULL for every row this fixture gives these two specific ids.
+
+cost_by_billing_origin_product: [billing_origin_product, usage_unit, cloud, workspace_id]
+cost_by_compute_resource: [usage_date, cloud, workspace_id, billing_origin_product, cluster_id, warehouse_id, instance_pool_id, is_serverless]
+cost_by_job: [usage_date, cloud, workspace_id, billing_origin_product, job_id, is_serverless]
+cost_by_notebook: [usage_date, cloud, workspace_id, billing_origin_product, notebook_id, is_serverless]
+# masked: endpoint_name stands in for usage_metadata.endpoint_name (DEC-48)
+cost_by_serving_endpoint: [usage_date, cloud, workspace_id, billing_origin_product, endpoint_id, endpoint_name, usage_type]
+# masked: identity_run_as stands in for identity_metadata.run_as (DEC-48)
+# masked: identity_owned_by stands in for identity_metadata.owned_by (DEC-48)
+# masked: identity_created_by stands in for identity_metadata.created_by (DEC-48)
+cost_chargeback_by_identity: [usage_date, cloud, workspace_id, billing_origin_product, identity_type, identity_run_as, identity_owned_by, identity_created_by]
+cost_chargeback_by_tag: [usage_date, cloud, workspace_id, billing_origin_product, tag_key, tag_value]
+cost_default_storage_dsu: [usage_date, cloud, sku_name, usage_type, usage_unit, storage_api_type, catalog_id]
+# masked: endpoint_name stands in for usage_metadata.endpoint_name (DEC-48)
+cost_genai_token_gpu: [usage_date, cloud, sku_name, billing_origin_product, usage_type, usage_unit, serving_type, endpoint_name, endpoint_id]
+cost_networking_egress: [usage_date, cloud, sku_name, usage_type, usage_unit, source_region, destination_region, networking_client, recipient_id]
+cost_premium_serverless_photon: [usage_date, cloud, workspace_id, sku_name, billing_origin_product, is_serverless, is_photon, jobs_tier, sql_tier, dlt_tier, performance_target]
+cost_restatement_trust_metric: [workspace_id, cloud]
+cost_totals_by_sku_day: [usage_date, cloud, workspace_id, sku_name, billing_origin_product, usage_type, usage_unit, is_serverless]
+cost_usage_policy_coverage: [usage_date, cloud, workspace_id, billing_origin_product, is_serverless, policy_coverage, tag_coverage]

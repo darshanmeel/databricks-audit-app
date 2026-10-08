@@ -1,0 +1,5 @@
+overview_list_prices_raw:
+  - sku_name
+  - cloud
+  - currency_code
+  - price_start_time
