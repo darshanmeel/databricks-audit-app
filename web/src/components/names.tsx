@@ -451,7 +451,7 @@ export function Ref({ kind, id, workspaceId, runId, label }: { kind: string; id:
         href={url}
         target="_blank"
         rel="noopener noreferrer"
-        title={`${nameTitle} -- opens Databricks. This link's shape is our best guess, not confirmed against your workspace. A 404 means the shape is wrong, not that the object is gone.`}
+        title={`${nameTitle} -- opens Databricks (link shape is a best guess)`}
         onClick={(e) => e.stopPropagation()}
       >
         {display}

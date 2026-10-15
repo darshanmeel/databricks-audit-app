@@ -37,15 +37,13 @@
 --   is_other=true is the one pooled row for every status=OK row ranked below :top_n by current
 --   spend (every other column NULL on that row, pooled_count says how many); it always reads status
 --   OK (see caveats).
--- healthy: status OK - no increase at/above :warn_increase_pct, or the row's own current-period
---   spend (a real $0 counts) sits below :min_spend_usd
--- investigate_if: CRITICAL - the increase is at/above :crit_increase_pct on at least
---   :min_spend_usd of current spend, or the row is brand-new spend above the floor with nothing in
---   the previous period to compare against; WARN - at/above :warn_increase_pct. NOT_ASSESSED - read
---   not_assessed_reason: 'previous_window_not_covered' when the account's own earliest recorded
---   usage does not reach back far enough to cover the previous window at this window length;
---   'current_period_unpriced' when this row's current-period spend could not be priced at all;
---   'previous_period_unpriced' is the same gap on the previous period's own side.
+--   One row per workspace has cluster_kind = 'no_cluster' and entity_id NULL: its spend with no
+--   cluster id (serverless, storage, anything not on classic compute), judged by the same growth
+--   rule and never pooled, so all rows add up to total spend.
+-- healthy: OK - up less than :warn_increase_pct, or current spend under $:min_spend_usd.
+-- investigate_if: CRITICAL - up :crit_increase_pct or more on at least $:min_spend_usd of current
+--   spend, or brand-new spend above the floor with nothing before. WARN - up :warn_increase_pct or
+--   more. NOT_ASSESSED - read not_assessed_reason.
 -- actions: 1) open cost_chargeback_by_job for a job_cluster row, or cost_chargeback_by_tag_value
 --   for the tag behind the growth (free); 2) if the growth is deliberate, right-size the cluster or
 --   set a budget policy before it compounds another period (config); 3) for a growing all_purpose
@@ -76,11 +74,13 @@ WITH snapshot AS (
 priced AS (
   SELECT u.workspace_id,
          CASE
+           WHEN NOT (upper(u.usage_unit) = 'DBU' AND u.usage_metadata.cluster_id IS NOT NULL) THEN 'no_cluster'
            WHEN u.usage_metadata.dlt_pipeline_id IS NOT NULL THEN 'pipeline'
            WHEN u.usage_metadata.job_id IS NULL THEN 'all_purpose'
            ELSE 'job_cluster'
          END AS cluster_kind,
          CASE
+           WHEN NOT (upper(u.usage_unit) = 'DBU' AND u.usage_metadata.cluster_id IS NOT NULL) THEN CAST(NULL AS STRING)
            WHEN u.usage_metadata.dlt_pipeline_id IS NOT NULL THEN u.usage_metadata.dlt_pipeline_id
            WHEN u.usage_metadata.job_id IS NULL THEN u.usage_metadata.cluster_id
            ELSE u.usage_metadata.job_id
@@ -100,9 +100,9 @@ priced AS (
    AND u.usage_unit = lp.usage_unit
    AND u.usage_end_time >= lp.price_start_time
    AND (lp.price_end_time IS NULL OR u.usage_end_time < lp.price_end_time)
-  WHERE upper(u.usage_unit) = 'DBU'
-    AND u.usage_metadata.cluster_id IS NOT NULL
-    AND u.usage_date >= dateadd(day, -(:period_days * 2), current_date())
+  -- no unit/id filter: usage with no cluster id (and any non-DBU unit) becomes the workspace's own
+  -- 'no_cluster' row, so the rows add up to total spend
+  WHERE u.usage_date >= dateadd(day, -(:period_days * 2), current_date())
     AND u.usage_date <  current_date()
 ),
 raw_agg AS (
@@ -192,6 +192,8 @@ scored AS (
              THEN 'NOT_ASSESSED'
            WHEN a.previous_cost IS NULL AND a.previous_unpriced_quantity > 0
              THEN 'NOT_ASSESSED'
+           -- Spend outside any cluster is context for the total, not a cluster to fix.
+           WHEN a.cluster_kind = 'no_cluster' THEN 'OK'
            WHEN COALESCE(a.eff_current_cost, 0) < :min_spend_usd THEN 'OK'
            WHEN a.eff_previous_cost = 0 THEN 'CRITICAL'
            WHEN (a.eff_current_cost - a.eff_previous_cost) / NULLIF(a.eff_previous_cost, 0) * 100 >= :crit_increase_pct
@@ -224,13 +226,13 @@ flagged AS (
          est_current_usd_list, share_of_total_pct, est_previous_usd_list, est_change_usd_list,
          change_pct, price_basis, status, not_assessed_reason
   FROM scored
-  WHERE status != 'OK'
+  WHERE status != 'OK' OR cluster_kind = 'no_cluster'   -- the no-cluster row is never pooled
 ),
 ok_ranked AS (
   SELECT scored.*,
          ROW_NUMBER() OVER (ORDER BY est_current_usd_list DESC NULLS LAST, cluster_kind, entity_id) AS rn
   FROM scored
-  WHERE status = 'OK'
+  WHERE status = 'OK' AND cluster_kind <> 'no_cluster'
 ),
 ok_kept AS (
   -- The top :top_n OK rows by current spend, kept as their own row.

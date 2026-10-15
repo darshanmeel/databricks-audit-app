@@ -224,15 +224,18 @@ function ChangeBreakdownCard({ periodState, filters, maxCat }: { periodState: Fi
     const resData = resState.phase === "ready" && resState.outcome === "ok_rows" ? resState.data : null;
     const rows = resData ? resData.rows.filter((r) => judged(r) && (isSpend || !r.is_other)) : null;
     const net = resData ? 1 - numOrZero(resData.discount_pct) : 1;
-    const nameOf = level === "warehouse" ? (r: Row) => warehouseInWorkspace(r.workspace_id, r.warehouse_id)
-      : level === "job" ? (r: Row) => `${r.job_name || resolveName("job", r.workspace_id, r.job_id) || `job ${r.job_id}`} · ${wsPhrase(r.workspace_id)}`
-      : (r: Row) => `${r.name || r.entity_id} · ${wsPhrase(r.workspace_id)}`;
+    const notAttr = (r: Row) => !r.is_other && (level === "warehouse" ? r.warehouse_id == null : level === "job" ? r.job_id == null : r.cluster_kind === "no_cluster");
+    const nameOf = (r: Row) => notAttr(r)
+      ? `${wsPhrase(r.workspace_id)} · ${level === "warehouse" ? "not on a warehouse" : level === "job" ? "no job" : "no cluster"}`
+      : level === "warehouse" ? warehouseInWorkspace(r.workspace_id, r.warehouse_id)
+      : level === "job" ? `${r.job_name || resolveName("job", r.workspace_id, r.job_id) || `job ${r.job_id}`} · ${wsPhrase(r.workspace_id)}`
+      : `${r.name || r.entity_id} · ${wsPhrase(r.workspace_id)}`;
     // The warehouse check names its columns usd_list/change_usd_list; the others est_*.
     const valueOf = isSpend
       ? (r: Row) => numOrZero(r.usd_list != null ? r.usd_list : r.est_current_usd_list) * net
       : (r: Row) => numOrZero(r.change_usd_list != null ? r.change_usd_list : r.est_change_usd_list) * net;
     // A check's pooled remainder row is still spend: shown as its own bar, never dropped.
-    items = rows ? rows.map((r) => ({ name: r.is_other ? `Other ${lv.label.toLowerCase()}s` : nameOf(r), value: valueOf(r) })) : null;
+    items = rows ? rows.map((r) => ({ name: r.is_other ? `Other ${lv.label.toLowerCase()}s` : nameOf(r), value: valueOf(r), untagged: notAttr(r) })) : null;
   }
   return (
     <Card
@@ -1280,10 +1283,27 @@ function cbMoney(dim: CbDim, row: Row, disc: number) {
     ? { cur: scale(row.est_current_usd_list), prev: scale(row.est_previous_usd_list), change: scale(row.est_change_usd_list) }
     : { cur: scale(row.usd_list), prev: scale(row.prev_usd_list), change: scale(row.change_usd_list) };
 }
+// The "not attributed" row of a cut: shown first, named plainly.
+function cbIsNotAttributed(dim: CbDim, row: Row): boolean {
+  if (row.is_other) return false;
+  switch (dim.key) {
+    case "tag_value": return !!row.is_untagged;
+    case "workspace": return row.workspace_id == null;
+    case "service": return !row.billing_origin_product || row.service_label === "Unattributed";
+    case "identity": return !row.identity_run_as || row.identity_run_as === "unknown";
+    case "warehouse": return row.warehouse_id == null;
+    case "job": return row.job_id == null;
+    case "cluster": return row.cluster_kind === "no_cluster";
+    default: return false;
+  }
+}
 // The one label every chart/table/verdict names a row by -- "Other (n)" only when the SQL itself
 // already pooled the tail (is_other), never a second client-side fold.
 function cbLabel(dim: CbDim, row: Row): string {
   if (row.is_other) return row.pooled_count != null ? `Other (${fmtInt(row.pooled_count)})` : "Other values";
+  // One not-attributed row per workspace; the workspace leads so a cut-off chart label keeps it.
+  const none = { warehouse: "not on a warehouse", job: "no job", cluster: "no cluster" }[dim.key as "warehouse" | "job" | "cluster"];
+  if (none && cbIsNotAttributed(dim, row)) return row.workspace_id != null ? `${wsPhrase(row.workspace_id)} · ${none}` : none.charAt(0).toUpperCase() + none.slice(1);
   switch (dim.key) {
     // cost_chargeback_by_workspace's own header: a NULL workspace_id here is genuine account-level
     // usage (some networking/storage SKUs bill with no workspace_id at all), not an id this app
@@ -1302,7 +1322,7 @@ function cbLabel(dim: CbDim, row: Row): string {
     // real, nameable fact, not a lookup failure -- "unknown" reads as data this app failed to
     // resolve; it never had a name to find.
     case "identity": return (!row.identity_run_as || row.identity_run_as === "unknown") ? "No run-as identity" : row.identity_run_as;
-    case "tag_value": return row.is_untagged ? "(untagged)" : (row.tag_value || "(blank value)");
+    case "tag_value": return row.is_untagged ? `No ${row.tag_key} tag` : (row.tag_value || "(blank value)");
     default: return "-";
   }
 }
@@ -1369,6 +1389,7 @@ function cbChartLabel(dim: CbDim, row: Row): string {
 // value is not a Databricks object and has no such link.
 function CbEntityCell({ dim, row }: { dim: CbDim; row: Row }) {
   if (row.is_other) return <span className="muted">{cbLabel(dim, row)}</span>;
+  if (["warehouse", "job", "cluster"].includes(dim.key) && cbIsNotAttributed(dim, row)) return <span>{cbLabel(dim, row)}</span>;
   if (dim.key === "warehouse") return <Ref kind="warehouse" id={row.warehouse_id} workspaceId={row.workspace_id} />;
   if (dim.key === "job") return <Ref kind="job" id={row.job_id} workspaceId={row.workspace_id} label={row.job_name} />;
   if (dim.key === "cluster") {
@@ -1394,10 +1415,11 @@ function cbSubLabel(dim: CbDim, row: Row): string | null {
 }
 // Why a dimension only reaches PART of the billing total, in plain words (cost_chargeback_reconcile's
 // own "partial"/"coverage_type" caveat, one line per dimension).
+// The rest of the bill sits in each workspace's not-attributed row, so the cut still adds up.
 const CB_SCOPE_NOTE: Record<string, string> = {
-  warehouse: "DBU usage that carries a SQL warehouse id, so it can differ from the SQL product line",
-  job: "DBU usage that carries a job id, whatever product billed it, so it can differ from the Jobs product line",
-  cluster: "billed cluster, job-cluster and pipeline DBU usage only, by design",
+  warehouse: "not on a warehouse",
+  job: "no job",
+  cluster: "no cluster",
 };
 // One account-wide reconcile line per check, summed over its workspace rows; worst status wins.
 function reconcileRow(reconcileRows: Row[] | null, checkName: string) {
@@ -1439,9 +1461,11 @@ function cbReconcileNote(dim: CbDim, reconcileRows: Row[] | null, tagCtx: { keyT
   if (row.coverage_type === "overlapping") {
     if (!tagCtx || !(numOrZero(tagCtx.billTotal) > 0)) return null;
     const pct = (numOrZero(tagCtx.keyTotal) / numOrZero(tagCtx.billTotal)) * 100;
-    return `This tag key's own values add up to ${fmtPct(pct, 0)} of billed $ (untagged fills the rest). A resource carrying several DIFFERENT tag keys counts once under each, so the sum across all keys combined can pass 100% -- that is expected, not a gap in this one key.`;
+    return `This tag key and its "No tag" row add up to ${fmtPct(pct, 0)} of billed $. A resource carrying several DIFFERENT tag keys counts once under each, so the sum across all keys combined can pass 100% -- that is expected, not a gap in this one key.`;
   }
-  return `This cut reaches ${fmtPct(row.coverage_pct, 0)} of billed $ (${CB_SCOPE_NOTE[dim.key] || "partial coverage, by design"}).`;
+  return CB_SCOPE_NOTE[dim.key]
+    ? `Named ${dim.noun}s: ${fmtPct(row.coverage_pct, 0)} of billed $; the rest is in the "${CB_SCOPE_NOTE[dim.key]}" rows.`
+    : `This cut reaches ${fmtPct(row.coverage_pct, 0)} of billed $ (partial coverage, by design).`;
 }
 // Tag value view: which keys actually split spend. A key with 2+ values inside a workspace splits
 // it; one value per workspace only relabels workspaces; one value everywhere splits nothing.
@@ -1608,15 +1632,17 @@ function CostChargebackContent({ filters, maxCat, meta, onVerdict }: TabProps) {
   const displayRows = React.useMemo(() => {
     if (!rows) return null;
     const real = [...rows.filter((r) => !r.is_other && r.status !== "NOT_ASSESSED")]
-      .sort((a, b) => numOrZero(cbMoney(dim, b, disc).cur) - numOrZero(cbMoney(dim, a, disc).cur));
+      .sort((a, b) => (Number(cbIsNotAttributed(dim, b)) - Number(cbIsNotAttributed(dim, a)))
+        || numOrZero(cbMoney(dim, b, disc).cur) - numOrZero(cbMoney(dim, a, disc).cur));
     const na = rows.filter((r) => !r.is_other && r.status === "NOT_ASSESSED");
     const other = rows.filter((r) => r.is_other);
-    return [...real, ...na, ...other];
+    const all = [...real, ...na, ...other];
+    return [...all.filter((r) => cbIsNotAttributed(dim, r)), ...all.filter((r) => !cbIsNotAttributed(dim, r))];
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rows, dim.key, disc]);
   const spendItems = displayRows
     // The check's own pooled row is renamed so it isn't confused with the chart's "Other" bar.
-    ? displayRows.map((r) => ({ name: r.is_other ? cbLabel(dim, r).replace(/^Other/, "Smaller ones pooled") : cbLabel(dim, r), value: numOrZero(cbMoney(dim, r, disc).cur) })).filter((e) => e.value > 0)
+    ? displayRows.map((r) => ({ name: r.is_other ? cbLabel(dim, r).replace(/^Other/, "Smaller ones pooled") : cbLabel(dim, r), value: numOrZero(cbMoney(dim, r, disc).cur), untagged: cbIsNotAttributed(dim, r) })).filter((e) => e.value > 0)
     : null;
 
   // price_join_fanout is a self-check on the shared price join every one of these 8 cuts uses, not
@@ -1639,8 +1665,13 @@ function CostChargebackContent({ filters, maxCat, meta, onVerdict }: TabProps) {
     ? cbReconcileNote(dim, reconcileState.data.rows, isTagDim && !activeTagWs ? { keyTotal: rawKeyTotal, billTotal } : null)
     : null;
 
+  const notAttr = rows ? rows.filter((r) => cbIsNotAttributed(dim, r)) : [];
+  const notAttrUsd = notAttr.reduce((s, r) => s + numOrZero(cbMoney(dim, r, disc).cur), 0);
+  const notAttrPct = total && total > 0 ? (notAttrUsd / total) * 100 : 0;
+  // Summed over every workspace, so the label drops the one workspace name.
+  const notAttrName = notAttr.length ? cbLabel(dim, notAttr.length > 1 ? { ...notAttr[0], workspace_id: null } : notAttr[0]) : null;
   const verdictSentence = ready
-    ? `${fmtMoney(total, 0)} charged back by ${dim.noun} this window`
+    ? `${fmtMoney(total, 0)} ${isTagDim ? "total spend" : `charged back by ${dim.noun}`} this window`
       + (gainer ? `; biggest mover up: ${gainer.label}, +${fmtMoney(gainer.change, 0)}` : "")
       + (faller ? `${gainer ? "," : ";"} down: ${faller.label}, ${fmtMoney(faller.change, 0)}` : "")
       + "."
@@ -1668,9 +1699,11 @@ function CostChargebackContent({ filters, maxCat, meta, onVerdict }: TabProps) {
           {fanoutNote && <div className="metric-note" style={{ marginBottom: 10 }}>{fanoutNote}</div>}
           <MetricGrid>
             <MetricCard
-              label={`Charged back by ${dim.noun}`}
+              label={isTagDim ? "Total spend" : `Charged back by ${dim.noun}`}
               value={fmtMoney(total, 0)}
-              facts={[otherRows && otherRows.length
+              facts={[notAttrName
+                ? { label: notAttrName, value: `${fmtMoney(notAttrUsd, 0)} · ${fmtPct(notAttrPct, 0)}`, tone: notAttrPct >= 20 ? "crit" : "ok" }
+                : otherRows && otherRows.length
                 ? { label: "Incl.", value: otherRows.map((r) => cbLabel(dim, r)).join(", ") }
                 : { label: "Rows", value: fmtInt((rows || []).length) }]}
             />
@@ -1694,6 +1727,7 @@ function CostChargebackContent({ filters, maxCat, meta, onVerdict }: TabProps) {
               <RankedBars
                 items={spendItems}
                 n={maxCat}
+                untaggedFirst
                 valueFmt={(v) => fmtMoney(v, 0)}
                 unitLabel="$"
                 note={`Each ${dim.noun}'s total this window; the change against the previous period is under Change and in the table below.`}

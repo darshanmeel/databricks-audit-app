@@ -23,26 +23,15 @@
 --   that day's total; est_baseline_usd_list is the trailing median it is judged against;
 --   spike_ratio_actual is est_day_usd_list over that median; top_skus names the SKUs that made up
 --   most of the day (the drivers to look at first).
--- healthy: status = OK is never itself returned as a row (see caveats: this query emits ONLY
---   WARN or NOT_ASSESSED days) - a day whose own spend never clears :min_spend_usd, or that
---   clears the floor but not :spike_ratio, or that clears both but has no baseline, simply has no
---   row when the floor alone is what stops it, so "no row for a workspace/product in the window"
---   is (mostly) the healthy case - see NOT_ASSESSED below for the one exception.
--- investigate_if: WARN - every row returned above the floor with a real trailing baseline of at
---   least :min_baseline_days days: a real jump on a real amount of money. NOT_ASSESSED - read
---   not_assessed_reason: 'no_baseline_history' when this workspace/product cleared :min_spend_usd
---   on this day but has no earlier spend at all in the trailing :baseline_days before it (a
---   brand-new workspace or a SKU that only just started billing); 'short_baseline' when it has
---   some earlier spend but fewer than :min_baseline_days days of it, too thin a median to trust -
---   the $ floor is checked first, so a NOT_ASSESSED row always represents a day with real money
---   behind it, never a $1 non-event.
--- actions: 1) open cost_dollarized_by_sku_day for this workspace and day and read top_skus
---   against it - a backfill or restatement usually shows as one SKU/day, a genuine spike as many
---   (free); 2) check cost_period_over_period for the same workspace/product - one spike day inside
---   an otherwise flat period reads differently from a period that is trending up throughout
---   (free); 3) if the spike is real new usage (a job that started running more often, a new
---   endpoint, a bigger backfill) rather than a one-off correction, the matching domain tab names
---   the resource and whether it is worth scaling down (config) or is deliberate growth (spend).
+-- healthy: OK days are not listed: a day under $:min_spend_usd, under :spike_ratio times its median,
+--   or with no baseline has no row.
+-- investigate_if: WARN - spend at least :spike_ratio times the trailing :baseline_days-day median
+--   and at least $:min_spend_usd, with at least :min_baseline_days baseline days. NOT_ASSESSED - read
+--   not_assessed_reason.
+-- actions: 1) open cost_dollarized_by_sku_day for that day: one SKU means a backfill or restatement,
+--   many SKUs a real spike (free); 2) check cost_period_over_period: one spike day or a rising trend?
+--   (free); 3) real new usage: the domain tab names the resource; scale it down or accept the growth
+--   (config).
 -- not_assessed_reasons: no_baseline_history: not enough earlier days for this workspace and
 --   product to set a normal baseline yet; short_baseline: some earlier days exist but fewer than
 --   :min_baseline_days, too thin a median to trust

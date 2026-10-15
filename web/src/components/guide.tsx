@@ -20,7 +20,7 @@ import { columnMeta, planColumns } from "./columns";
 import { actionTier } from "./overview_tile";
 import { entityDisplayName } from "../tabs/tab_waste";
 import { guideLinkProps, navHref } from "./nav_hash";
-import { fetchGuideData, splitFlagClauses } from "./guide_drawer";
+import { fetchGuideData, firstClause, splitFlagClauses, upperFirst } from "./guide_drawer";
 import type { Affected, Filters, FindingSummary, LibraryCorrection, Meta } from "../types";
 import type { Area, Home } from "./tab_registry";
 import type { CheckLabel } from "./labels";
@@ -121,9 +121,7 @@ type GuideFilters = Pick<Filters, "window" | "workspaceIds" | "envs">;
 /** One screen's Guide page text. `screen` items name a panel (t) or a sub-tab (sub). */
 interface GuideTabInfo {
   lens: string;
-  represents: string;
-  flags: string;
-  wrong: string;
+  card?: string;
   lede: string;
   questions: string[];
   screen: { t?: string; sub?: string; d: string }[];
@@ -134,17 +132,18 @@ interface GuideTabInfo {
   limits: string[];
   tables?: string[];
   queries?: { id: string; title: string }[];
+  extra?: { h?: string; items: string[] }[];
 }
 
 // this list's slugs, in this order, must equal app/api/guide.py's own GUIDE_SECTION_SLUGS.
 const GUIDE_SECTIONS = [
   { slug: "flow", title: "Where the data comes from", teaser: "Your own credentials ran every check on Databricks; only the result rows are saved here. Nothing is sent anywhere else." },
   { slug: "window", title: "Windows and snapshots", teaser: "Most checks cover the last 7, 30 or 90 days up to the export, today partial. A snapshot check shows today's settings, not a period." },
-  { slug: "status", title: "What each status means", teaser: "Critical and Warn are flagged. OK is a verified pass. Not assessed and Nothing to judge are never a pass." },
-  { slug: "floors", title: "Materiality floors", teaser: "A tiny row is too small to matter -- it reads OK instead of Critical or Warn, and every count already excludes it." },
+  { slug: "status", title: "What each status means", teaser: "Critical and Warn are flagged. Only OK is a verified pass. Not assessed and No data never are." },
+  { slug: "floors", title: "Materiality floors", teaser: "A tiny row is too small to matter: it reads OK instead of Critical or Warn, and every count already excludes it." },
   { slug: "money", title: "How dollars are worked out", teaser: "Usage × list price (effective). Never your invoice, and never your cloud VM, storage or network bill." },
   { slug: "steps", title: "Free, config and spend steps", teaser: "Free is a setting or a read. Config changes how something is configured. Spend costs money to carry out." },
-  { slug: "tags", title: "Tags and chargeback", teaser: "Spend is attributed query, then compute, then workspace, then account -- most specific tag first. A workspace tag is read from its bill. The Tags page counts what misses the mandatory tags." },
+  { slug: "tags", title: "Tags and chargeback", teaser: "Spend takes its most specific tag first: query, then compute, then workspace, then account. A workspace tag is read from its bill." },
   { slug: "names", title: "Names, not ids", teaser: "A row shows a name wherever one is known. When it can't be found, the row says why instead of guessing." },
   { slug: "coverage", title: "Coverage and gaps", teaser: "An empty panel means couldn't look or nothing happened -- never all clear. Coverage & Gaps says which." },
   { slug: "coverage-data-sources", title: "Coverage & Gaps: Data sources", teaser: "Which system tables this audit could read, which came back empty, and which need a grant." },
@@ -182,9 +181,7 @@ function isPricedWaste(id: string): boolean { return WASTE_ITEMS.some((w) => w.i
 const GUIDE_TABS: Record<string, GuideTabInfo> = {
   overview: {
     lens: "FinOps · Data engineer · Governance",
-    represents: "The bill on one page: spend against the period before, what moved it, list price to your discount to the part a cost-allocation tag reaches, possible waste and what to fix first. The data engineer's view adds each job's state over the window and when queries queue.",
-    flags: "Open the linked check or the Actions page.",
-    wrong: "A jump from near zero reads as a multiple or \"new\"; workspaces outside the export region count spend only.",
+    card: "Spend, what moved it, possible waste, what to open first.",
     lede: "Spend for the window, what moved it, possible waste, and the few checks worth opening first.",
     questions: [
       "What did we spend, and is it rising?",
@@ -213,9 +210,7 @@ const GUIDE_TABS: Record<string, GuideTabInfo> = {
   },
   actions: {
     lens: "Everyone",
-    represents: "Flagged checks grouped into fixes: what to change, where, and what it saves.",
-    flags: "Open the fix, apply the change in Databricks, re-run the export.",
-    wrong: "A fix without a dollar figure has no priced source; the saving is possible waste, not a forecast.",
+    card: "Flagged checks as fixes, with resources and money freed.",
     lede: "The flagged checks as a short list of fixes, each with the resources it touches and the money it frees.",
     questions: [
       "What should we fix first?",
@@ -242,9 +237,6 @@ const GUIDE_TABS: Record<string, GuideTabInfo> = {
   },
   money: {
     lens: "CFO · CTO",
-    represents: "The bill for executives: spend against the period before, possible waste, untagged spend and the biggest drivers.",
-    flags: "Open the driver's own tab; tag the untagged spend.",
-    wrong: "A jump from near zero reads as a multiple or \"new\"; spend with no cost-center tag can't be charged back.",
     lede: "Spend, possible waste and untagged spend for the window, what moved it, and the products, workspaces and resources behind it.",
     questions: [
       "What did we spend, and is it rising?",
@@ -265,7 +257,7 @@ const GUIDE_TABS: Record<string, GuideTabInfo> = {
     price: "Usage × list price (effective), less your what-if discount.",
     troubles: [
       { see: "A change reads 6.2× or \"new\"", why: "The previous period was near zero or empty.", doit: "Open What moved spend to see which workspace started." },
-      { see: "The change is on less than the spend (\"priced in both periods\")", why: "The change is measured only on workspace-and-product rows fully priced in both periods; a row with any unpriced usage on either side is left out of the comparison, never out of the spend total.", doit: "See Cost › Pricing & policy for the usage with no list price." },
+      { see: "Change shown on less than total spend", why: "Only rows priced in both periods are compared; unpriced rows stay in the total.", doit: "See Cost › Pricing & policy." },
       { see: "No cost center is most of the spend", why: "Compute was created without the cost-center tag.", doit: "Enforce the tag with a cluster or budget policy." },
       { see: "Possible waste is lower than expected", why: "Only priced waste adds up; unpriced checks are counted, not summed.", doit: "See Waste & savings › Flagged, not priced." },
     ],
@@ -276,9 +268,7 @@ const GUIDE_TABS: Record<string, GuideTabInfo> = {
   },
   cost: {
     lens: "FinOps · finance",
-    represents: "Who spent what, whether it can be charged back, and which SKUs and workspaces grew.",
-    flags: "Tag the owner at the source; open the spike's check.",
-    wrong: "Untagged and account-level usage, SKU-days with no price, overlapping price rows, billing restatements.",
+    card: "Spend trend, product and SKU split, who spent it, untagged spend.",
     lede: "Every dollar in the window: the trend, the product and SKU split, who spent it, and what can't be charged back.",
     questions: [
       "Which workspace, team or tag spent the most?",
@@ -286,12 +276,12 @@ const GUIDE_TABS: Record<string, GuideTabInfo> = {
       "Which SKUs grew fastest?",
     ],
     screen: [
-      { sub: "trend", d: "Spend by day and month with spike days marked, and a Spend / Change switch: each product's, workspace's, warehouse's, cluster's or job's total for the window, or its change against the period before. Spend by workspace, warehouse or SKU: the top 5 stacked by day or month, every one in a table, and the picked one's own daily and monthly bars." },
+      { sub: "trend", d: "Spend by day/month with spikes marked; Spend / Change by product, workspace, warehouse, cluster or job; top 5 stacked, all in a table, one picked." },
       { sub: "product", d: "Spend by product and SKU, the SKUs that grew, and serverless or Photon premiums." },
       { sub: "allocation", d: "The share of spend each tag or policy reaches, where each dollar lands, and each workspace's tags: which count and why the others don't." },
-      { sub: "chargeback", d: "This period against the one before, by workspace, tag, warehouse, job, cluster or identity. By tag value: pick a workspace, then a tag key; only workspaces with tagged spend in the window are listed." },
+      { sub: "chargeback", d: "This period vs the last, by workspace, tag, warehouse, job, cluster or identity; By tag value lists only workspaces with tagged spend." },
       { sub: "resource", d: "Spend by cluster, warehouse, pool, job and notebook." },
-      { sub: "before_after", d: "Pick the day you made a fix: each workspace's, warehouse's, job's, all-purpose cluster's or pipeline's average before it against from it, in $, DBUs, time, runs, failures, queue wait, start-up or spill, with its day-by-day chart. What changed splits the move into its drivers (more runs or costlier runs, waiting or executing, which product, which failure cause)." },
+      { sub: "before_after", d: "Pick a fix day: each resource's average before vs after ($, DBUs, time, runs, failures, queue, start-up, spill), daily chart, and the drivers of the change." },
       { sub: "pricing", d: "Usage-policy and tag coverage, effective price by SKU, restatements, egress and cloud infra." },
     ],
     measure: "Usage rows joined to the list price valid for that SKU and time.",
@@ -301,7 +291,7 @@ const GUIDE_TABS: Record<string, GuideTabInfo> = {
       { see: "Most spend is untagged", why: "Compute was created without the cost-center tag; account-level SKUs carry no workspace.", doit: "Enforce the tag with a cluster or budget policy." },
       { see: "A SKU is missing from the total", why: "No list price for that SKU-day.", doit: "It's listed under Pricing & policy; no dollars are guessed." },
       { see: "Last month changed", why: "Billing restated earlier usage.", doit: "Open the restatement check for the share." },
-      { see: "A workspace's tag doesn't reach its queries and compute", why: "The tag is on under half of the workspace's classic compute usage, or no one value has most of it.", doit: "Allocation › Workspace tags shows each tag's share; tag the warehouses and clusters themselves." },
+      { see: "Workspace tag doesn't reach its compute", why: "Under half of classic usage carries it, or no value dominates.", doit: "Tag warehouses and clusters directly (Allocation › Workspace tags)." },
       { see: "Per-query dollars are below the warehouse", why: "Idle warehouse time isn't attributed to any query.", doit: "Charge back at the warehouse level." },
     ],
     limits: [
@@ -311,9 +301,7 @@ const GUIDE_TABS: Record<string, GuideTabInfo> = {
   },
   waste: {
     lens: "FinOps · platform",
-    represents: "What could stop being paid for: idle and failed work, priced where a source allows it.",
-    flags: "Open the biggest offender and apply its fix.",
-    wrong: "Only priced rows add up; flagged-but-unpriced checks are counted, not summed.",
+    card: "Possible waste from 5 sources, one total, top resources.",
     lede: "Possible waste from five sources, one total, and the resources that make most of it.",
     questions: [
       "How much are we paying for idle or failed work?",
@@ -334,14 +322,12 @@ const GUIDE_TABS: Record<string, GuideTabInfo> = {
     ],
     limits: [
       "A floor, not a forecast: it prices what was measured, never what might happen.",
-      "Stopping a classic or pro warehouse empties its disk cache; serverless keeps the result cache 24 h, so only classic and pro lose it too.",
+      "Stopping a classic or pro warehouse empties its disk cache; serverless keeps the result cache 24 h.",
     ],
   },
   mlai: {
     lens: "ML platform",
-    represents: "What each endpoint costs against its traffic, which sit idle, and how the gateway behaves.",
-    flags: "Scale to zero or delete once you confirm there are no callers.",
-    wrong: "Usage tracking off reads as zero requests; endpoints not in served entities read Not assessed.",
+    card: "Serving and vector-search spend, idle endpoints, AI Gateway.",
     lede: "Serving and vector-search spend, endpoints billed with no traffic, and AI Gateway usage.",
     questions: [
       "What does each endpoint cost?",
@@ -366,9 +352,7 @@ const GUIDE_TABS: Record<string, GuideTabInfo> = {
   },
   genie: {
     lens: "FinOps · ML platform · data engineering",
-    represents: "Who uses Genie, in which workspace and env, for what kind of work, and whether it is built into apps or used by people in the browser.",
-    flags: "Nothing is flagged; this page shows where Genie spend goes.",
-    wrong: "Accounts whose billing table has no Genie fields yet show no rows; Genie called from inside another product is billed to that product. Dollars are at list price: the free DBUs per named user a month and promotional discounts are taken off only where the bill marks the DBUs as free.",
+    card: "Genie spend by kind of use, entry point, user and workspace.",
     lede: "Genie spend from the bill, split three ways: by kind of use, by how Genie was reached, and by user and workspace.",
     questions: [
       "How much does Genie cost, and is it growing?",
@@ -376,12 +360,12 @@ const GUIDE_TABS: Record<string, GuideTabInfo> = {
       "Which users and workspaces use it most?",
     ],
     screen: [
-      { t: "Kind of use", d: "Genie Code is the assistant: it writes SQL or Python and a person runs it. Genie agents (formerly Genie spaces) answer questions and run SQL themselves. Genie One is the chat." },
-      { t: "Built in or in the browser", d: "Built into apps or agents: the channel is not UI, or it ran as a service principal. People in the browser: channel UI and a person. The channel shows as UI, or \"Non-UI · <value>\" for anything else." },
+      { t: "Kind of use", d: "Genie Code (writes SQL/Python, a person runs it) · Genie agents, formerly spaces (answer and run SQL) · Genie One (chat)." },
+      { t: "Built in or in the browser", d: "Built in = channel not UI, or run as a service principal; In the browser = UI channel and a person. Other channels show as \"Non-UI · <value>\"." },
       { t: "Who, where and how", d: "Each user or service principal by workspace, env, kind and channel, with DBUs, $ and the change against the period before." },
       { t: "Workspaces, agents and days", d: "Spend by workspace with its env, the top Genie agents, and spend per day." },
     ],
-    measure: "Billing rows with product GENIE: usage_metadata.genie.surface, channel and agent_id, and identity_metadata.run_as. The period before is the same number of days just before.",
+    measure: "GENIE billing rows: surface, channel, agent id and run-as identity; the period before is the same length.",
     judge: "Nothing on this page is judged.",
     price: "DBUs × list price (effective). A free-tier SKU is a real $0; a SKU with no price adds nothing and is counted apart.",
     troubles: [
@@ -391,14 +375,13 @@ const GUIDE_TABS: Record<string, GuideTabInfo> = {
     ],
     limits: [
       "Genie agents have ids, not names, in the system tables.",
+      "Dollars are list price; free DBUs per named user and promotions are taken off only where the bill marks them free.",
       "The SQL Genie agents run on warehouses is on Queries › Heavy queries (source Genie).",
     ],
   },
   compute: {
     lens: "Platform",
-    represents: "Whether warehouses, clusters and pools are sized and stopped right.",
-    flags: "Lower auto-stop, attach a cluster policy, resize for the pressure.",
-    wrong: "Out-of-region workspaces aren't assessed; older clusters don't record access mode.",
+    card: "Idle warehouses and clusters, auto-stop, autoscale churn, config risk.",
     lede: "Idle time on SQL warehouses and classic clusters, auto-stop and autoscale churn, and configuration risk.",
     questions: [
       "Which warehouses run while nobody queries them, and what does that cost?",
@@ -424,9 +407,7 @@ const GUIDE_TABS: Record<string, GuideTabInfo> = {
   },
   jobs: {
     lens: "Data engineering",
-    represents: "Which jobs fail, get slower or queue, what failures cost, and which pipelines idle.",
-    flags: "Fix by termination cause; add timeouts and health rules.",
-    wrong: "Slowdown needs enough runs on both sides; queue time is for single-task jobs only.",
+    card: "Failed and slow runs, their cost, hygiene, wrong compute, pipelines.",
     lede: "Failed and slow runs, what they cost, hygiene gaps, jobs on the wrong compute, and pipelines.",
     questions: [
       "Which jobs are failing, and why?",
@@ -434,8 +415,8 @@ const GUIDE_TABS: Record<string, GuideTabInfo> = {
       "Which jobs run on all-purpose compute?",
     ],
     screen: [
-      { sub: "failures", d: "One state line per job and pipeline over the window (ran fine, failed, ran slow, skipped), failed runs by cause with the top termination code's share, and the DBUs they burned." },
-      { sub: "slow", d: "Every job and pipeline by average run time (top 20 or 50, all as CSV), jobs whose last 7 days ran 1.5x or longer than the rest of the window, queue time, cold starts of successful task runs, and task runs that failed while their cluster was starting." },
+      { sub: "failures", d: "Daily state per job and pipeline; failed runs by cause, top code's share, and DBUs burned." },
+      { sub: "slow", d: "Run time ranking (top 20/50, CSV); jobs 1.5x slower in the last 7 days; queue time; cold starts; tasks failed while the cluster started." },
       { sub: "hygiene", d: "Retries, stale jobs, no timeout, no health rule, no owner, and jobs on all-purpose clusters." },
       { sub: "compute_fit", d: "Compute pressure, task cluster use and oversized jobs." },
       { sub: "pipelines", d: "Pipeline failures, retries and idle tails." },
@@ -457,9 +438,6 @@ const GUIDE_TABS: Record<string, GuideTabInfo> = {
   },
   queries: {
     lens: "Data and analytics engineering",
-    represents: "Which SQL costs most, spills or shuffles, fails, and whether warehouses queue.",
-    flags: "Tune the costliest query shapes; resize warehouses that queue.",
-    wrong: "Redacted statement text pools into one shape; per-query dollars leave out idle time.",
     lede: "The costliest SQL, inefficient shapes, failures, and warehouse capacity.",
     questions: [
       "Which queries cost the most?",
@@ -470,11 +448,11 @@ const GUIDE_TABS: Record<string, GuideTabInfo> = {
       { sub: "heavy", d: "Query groups ranked by estimated cost, with the files each read out of all its filters could have skipped." },
       { sub: "efficiency", d: "Spill, shuffle, pruning and cache reuse, worst warehouses first." },
       { sub: "reliability", d: "Failed statements and what they burned." },
-      { sub: "capacity", d: "Queue waits and warehouse pressure, the share of queries that waited for a slot by weekday and hour (UTC) and by warehouse and day, and time clients spent fetching results after execution ended." },
-      { sub: "trend", d: "One SQL warehouse measure by day or month (spill, shuffle, slot wait, provisioning wait, disk and result cache, query time, queries, failures), for all warehouses and for each one, with the busiest ten as a warehouse-by-day grid." },
+      { sub: "capacity", d: "Queue waits, warehouse pressure, share of queries that waited by hour (UTC) and by warehouse-day, and result fetch time." },
+      { sub: "trend", d: "One warehouse measure by day or month (spill, shuffle, waits, cache, time, counts, failures), all and per warehouse, plus a top-10 grid." },
       { sub: "team", d: "Cost by the tag or user behind each query." },
     ],
-    measure: "Each warehouse's bill is split across its statements by run time. Provisioning wait has three numbers: every query's wait for its warehouse to start added up (100 queries waiting the same 5 s read 500 s), the clock time at least one query waited (5 s), and the warehouse's own starts from system.compute.warehouse_events (STARTING to RUNNING: how many, how long, the longest, and starts that stopped before running).",
+    measure: "Warehouse bill split across statements by run time.",
     judge: "Spill, shuffle and queue limits from config/thresholds.yml.",
     price: "Failed statements' share of warehouse DBUs × list price counts as possible waste.",
     troubles: [
@@ -484,12 +462,15 @@ const GUIDE_TABS: Record<string, GuideTabInfo> = {
     limits: [
       "Per-query dollars are an estimate from run time, not a billed amount.",
     ],
+    extra: [{ items: [
+      "Provisioning wait, summed: every query's wait added up (100 queries × 5 s = 500 s).",
+      "Provisioning wait, clock: time at least one query waited (5 s).",
+      "Warehouse starts: STARTING→RUNNING from system.compute.warehouse_events (count, time, longest, aborted).",
+    ] }],
   },
   governance: {
     lens: "Security · data governance",
-    represents: "Who can reach sensitive data, where it spreads, and which admin or network events need a look.",
-    flags: "Narrow grants, mask sensitive columns, tag copies.",
-    wrong: "Grants, tags, masks and lineage cover the whole metastore and ignore the workspace filter. Untagged doesn't prove PII.",
+    card: "Grants, admin activity, sensitive-data reads, lineage, sharing.",
     lede: "Grants, admin activity, sensitive-data reads, lineage and sharing across the metastore.",
     questions: [
       "Who has broad access?",
@@ -517,9 +498,6 @@ const GUIDE_TABS: Record<string, GuideTabInfo> = {
   },
   storage: {
     lens: "Platform",
-    represents: "Which tables exist and grow, and whether table maintenance pays for itself.",
-    flags: "Confirm unused tables with their owners before retiring them; fix failing predictive optimization.",
-    wrong: "Table checks cover the whole metastore; a table unused in lineage may still be read outside Unity Catalog.",
     lede: "Table inventory, growth, unused tables, and maintenance cost and failures.",
     questions: [
       "Which tables grow fastest, and which look unused?",
@@ -532,7 +510,7 @@ const GUIDE_TABS: Record<string, GuideTabInfo> = {
     ],
     measure: "Table metadata and metrics history; maintenance runs from predictive optimization history.",
     judge: "No reads or writes in lineage flags a table as unused.",
-    price: "Not priced: maintenance is shown in DBU (the predictive-optimization history carries no SKU or price); storage bytes are on your cloud bill.",
+    price: "Not priced: maintenance in DBU only (no SKU in the history); storage bytes bill on your cloud.",
     troubles: [
       { see: "A used table reads unused", why: "It's read outside Unity Catalog lineage.", doit: "Confirm before you drop it." },
     ],
@@ -542,24 +520,22 @@ const GUIDE_TABS: Record<string, GuideTabInfo> = {
   },
   tags: {
     lens: "FinOps · governance · data engineering",
-    represents: "Which queries, jobs, pipelines, serverless notebooks, clusters, warehouses and workspaces miss the tags every object must carry, and at which level each tag is found.",
-    flags: "Tag the object or its compute; a workspace tag only covers what has neither.",
-    wrong: "A workspace tag is read from the bill day by day, so it counts only on days it is on most of the workspace's billed usage; spend from before it showed stays untagged.",
-    lede: "The mandatory tags (settings: mandatory_tag_keys, up to 5) traced from the most specific level out: the object's own tag, the job or pipeline that ran a query, its compute, its workspace. Missing at every level is truly missing.",
+    card: "What misses the mandatory tags (up to 5), level by level.",
+    lede: "Which objects miss a mandatory tag (up to 5 keys), checked from the object out to its workspace.",
     questions: [
-      "How many queries, jobs, pipelines, notebooks, clusters, warehouses and workspaces miss a mandatory tag?",
-      "Where does each tag come from: the object, the job that ran it, its compute, or its workspace?",
-      "Where do the queries without a query tag come from (SQL editor, dashboards, jobs), and does their compute cover them?",
+      "How many objects miss a mandatory tag?",
+      "Where does each tag come from?",
+      "Where do untagged queries come from, and does their compute cover them?",
     ],
     screen: [
       { t: "One number per type", d: "The share of each object type that misses a mandatory tag at every level." },
-      { t: "One card per type", d: "How many miss at least one mandatory tag and how many miss all, on the object alone and at every level; then, per tag, how many carry it themselves, how many get it from their compute or workspace, and how many miss it at every level. Missing means a mandatory tag is absent; other tags an object carries don't count." },
+      { t: "One card per type", d: "Per type: missing at least one tag / missing all, on the object alone and at every level; per tag: own, from compute or workspace, missing everywhere." },
       { t: "Where queries come from", d: "Queries by origin (SQL editor, dashboards, Genie, jobs, notebooks, tools): how many carry no query tag, and how many miss the tag at every level." },
-      { t: "What to tag", d: "The objects missing a mandatory tag at every level, and which ones. Queries are grouped by the warehouse or cluster they ran on, with where they came from." },
+      { t: "What to tag", d: "Objects missing a tag at every level; queries grouped by warehouse or cluster, with their origin." },
       { t: "Workspace tags", d: "Each workspace's tags, which count, and why the others don't." },
     ],
-    measure: "Queries: the query tags on each statement in the window, then the tags of the job or pipeline that ran it, then the warehouse's or cluster's own tags or bill (on serverless, the usage policy's tags on the notebook's, job's or pipeline's bill), then the workspace tag. Jobs and pipelines: their own tags, then their bill, then the workspace's. Serverless notebooks (those that ran queries in the window): their usage policy's tags on the bill, then the workspace's. Clusters and warehouses: their own tags or their bill, then the workspace's. A bill's tag counts when it is on the object's latest billed day and, on Azure, differs from the workspace's own value. Only objects that are not deleted count.",
-    judge: "A tag counts at a level when that level carries the key with any value; case, spaces, _ and - are ignored. A key found at several levels is credited to the most specific. A bill value equal to the workspace's own is the workspace's tag: on Azure it is copied onto every bill row. A value a usage policy put on the bill is the policy's, even when it equals the workspace's.",
+    measure: "Most specific level first, then outward.",
+    judge: "Key present with any value.",
     price: "Not priced; the counts are queries or objects.",
     troubles: [
       { see: "Every query misses its own tags", why: "Few teams set query tags; they are set per session or per query. SQL editor queries rarely carry any.", doit: "Read Where queries come from: tag the warehouses those queries run on." },
@@ -571,9 +547,27 @@ const GUIDE_TABS: Record<string, GuideTabInfo> = {
     ],
     limits: [
       "Workspace tags come from the bill: Databricks has no table that lists them.",
-      "Cost follows each day's bill; performance uses a warehouse's, cluster's, job's or pipeline's latest tags for the whole window. Both use the workspace tag valid on each day.",
+      "Cost uses each day's bill.",
+      "Performance uses each object's latest tags for the whole window; both use the workspace tag valid that day.",
+      "Set the keys in settings: mandatory_tag_keys.",
       "Serverless notebooks are counted only when they ran queries in the window; notebooks carry no tags of their own.",
       "Deleted jobs, clusters and warehouses are left out only on exports that record delete times.",
+    ],
+    extra: [
+      { h: "Measure: most specific level first, then outward", items: [
+        "Queries: query tag → job/pipeline → warehouse or cluster (own tags or bill) → workspace.",
+        "Jobs and pipelines: own tags → bill → workspace.",
+        "Serverless notebooks (ran queries in the window): usage-policy tags on the bill → workspace.",
+        "Clusters and warehouses: own tags or bill → workspace.",
+        "A bill tag counts on the latest billed day; on Azure only if it differs from the workspace value.",
+        "Deleted objects are left out.",
+      ] },
+      { h: "Judge: key present with any value", items: [
+        "Case, spaces, _ and - are ignored.",
+        "Found at several levels → credited to the most specific.",
+        "Bill value = workspace value → the workspace's tag (Azure copies it to every row).",
+        "Value set by a usage policy → the policy's.",
+      ] },
     ],
     tables: ["system.query.history", "system.lakeflow.jobs", "system.compute.warehouses", "system.compute.clusters", "system.billing.usage"],
     queries: [
@@ -584,9 +578,7 @@ const GUIDE_TABS: Record<string, GuideTabInfo> = {
   },
   coverage: {
     lens: "Everyone",
-    represents: "What this audit could see, what it couldn't, and why.",
-    flags: "Grant the missing table, then re-run the export.",
-    wrong: "No data means nothing happened or nothing was readable, never zero.",
+    card: "Readable tables, checks that couldn't run, fixed limits.",
     lede: "Which system tables were readable, which checks couldn't run and why, and the fixed limits of this audit.",
     questions: [
       "Which checks ran?",
@@ -626,7 +618,7 @@ function splitSentences(text: string | null | undefined): string[] {
   if (!text) return [];
   const trimmed = String(text).trim();
   if (!trimmed || trimmed.toLowerCase().startsWith("n/a")) return [];
-  return trimmed.split(/(?<=[.!?])\s+/).filter(Boolean);
+  return trimmed.replace(/\b(e\.g|i\.e|etc|vs)\./g, "$1․").split(/(?<=[.!?])\s+(?![^()]*\))/).map((x) => x.replace(/․/g, ".")).filter(Boolean);
 }
 
 const ANYWHERE_TIER_BRACKET_RE = /\(([^()]*(?:free|config|spend)[^()]*)\)/i;
@@ -680,9 +672,54 @@ function desnakeProse(text: string | null | undefined): string | null | undefine
 // format pass rather than a backend change. Runs before codeifyProse, which handles snake_case.
 const STATUS_PREFIX_RE = /^status\s*=\s*[A-Z_]+(?:\s+or\s+[A-Z_]+)?\s*-?\s*/i;
 const DEFAULT_PERCENT_RE = /(\d+(?:\.\d+)?)\s*\(default\)\s*percent/gi;
-// A report capped at Warn says so, since its own rule still names Critical.
-function capNote(f: GuideFinding | null): string {
-  return f && f.severity_cap === "WARN" ? " Capped at Warn: a trend on its own never reads Critical." : "";
+// The tab table's short form: one bullet per level, first sentence only; the check page has the rest.
+function shortFlagBullets(f: GuideFinding): { label: string; text: string }[] {
+  // A capped check never reads Critical, so its Critical rule is the top Warn band.
+  const label = f.severity_cap === "WARN"
+    ? { WARN: "Warn", CRITICAL: "Warn (top band)", BOTH: "Warn" }
+    : { WARN: "Warn", CRITICAL: "Critical", BOTH: "Flags" };
+  const out: { label: string; text: string }[] = splitFlagClauses(f.investigate_if || "")
+    .map((c) => ({ label: label[c.level], text: firstClause(c.body) }))
+    .filter((b) => b.text.length >= 12 && !/^(or\s|\()/i.test(b.text))
+    .map((b) => ({ label: b.label, text: upperFirst(b.text) }));
+  if (!out.length && f.investigate_if) {
+    const t = firstClause(f.investigate_if.replace(STATUS_PREFIX_RE, ""));
+    if (t) out.push({ label: "Flags", text: upperFirst(t) });
+  }
+  return out;
+}
+
+// Verdict colour class for a bullet label: Critical/Warn/problem words bad, OK/pass good.
+function verdictCls(label: string): string {
+  if (/^critical/i.test(label)) return "gd-v-crit";
+  if (/^(warn|flags|not |missing|failed|read error|untagged)/i.test(label)) return "gd-v-warn";
+  if (/^(ok|pass|counted|saved|covered)/i.test(label)) return "gd-v-ok";
+  return "";
+}
+
+// Short label for a param: its name plus the unit the name carries.
+const PARAM_UNITS: [RegExp, string][] = [
+  [/_pct$/, "%"], [/_usd$/, "$"], [/_gb$/, "GB"], [/_mb$/, "MB"], [/_seconds$/, "s"], [/_minutes$/, "min"], [/_hours$/, "h"], [/_days$/, "days"],
+];
+function paramLabel(name: string): string {
+  const base = humanizeParamName(name.replace(/_(pct|usd|gb|mb|seconds|minutes|hours|days)$/, ""));
+  const u = PARAM_UNITS.find(([re]) => re.test(name));
+  return u ? `${base}, ${u[1]}` : base;
+}
+
+// "SKEWED: ...; WAITING: ..." splits into one piece per upper-case lead word.
+function splitRungCases(text: string): string[] {
+  return String(text || "").split(/;\s+(?=[A-Z_]{3,}[\s:(-])/).filter(Boolean);
+}
+function boldLead(text: string): React.ReactNode {
+  const m = /^([A-Z_]{3,})\b(.*)$/s.exec(text);
+  return m ? <React.Fragment><b>{m[1]}</b>{codeifyProse(m[2])}</React.Fragment> : codeifyProse(text);
+}
+// First clause of a long sentence: cut at " - " or ";", then at 25 words.
+function shortClause(text: string): string {
+  const t = String(text || "").split(/;\s|\s-\s/)[0].replace(/[\s;.,]+$/, "");
+  const w = t.split(/\s+/);
+  return w.length > 25 ? `${w.slice(0, 25).join(" ")}…` : t;
 }
 
 // A stat box's own label -- short, never the full param.meaning sentence (that goes in its title
@@ -695,11 +732,10 @@ function humanizeParamName(name: string): string {
 // "(default)" after every threshold is noise; one closing note says where they are set.
 function cleanFlagPrefix(text: string): string {
   if (!text) return text;
-  let s = String(text).replace(STATUS_PREFIX_RE, "");
+  let s = String(text).replace(STATUS_PREFIX_RE, "").replace(/^(?:status\s+)?(?:OK|WARN|CRITICAL)\s*[-–:]\s+/i, "");
   s = s.replace(DEFAULT_PERCENT_RE, "$1%");
-  const stripped = s.replace(/\s*\(default\)/g, "");
-  if (stripped !== s) s = `${stripped.replace(/\s*$/, "")} Defaults; set in config/thresholds.yml.`;
-  return s.charAt(0).toUpperCase() + s.slice(1);
+  s = s.replace(/\s*\(default\)/g, "");
+  return upperFirst(s);
 }
 
 function appTabLinkProps(tab: string, subtab: string | null | undefined) {
@@ -797,11 +833,11 @@ function TagReachTable({ findings }: { findings: GuideFinding[] }) {
   return (
     <div>
       <h3>What the tag filter reaches</h3>
-      <table className="tag-rollup-table" style={{ width: "100%", fontSize: 12, borderCollapse: "collapse" }}>
+      <table className="tag-rollup-table">
         <thead>
           <tr className="faint">
-            <th style={{ textAlign: "left" }}>The filter follows</th>
-            <th style={{ textAlign: "right" }}>Checks</th>
+            <th>The filter follows</th>
+            <th>Checks</th>
           </tr>
         </thead>
         <tbody>
@@ -812,10 +848,10 @@ function TagReachTable({ findings }: { findings: GuideFinding[] }) {
                 <div className="faint">{g.note}</div>
                 <details>
                   <summary className="faint">Show checks</summary>
-                  <div className="faint">{byGroup[g.key].sort().join(", ")}</div>
+                  <ul className="faint">{byGroup[g.key].sort().map((n) => <li key={n}>{n}</li>)}</ul>
                 </details>
               </td>
-              <td className="mono" style={{ textAlign: "right", verticalAlign: "top" }}>{byGroup[g.key].length}</td>
+              <td className="mono">{byGroup[g.key].length}</td>
             </tr>
           ))}
         </tbody>
@@ -833,126 +869,105 @@ function renderHowBody(slug: string, app: GuideApp, findings: GuideFinding[]): R
         ? ["Databricks system tables", "Computed on Databricks", "Result files", "This app"]
         : ["Databricks system tables", "Snapshot files", "Build (DuckDB)", "This app"];
       return (
-        <div>
-          <div className="guide2-flow">
-            {steps.map((step, i) => (
-              <React.Fragment key={step}>
-                {i > 0 && <span className="guide2-flow-arrow">&rarr;</span>}
-                <span className="guide2-flow-step">{step}</span>
-              </React.Fragment>
-            ))}
-          </div>
-          {direct ? (
-            <p>
-              Your own credentials ran every check on Databricks and saved only the result rows
-              locally -- nothing is sent anywhere else. Every check names the exact table(s) it
-              reads ("Where the data comes from" on its own page), and the data on screen was
-              computed on <span className="mono">{(direct.as_of || "").slice(0, 10)}</span>.
-            </p>
-          ) : (
-            <p>
-              Your own credentials read the system tables into local files -- nothing is sent
-              anywhere else. Every check names the exact table(s) it reads, and the data on
-              screen is as of <span className="mono">{app.as_of || "no snapshot captured yet"}</span>.
-            </p>
-          )}
+        <div className="guide2-flow">
+          {steps.map((step, i) => (
+            <React.Fragment key={step}>
+              {i > 0 && <span className="guide2-flow-arrow">&rarr;</span>}
+              <span className="guide2-flow-step">{step}</span>
+            </React.Fragment>
+          ))}
         </div>
       );
     }
     case "window":
       return (
-        <p>
-          Most checks use a rolling window (<span className="mono">{app.window_options.join("/")}</span> days)
-          up to the export. Today counts up to the moment the export ran and the top bar marks it
-          "today partial"; billing lags a few hours, so its last hours can be missing
-          (<span className="mono">include_today: false</span> exports full days only). A
-          snapshot shorter than the window you picked is marked, so a partial window never reads
-          as a complete one. A "snapshot" check has no window at all: it shows the current state
-          (the latest known configuration), not a period.
-        </p>
+        <ul>
+          <li>Today counts up to the export moment; the top bar says "today partial".</li>
+          <li>Billing lags a few hours, so today's last hours can be missing. <span className="mono">include_today: false</span> exports full days only.</li>
+          <li>A snapshot shorter than your window is marked, so a partial window never reads as complete.</li>
+          <li>A snapshot check has no window: it shows the latest known configuration.</li>
+        </ul>
       );
     case "status":
       return <StatusMeaningsGrid />;
     case "floors":
       return (
-        <p>
-          Some checks also carry a materiality floor: a row that would flag Critical or Warn, but
-          whose own dollar or unit column sits under a set minimum, reads OK instead and is marked{" "}
-          <span className="mono">below_floor</span> -- too small to be worth judging. Every count,
-          the worst status shown and every $ total already exclude floored rows; a "Not assessed"
-          row is never touched by a floor. Floors are set per check in{" "}
-          <span className="mono">config/materiality.yml</span>
-          {app.materiality_floors_configured != null
-            ? `, ${app.materiality_floors_configured} checks have one today.`
-            : "."}
-        </p>
+        <ul>
+          <li>The row is marked <span className="mono">below_floor</span>.</li>
+          <li>Counts, worst status and $ totals already exclude floored rows.</li>
+          <li>A Not assessed row is never floored.</li>
+          <li>Floors are set per check in <span className="mono">config/materiality.yml</span>.</li>
+        </ul>
       );
     case "money":
       return (
         <div>
-          <p>
-            Every dollar figure is usage &times; list price (effective) (today's what-if
-            discount: <span className="mono">{fmtPct(app.discount_pct * 100)}</span>). This is never
-            your real invoice, and it never includes cloud VM, storage or network-egress cost --
-            only Databricks usage itself. The discount is a "what if we negotiated X% off list"
-            figure, not a real contract rate the app knows.
-          </p>
-          <p>
-            "Possible waste" means idle warehouse minutes
-            {app.idle_gap_seconds != null ? ` over ${app.idle_gap_seconds}s at a stretch` : ""}{" "}
-            (including the gap from start to first query, and from last query to auto-stop), idle
-            classic-cluster nodes (near-zero CPU while billed), failed or timed-out job runs
-            (including their repaired attempts), failed SQL statements, and serving endpoints
-            billed with zero requests. No figure here is a forecast, and none is a "per month"
-            number -- every one states the exact dates it covers.
-          </p>
+          <ul>
+            <li>The discount ({fmtPct(app.discount_pct * 100)} today) is a "what if we negotiated X% off list", not your contract rate.</li>
+            <li>Only Databricks usage: no cloud VM, storage or network-egress cost.</li>
+          </ul>
+          <p><b>Possible waste</b></p>
+          <ul>
+            <li>Idle warehouse minutes{app.idle_gap_seconds != null ? ` over ${app.idle_gap_seconds}s at a stretch` : ""}, incl. start→first query and last query→auto-stop</li>
+            <li>Idle classic-cluster nodes (near-zero CPU while billed)</li>
+            <li>Failed or timed-out job runs, incl. repaired attempts</li>
+            <li>Failed SQL statements</li>
+            <li>Serving endpoints billed with zero requests</li>
+          </ul>
+          <p>No forecasts, no "per month": every figure states its dates.</p>
         </div>
       );
     case "steps":
       return (
-        <p>
-          Every step in a check's "What to do" is tagged{" "}
-          <Badge kind="info">FREE</Badge> (a setting change or a read -- no spend),{" "}
-          <Badge kind="info">CONFIG</Badge> (changes how something is configured, not what it
-          costs directly) or <Badge kind="info">SPEND</Badge> (a step that costs money to carry
-          out). A threshold named inside a step shows "default" when nobody has changed it, or
-          "your setting" once <span className="mono">config/thresholds.yml</span> overrides it.
-        </p>
+        <div>
+          <ul className="gd-step-badges">
+            <li><Badge kind="info">FREE</Badge> a setting change or a read, no spend</li>
+            <li><Badge kind="info">CONFIG</Badge> changes how something is configured, not its cost directly</li>
+            <li><Badge kind="info">SPEND</Badge> costs money to carry out</li>
+          </ul>
+          <p>A threshold in a step shows "default", or "your setting" once <span className="mono">config/thresholds.yml</span> overrides it.</p>
+        </div>
       );
     case "tags":
       return (
         <div>
-          <p>
-            Spend is attributed query tag &rarr; compute tag &rarr; workspace tag &rarr; account:
-            each level tries a more specific tag before falling back to a broader one. Every level
-            shows its own "no tag, cannot be attributed" row with a count and a dollar figure, and
-            the levels always sum back to the same billing total -- attribution narrows the picture,
-            it never invents or drops spend. The filters this app offers are whichever tag keys your
-            own account actually uses, never a fixed list.
-          </p>
-          <p>
-            <b>What the Tag filter does today.</b>
-          </p>
           <ul>
-            <li><b>Spend</b> (Overview, Cost): each dollar takes its most specific tag: the query tag for the part of a warehouse's time Databricks attributes to queries, else the job's or pipeline's tag, else the tag on the bill (warehouse, cluster or budget policy), else the workspace's. The values add up to the bill.</li>
+            <li>Each level has its own "no tag, cannot be attributed" row with a count and $.</li>
+            <li>Levels always sum to the same billing total: nothing is invented or dropped.</li>
+            <li>Filters offer the tag keys your account uses, not a fixed list.</li>
+          </ul>
+          <p><b>What the Tag filter does today</b></p>
+          <ul>
+            <li>
+              <b>Spend</b> (Overview, Cost): each dollar takes its most specific tag, values add up to the bill.
+              <ol>
+                <li>Query tag (for the warehouse time Databricks attributes to queries)</li>
+                <li>Job or pipeline tag</li>
+                <li>Bill tag (warehouse, cluster, budget policy)</li>
+                <li>Workspace tag</li>
+              </ol>
+            </li>
             <li><b>Single queries, jobs, pipelines, runs, warehouses and clusters:</b> the row's own tag, else the next level up, as listed below.</li>
             <li><b>Tables, schemas and catalogs:</b> their Unity Catalog tags.</li>
             <li><b>Several tag names:</b> a row must match every name; the values picked under one name are alternatives.</li>
-            <li><b>The Tags page:</b> counts the objects whose own tag, bill or workspace tag matches, and lists those that match only through their workspace. A SQL warehouse query counts by its own query tag first.</li>
+            <li>
+              <b>The Tags page:</b>
+              <ul>
+                <li>Counts objects whose own, bill or workspace tag matches.</li>
+                <li>Lists those that match only through their workspace.</li>
+                <li>A SQL warehouse query counts by its own query tag first.</li>
+              </ul>
+            </li>
             <li><b>Workspace tags on any cloud:</b> from <span className="mono">config/workspace.csv</span> (workspace_id, then one column per tag) for the workspaces it lists; the rest keep their tags from the bill (Azure only).</li>
           </ul>
-          <p>
-            <b>What it doesn't do yet.</b>
-          </p>
+          <p><b>What it doesn't do yet</b></p>
           <ul>
             <li><b>Queries › Trend and the Capacity waits</b> read query slices with a tag filter on, so each query counts by its own query tag first.</li>
-            <li><b>Warehouse starts, clock waits, pressure, the hourly grids and top queries by $</b> stay per warehouse or per query group: they follow the warehouse's and workspace's tags, and say so when the tag is only on queries.</li>
+            <li><b>Warehouse starts, clock waits, pressure, hourly grids, top queries by $:</b> per warehouse or query group, so they follow warehouse then workspace tags, and say so when the tag is only on queries.</li>
             <li><b>Idle warehouse time</b> has no query, so its dollars follow the warehouse's tag, then the workspace's.</li>
             <li><b>Checks no tag can reach</b> (price lists, grants, account settings) are never filtered and show "tag n/a".</li>
           </ul>
-          <p>
-            <b>Which tag each object gets.</b> For each tag key, the first level that has it wins:
-          </p>
+          <p><b>Which tag each object gets.</b> For each tag key, the first level that has it wins:</p>
           <ul>
             <li><b>Query:</b> its own query tag, else the tag of the job or pipeline that ran it, else its compute's (the warehouse's or cluster's own tag or bill; on serverless, the usage policy's), else its workspace's.</li>
             <li><b>Job or pipeline:</b> its own tag, else its compute's tag, else its workspace's.</li>
@@ -960,135 +975,119 @@ function renderHowBody(slug: string, app: GuideApp, findings: GuideFinding[]): R
             <li><b>Serverless notebook:</b> its usage policy's tag, else its workspace's.</li>
             <li><b>Workspace:</b> its own tag; on Azure, the workspace resource's tag.</li>
           </ul>
-          <p>
-            On Azure, the workspace's own tag is copied onto every bill row, classic and serverless.
-            On the Tags page a bill value equal to it counts as the workspace's, so a warehouse with
-            no tag of its own is not credited with it. A value on a bill with a usage policy counts as
-            the policy's, even when it equals the workspace's. To give two warehouses different tags,
-            tag each warehouse; a usage policy on a serverless warehouse's bill counts too.
-          </p>
-          <p>
-            Dollars follow each day's bill: Databricks copies a warehouse's or cluster's tags onto its
-            bill, so each day's spend carries the value of that day. When an object's own tag and its
-            bill disagree, the cost follows the bill, and the Tags page lists the object under
-            "tagged one way, billed another". Performance by tag uses a warehouse's or cluster's
-            latest tags for the whole window, and the workspace tag valid on each query's day.
-          </p>
+          <p><b>Azure</b></p>
+          <ul>
+            <li>The workspace tag is copied onto every bill row, classic and serverless.</li>
+            <li>Tags page: a bill value equal to it counts as the workspace's, so an untagged warehouse isn't credited.</li>
+            <li>A value on a bill with a usage policy counts as the policy's, even if equal.</li>
+            <li>To split two warehouses, tag each one (a usage policy on a serverless bill counts too).</li>
+          </ul>
+          <p><b>Dollars follow the bill</b></p>
+          <ul>
+            <li>Each day's bill carries that day's warehouse/cluster tags.</li>
+            <li>Own tag and bill disagree: cost follows the bill; the Tags page lists it under "tagged one way, billed another".</li>
+            <li>Performance by tag: latest warehouse/cluster tags for the whole window; workspace tag valid on each query's day.</li>
+          </ul>
           <p>
             <b>Example.</b> Warehouse BI is tagged cost_center=A on itself; its bill reads
             cost_center=B since 4 Sep. A query on BI tagged cost_center=C is charged to C. A query with
             no tag is charged to B from 4 Sep, and to the bill's earlier value before. The Tags page
             counts BI as tagged on itself and lists it as tagged A, billed B.
           </p>
-          <p>
-            <b>Dates and values on the Tags page.</b> "since 4 Sep": the value has been on the bill
-            every billed day since. "gone after 1 Sep": the key was on the bill, but not on its latest
-            day. "(before: A)": other values the key had on the bill. "last billed 12 Jun": no bill
-            for over a week, so the tags shown are that day's. "mixed: red, blue": a workspace whose
-            billed values split with none on most; it covers nothing.
-          </p>
-          <p>
-            <b>Workspace tags.</b> Databricks has no table that lists a workspace's tags, so each
-            one is read from the workspace's bill, where Azure copies the workspace resource's tags
-            onto every row. A tag counts as the workspace's when at
-            least {fmtPct((app.tag_coverage_floor || 0) * 100, 0)} of its billed usage without a usage policy carries the key and
-            one value has at least {fmtPct((app.tag_share_floor || 0) * 100, 0)} of it (settings{" "}
-            <span className="mono">tag_coverage_floor</span> and{" "}
-            <span className="mono">tag_share_floor</span>). Then it also covers the workspace's
-            serverless usage, queries, jobs and compute that have no tag of their own. When the key
-            is there but split between values, it reads "mixed" and covers nothing. A workspace
-            with no billed usage has no workspace tag to read. Cost › Allocation › Workspace tags
-            shows each tag's share.
-          </p>
-          <p>
-            <b>Mandatory tags.</b> The tags every object must carry are set in{" "}
-            <span className="mono">mandatory_tag_keys</span>
-            {app.mandatory_tag_keys ? ` (now ${app.mandatory_tag_keys.join(", ")})` : ""}, up to 5. The Tags
-            page counts the queries, jobs, pipelines, serverless notebooks, clusters, warehouses and
-            workspaces that miss them, level by level, and where queries without a query tag come
-            from.
-          </p>
-          <p>
-            <b>Chargeback by tag value.</b> Cost › Chargeback › Tag value splits the window's spend by
-            one tag key at a time. Pick a workspace first, then a key. Mandatory tags come first;
-            then keys with 2+ values inside a workspace (they split spend), keys with one value per
-            workspace (the same split as the Workspace view) and keys with one value only (they split
-            nothing). The workspace list holds only workspaces with tagged spend in the window, so it
-            is usually shorter than the account's workspace count: a workspace with no spend in the
-            window, or whose spend carries no tag at all, has nothing to split. The Tags page's
-            Workspaces card counts every workspace with spend.
-          </p>
+          <p><b>Dates and values on the Tags page</b></p>
+          <div className="gd-table-wrap">
+            <table className="gd-table gd-term-table">
+              <thead><tr><th>Term</th><th>Meaning</th></tr></thead>
+              <tbody>
+                <tr><td>since 4 Sep</td><td>On the bill every billed day since.</td></tr>
+                <tr><td>gone after 1 Sep</td><td>Was on the bill, not on its latest day.</td></tr>
+                <tr><td>(before: A)</td><td>Other values the key had on the bill.</td></tr>
+                <tr><td>last billed 12 Jun</td><td>No bill for over a week; the tags are that day's.</td></tr>
+                <tr><td>mixed: red, blue</td><td>Billed values split, none on most; covers nothing.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p><b>Workspace tags</b></p>
+          <ul>
+            <li>No Databricks table lists workspace tags; each is read from the workspace's bill (Azure copies them onto every row).</li>
+            <li>
+              Counts when ≥{fmtPct((app.tag_coverage_floor || 0) * 100, 0)} of billed usage without a usage policy has the key and one value has ≥{fmtPct((app.tag_share_floor || 0) * 100, 0)}
+              {" "}(<span className="mono">tag_coverage_floor</span>, <span className="mono">tag_share_floor</span>).
+            </li>
+            <li>Then it also covers untagged serverless usage, queries, jobs and compute.</li>
+            <li>Split values read "mixed" and cover nothing; no billed usage = no workspace tag.</li>
+            <li>Shares: Cost › Allocation › Workspace tags.</li>
+          </ul>
+          <p><b>Mandatory tags</b></p>
+          <ul>
+            <li>Set in <span className="mono">mandatory_tag_keys</span>{app.mandatory_tag_keys ? ` (now ${app.mandatory_tag_keys.join(", ")})` : ""}, up to 5.</li>
+            <li>The Tags page counts queries, jobs, pipelines, serverless notebooks, clusters, warehouses and workspaces missing them, level by level, and where untagged queries come from.</li>
+          </ul>
+          <p><b>Chargeback by tag value</b></p>
+          <ul>
+            <li>Cost › Chargeback › Tag value splits spend by one key: pick a workspace, then a key.</li>
+            <li>Key order: mandatory → 2+ values in a workspace → one value per workspace (= Workspace view) → one value only (splits nothing).</li>
+            <li>The workspace list holds only workspaces with tagged spend in the window, so it is usually shorter than the account count; the Tags page Workspaces card counts every workspace with spend.</li>
+          </ul>
           <TagReachTable findings={findings} />
         </div>
       );
     case "names":
       return (
-        <p>
-          Once a name is known, a row shows it as "name (id)" rather than the bare id. When no
-          name could be resolved, the row says why ("no name: &lt;reason&gt;") instead of leaving
-          a blank or guessing at one.
-        </p>
+        <ul>
+          <li>Known name: shown as "name (id)".</li>
+          <li>Unknown: "no name: &lt;reason&gt;", never blank or guessed.</li>
+        </ul>
       );
     case "coverage":
       return (
-        <p>
-          Coverage &amp; Gaps shows which system tables this snapshot actually captured, and what
-          enabling one needs -- most schemas need only{" "}
-          <span className="mono">{app.default_enable}</span>, and a check's own "Where the data
-          comes from" names anything extra. Regional system tables cover only the metastore's own
-          region; billing and the workspace list are the account-wide exceptions. Every check also
-          carries its own confidence and any known issue with the vendored query behind it, in its
-          own "For reviewers and admins".
-        </p>
+        <ul>
+          <li>Shows which system tables this snapshot captured and what enabling each needs.</li>
+          <li>Most schemas need only <span className="mono">{app.default_enable}</span>; a check's "Where the data comes from" names anything extra.</li>
+          <li>Regional tables cover only the metastore's region; billing and the workspace list are account-wide.</li>
+          <li>Each check's "For reviewers and admins" gives its confidence and known query issues.</li>
+        </ul>
       );
     case "coverage-data-sources":
       return (
         <div>
-          <p>
-            The Sources tab lists every system table this app can read: rows captured, the date
-            range or "current state" it covers, how many checks use it, and (if empty) what fills
-            it in. It splits them into <b>With rows</b> (captured data this snapshot), <b>Empty</b>{" "}
-            (read fine, 0 rows -- not a verified zero) and <b>Missing</b> (could not be read at all).
-            Alongside that inventory, <b>System table coverage</b> is a real check of its own: it
-            flags a table whose data has gone stale or has a gap inside this window (WARN), not
-            just whether the table exists. <b>This audit's own usage</b> is a reference row showing
-            how much of each warehouse's own traffic and spend was this audit itself.
-          </p>
-          <p>
-            <b>What to do:</b> for a Missing source, grant the account or metastore the read the
-            table needs (the row itself names the schema); for an Empty one, read its own "what
-            fills it" note -- some are a true zero, others need a feature turned on first; for a
-            System table coverage row flagged WARN, check that table's own ingestion job or grant.
-          </p>
+          <ul>
+            <li>Sources tab: every readable system table: rows, date range or "current state", checks using it, what fills it if empty.</li>
+            <li><b className="gd-v-ok">With rows:</b> captured this snapshot. <b className="gd-v-warn">Empty:</b> read fine, 0 rows, not a verified zero. <b className="gd-v-warn">Missing:</b> couldn't be read.</li>
+            <li>System table coverage is a real check: WARN when a table is stale or has a gap in this window.</li>
+            <li>This audit's own usage: reference row with the audit's share of each warehouse's traffic and spend.</li>
+          </ul>
+          <p><b>What to do</b></p>
+          <ul>
+            <li>Missing → grant the read the row names (account or metastore).</li>
+            <li>Empty → read its "what fills it" note (true zero, or a feature to turn on).</li>
+            <li>Coverage WARN → check that table's ingestion job or grant.</li>
+          </ul>
           <a className="ck-link" {...appTabLinkProps("coverage", "sources")}>{"Back to Coverage & Gaps › Sources →"}</a>
         </div>
       );
     case "coverage-couldnt-check":
       return (
         <div>
-          <p>
-            The Not assessed tab lists every check that judged nothing this window: its build
-            was <b>not assessed</b> (skipped or failed), it hit a <b>read error</b>, it found{" "}
-            <b>nothing in this window</b>, or your filters excluded every row. None of these is a
-            pass, even the ones that ran cleanly and found nothing.
-          </p>
-          <p>
-            <b>What to do:</b> open the check's own page and read "If it says Not assessed or is
-            empty" for the exact reason and, where there is one, the grant or setting that fixes it.
-          </p>
+          <p>Checks that judged nothing this window, never a pass:</p>
+          <ul>
+            <li><b className="gd-v-warn">Not assessed:</b> build skipped or failed</li>
+            <li><b className="gd-v-warn">Read error</b></li>
+            <li><b>Nothing in this window</b></li>
+            <li><b>Filtered out:</b> your filters excluded every row</li>
+          </ul>
+          <p><b>What to do:</b> open the check's page → "If it says Not assessed or is empty" for the reason and the grant or setting that fixes it.</p>
           <a className="ck-link" {...appTabLinkProps("coverage", "couldnt")}>{"Back to Coverage & Gaps › Not assessed →"}</a>
         </div>
       );
     case "coverage-known-limitations":
       return (
         <div>
-          <p>
-            The Known limitations tab lists fixed modelling choices that change how to read a
-            number elsewhere in the app -- a ranking-by-size check that never reads Critical or
-            Warn, autoscale churn counted in events rather than time, and the like. These are not
-            bugs to fix; they are how the check was built.
-          </p>
-          <p><b>What to do:</b> nothing to configure -- just read the affected number with its own note in mind.</p>
+          <ul>
+            <li>Fixed modelling choices, not bugs.</li>
+            <li>E.g. a ranking-by-size check never reads Critical or Warn; autoscale churn is counted in events, not time.</li>
+            <li>Read the affected number with its note in mind.</li>
+          </ul>
           <a className="ck-link" {...appTabLinkProps("coverage", "limits")}>{"Back to Coverage & Gaps › Known limitations →"}</a>
         </div>
       );
@@ -1104,10 +1103,10 @@ const STATUS_MEANING_ROWS = [
   { kind: "warn", word: "Warn", d: "Flagged, but not the worst kind this check has." },
   { kind: "ok", word: "OK", d: "Ran on real data in this window and found nothing. A verified pass." },
   { kind: "ranked", word: "Ranked", d: "Sorted by size only. Big isn't the same as wrong." },
-  { kind: "not_assessed", word: "Not assessed", d: "Did not run in this export. Never a pass: its numbers read \"–\" with the reason, and the top bar's \"N of M checks ran\" leaves it out." },
-  { kind: "reference", word: "No data", d: "Ran, but nothing happened in this window. Not a verified zero -- the checks table's own \"No data\" tab." },
-  { kind: "reference", word: "No data (filtered)", d: "Rows exist, but your workspace or tag filters exclude them all -- also the \"No data\" tab." },
-  { kind: "reference", word: "Reference", d: "A list to look things up in -- no pass or fail. A reference list that flags rows Critical or Warn counts as Critical or Warn, like any check." },
+  { kind: "not_assessed", word: "Not assessed", d: "Didn't run in this export. Never a pass: numbers show \"–\" and the reason; left out of \"N of M checks ran\"." },
+  { kind: "reference", word: "No data", d: "Ran; nothing happened in this window. Not a verified zero. Listed on the \"No data\" tab." },
+  { kind: "reference", word: "No data (filtered)", d: "Rows exist; your workspace or tag filters hide them all. Also on \"No data\"." },
+  { kind: "reference", word: "Reference", d: "Lookup list, no pass or fail. If it flags rows Critical or Warn, it counts like a check." },
 ];
 function StatusMeaningsGrid() {
   return (
@@ -1137,55 +1136,51 @@ function guideFaqs() {
     {
       q: "Is this my Databricks invoice?",
       a: (
-        <React.Fragment>
-          No. Every dollar is your Databricks usage &times; the list price Databricks publishes,
-          minus a what-if discount you can set (today's setting shows on the "How dollars are
-          worked out" topic above). It never includes your cloud provider's VM, storage or network
-          bill, and it never knows your negotiated rate. Use it to compare and rank, not to
-          reconcile an invoice. <a {...guideLinkProps("how-money")}>How the dollar figures are worked out &rarr;</a>
-        </React.Fragment>
+        <ul className="gd-bullets">
+          <li>No: Databricks usage × published list price, minus your what-if discount.</li>
+          <li>Leaves out your cloud VM, storage and network bill, and your negotiated rate.</li>
+          <li>Use it to compare and rank, not to reconcile an invoice. <a {...guideLinkProps("how-money")}>How dollars are worked out &rarr;</a></li>
+        </ul>
       ),
     },
     {
       q: "Why is a panel empty, or a whole screen \"no data\"?",
       a: (
-        <React.Fragment>
-          An empty panel means the check ran and found nothing, or the source behind it isn't
-          available in this snapshot -- never "all clear" by omission.{" "}
-          <a {...appTabLinkProps("coverage", "sources")}>Coverage & Gaps &rarr;</a> says which sources are missing and what filling them would unlock.
-        </React.Fragment>
+        <ul className="gd-bullets">
+          <li>Ran and found nothing, or the source isn't in this snapshot. Never "all clear".</li>
+          <li><a {...appTabLinkProps("coverage", "sources")}>Coverage & Gaps &rarr;</a> lists the missing sources.</li>
+        </ul>
       ),
     },
     {
-      q: "What counts as possible waste -- and what doesn't?",
+      q: "What counts as possible waste, and what doesn't?",
       a: (
-        <React.Fragment>
-          Idle warehouse minutes, idle classic-cluster nodes, failed or timed-out job runs, failed
-          SQL statements, and serving endpoints billed with zero requests -- each priced at list, a
-          lower bound and never a forecast. Spend on premium SKUs (serverless, Photon) is worth a
-          look but is not counted as waste. <a {...guideLinkProps("how-money")}>More on how dollars are worked out &rarr;</a>
-        </React.Fragment>
+        <ul className="gd-bullets">
+          <li>Counted: idle warehouse minutes, idle classic-cluster nodes, failed or timed-out job runs, failed SQL statements, serving endpoints billed with 0 requests.</li>
+          <li>Priced at list: a lower bound, never a forecast.</li>
+          <li>Not counted: premium SKUs (serverless, Photon). Worth a look, not waste.</li>
+          <li><a {...guideLinkProps("how-money")}>How dollars are worked out &rarr;</a></li>
+        </ul>
       ),
     },
     {
       q: "Why does a check say \"Not assessed\"?",
-      a: "The build behind that check failed or was skipped this run -- never a verified pass. Open the check's own page and look under \"If it says Not assessed or is empty\" for the exact reason.",
+      a: "The build behind that check failed or was skipped this run, never a verified pass. Open the check's page and look under \"If it says Not assessed or is empty\" for the reason.",
     },
     {
       q: "How do I change a threshold, like the 60-second idle rule?",
       a: (
-        <React.Fragment>
-          Every threshold this app uses lives in <span className="mono">config/thresholds.yml</span>.
-          A check's own "When it flags" section shows each value and whether it is still the default
-          or has been set there.
-        </React.Fragment>
+        <ul className="gd-bullets">
+          <li>Every threshold lives in <span className="mono">config/thresholds.yml</span>.</li>
+          <li>A check's "When it flags" shows each value and whether it is the default.</li>
+        </ul>
       ),
     },
     {
       q: "Which grants does Databricks need for the missing tables?",
       a: (
         <React.Fragment>
-          <a {...appTabLinkProps("coverage", "sources")}>Coverage & Gaps &rarr;</a> lists exactly which grant each missing source needs, next to that source.
+          <a {...appTabLinkProps("coverage", "sources")}>Coverage & Gaps &rarr;</a> lists the grant each missing source needs, next to that source.
         </React.Fragment>
       ),
     },
@@ -1197,7 +1192,7 @@ function guideFaqs() {
 }
 
 const GUIDE_GLOSSARY = [
-  { k: "DBU", d: "Databricks Unit -- the unit Databricks bills compute in. Dollars = DBUs × the price for that product." },
+  { k: "DBU", d: "Databricks Unit: the unit compute is billed in. Dollars = DBUs × that product's price." },
   { k: "List price", d: "Databricks' published price per product, after any promotion. Not your negotiated rate." },
   { k: "Possible waste", d: "Measured idle time and failed work, priced at list. A lower bound, never a forecast." },
   { k: "Window", d: "The days a check covers: the last 7, 30 or 90, up to the export." },
@@ -1205,6 +1200,10 @@ const GUIDE_GLOSSARY = [
   { k: "Spill", d: "A query ran out of memory and wrote to disk, which slows it down." },
   { k: "Broken job", d: "Its latest 3 or more runs failed in a row (default threshold)." },
   { k: "Flaky job", d: "20% or more of its runs failed, with at least 5 runs in the window (default thresholds)." },
+  { k: "Not assessed", d: "The check didn't run. Never a pass." },
+  { k: "No data", d: "It ran and saw nothing in the window. Not a verified zero." },
+  { k: "Flagged", d: "At least one row is over a Warn or Critical threshold." },
+  { k: "Reference", d: "A list or ranking with no pass/fail rule." },
 ];
 
 function CloudSwitch({ cloud, setCloud, cloudNote, overrideStale, useSnapshotCloud }: {
@@ -1254,6 +1253,11 @@ function tabCheckIds(areaKey: string): string[] {
   (area.subtabs || []).forEach((s) => { (s.ids || []).forEach(add); (s.refIds || []).forEach(add); });
   (area.refIds || []).forEach(add);
   return ids;
+}
+
+// Check ids break only after an underscore.
+function wrapIdAfterUnderscore(id: string): React.ReactNode[] {
+  return id.split("_").flatMap((part, i, a) => (i < a.length - 1 ? [`${part}_`, <wbr key={i} />] : [part]));
 }
 
 function shortTable(key: string): string { return String(key).replace(/^system\./, ""); }
@@ -1465,9 +1469,9 @@ export function GuideNav({ current, checkArea, guideIndex, role, backLabel, back
   );
 }
 
-function JumpChips({ sections }: { sections: { id: string; label: string }[] }) {
+function JumpChips({ sections, className }: { sections: { id: string; label: string }[]; className?: string }) {
   return (
-    <nav className="gd-jumpchips" aria-label="Jump to a section">
+    <nav className={`gd-jumpchips${className ? ` ${className}` : ""}`} aria-label="Jump to a section">
       {sections.map((s) => (
         <a key={s.id} className="gd-jumpchip" href={`#${s.id}`} onClick={(e) => { e.preventDefault(); const el = document.getElementById(s.id); if (el) el.scrollIntoView({ behavior: "smooth", block: "start" }); }}>{s.label}</a>
       ))}
@@ -1512,7 +1516,7 @@ function RailCard({ title, children }: { title?: string; children?: React.ReactN
 
 // The picker's own lens names for an area; the CFO lens has its own page, not these areas.
 function lensesForArea(areaKey: string): string | null {
-  const roles = ROLES.filter((r) => r !== "cfo" && (ROLE_AREAS[r] || []).includes(areaKey));
+  const roles = ROLES.filter((r) => r !== "cfo" && (areaKey === "overview" || (ROLE_AREAS[r] || []).includes(areaKey)));
   return roles.length ? roles.map((r) => ROLE_LABEL[r]).join(", ") : null;
 }
 
@@ -1607,7 +1611,7 @@ function GuideHome({ data, guideIndex, cloud, setCloud, cloudNote, overrideStale
                 // distinct from its one-line "what" -- show the count chip only when it says
                 // something the description below does not already say.
                 const count = ids.length ? `${ids.length} check${ids.length === 1 ? "" : "s"}` : (g && g.queries ? `${g.queries.length} queries to run` : null);
-                const what = g ? g.lede : area.scope;
+                const what = g ? (g.card || g.lede) : area.scope;
                 const link = g ? guideLinkProps(tabGuideId(k)) : appTabLinkProps(k, null);
                 return (
                   <a key={k} className="gd-card gd-tabcard" {...link}>
@@ -1647,19 +1651,14 @@ function topicBullets(slug: string, app: GuideApp): React.ReactNode[] | null {
     case "flow": {
       const direct = app.direct_export;
       return [
+        "Every check names the table(s) it reads, on its own page.",
         direct
-          ? "Your own credentials ran every check on Databricks; only the result rows are saved here."
-          : "Your own credentials read the system tables into local files.",
-        "Nothing is sent anywhere else.",
-        direct ? `Computed on ${(direct.as_of || "").slice(0, 10)}.` : `As of ${app.as_of || "no snapshot captured yet"}.`,
+          ? `Computed on ${(direct.as_of || "").slice(0, 10)}.`
+          : app.as_of ? `Data as of ${app.as_of}.` : "No snapshot captured yet.",
       ];
     }
     case "window":
-      return [
-        `Rolling window: ${app.window_options.join("/")} days, up to the export.`,
-        "Today reads \"today partial\"; billing can lag a few hours.",
-        "A snapshot check has no window -- it shows the current state.",
-      ];
+      return [`Rolling window: ${app.window_options.join("/")} days, up to the export.`];
     case "floors":
       return [
         "A row under its $ or unit floor reads OK, not Critical or Warn.",
@@ -1668,34 +1667,15 @@ function topicBullets(slug: string, app: GuideApp): React.ReactNode[] | null {
     case "money":
       return [
         `Every dollar is usage × list price (effective discount ${fmtPct((app.discount_pct || 0) * 100)}).`,
-        "Never your invoice. Never cloud VM, storage or network cost.",
-        `Possible waste: idle warehouse minutes${app.idle_gap_seconds != null ? ` (over ${app.idle_gap_seconds}s)` : ""}, idle cluster nodes, failed job runs, failed queries, zero-request endpoints.`,
-      ];
-    case "steps":
-      return [
-        "Each fix step is tagged FREE (no spend), CONFIG (how it's set up) or SPEND (costs money).",
-        "A threshold reads \"default\" or \"your setting\" (config/thresholds.yml).",
+        "Possible waste is a lower bound, never a forecast.",
       ];
     case "tags":
       return [
-        "Spend follows query tag → compute tag → workspace tag → account -- most specific wins.",
         app.mandatory_tag_keys && app.mandatory_tag_keys.length ? `Mandatory tags: ${app.mandatory_tag_keys.join(", ")}.` : "Mandatory tags are set in config, up to 5.",
         `A workspace tag needs ≥${fmtPct((app.tag_coverage_floor || 0) * 100, 0)} coverage and one value ≥${fmtPct((app.tag_share_floor || 0) * 100, 0)} share.`,
       ];
     case "coverage":
-      return [
-        "Empty means couldn't look or nothing happened -- never all clear.",
-        "Coverage & Gaps lists data sources, not-assessed checks and known limits.",
-      ];
-    case "coverage-data-sources":
-      return [
-        "Sources: rows captured, the range covered, and how many checks use it.",
-        "With rows / Empty (0 rows, not a verified zero) / Missing (couldn't be read).",
-      ];
-    case "coverage-couldnt-check":
-      return ["Not assessed, a read error, nothing in the window, or filtered out -- never a pass."];
-    case "coverage-known-limitations":
-      return ["Fixed modelling choices, not bugs -- read the number with the note in mind."];
+      return ["Coverage & Gaps lists data sources, not-assessed checks and known limits."];
     default:
       return null;
   }
@@ -1703,10 +1683,7 @@ function topicBullets(slug: string, app: GuideApp): React.ReactNode[] | null {
 
 // "status" (a compact grid already) and "names" (one sentence already) need no <details> wrapper;
 // every other Start-here topic's prose is long enough to belong behind one.
-const TOPIC_DETAILS_SLUGS = new Set([
-  "flow", "window", "floors", "money", "steps", "tags",
-  "coverage", "coverage-data-sources", "coverage-couldnt-check", "coverage-known-limitations",
-]);
+const TOPIC_DETAILS_SLUGS = new Set(["flow", "window", "floors", "money", "tags", "coverage"]);
 
 // Previous/next within the same sequence a topic belongs to -- Start-here topics in their own
 // reading order, a Coverage sub-topic among its siblings only.
@@ -1727,7 +1704,7 @@ function GuideTopicPage({ slug, data, guideIndex, cloud }: { slug: string; data:
     <GuidePage current={`how-${slug}`}>
       <Crumbs items={isCoverage ? [{ label: "Tabs" }, { label: AREA_REGISTRY.coverage.label, focus: tabGuideId("coverage") }] : [{ label: "Start here" }]} />
       <h1 className="gd-title">{section.title}</h1>
-      <p className="gd-lede">{section.teaser}</p>
+      <p className="gd-lede">{slug === "flow" && !data.app.direct_export ? "Your own credentials read the system tables into local files. Nothing is sent anywhere else." : section.teaser}</p>
       {bullets && <ul className="gd-bullets">{bullets.map((b, i) => <li key={i}>{b}</li>)}</ul>}
       {TOPIC_DETAILS_SLUGS.has(slug) ? (
         <details className="gd-details gd-topic-details">
@@ -1762,6 +1739,8 @@ function GuideTabPage({ areaKey, data, guideIndex, findingsById, meta }: {
   const g = GUIDE_TABS[areaKey];
   const ids = tabCheckIds(areaKey).filter((id) => guideIndex[id]);
   const tables = ids.length ? tablesFor(ids, guideIndex) : (g.tables || []);
+  const findingIds = ids.filter((id) => guideIndex[id].is_finding);
+  const refIds = ids.filter((id) => !guideIndex[id].is_finding);
   const ran = ids.filter((id) => checkRan(findingsById[id])).length;
   const flagged = ids.filter((id) => checkFlagged(findingsById[id])).length;
   const subLabel = (key: string) => {
@@ -1835,24 +1814,28 @@ function GuideTabPage({ areaKey, data, guideIndex, findingsById, meta }: {
       </ol>
 
       <h2 className="gd-h2" id="gd-s2">How the numbers get here</h2>
-      <p className="gd-prose muted">{ids.length || !g.queries
-        ? "Every figure is the output of a check: a SQL query run with your own credentials against Databricks system tables. Only the result rows are stored."
-        : "Every figure is worked out from the tags the export read from Databricks system tables, with your own credentials. Only the result rows are stored."}</p>
+      <p className="muted gd-small">Run with your credentials; only result rows are stored (<a {...guideLinkProps("how-flow")}>how</a>).</p>
       <div className="gd-flow">
         <div className="gd-card gd-flow-step"><span className="gd-eyebrow">1 · Read</span><b>System tables</b>{tables.length > 0 ? <TableChips tables={tables} max={8} /> : <span className="muted">No system table of its own.</span>}</div>
         <span className="gd-flow-arrow" aria-hidden="true">&rarr;</span>
-        <div className="gd-card gd-flow-step"><span className="gd-eyebrow">2 · Measure</span><span>{g.measure}</span></div>
+        <div className="gd-card gd-flow-step"><span className="gd-eyebrow">2 · Measure</span><span>{codeifyProse(g.measure)}</span></div>
         <span className="gd-flow-arrow" aria-hidden="true">&rarr;</span>
         <div className="gd-card gd-flow-step"><span className="gd-eyebrow">3 · Judge</span><span>{codeifyProse(g.judge)}</span></div>
         <span className="gd-flow-arrow" aria-hidden="true">&rarr;</span>
         <div className="gd-card gd-flow-step"><span className="gd-eyebrow">4 · Price</span><span>{g.price}</span></div>
       </div>
+      {(g.extra || []).map((x, i) => (
+        <React.Fragment key={i}>
+          {x.h && <p className="gd-small"><b>{x.h}</b></p>}
+          <ul className="gd-bullets">{x.items.map((it, j) => <li key={j}>{codeifyProse(it)}</li>)}</ul>
+        </React.Fragment>
+      ))}
 
       <div className="gd-section-head" id="gd-s3">
         <h2 className="gd-h2">{ids.length || !g.queries ? "Checks on this tab" : "Queries to run yourself"}</h2>
         <span className="muted">{ids.length || !g.queries ? `${ids.length} check${ids.length === 1 ? "" : "s"}` : `${g.queries.length} queries`}</span>
       </div>
-      {ids.length > 0 && <p className="muted gd-small">Each check's page ends with the SQL it runs, to paste into a Databricks SQL editor.</p>}
+      {ids.length > 0 && <p className="muted gd-small">Short form; open a check for the full rule and its SQL. Numbers are defaults from config/thresholds.yml.{ids.some((id) => guideIndex[id].severity_cap === "WARN") ? " Warn max = a trend alone never reads Critical." : ""}</p>}
       {g.queries && g.queries.length > 0 && (
         <div className="gd-sql-list">
           <p className="muted gd-small">This page has no checks of its own. These queries answer the same questions in a Databricks SQL editor:</p>
@@ -1862,34 +1845,51 @@ function GuideTabPage({ areaKey, data, guideIndex, findingsById, meta }: {
       {ids.length === 0 ? (
         !g.queries && <p className="muted">This page has no checks of its own; it rolls up the others.</p>
       ) : (
-        <div className="gd-table-wrap">
-          <table className="gd-table">
-            <thead><tr><th>Check</th><th>Flags when</th><th>Money</th><th>This build</th></tr></thead>
-            <tbody>
-              {ids.map((id) => {
-                const f = guideIndex[id];
-                const s = findingsById[id];
-                const money = f.money && f.money.column;
-                return (
-                  <tr key={id}>
-                    <td>
-                      <a {...guideLinkProps(id)}>{getCheckLabel(id, f.title).title}</a>
-                      <div className="mono muted gd-small">{id}</div>
-                    </td>
-                    <td className="gd-small">{f.is_finding ? <React.Fragment>{codeifyProse(cleanFlagPrefix(f.investigate_if || "")) || "--"}{capNote(f)}</React.Fragment> : <span className="muted">Reference list, no pass or fail.</span>}</td>
-                    <td>{money ? <span className={`gd-chip ${isPricedWaste(id) ? "ok" : ""}`}>{isPricedWaste(id) ? "Waste" : "Priced"}</span> : <span className="muted">--</span>}</td>
-                    <td className="gd-small" style={{ whiteSpace: "nowrap" }}>{!s ? <span className="muted">--</span> : checkFlagged(s) ? <span className="gd-flag">Flagged</span> : checkRan(s) ? <span className="muted">Ran</span> : <span className="muted">Not assessed</span>}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+        <React.Fragment>
+          {findingIds.length > 0 && (
+            <div className="gd-table-wrap">
+              <table className="gd-table gd-checks">
+                <thead><tr><th>Check</th><th>Flags when</th><th>Money</th><th>This build</th></tr></thead>
+                <tbody>
+                  {findingIds.map((id) => {
+                    const f = guideIndex[id];
+                    const s = findingsById[id];
+                    const money = f.money && f.money.column;
+                    return (
+                      <tr key={id}>
+                        <td className="gd-ct-check">
+                          <a {...guideLinkProps(id)}>{getCheckLabel(id, f.title).title}</a>
+                          <div className="mono muted gd-small">{wrapIdAfterUnderscore(id)}</div>
+                        </td>
+                        <td className="gd-small">
+                          <ul className="gd-flag-bullets">{shortFlagBullets(f).map((b, i) => <li key={i}><b className={verdictCls(b.label)}>{b.label}:</b> {codeifyProse(b.text)}</li>)}</ul>
+                        </td>
+                        <td>{money ? <span className={`gd-chip ${isPricedWaste(id) ? "ok" : ""}`}>{isPricedWaste(id) ? "Waste" : "Priced"}</span> : <span className="muted">--</span>}</td>
+                        <td className="gd-small" style={{ whiteSpace: "nowrap" }}>
+                          {!s ? <span className="muted">--</span> : checkFlagged(s) ? <span className="gd-flag">Flagged</span> : checkRan(s) ? <span className="muted">Ran</span> : <span className="muted">Not assessed</span>}
+                          {f.severity_cap === "WARN" && <div><span className="gd-chip" title="A trend alone never reads Critical">Warn max</span></div>}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+          {refIds.length > 0 && (
+            <p className="gd-small muted">
+              Reference lists (no pass or fail):{" "}
+              {refIds.map((id, i) => (
+                <React.Fragment key={id}>{i > 0 && ", "}<a {...guideLinkProps(id)}>{getCheckLabel(id, guideIndex[id].title).title.replace(/, reference$/, "")}</a></React.Fragment>
+              ))}
+            </p>
+          )}
+        </React.Fragment>
       )}
 
       <h2 className="gd-h2" id="gd-s4">When something looks wrong</h2>
       <div className="gd-table-wrap">
-        <table className="gd-table">
+        <table className="gd-table gd-trouble">
           <thead><tr><th>You see</th><th>Why it happens</th><th>What to do</th></tr></thead>
           <tbody>
             {g.troubles.map((t, i) => <tr key={i}><td><b>{t.see}</b></td><td>{t.why}</td><td>{t.doit}</td></tr>)}
@@ -1925,7 +1925,7 @@ const STATUS_PATHS = [
     ],
   },
   {
-    badge: "critical", word: "A number", d: "It has a value you don't believe.",
+    badge: "reference", word: "A number", d: "It has a value you don't believe.",
     steps: [
       "Press How is this worked out? next to it to see the formula and source tables.",
       "Read the region banner: some workspaces may show spend only.",
@@ -1936,9 +1936,9 @@ const STATUS_PATHS = [
 
 const SCREENS_DIFFER = [
   { r: "Different window", ex: "Monthly bars use calendar months; the cards use the last 7, 30 or 90 full days.", fix: "Compare like for like." },
-  { r: "Filter doesn't apply", ex: "Grants, tags, masks, lineage and table checks cover the whole metastore; picking a workspace doesn't narrow them.", fix: "Read the tab's scope note." },
-  { r: "Different coverage", ex: "Spend counts every billed workspace; compute, jobs and queries only those in the export region.", fix: "Filter to the assessed workspaces." },
-  { r: "Different attribution level", ex: "Spend is attributed query, then compute, workspace, account. A per-query view adds up to less than the warehouse bill.", fix: "Use the level that matches the question." },
+  { r: "Filter doesn't apply", ex: "Grants, tags, masks, lineage and table checks are metastore-wide; a workspace pick doesn't narrow them.", fix: "Read the tab's scope note." },
+  { r: "Different coverage", ex: "Spend: every billed workspace. Compute, jobs, queries: export region only.", fix: "Filter to the assessed workspaces." },
+  { r: "Different attribution level", ex: "Spend goes to query, then compute, workspace, account; per-query sums < warehouse bill.", fix: "Use the level that matches the question." },
   { r: "Priced vs counted", ex: "Possible waste sums only priced rows; unpriced findings are counted, not added.", fix: "Read priced and not priced separately." },
   { r: "Ranked vs judged", ex: "A spend ranking never reads Critical; checks judge against a rule.", fix: "Open the check for the rule." },
   { r: "Pricing gaps", ex: "SKU-days with no list price are left out of every dollar.", fix: "See Cost › Pricing & policy." },
@@ -1958,12 +1958,12 @@ const GRANT_SCHEMAS = [
 ];
 
 function GuideTroubleshooting({ guideIndex }: { guideIndex: GuideIndex }) {
-  const faqs = guideFaqs().filter((x) => !/differ between screens|Not assessed/.test(x.q));
+  const faqs = guideFaqs().filter((x) => !/differ between screens|Not assessed|Which grants/.test(x.q));
   return (
     <GuidePage current="how-troubleshooting">
       <Crumbs items={[{ label: "Troubleshooting" }]} />
       <h1 className="gd-title">A panel is empty, or a number looks wrong</h1>
-      <p className="gd-lede">Start with the status word on the panel. It tells you whether the audit couldn't look, looked and found nothing, or found something you don't expect.</p>
+      <p className="gd-lede">Read the status word on the panel, then follow its branch below.</p>
 
       <h2 className="gd-h2">Follow the status word</h2>
       <div className="gd-path">
@@ -1999,7 +1999,7 @@ function GuideTroubleshooting({ guideIndex }: { guideIndex: GuideIndex }) {
 
       <h2 className="gd-h2">Why two screens can show different numbers</h2>
       <div className="gd-table-wrap">
-        <table className="gd-table">
+        <table className="gd-table gd-ts-table">
           <thead><tr><th>Reason</th><th>Example</th><th>How to line them up</th></tr></thead>
           <tbody>{SCREENS_DIFFER.map((x) => <tr key={x.r}><td><b>{x.r}</b></td><td>{x.ex}</td><td>{x.fix}</td></tr>)}</tbody>
         </table>
@@ -2053,30 +2053,33 @@ function GuideCheckReference({ guideIndex, findingsById }: { guideIndex: GuideIn
     ids.forEach((id) => placed.add(id));
     return { key: k, label: AREA_REGISTRY[k].label, ids };
   });
+  const judged = Object.values(guideIndex).filter((f) => f.is_finding).length;
   const rest = Object.keys(guideIndex).filter((id) => !placed.has(id)).sort();
   if (rest.length) groups.push({ key: "other", label: "Not on a screen", ids: rest });
   return (
     <GuidePage current="how-checks">
       <Crumbs items={[{ label: "Check reference" }]} />
       <h1 className="gd-title">Check reference</h1>
-      <p className="gd-lede">{`All ${Object.keys(guideIndex).length} checks by the tab they live on, with the system tables each reads.`}</p>
+      <p className="gd-lede">{`${Object.keys(guideIndex).length} checks: ${judged} judged against a rule, ${Object.keys(guideIndex).length - judged} reference lists. Grouped by tab, with the system tables each reads.`}</p>
+      <JumpChips className="gd-ref-jump" sections={groups.filter((gr) => gr.ids.length).map((gr) => ({ id: `ref-${gr.key}`, label: `${gr.label} · ${gr.ids.length}` }))} />
       {groups.filter((gr) => gr.ids.length).map((gr) => (
         <section key={gr.key} className="gd-section">
-          <div className="gd-section-head">
+          <div className="gd-section-head" id={`ref-${gr.key}`}>
             <h2 className="gd-h2 flush">{gr.label}</h2>
             <span className="muted">{`${gr.ids.length} check${gr.ids.length === 1 ? "" : "s"}`}</span>
           </div>
           <div className="gd-table-wrap">
-            <table className="gd-table">
+            <table className="gd-table gd-ref-table">
+              <thead><tr><th>Check</th><th>Reads</th><th className="gd-ref-status">This run</th></tr></thead>
               <tbody>
                 {gr.ids.map((id) => {
                   const f = guideIndex[id];
                   const s = findingsById[id];
                   return (
                     <tr key={id}>
-                      <td className="gd-ref-name"><a {...guideLinkProps(id)}>{getCheckLabel(id, f.title).title}</a><div className="mono muted gd-small">{id}</div></td>
+                      <td className="gd-ref-name"><a {...guideLinkProps(id)}>{getCheckLabel(id, f.title).title.replace(/, reference$/, "")}</a><div className="mono muted gd-small">{id}</div></td>
                       <td><TableChips tables={(f.reads || []).filter((t) => String(t).indexOf("system.") === 0)} max={4} /></td>
-                      <td className="gd-small" style={{ whiteSpace: "nowrap" }}>{!s ? "" : checkFlagged(s) ? <span className="gd-flag">Flagged</span> : checkRan(s) ? <span className="muted">Ran</span> : <span className="muted">Not assessed</span>}</td>
+                      <td className="gd-small gd-ref-status">{!f.is_finding ? <span className="muted">Reference</span> : !s ? "" : checkFlagged(s) ? <span className="gd-flag">Flagged</span> : checkRan(s) ? <span className="muted">Ran</span> : <span className="muted">Not assessed</span>}</td>
                     </tr>
                   );
                 })}
@@ -2166,13 +2169,13 @@ function ExampleRow({ f, filters }: { f: GuideFinding; filters: GuideFilters }) 
   const status = row.status;
   const cellText = (c: PlannedColumn) => {
     if (entity && c.name === entity.name && plan.entity) return entityDisplayName(plan.entity, row, dims) || String(row[c.name]);
-    return fmtCell(row[c.name], c.kind, row);
+    return fmtCell(row[c.name], c.unit === "$" ? "money" : c.kind, row);
   };
   return (
     <div className="gd-card gd-example">
       {cells.map((c) => (
         <div key={c.name} className="gd-example-cell">
-          <span className="muted gd-small">{c.label}{c.unit ? ` (${c.unit})` : ""}</span>
+          <span className="muted gd-small">{c.label}{c.unit && !String(cellText(c)).includes(c.unit) ? ` (${c.unit})` : ""}</span>
           <span className={`mono gd-example-v${c.kind === "money" && status && status !== "OK" ? " tone-crit" : ""}`}>{cellText(c)}</span>
           {entity && c.name === entity.name && row.workspace_id != null && plan.entity !== "workspace_id" && (
             <span className="muted gd-small">{wsPhrase(row.workspace_id)}</span>
@@ -2215,6 +2218,11 @@ function checkSequence(areaKey: string, guideIndex: GuideIndex): string[] {
   return [tabGuideId(areaKey), ...guideSubtabGroups(areaKey, guideIndex).flatMap((g) => g.ids)];
 }
 
+// A table name may break after a dot, never mid-word.
+function wrapKey(key: string): React.ReactNode[] {
+  return key.split(".").flatMap((p, i, a) => (i < a.length - 1 ? [`${p}.`, <wbr key={i} />] : [p]));
+}
+
 function CheckRail({ f, data, cloud, reads, related }: {
   f: GuideFinding; data: GuideData; cloud: string; reads: string[]; related: { query_id: string; title: string | null; if: string }[];
 }) {
@@ -2232,8 +2240,8 @@ function CheckRail({ f, data, cloud, reads, related }: {
               const entry = data.docs[key];
               const link = entry && entry.urls[cloud];
               return link
-                ? <a key={key} className="gd-code" href={link.url} target="_blank" rel="noreferrer" title={(entry && entry.what) || ""}>{key}</a>
-                : <code key={key} className="gd-code" title={(entry && entry.what) || ""}>{key}</code>;
+                ? <a key={key} className="gd-code" href={link.url} target="_blank" rel="noreferrer" title={(entry && entry.what) || ""}>{wrapKey(key)}</a>
+                : <code key={key} className="gd-code" title={(entry && entry.what) || ""}>{wrapKey(key)}</code>;
             })}
           </div>
           <div className="muted gd-small">If one is missing, this check reads Not assessed, never OK.</div>
@@ -2274,7 +2282,7 @@ function RunItYourself({ queryId, windowDays, title }: { queryId: string; window
         <React.Fragment>
           <div className="gd-sql-bar">
             <span className="muted gd-small">Paste into a Databricks SQL editor. It only reads system tables.</span>
-            <button type="button" className="ck-link" onClick={copy}>{copied ? "Copied" : "Copy SQL"}</button>
+            <button type="button" className="ck-link" style={{ whiteSpace: "nowrap" }} onClick={copy}>{copied ? "Copied" : "Copy SQL"}</button>
           </div>
           <pre className="gd-sql-code"><code>{state.sql}</code></pre>
         </React.Fragment>
@@ -2304,7 +2312,7 @@ function GuideArticle({ f, data, filters, home, area, guideIndex, findingsById }
   if (s && checkRan(s)) {
     const a: Partial<Affected> = s.affected || {};
     if (f.is_finding && a.total != null) buildLine = `${fmtInt(a.flagged || 0)} of ${fmtInt(a.total)} ${a.noun || "rows"} flagged`;
-    else buildLine = s.row_count != null ? `${fmtInt(s.row_count)} rows` : "Ran";
+    else buildLine = s.row_count != null ? `${fmtInt(s.row_count)} row${s.row_count === 1 ? "" : "s"}` : "Ran";
   } else if (s) {
     buildLine = "Not assessed";
   }
@@ -2314,20 +2322,20 @@ function GuideArticle({ f, data, filters, home, area, guideIndex, findingsById }
   // second sentence; only the FIRST of those is shown inline, the rest sits behind one "Full
   // detail" <details> under the steps list.
   const readSentences = splitSentences(f.read_this).slice(1);
-  const readFirst = readSentences[0] || null;
-  const readMore = readSentences.slice(1).join(" ");
+  const readFirst = readSentences[0] ? readSentences[0].replace(/\s*\(default\)/g, "") : null;
   const params = f.params.filter((p) => p.name !== "period_days" && p.name !== "top_n");
   const readTables = (f.reads || []).filter((t) => String(t).indexOf("system.") === 0).map(shortTable);
+  const discount = data.app.discount_pct || 0;
   // Always four steps; a step with no check-specific data falls back to generic wording.
   const steps: { h: string; t: React.ReactNode }[] = [
     {
       h: "Reads.",
-      t: grain ? `One row is ${grain}.` : readTables.length ? `System tables ${readTables.slice(0, 3).join(", ")}${readTables.length > 3 ? ` +${readTables.length - 3} more` : ""}.` : "One row per item the check lists.",
+      t: grain ? `One row is ${grain.replace(/\s*\(default\)/g, "")}.` : readTables.length ? `System tables ${readTables.slice(0, 3).join(", ")}${readTables.length > 3 ? ` +${readTables.length - 3} more` : ""}.` : "One row per item the check lists.",
     },
     {
       h: moneyCol ? "Dollars." : "Computes.",
       t: moneyCol
-        ? (wasteItem ? wasteItem.why : `Usage in the window × list price (effective), today's discount ${fmtPct((data.app.discount_pct || 0) * 100)}. Never your invoice or your cloud VM bill.`)
+        ? (wasteItem ? wasteItem.why : `Usage in the window × list price (effective)${discount > 0 ? `, today's discount ${fmtPct(discount * 100)}` : ""}. Never your invoice or your cloud VM bill.`)
         : (readFirst ? codeifyProse(readFirst) : "Counts the rows that match. No dollar column."),
     },
     {
@@ -2336,51 +2344,53 @@ function GuideArticle({ f, data, filters, home, area, guideIndex, findingsById }
     },
     {
       h: "Judges.",
-      t: !f.is_finding ? "A reference list. No pass or fail." : "Each row is compared with the Warn and Critical limits below.",
+      t: !f.is_finding ? "A reference list. No pass or fail." : `Each row is compared with the ${f.severity_cap === "WARN" ? "Warn" : "Warn and Critical"} limits below.`,
     },
   ];
-  const stepsMore = [moneyCol ? readFirst : null, readMore].filter(Boolean).join(" ");
+  const stepsMore = [...(moneyCol && readFirst ? [readFirst] : []), ...readSentences.slice(1)];
 
-  const flagRows: { h: string; t: React.ReactNode }[] = [];
-  if (f.is_finding && f.healthy) flagRows.push({ h: "Reads OK when", t: codeifyProse(cleanFlagPrefix(f.healthy)) });
+  // "Reads OK when": the first clause only; the rest goes behind "Why the number could be off".
+  const healthyFull = f.is_finding && f.healthy ? cleanFlagPrefix(f.healthy) : "";
+  const healthyShort = healthyFull ? firstClause(healthyFull) : "";
+  const healthyRest = healthyFull && healthyFull.length > healthyShort.length + 2 ? healthyFull : "";
+  const flagBullets = shortFlagBullets(f);
+  const capped = f.severity_cap === "WARN";
 
-  // Measure | Warn | Critical: params named *_warn / *_crit pair up; a lone value or the combined
-  // condition goes under Warn, never a made-up Critical number.
-  const flagTable: { measure: string; warn: React.ReactNode; crit: React.ReactNode }[] = [];
-  const paired: Record<string, { measure: string; warn?: string; crit?: string }> = {};
+  // Measure | Warn | Critical: params named *_warn / *_crit pair up; a lone value goes under Warn,
+  // never a made-up Critical number.
+  const flagTable: { measure: string; hint: string | null; warn: React.ReactNode; crit: React.ReactNode }[] = [];
+  const paired: Record<string, { measure: string; hint: string | null; warn?: string; crit?: string }> = {};
   const lone: typeof params = [];
   params.forEach((p) => {
     const m = /^(.*?)_?(warn|warning|crit|critical)(?:_(.*))?$/.exec(p.name);
     if (!m) { lone.push(p); return; }
     const base = [m[1], m[3]].filter(Boolean).join("_") || p.name;
-    const e = paired[base] || (paired[base] = { measure: p.meaning || humanizeParamName(base) });
+    const e = paired[base] || (paired[base] = { measure: paramLabel(base), hint: p.meaning });
     if (m[2].indexOf("warn") === 0) e.warn = String(p.value); else e.crit = String(p.value);
   });
-  Object.values(paired).forEach((e) => flagTable.push({ measure: e.measure, warn: e.warn || "—", crit: e.crit || "—" }));
-  lone.forEach((p) => flagTable.push({ measure: p.meaning || humanizeParamName(p.name), warn: <span className="mono">{String(p.value)}</span>, crit: "—" }));
-  if (f.is_finding && f.investigate_if) {
-    const clauses = splitFlagClauses(f.investigate_if);
-    const cell = (levels: string[]) => {
-      const t = clauses.filter((c) => levels.includes(c.level)).map((c) => c.body).join("; ");
-      return t ? codeifyProse(cleanFlagPrefix(t)) : "—";
-    };
-    flagTable.unshift({
-      measure: "Flag condition",
-      warn: <React.Fragment>{cell(["WARN", "BOTH"])}{capNote(f)}</React.Fragment>,
-      crit: cell(["CRITICAL", "BOTH"]),
-    });
-  }
+  Object.values(paired).forEach((e) => flagTable.push({ measure: e.measure, hint: e.hint, warn: e.warn || "—", crit: e.crit || "—" }));
+  lone.forEach((p) => flagTable.push({ measure: paramLabel(p.name), hint: p.meaning, warn: <span className="mono">{String(p.value)}</span>, crit: "—" }));
+  const showCrit = !capped && flagTable.some((r) => r.crit !== "—");
 
   const rungs = (f.actions || [])
     .map((a) => String(a).trim())
     .filter((a) => a && !a.toLowerCase().startsWith("n/a"))
-    .map((a) => ({ tier: rungTier(a), text: codeifyProse(rungText(a)) }));
-  const caveats = splitSentences(f.caveats);
-  const offCards: { h: string | null; t?: React.ReactNode; list?: string[] }[] = [
-    ...caveats.map((c) => ({ h: null, t: codeifyProse(c) })),
+    .map((a) => ({ tier: rungTier(a), parts: splitRungCases(rungText(a)) }));
+  const caveats = [...(healthyRest ? [healthyRest] : []), ...splitSentences(f.caveats)];
+  const offLists: { h: string; list: string[] }[] = [
     ...(f.not_assessed_reasons.length ? [{ h: "Not assessed when", list: f.not_assessed_reasons }] : []),
     ...(f.empty_if_words.length ? [{ h: "No data when", list: f.empty_if_words }] : []),
   ];
+  const offCount = caveats.length + offLists.length;
+  const offItem = (c: string, i: number) => {
+    const short = shortClause(c);
+    return short === c.replace(/[\s;.,]+$/, "")
+      ? <li key={i}>{codeifyProse(c)}</li>
+      : <li key={i}><details><summary>{codeifyProse(short)}</summary>{codeifyProse(short.endsWith("…") || !c.startsWith(short) ? c : upperFirst(c.slice(short.length).replace(/^[\s;,.\-–]+/, "")) || c)}</details></li>;
+  };
+
+  const colMeta = (f.columns || []).map((c) => ({ c, meta: columnMeta(c.name, c.kind) }));
+  const showUnit = colMeta.filter((x) => x.meta.unit).length >= 3;
 
   const seq = area && GUIDE_TABS[home.tab] ? checkSequence(home.tab, guideIndex) : [];
   const idx = seq.indexOf(f.query_id);
@@ -2414,16 +2424,20 @@ function GuideArticle({ f, data, filters, home, area, guideIndex, findingsById }
 
       <div className="gd-statrow">
         <div className="gd-statbox"><span className="muted gd-small">This build</span><span className="gd-stat-v">{buildLine}</span></div>
-        <div className="gd-statbox">
-          <span className="muted gd-small" title={(params[0] && params[0].meaning) || undefined}>{params[0] ? humanizeParamName(params[0].name) : "Threshold"}</span>
-          <span className="gd-stat-v">{params[0] ? String(params[0].value) : "—"}</span>
-          <span className="muted gd-small">{params[0] ? (params[0].source === "default" ? "default" : "config/thresholds.yml") : "no numeric threshold"}</span>
-        </div>
-        <div className="gd-statbox">
-          <span className="muted gd-small">Window</span>
-          <span className="gd-stat-v">{f.period_kind === "days" ? `${filters.window} days` : "—"}</span>
-          <span className="muted gd-small">{f.period_kind === "days" ? "up to the export" : f.period_kind === "fixed" ? "own fixed period" : "current state, no window"}</span>
-        </div>
+        {params[0] && (
+          <div className="gd-statbox">
+            <span className="muted gd-small" title={params[0].meaning || undefined}>{humanizeParamName(params[0].name)}</span>
+            <span className="gd-stat-v">{String(params[0].value)}</span>
+            <span className="muted gd-small">{params[0].source === "default" ? "default" : "config/thresholds.yml"}</span>
+          </div>
+        )}
+        {f.period_kind === "days" && (
+          <div className="gd-statbox">
+            <span className="muted gd-small">Window</span>
+            <span className="gd-stat-v">{`${filters.window} days`}</span>
+            <span className="muted gd-small">up to the export</span>
+          </div>
+        )}
       </div>
 
       <h2 className="gd-h2" id="worked">How it's worked out</h2>
@@ -2432,36 +2446,43 @@ function GuideArticle({ f, data, filters, home, area, guideIndex, findingsById }
           <li key={i}><span className="gd-step-n mono">{String(i + 1).padStart(2, "0")}</span><span><b>{s2.h}</b> {s2.t}</span></li>
         ))}
       </ol>
-      {stepsMore && (
-        <details className="gd-details">
+      {stepsMore.length > 0 && (
+        <details className="gd-details gd-topic-details">
           <summary>Full detail</summary>
-          <p className="gd-prose">{codeifyProse(stepsMore)}</p>
+          <ul className="gd-flag-bullets">
+            {stepsMore.map((x, i) => {
+              const t = x.replace(/\s*\(default\)/g, "");
+              const m = /^([a-z][a-z0-9]*(?:_[a-z0-9]+)+)\b(.*)$/s.exec(t);
+              return <li key={i}>{m ? <React.Fragment><b>{m[1]}</b>{codeifyProse(m[2])}</React.Fragment> : codeifyProse(t)}</li>;
+            })}
+          </ul>
         </details>
       )}
-      <p className="muted gd-small"><a {...guideLinkProps("how-money")}>How every dollar figure is worked out &rarr;</a></p>
+      {moneyCol && <p className="muted gd-small"><a {...guideLinkProps("how-money")}>How every dollar figure is worked out &rarr;</a></p>}
 
       {(f.is_finding || flagTable.length > 0) && (
         <React.Fragment>
           <h2 className="gd-h2" id="flags">When it flags</h2>
-          {flagTable.length > 0 ? (
+          {(flagBullets.length > 0 || healthyShort || capped) && (
+            <ul className="gd-flag-bullets">
+              {healthyShort && <li><b className="gd-v-ok">OK:</b> {codeifyProse(healthyShort)}</li>}
+              {flagBullets.map((b, i) => <li key={i}><b className={verdictCls(b.label)}>{b.label}:</b> {codeifyProse(b.text)}</li>)}
+              {capped && <li><b className="gd-v-crit">Critical:</b> never; a trend alone tops out at Warn</li>}
+            </ul>
+          )}
+          {flagTable.length > 0 && (
             <div className="gd-table-wrap">
-              <table className="gd-table">
-                <thead><tr><th>Measure</th><th>Warn</th><th>Critical</th></tr></thead>
+              <table className="gd-table gd-flagtable">
+                <thead><tr><th>Measure</th><th>Warn</th>{showCrit && <th>Critical</th>}</tr></thead>
                 <tbody>
                   {flagTable.map((r, i) => (
-                    <tr key={i}><td>{r.measure}</td><td className="gd-small">{r.warn}</td><td className="gd-small">{r.crit}</td></tr>
+                    <tr key={i}><td title={r.hint || undefined}>{r.measure}</td><td className="gd-small">{r.warn}</td>{showCrit && <td className="gd-small">{r.crit}</td>}</tr>
                   ))}
                 </tbody>
               </table>
             </div>
-          ) : (
-            <p className="muted gd-small">This check lists no Warn or Critical limit.</p>
           )}
-          {flagRows.length > 0 && (
-            <div className="gd-flagrows">
-              {flagRows.map((r, i) => <div key={i} className="gd-flagrow"><b>{r.h}</b><span>{r.t}</span></div>)}
-            </div>
-          )}
+          {flagTable.length === 0 && flagBullets.length === 0 && <p className="muted gd-small">This check lists no Warn or Critical limit.</p>}
           {params.length > 0 && <p className="muted gd-small">{`Set in config/thresholds.yml. ${params.filter((p) => p.source === "default").length} of ${params.length} still on the default.`}</p>}
         </React.Fragment>
       )}
@@ -2476,24 +2497,31 @@ function GuideArticle({ f, data, filters, home, area, guideIndex, findingsById }
             {rungs.map((r, i) => (
               <div key={i} className="gd-card gd-todo-card">
                 <span className={`gd-chip ${r.tier === "free" ? "ok" : r.tier === "spend" ? "warn" : ""}`}>{r.tier ? `${i + 1} · ${r.tier}` : `Step ${i + 1}`}</span>
-                <span>{r.text}</span>
+                {r.parts.length > 1
+                  ? <ul>{r.parts.map((x, j) => <li key={j}>{boldLead(x)}</li>)}</ul>
+                  : <span>{codeifyProse(r.parts[0] || "")}</span>}
               </div>
             ))}
           </div>
         </React.Fragment>
       )}
 
-      {offCards.length > 0 && (
+      {offCount > 0 && (
         <React.Fragment>
           <h2 className="gd-h2" id="off">Why the number could be off</h2>
           <details className="gd-details">
-            <summary>{`${fmtInt(offCards.length)} way${offCards.length === 1 ? "" : "s"} it could be off: column names, edge cases`}</summary>
+            <summary>{`${fmtInt(offCount)} way${offCount === 1 ? "" : "s"} it could be off: column names, edge cases`}</summary>
             <div className="gd-off">
-              {offCards.map((c, i) => (
-                <div key={i} className="gd-card gd-off-card">
-                  {c.h && <b>{c.h}</b>}
-                  {c.list ? <ul>{c.list.map((x, j) => <li key={j}>{codeifyProse(x)}</li>)}</ul> : <span>{c.t}</span>}
-                </div>
+              {caveats.length > 0 && (
+                <ul className="gd-off-list">
+                  {caveats.slice(0, 6).map(offItem)}
+                  {caveats.length > 6 && (
+                    <li><details><summary>{`Show ${caveats.length - 6} more`}</summary><ul className="gd-off-list">{caveats.slice(6).map(offItem)}</ul></details></li>
+                  )}
+                </ul>
+              )}
+              {offLists.map((l) => (
+                <div key={l.h}><b>{l.h}</b><ul className="gd-off-list">{l.list.map((x, j) => <li key={j}>{codeifyProse(x)}</li>)}</ul></div>
               ))}
             </div>
           </details>
@@ -2501,25 +2529,21 @@ function GuideArticle({ f, data, filters, home, area, guideIndex, findingsById }
       )}
 
       <h2 className="gd-h2" id="sql">Run it yourself</h2>
-      <p className="muted gd-small">The exact query the export runs for this check, with the window and today's date filled in.</p>
-      <RunItYourself queryId={f.query_id} windowDays={filters.window} />
+      <RunItYourself queryId={f.query_id} windowDays={filters.window} title={f.period_kind === "days" ? undefined : "The SQL"} />
 
       {f.columns && f.columns.length > 0 && (
         <details className="gd-details" id="cols">
           <summary>{`Columns (${f.columns.length})`}</summary>
           <table className="guide2-cols">
-            <thead><tr><th>Column</th><th>Meaning</th><th>Unit</th></tr></thead>
+            <thead><tr><th>Column</th><th>Meaning</th>{showUnit && <th>Unit</th>}</tr></thead>
             <tbody>
-              {f.columns.map((c) => {
-                const meta = columnMeta(c.name, c.kind);
-                return (
-                  <tr key={c.name}>
-                    <td className="mono">{c.name}</td>
-                    <td>{meta.label}{meta.help && <div className="muted">{meta.help}</div>}</td>
-                    <td className="muted">{meta.unit || "—"}</td>
-                  </tr>
-                );
-              })}
+              {colMeta.map(({ c, meta }) => (
+                <tr key={c.name}>
+                  <td className="mono">{c.name}</td>
+                  <td>{meta.label}{!showUnit && meta.unit ? ` (${meta.unit})` : ""}{meta.help && <div className="muted">{meta.help}</div>}</td>
+                  {showUnit && <td className="muted gd-col-unit">{meta.unit || "—"}</td>}
+                </tr>
+              ))}
             </tbody>
           </table>
         </details>
@@ -2552,7 +2576,7 @@ function GuideCheckPage({ data, guideIndex, f, cloud, filters, findingsById }: {
       current={f.query_id}
       rail={<CheckRail f={f} data={data} cloud={cloud} reads={f.reads || []} related={related} />}
     >
-      <GuideArticle f={f} data={data} filters={filters} home={home} area={area} guideIndex={guideIndex} findingsById={findingsById} />
+      <GuideArticle key={f.query_id} f={f} data={data} filters={filters} home={home} area={area} guideIndex={guideIndex} findingsById={findingsById} />
     </GuidePage>
   );
 }

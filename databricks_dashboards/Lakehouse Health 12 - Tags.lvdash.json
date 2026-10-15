@@ -510,7 +510,7 @@
       "displayName": "check:cost_chargeback_by_tag",
       "queryLines": [
         "SELECT\n",
-        "  COALESCE(concat(n_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING)) AS `workspace_shown`,\n",
+        "  COALESCE(concat(n_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING), NULL) AS `workspace_shown`,\n",
         "  CAST(t.`usage_date` AS STRING) AS `usage_date`,\n",
         "  t.`cloud` AS `cloud`,\n",
         "  t.`billing_origin_product` AS `billing_origin_product`,\n",
@@ -549,7 +549,7 @@
       "displayName": "check:cost_chargeback_by_allocation_tag",
       "queryLines": [
         "SELECT\n",
-        "  COALESCE(concat(n_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING)) AS `workspace_shown`,\n",
+        "  COALESCE(concat(n_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING), NULL) AS `workspace_shown`,\n",
         "  t.`status` AS `status`,\n",
         "  t.`usage_unit` AS `usage_unit`,\n",
         "  t.`allocation_key` AS `allocation_key`,\n",
@@ -591,7 +591,7 @@
       "displayName": "check:cost_chargeback_by_tag_value",
       "queryLines": [
         "SELECT\n",
-        "  COALESCE(concat(n_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING)) AS `workspace_shown`,\n",
+        "  COALESCE(concat(n_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING), NULL) AS `workspace_shown`,\n",
         "  t.`status` AS `status`,\n",
         "  t.`tag_key` AS `tag_key`,\n",
         "  t.`tag_value` AS `tag_value`,\n",
@@ -636,7 +636,7 @@
       "displayName": "check:cost_usage_policy_coverage",
       "queryLines": [
         "SELECT\n",
-        "  COALESCE(concat(n_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING)) AS `workspace_shown`,\n",
+        "  COALESCE(concat(n_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING), NULL) AS `workspace_shown`,\n",
         "  t.`status` AS `status`,\n",
         "  CAST(t.`usage_date` AS STRING) AS `usage_date`,\n",
         "  t.`cloud` AS `cloud`,\n",
@@ -676,7 +676,7 @@
       "displayName": "check:cost_unnamed_workspaces",
       "queryLines": [
         "SELECT\n",
-        "  COALESCE(concat(n_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING)) AS `workspace_shown`,\n",
+        "  COALESCE(concat(n_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING), NULL) AS `workspace_shown`,\n",
         "  t.`status` AS `status`,\n",
         "  CAST(t.`first_used` AS STRING) AS `first_used`,\n",
         "  CAST(t.`last_used` AS STRING) AS `last_used`,\n",

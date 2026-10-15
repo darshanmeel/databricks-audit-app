@@ -8,7 +8,7 @@ WITH snapshot AS (
   SELECT MIN(usage_date) AS snapshot_start FROM {{ source('system_billing', 'usage') }}
 ),
 priced AS (
-  SELECT u.workspace_id, u.usage_metadata.job_id AS job_id, u.usage_date, u.sku_name,
+  SELECT u.workspace_id, CASE WHEN upper(u.usage_unit) = 'DBU' THEN u.usage_metadata.job_id END AS job_id, u.usage_date, u.sku_name,
          u.usage_quantity                    AS usage_quantity,
          u.usage_quantity * lp.list_rate     AS list_cost,
          lp.list_rate                        AS list_rate
@@ -23,9 +23,9 @@ priced AS (
    AND u.usage_unit = lp.usage_unit
    AND u.usage_end_time >= lp.price_start_time
    AND (lp.price_end_time IS NULL OR u.usage_end_time < lp.price_end_time)
-  WHERE upper(u.usage_unit) = 'DBU'
-    AND u.usage_metadata.job_id IS NOT NULL
-    AND u.usage_date >= dateadd(day, -({{ w }} * 2), {{ audit_today() }})
+  -- no unit/id filter: usage with no job id (and any non-DBU unit) becomes the workspace's own
+  -- NULL-job row, so the rows add up to total spend
+  WHERE u.usage_date >= dateadd(day, -({{ w }} * 2), {{ audit_today() }})
     AND u.usage_date <  {{ audit_today() }}
 ),
 raw_agg AS (
@@ -94,6 +94,8 @@ scored AS (
              THEN 'NOT_ASSESSED'
            WHEN a.previous_cost IS NULL AND a.previous_unpriced_quantity > 0
              THEN 'NOT_ASSESSED'
+           -- Spend outside any job is context for the total, not a job to fix.
+           WHEN a.job_id IS NULL THEN 'OK'
            WHEN COALESCE(a.eff_current_cost, 0) < {{ param('cost_chargeback_by_job', 'min_spend_usd', 20) }} THEN 'OK'
            WHEN a.eff_previous_cost = 0 THEN 'CRITICAL'
            WHEN (a.eff_current_cost - a.eff_previous_cost) / NULLIF(a.eff_previous_cost, 0) * 100 >= {{ param('cost_chargeback_by_job', 'crit_increase_pct', 50) }}
@@ -123,13 +125,13 @@ flagged AS (
          est_current_usd_list, share_of_total_pct, est_previous_usd_list, est_change_usd_list,
          change_pct, price_basis, status, not_assessed_reason
   FROM scored
-  WHERE status != 'OK'
+  WHERE status != 'OK' OR job_id IS NULL   -- the no-job row is never pooled
 ),
 ok_ranked AS (
   SELECT scored.*,
          ROW_NUMBER() OVER (ORDER BY est_current_usd_list DESC NULLS LAST, job_id) AS rn
   FROM scored
-  WHERE status = 'OK'
+  WHERE status = 'OK' AND job_id IS NOT NULL
 ),
 ok_kept AS (
   -- The top {{ param('cost_chargeback_by_job', 'top_n', 20) }} OK jobs by current spend, kept as their own row.

@@ -997,7 +997,7 @@
       "displayName": "method:Priced sources",
       "queryLines": [
         "SELECT check_name, area, why FROM (VALUES\n",
-        "       ('Warehouse idle time', 'Compute', 'A warehouse billed while running with no query for longer than the idle gap in the thresholds file. Possible waste.'),\n",
+        "       ('Warehouse idle time', 'Compute', 'A warehouse billed while running with no query for over 60 s (idle gap). Possible waste.'),\n",
         "       ('Idle cluster nodes', 'Compute', 'Classic cluster minutes with almost no CPU in use. Possible waste.'),\n",
         "       ('Compute burned on failed runs', 'Jobs', 'Job runs that failed, and failed attempts later repaired: compute that produced no result. Possible waste; some is unavoidable.'),\n",
         "       ('Compute burned on failed statements', 'Queries', 'SQL statements that failed after using billed compute. Possible waste; some is unavoidable.'),\n",

@@ -534,7 +534,7 @@ function LibraryIssueBadge({ corrections }: { corrections: LibraryCorrection[] |
   return (
     <div className={`guidance lib-corrections ${open ? "open" : ""}`}>
       <button type="button" className="lib-badge-trigger" onClick={() => setOpen(!open)}
-        title={allFixed ? "This check's query differs from the Databricks sample query it came from; click for what changed and why." : "Known issues with this check's query; click for their effect on the numbers."}>
+        title={allFixed ? "What changed in this check's query" : "Known issues with this check's query"}>
         <Badge kind={kind}>{label}</Badge>
       </button>
       {open && (

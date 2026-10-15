@@ -535,7 +535,7 @@
       "displayName": "check:overview_spend_estimate",
       "queryLines": [
         "SELECT\n",
-        "  COALESCE(concat(n_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING)) AS `workspace_shown`,\n",
+        "  COALESCE(concat(n_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING), NULL) AS `workspace_shown`,\n",
         "  t.`total_net_dbus` AS `total_net_dbus`,\n",
         "  t.`currency_code` AS `currency_code`,\n",
         "  t.`net_list_cost_usd` AS `net_list_cost_usd`,\n",
@@ -571,7 +571,7 @@
       "displayName": "check:overview_dbu_by_sku",
       "queryLines": [
         "SELECT\n",
-        "  COALESCE(concat(n_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING)) AS `workspace_shown`,\n",
+        "  COALESCE(concat(n_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING), NULL) AS `workspace_shown`,\n",
         "  t.`sku_name` AS `sku_name`,\n",
         "  t.`billing_origin_product` AS `billing_origin_product`,\n",
         "  t.`net_dbus` AS `net_dbus`\n",
@@ -606,7 +606,7 @@
       "displayName": "check:overview_serverless_classic_split",
       "queryLines": [
         "SELECT\n",
-        "  COALESCE(concat(n_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING)) AS `workspace_shown`,\n",
+        "  COALESCE(concat(n_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING), NULL) AS `workspace_shown`,\n",
         "  t.`serverless_net_dbus` AS `serverless_net_dbus`,\n",
         "  t.`classic_net_dbus` AS `classic_net_dbus`,\n",
         "  t.`serverless_pct` AS `serverless_pct`,\n",
@@ -645,7 +645,7 @@
       "displayName": "check:overview_daily_dbu_trend",
       "queryLines": [
         "SELECT\n",
-        "  COALESCE(concat(n_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING)) AS `workspace_shown`,\n",
+        "  COALESCE(concat(n_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING), NULL) AS `workspace_shown`,\n",
         "  CAST(t.`usage_date` AS STRING) AS `usage_date`,\n",
         "  t.`net_dbus` AS `net_dbus`\n",
         "FROM databricks_audit_dashboard.overview_daily_dbu_trend t\n",

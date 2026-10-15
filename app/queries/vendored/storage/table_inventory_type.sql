@@ -16,5 +16,8 @@
 SELECT table_catalog, table_schema, table_type, data_source_format,
        COUNT(*) AS table_count
 FROM system.information_schema.tables
+-- samples and System user tables are Databricks' own, not the customer's.
+WHERE table_catalog NOT IN ('system', 'samples')
+  AND COALESCE(table_owner, '') <> 'System user'
 GROUP BY table_catalog, table_schema, table_type, data_source_format
 ORDER BY table_catalog, table_schema, table_type

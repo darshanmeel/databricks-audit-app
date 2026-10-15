@@ -27,16 +27,10 @@
 --   prev_usd_list are the two totals; change_usd_list and change_pct compare them. dbus is
 --   populated only when usage_unit = 'DBU'. price_basis discloses pricing coverage across both
 --   windows combined; not_assessed_reason explains a NOT_ASSESSED row.
--- healthy: status OK - no increase at/above :warn_increase_pct, or the row's own current-period
---   spend (a real $0 counts) sits below :min_spend_usd. The comparison is judged per workspace,
---   not account-wide (see caveats), so a SKU's account-wide swing may not itself flag.
--- investigate_if: CRITICAL - the increase is at/above :crit_increase_pct on at least
---   :min_spend_usd of current spend, or brand-new spend above the floor with nothing in the
---   previous period to compare against. WARN - at/above :warn_increase_pct. NOT_ASSESSED - read
---   not_assessed_reason: 'previous_window_not_covered' when the account's own earliest recorded
---   usage does not reach back far enough to cover the previous window at this window length;
---   'current_period_unpriced' / 'previous_period_unpriced' when that side's whole spend could not
---   be priced at all.
+-- healthy: OK - up less than :warn_increase_pct, or current spend under $:min_spend_usd.
+-- investigate_if: CRITICAL - up :crit_increase_pct or more on at least $:min_spend_usd of current
+--   spend, or brand-new spend above the floor with nothing before. WARN - up :warn_increase_pct or
+--   more. NOT_ASSESSED - read not_assessed_reason.
 -- actions: 1) open cost_sku_trend_12m for the same SKU to see whether this window's move is a
 --   one-off or part of a 12-month growth trend (free); 2) open cost_chargeback_by_allocation_tag
 --   or cost_chargeback_by_workspace for the same window to see which workspace or team is driving

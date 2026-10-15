@@ -206,13 +206,22 @@ def substitute_params(text: str | None, resolved: dict[str, tuple[Any, str]]) ->
     start with a colon-letter, or a lint_headers.py bug, never this function's call to guess."""
     if not text:
         return text
+    if resolved.get("period_days", (None, None))[1] == "window":
+        text = re.sub(r":period_days\s+days", ":period_days", text)
 
     def _sub(m: "re.Match[str]") -> str:
         name = m.group(1)
         if name not in resolved:
             return m.group(0)
         value, source = resolved[name]
+        if source == "window":
+            return "the window"
         shown = _fmt_param_value(value)
+        # A dollar or percent threshold keeps its unit.
+        if name.endswith("_usd") and isinstance(value, (int, float)) and not m.string[:m.start()].endswith("$"):
+            shown = f"${shown}"
+        elif name.endswith("_pct") and not m.string[m.end():].startswith((" percent", "%")):
+            shown = f"{shown}%"
         # A byte threshold reads as MiB/GiB, never a ten-digit number.
         if name.endswith("_bytes") and isinstance(value, (int, float)) and value >= 1024 ** 2:
             shown = "1 GiB" if value == 1024 ** 3 else f"{value / 1024 ** 2:g} MiB"
@@ -221,7 +230,7 @@ def substitute_params(text: str | None, resolved: dict[str, tuple[Any, str]]) ->
     return _PARAM_TOKEN_RE.sub(_sub, text)
 
 
-def substitute_header_params(spec: registry.QuerySpec, window_days: int | None = None) -> dict[str, Any]:
+def substitute_header_params(spec: registry.QuerySpec, window_days: int | None = None, generic_window: bool = False) -> dict[str, Any]:
     """The header fields a reader actually sees -- read_this, healthy, investigate_if, actions and
     not_assessed_reasons -- with every `:param` token replaced by resolve_params()'s value/source
     (P4-03). caveats and confidence_note are deliberately left alone: they are reference text, not
@@ -241,7 +250,9 @@ def substitute_header_params(spec: registry.QuerySpec, window_days: int | None =
     text never claims a fuller query than what actually ran.
     """
     resolved = resolve_params(spec)
-    if window_days is not None and spec.windowed and "period_days" in resolved:
+    if generic_window and "period_days" in resolved:
+        resolved["period_days"] = (None, "window")
+    elif window_days is not None and spec.windowed and "period_days" in resolved:
         coverage = app_core_data.exported_window_coverage()
         covered = coverage.get(window_days) if coverage else None
         if covered is not None and covered < window_days:
@@ -254,6 +265,7 @@ def substitute_header_params(spec: registry.QuerySpec, window_days: int | None =
         "read_this": substitute_params(spec.read_this, resolved),
         "healthy": substitute_params(spec.healthy, resolved),
         "investigate_if": substitute_params(spec.investigate_if, resolved),
+        "caveats": substitute_params(spec.caveats, resolved),
         "actions": [substitute_params(a, resolved) for a in (spec.actions or [])],
         "not_assessed_reasons": {
             code: substitute_params(words, resolved)

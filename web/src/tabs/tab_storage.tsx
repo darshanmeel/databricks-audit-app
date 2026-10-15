@@ -26,6 +26,8 @@ function UnreadTablesCard({ filters, meta }: LooseProps) {
   const days = Math.min(filters.window, numOrZero(meta && meta.snapshot_days) || filters.window);
   const rows = rowsOf(state);
   const real = rows ? rows.filter((r) => !r.is_other) : null;
+  // Databricks-owned tables (samples, System user) come as one pooled row: cost counted, not listed.
+  const sys = rows ? rows.find((r) => r.is_other && r.table_name === "(Databricks-owned)") : null;
   const written = real ? real.filter((r) => r.days_since_last_write != null && numOrZero(r.days_since_last_write) <= days) : null;
   const idle = real ? real.filter((r) => !(r.days_since_last_write != null && numOrZero(r.days_since_last_write) <= days)) : null;
   const list = (which === "written" ? written : idle) || [];
@@ -44,7 +46,7 @@ function UnreadTablesCard({ filters, meta }: LooseProps) {
     return d == null ? "none on record" : numOrZero(d) === 0 ? "today" : `${fmtInt(d)} day${numOrZero(d) === 1 ? "" : "s"} ago`;
   };
   return (
-    <Card title={`Tables nobody read in the last ${fmtInt(days)} days`} right={real && priced(real) ? <span className="muted">{`${fmtMoney(usd(real), 0)} a month storage and upkeep`}</span> : null}>
+    <Card title={`Tables nobody read in the last ${fmtInt(days)} days`} right={real && priced(real) ? <span className="muted">{`${fmtMoney(usd(real) + numOrZero(sys && sys.est_total_usd_month), 0)} a month storage and upkeep`}</span> : null}>
       {real ? (
         <React.Fragment>
           <div className="ws-actions">
@@ -80,6 +82,7 @@ function UnreadTablesCard({ filters, meta }: LooseProps) {
               {showAll ? `Show the ${UNREAD_SHOWN} costliest` : sorted.length > UNREAD_MAX ? `Show the ${UNREAD_MAX} costliest of ${fmtInt(sorted.length)}` : `Show all ${fmtInt(sorted.length)}`}
             </button>
           )}
+          {sys && <div className="metric-note">{`Not listed: ${fmtInt(sys.pooled_count)} Databricks-owned tables (samples, System user)${sys.est_total_usd_month != null ? ` · ${fmtMoney(sys.est_total_usd_month, 0)} a month, counted in the total` : ""}.`}</div>}
           <div className="metric-note">Reads outside Unity Catalog lineage don't show here -- confirm with the owner before dropping anything. A read through a view counts for its tables, not the view.</div>
         </React.Fragment>
       ) : <ChartNote state={state} label="storage_unused_table_cost" />}

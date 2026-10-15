@@ -2735,7 +2735,7 @@ WITH snapshot AS (
   FROM `system`.`billing`.`usage`
 ),
 priced AS (
-  SELECT u.workspace_id, u.usage_metadata.warehouse_id AS warehouse_id, u.usage_date,
+  SELECT u.workspace_id, CASE WHEN upper(u.usage_unit) = 'DBU' THEN u.usage_metadata.warehouse_id END AS warehouse_id, u.usage_date,
          u.record_type, u.usage_start_time, u.sku_name,
          u.usage_quantity                AS usage_quantity,
          u.usage_quantity * lp.list_rate AS list_cost,
@@ -2778,9 +2778,9 @@ priced AS (
    AND u.usage_unit = lp.usage_unit
    AND u.usage_end_time >= lp.price_start_time
    AND (lp.price_end_time IS NULL OR u.usage_end_time < lp.price_end_time)
-  WHERE upper(u.usage_unit) = 'DBU'
-    AND u.usage_metadata.warehouse_id IS NOT NULL
-    AND u.usage_date >= dateadd(day, -(30 * 2), current_date())
+  -- no unit/id filter: usage with no warehouse id (and any non-DBU unit) becomes the workspace's
+  -- own NULL-warehouse row, so the rows add up to total spend
+  WHERE u.usage_date >= dateadd(day, -(30 * 2), current_date())
     AND u.usage_date <  current_date()
 ),
 raw_agg AS (
@@ -2846,6 +2846,8 @@ scored AS (
            WHEN s.snapshot_start > dateadd(day, -(30 * 2), current_date()) THEN 'NOT_ASSESSED'
            WHEN a.current_cost IS NULL AND a.current_unpriced_quantity > 0           THEN 'NOT_ASSESSED'
            WHEN a.previous_cost IS NULL AND a.previous_unpriced_quantity > 0         THEN 'NOT_ASSESSED'
+           -- Spend outside any warehouse is context for the total, not a warehouse to fix.
+           WHEN a.warehouse_id IS NULL THEN 'OK'
            WHEN COALESCE(a.eff_current_cost, 0) < 20                    THEN 'OK'
            WHEN a.eff_previous_cost = 0                                             THEN 'CRITICAL'
            WHEN (a.eff_current_cost - a.eff_previous_cost) / NULLIF(a.eff_previous_cost, 0) * 100 >= 50
@@ -2871,7 +2873,7 @@ flagged AS (
          billed_hours, queries, usd_per_1000_queries, usd_list, share_of_total_pct, prev_usd_list,
          change_usd_list, change_pct, price_basis, status, not_assessed_reason
   FROM scored
-  WHERE status IN ('WARN', 'CRITICAL')
+  WHERE status IN ('WARN', 'CRITICAL') OR warehouse_id IS NULL   -- the not-on-a-warehouse row is never pooled
 ),
 poolable_ranked AS (
   -- OK and NOT_ASSESSED warehouses are both poolable - on an account short of 2x 30 of
@@ -2883,7 +2885,7 @@ poolable_ranked AS (
   SELECT scored.*,
          ROW_NUMBER() OVER (PARTITION BY status ORDER BY usd_list DESC NULLS LAST, warehouse_id) AS rn
   FROM scored
-  WHERE status IN ('OK', 'NOT_ASSESSED')
+  WHERE status IN ('OK', 'NOT_ASSESSED') AND warehouse_id IS NOT NULL
 ),
 poolable_kept AS (
   -- The top 20 OK/NOT_ASSESSED warehouses by current spend, kept as their own row.
@@ -2978,11 +2980,13 @@ WITH snapshot AS (
 priced AS (
   SELECT u.workspace_id,
          CASE
+           WHEN NOT (upper(u.usage_unit) = 'DBU' AND u.usage_metadata.cluster_id IS NOT NULL) THEN 'no_cluster'
            WHEN u.usage_metadata.dlt_pipeline_id IS NOT NULL THEN 'pipeline'
            WHEN u.usage_metadata.job_id IS NULL THEN 'all_purpose'
            ELSE 'job_cluster'
          END AS cluster_kind,
          CASE
+           WHEN NOT (upper(u.usage_unit) = 'DBU' AND u.usage_metadata.cluster_id IS NOT NULL) THEN CAST(NULL AS STRING)
            WHEN u.usage_metadata.dlt_pipeline_id IS NOT NULL THEN u.usage_metadata.dlt_pipeline_id
            WHEN u.usage_metadata.job_id IS NULL THEN u.usage_metadata.cluster_id
            ELSE u.usage_metadata.job_id
@@ -3029,9 +3033,9 @@ priced AS (
    AND u.usage_unit = lp.usage_unit
    AND u.usage_end_time >= lp.price_start_time
    AND (lp.price_end_time IS NULL OR u.usage_end_time < lp.price_end_time)
-  WHERE upper(u.usage_unit) = 'DBU'
-    AND u.usage_metadata.cluster_id IS NOT NULL
-    AND u.usage_date >= dateadd(day, -(30 * 2), current_date())
+  -- no unit/id filter: usage with no cluster id (and any non-DBU unit) becomes the workspace's own
+  -- 'no_cluster' row, so the rows add up to total spend
+  WHERE u.usage_date >= dateadd(day, -(30 * 2), current_date())
     AND u.usage_date <  current_date()
 ),
 raw_agg AS (
@@ -3121,6 +3125,8 @@ scored AS (
              THEN 'NOT_ASSESSED'
            WHEN a.previous_cost IS NULL AND a.previous_unpriced_quantity > 0
              THEN 'NOT_ASSESSED'
+           -- Spend outside any cluster is context for the total, not a cluster to fix.
+           WHEN a.cluster_kind = 'no_cluster' THEN 'OK'
            WHEN COALESCE(a.eff_current_cost, 0) < 20 THEN 'OK'
            WHEN a.eff_previous_cost = 0 THEN 'CRITICAL'
            WHEN (a.eff_current_cost - a.eff_previous_cost) / NULLIF(a.eff_previous_cost, 0) * 100 >= 50
@@ -3153,13 +3159,13 @@ flagged AS (
          est_current_usd_list, share_of_total_pct, est_previous_usd_list, est_change_usd_list,
          change_pct, price_basis, status, not_assessed_reason
   FROM scored
-  WHERE status != 'OK'
+  WHERE status != 'OK' OR cluster_kind = 'no_cluster'   -- the no-cluster row is never pooled
 ),
 ok_ranked AS (
   SELECT scored.*,
          ROW_NUMBER() OVER (ORDER BY est_current_usd_list DESC NULLS LAST, cluster_kind, entity_id) AS rn
   FROM scored
-  WHERE status = 'OK'
+  WHERE status = 'OK' AND cluster_kind <> 'no_cluster'
 ),
 ok_kept AS (
   -- The top 20 OK rows by current spend, kept as their own row.
@@ -4321,7 +4327,7 @@ WITH snapshot AS (
   SELECT MIN(usage_date) AS snapshot_start FROM `system`.`billing`.`usage`
 ),
 priced AS (
-  SELECT u.workspace_id, u.usage_metadata.job_id AS job_id, u.usage_date, u.sku_name,
+  SELECT u.workspace_id, CASE WHEN upper(u.usage_unit) = 'DBU' THEN u.usage_metadata.job_id END AS job_id, u.usage_date, u.sku_name,
          u.usage_quantity                    AS usage_quantity,
          u.usage_quantity * lp.list_rate     AS list_cost,
          lp.list_rate                        AS list_rate
@@ -4363,9 +4369,9 @@ priced AS (
    AND u.usage_unit = lp.usage_unit
    AND u.usage_end_time >= lp.price_start_time
    AND (lp.price_end_time IS NULL OR u.usage_end_time < lp.price_end_time)
-  WHERE upper(u.usage_unit) = 'DBU'
-    AND u.usage_metadata.job_id IS NOT NULL
-    AND u.usage_date >= dateadd(day, -(30 * 2), current_date())
+  -- no unit/id filter: usage with no job id (and any non-DBU unit) becomes the workspace's own
+  -- NULL-job row, so the rows add up to total spend
+  WHERE u.usage_date >= dateadd(day, -(30 * 2), current_date())
     AND u.usage_date <  current_date()
 ),
 raw_agg AS (
@@ -4434,6 +4440,8 @@ scored AS (
              THEN 'NOT_ASSESSED'
            WHEN a.previous_cost IS NULL AND a.previous_unpriced_quantity > 0
              THEN 'NOT_ASSESSED'
+           -- Spend outside any job is context for the total, not a job to fix.
+           WHEN a.job_id IS NULL THEN 'OK'
            WHEN COALESCE(a.eff_current_cost, 0) < 20 THEN 'OK'
            WHEN a.eff_previous_cost = 0 THEN 'CRITICAL'
            WHEN (a.eff_current_cost - a.eff_previous_cost) / NULLIF(a.eff_previous_cost, 0) * 100 >= 50
@@ -4463,13 +4471,13 @@ flagged AS (
          est_current_usd_list, share_of_total_pct, est_previous_usd_list, est_change_usd_list,
          change_pct, price_basis, status, not_assessed_reason
   FROM scored
-  WHERE status != 'OK'
+  WHERE status != 'OK' OR job_id IS NULL   -- the no-job row is never pooled
 ),
 ok_ranked AS (
   SELECT scored.*,
          ROW_NUMBER() OVER (ORDER BY est_current_usd_list DESC NULLS LAST, job_id) AS rn
   FROM scored
-  WHERE status = 'OK'
+  WHERE status = 'OK' AND job_id IS NOT NULL
 ),
 ok_kept AS (
   -- The top 20 OK jobs by current spend, kept as their own row.
@@ -5022,7 +5030,9 @@ other_values AS (
   GROUP BY workspace_id, tag_key
 ),
 untagged_values AS (
-  SELECT kp.workspace_id, kp.tag_key, CAST(NULL AS STRING) AS tag_value,
+  -- every workspace with spend x every key seen anywhere in the account, so a workspace that never
+  -- carries a key still gets its whole spend as (untagged) and each key's rows sum to the total.
+  SELECT t.workspace_id, k.tag_key, CAST(NULL AS STRING) AS tag_value,
          t.cur_total_usd  - COALESCE(kp.cur_present_usd, 0)  AS cur_usd,
          t.prev_total_usd - COALESCE(kp.prev_present_usd, 0) AS prev_usd,
          t.cur_total_unpriced_q  - COALESCE(kp.cur_present_unpriced_q, 0)  AS cur_unpriced_q,
@@ -5030,13 +5040,21 @@ untagged_values AS (
          t.prev_total_unpriced_q - COALESCE(kp.prev_present_unpriced_q, 0) AS prev_unpriced_q,
          t.prev_total_priced_q  - COALESCE(kp.prev_present_priced_q, 0)   AS prev_priced_q,
          FALSE AS is_other, TRUE AS is_untagged, CAST(NULL AS BIGINT) AS pooled_count
-  FROM key_present kp
-  JOIN ws_totals t ON t.workspace_id IS NOT DISTINCT FROM kp.workspace_id
+  FROM ws_totals t
+  CROSS JOIN (SELECT DISTINCT tag_key FROM key_present) k
+  LEFT JOIN key_present kp
+    ON kp.workspace_id IS NOT DISTINCT FROM t.workspace_id AND kp.tag_key = k.tag_key
+),
+untagged_nonzero AS (
+  SELECT * FROM untagged_values
+  WHERE ABS(COALESCE(cur_usd, 0)) > 0.000001 OR ABS(COALESCE(prev_usd, 0)) > 0.000001
+     OR cur_unpriced_q > 0.000001 OR prev_unpriced_q > 0.000001
+     OR cur_priced_q > 0.000001 OR prev_priced_q > 0.000001
 ),
 combined AS (
   SELECT * FROM top_values
   UNION ALL SELECT * FROM other_values
-  UNION ALL SELECT * FROM untagged_values
+  UNION ALL SELECT * FROM untagged_nonzero
 ),
 resolved AS (
   -- same NULL-vs-real-zero resolution cost_period_over_period's own `agg` CTE uses: a side with
@@ -14576,6 +14594,8 @@ SELECT
     data_source_format
 FROM `system`.`information_schema`.`tables`
 WHERE table_type <> 'VIEW'
+  AND table_catalog NOT IN ('system', 'samples')
+  AND COALESCE(table_owner, '') <> 'System user'
 ORDER BY table_catalog, table_schema, table_name
 ) q
 """
@@ -14587,6 +14607,8 @@ FROM (
 SELECT table_catalog, table_schema, table_type, data_source_format,
        COUNT(*) AS table_count
 FROM `system`.`information_schema`.`tables`
+WHERE table_catalog NOT IN ('system', 'samples')
+  AND COALESCE(table_owner, '') <> 'System user'
 GROUP BY table_catalog, table_schema, table_type, data_source_format
 ORDER BY table_catalog, table_schema, table_type
 ) q
@@ -14619,7 +14641,8 @@ inventory AS (
          created,
          last_altered
   FROM `system`.`information_schema`.`tables`
-  WHERE table_catalog NOT IN ('system', '__databricks_internal')   -- pipeline backing tables
+  WHERE table_catalog NOT IN ('system', '__databricks_internal', 'samples')   -- pipeline backing tables, Databricks samples
+    AND COALESCE(table_owner, '') <> 'System user'
     AND table_schema <> 'information_schema'
     AND table_type IN ('MANAGED', 'EXTERNAL')
 )
@@ -15740,7 +15763,9 @@ last_write AS (
   GROUP BY target_table_catalog, target_table_schema, target_table_name
 ),
 inventory AS (
-  SELECT table_catalog, table_schema, table_name, table_type, table_owner, last_altered
+  SELECT table_catalog, table_schema, table_name, table_type, table_owner, last_altered,
+         -- Databricks' own tables (samples, owned by System user): kept out of the list, their $ pooled below.
+         (table_catalog = 'samples' OR COALESCE(table_owner, '') = 'System user') AS is_system_owned
   FROM `system`.`information_schema`.`tables`
   WHERE table_catalog <> 'system'
     AND table_schema <> 'information_schema'
@@ -15839,7 +15864,7 @@ po_rate AS (
 ),
 sized AS (
   SELECT
-    u.table_catalog, u.table_schema, u.table_name, u.table_type, u.table_owner, u.last_altered,
+    u.table_catalog, u.table_schema, u.table_name, u.table_type, u.table_owner, u.last_altered, u.is_system_owned,
     ls.active_bytes,
     COALESCE(po.po_dbu_sum, 0) AS po_dbu_sum,
     lw.last_write_time,
@@ -15911,10 +15936,10 @@ assessed AS (
     ORDER BY b.est_total_usd_month DESC, b.table_catalog, b.table_schema, b.table_name
   ) AS rn
   FROM banded b
-  WHERE b.est_total_usd_month IS NOT NULL
+  WHERE b.est_total_usd_month IS NOT NULL AND NOT b.is_system_owned
 ),
 unpriced_rows AS (
-  SELECT b.* FROM banded b WHERE b.est_total_usd_month IS NULL
+  SELECT b.* FROM banded b WHERE b.est_total_usd_month IS NULL AND NOT b.is_system_owned
 ),
 kept AS (
   SELECT
@@ -15956,11 +15981,32 @@ pooled AS (
     'OK' AS status
   FROM assessed
   WHERE rn > 500
+),
+system_pooled AS (
+  -- Databricks-owned tables in one is_other row, table_name '(Databricks-owned)': their cost stays
+  -- counted, the tables stay out of the list.
+  SELECT
+    CAST(NULL AS STRING) AS table_catalog, CAST(NULL AS STRING) AS table_schema,
+    '(Databricks-owned)' AS table_name, CAST(NULL AS STRING) AS table_type,
+    'System user' AS table_owner,
+    ROUND(SUM(active_gb), 3)              AS active_gb,
+    ROUND(SUM(est_storage_usd_month), 2)  AS est_storage_usd_month,
+    ROUND(SUM(po_upkeep_usd_window), 2)   AS po_upkeep_usd_window,
+    MAX(price_basis)                      AS price_basis,
+    ROUND(SUM(est_total_usd_month), 2)    AS est_total_usd_month,
+    CAST(NULL AS BIGINT) AS days_since_altered, CAST(NULL AS BIGINT) AS days_since_last_write,
+    TRUE AS is_other, COUNT(*) AS pooled_count,
+    CAST(NULL AS STRING) AS not_assessed_reason,
+    'OK' AS status
+  FROM banded
+  WHERE is_system_owned
 )
 SELECT * FROM (
   SELECT * FROM kept
   UNION ALL
   SELECT * FROM pooled WHERE pooled_count > 0
+  UNION ALL
+  SELECT * FROM system_pooled WHERE pooled_count > 0
 ) u
 ORDER BY CASE status WHEN 'CRITICAL' THEN 0 WHEN 'WARN' THEN 1 WHEN 'NOT_ASSESSED' THEN 2 ELSE 3 END,
          is_other,

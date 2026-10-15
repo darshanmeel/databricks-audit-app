@@ -118,7 +118,9 @@ other_values AS (
   GROUP BY workspace_id, tag_key
 ),
 untagged_values AS (
-  SELECT kp.workspace_id, kp.tag_key, CAST(NULL AS STRING) AS tag_value,
+  -- every workspace with spend x every key seen anywhere in the account, so a workspace that never
+  -- carries a key still gets its whole spend as (untagged) and each key's rows sum to the total.
+  SELECT t.workspace_id, k.tag_key, CAST(NULL AS STRING) AS tag_value,
          t.cur_total_usd  - COALESCE(kp.cur_present_usd, 0)  AS cur_usd,
          t.prev_total_usd - COALESCE(kp.prev_present_usd, 0) AS prev_usd,
          t.cur_total_unpriced_q  - COALESCE(kp.cur_present_unpriced_q, 0)  AS cur_unpriced_q,
@@ -126,13 +128,21 @@ untagged_values AS (
          t.prev_total_unpriced_q - COALESCE(kp.prev_present_unpriced_q, 0) AS prev_unpriced_q,
          t.prev_total_priced_q  - COALESCE(kp.prev_present_priced_q, 0)   AS prev_priced_q,
          FALSE AS is_other, TRUE AS is_untagged, CAST(NULL AS BIGINT) AS pooled_count
-  FROM key_present kp
-  JOIN ws_totals t ON t.workspace_id IS NOT DISTINCT FROM kp.workspace_id
+  FROM ws_totals t
+  CROSS JOIN (SELECT DISTINCT tag_key FROM key_present) k
+  LEFT JOIN key_present kp
+    ON kp.workspace_id IS NOT DISTINCT FROM t.workspace_id AND kp.tag_key = k.tag_key
+),
+untagged_nonzero AS (
+  SELECT * FROM untagged_values
+  WHERE ABS(COALESCE(cur_usd, 0)) > 0.000001 OR ABS(COALESCE(prev_usd, 0)) > 0.000001
+     OR cur_unpriced_q > 0.000001 OR prev_unpriced_q > 0.000001
+     OR cur_priced_q > 0.000001 OR prev_priced_q > 0.000001
 ),
 combined AS (
   SELECT * FROM top_values
   UNION ALL SELECT * FROM other_values
-  UNION ALL SELECT * FROM untagged_values
+  UNION ALL SELECT * FROM untagged_nonzero
 ),
 resolved AS (
   -- same NULL-vs-real-zero resolution cost_period_over_period's own `agg` CTE uses: a side with
@@ -301,7 +311,9 @@ other_values AS (
   GROUP BY workspace_id, tag_key
 ),
 untagged_values AS (
-  SELECT kp.workspace_id, kp.tag_key, CAST(NULL AS STRING) AS tag_value,
+  -- every workspace with spend x every key seen anywhere in the account, so a workspace that never
+  -- carries a key still gets its whole spend as (untagged) and each key's rows sum to the total.
+  SELECT t.workspace_id, k.tag_key, CAST(NULL AS STRING) AS tag_value,
          t.cur_total_usd  - COALESCE(kp.cur_present_usd, 0)  AS cur_usd,
          t.prev_total_usd - COALESCE(kp.prev_present_usd, 0) AS prev_usd,
          t.cur_total_unpriced_q  - COALESCE(kp.cur_present_unpriced_q, 0)  AS cur_unpriced_q,
@@ -309,13 +321,21 @@ untagged_values AS (
          t.prev_total_unpriced_q - COALESCE(kp.prev_present_unpriced_q, 0) AS prev_unpriced_q,
          t.prev_total_priced_q  - COALESCE(kp.prev_present_priced_q, 0)   AS prev_priced_q,
          FALSE AS is_other, TRUE AS is_untagged, CAST(NULL AS BIGINT) AS pooled_count
-  FROM key_present kp
-  JOIN ws_totals t ON t.workspace_id IS NOT DISTINCT FROM kp.workspace_id
+  FROM ws_totals t
+  CROSS JOIN (SELECT DISTINCT tag_key FROM key_present) k
+  LEFT JOIN key_present kp
+    ON kp.workspace_id IS NOT DISTINCT FROM t.workspace_id AND kp.tag_key = k.tag_key
+),
+untagged_nonzero AS (
+  SELECT * FROM untagged_values
+  WHERE ABS(COALESCE(cur_usd, 0)) > 0.000001 OR ABS(COALESCE(prev_usd, 0)) > 0.000001
+     OR cur_unpriced_q > 0.000001 OR prev_unpriced_q > 0.000001
+     OR cur_priced_q > 0.000001 OR prev_priced_q > 0.000001
 ),
 combined AS (
   SELECT * FROM top_values
   UNION ALL SELECT * FROM other_values
-  UNION ALL SELECT * FROM untagged_values
+  UNION ALL SELECT * FROM untagged_nonzero
 ),
 resolved AS (
   -- same NULL-vs-real-zero resolution cost_period_over_period's own `agg` CTE uses: a side with

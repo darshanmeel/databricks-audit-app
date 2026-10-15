@@ -211,7 +211,7 @@
       "displayName": "check:access_runas_escalation",
       "queryLines": [
         "SELECT\n",
-        "  COALESCE(concat(n_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING)) AS `workspace_shown`,\n",
+        "  COALESCE(concat(n_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING), NULL) AS `workspace_shown`,\n",
         "  t.`status` AS `status`,\n",
         "  t.`service_name` AS `service_name`,\n",
         "  t.`action_name` AS `action_name`,\n",
@@ -253,7 +253,7 @@
       "displayName": "check:access_login_concentration",
       "queryLines": [
         "SELECT\n",
-        "  COALESCE(concat(n_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING)) AS `workspace_shown`,\n",
+        "  COALESCE(concat(n_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING), NULL) AS `workspace_shown`,\n",
         "  t.`status` AS `status`,\n",
         "  t.`principal` AS `principal`,\n",
         "  t.`source_ip_address` AS `source_ip_address`,\n",
@@ -297,7 +297,7 @@
       "displayName": "check:access_network_inbound_denials",
       "queryLines": [
         "SELECT\n",
-        "  COALESCE(concat(n_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING)) AS `workspace_shown`,\n",
+        "  COALESCE(concat(n_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING), NULL) AS `workspace_shown`,\n",
         "  t.`status` AS `status`,\n",
         "  t.`policy_outcome` AS `policy_outcome`,\n",
         "  t.`rule_label` AS `rule_label`,\n",
@@ -338,7 +338,7 @@
       "displayName": "check:access_network_outbound_denials",
       "queryLines": [
         "SELECT\n",
-        "  COALESCE(concat(n_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING)) AS `workspace_shown`,\n",
+        "  COALESCE(concat(n_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING), NULL) AS `workspace_shown`,\n",
         "  t.`status` AS `status`,\n",
         "  t.`network_source_type` AS `network_source_type`,\n",
         "  t.`destination_type` AS `destination_type`,\n",
@@ -460,7 +460,7 @@
       "displayName": "check:access_admin_role_change_events",
       "queryLines": [
         "SELECT\n",
-        "  COALESCE(concat(COALESCE(t.`workspace_name`, n_workspace.n), ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING)) AS `workspace_shown`,\n",
+        "  COALESCE(concat(COALESCE(t.`workspace_name`, n_workspace.n), ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING), NULL) AS `workspace_shown`,\n",
         "  t.`status` AS `status`,\n",
         "  t.`service_name` AS `service_name`,\n",
         "  t.`action_name` AS `action_name`,\n",
@@ -634,7 +634,7 @@
       "displayName": "check:access_sensitive_table_reads",
       "queryLines": [
         "SELECT\n",
-        "  COALESCE(concat(n_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING)) AS `workspace_shown`,\n",
+        "  COALESCE(concat(n_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING), NULL) AS `workspace_shown`,\n",
         "  t.`status` AS `status`,\n",
         "  t.`table_catalog` AS `table_catalog`,\n",
         "  t.`table_schema` AS `table_schema`,\n",
@@ -934,7 +934,7 @@
       "displayName": "check:access_table_lineage_blast_radius",
       "queryLines": [
         "SELECT\n",
-        "  COALESCE(concat(n_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING)) AS `workspace_shown`,\n",
+        "  COALESCE(concat(n_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING), NULL) AS `workspace_shown`,\n",
         "  t.`status` AS `status`,\n",
         "  t.`source_table_full_name` AS `source_table_full_name`,\n",
         "  t.`target_table_full_name` AS `target_table_full_name`,\n",
@@ -978,7 +978,7 @@
       "displayName": "check:access_column_lineage_sensitive_reach",
       "queryLines": [
         "SELECT\n",
-        "  COALESCE(concat(n_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING)) AS `workspace_shown`,\n",
+        "  COALESCE(concat(n_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING), NULL) AS `workspace_shown`,\n",
         "  t.`status` AS `status`,\n",
         "  t.`source_table_full_name` AS `source_table_full_name`,\n",
         "  t.`source_column_name` AS `source_column_name`,\n",
@@ -1021,7 +1021,7 @@
       "displayName": "check:access_pii_propagation_untagged",
       "queryLines": [
         "SELECT\n",
-        "  COALESCE(concat(n_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING)) AS `workspace_shown`,\n",
+        "  COALESCE(concat(n_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING), NULL) AS `workspace_shown`,\n",
         "  t.`status` AS `status`,\n",
         "  t.`source_table_catalog` AS `source_table_catalog`,\n",
         "  t.`source_table_schema` AS `source_table_schema`,\n",

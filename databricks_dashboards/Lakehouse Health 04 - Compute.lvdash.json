@@ -555,8 +555,8 @@
       "displayName": "check:compute_warehouse_idle_minutes",
       "queryLines": [
         "SELECT\n",
-        "  COALESCE(concat(n_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING)) AS `workspace_shown`,\n",
-        "  COALESCE(concat(n_warehouse.n, ' (', CAST(t.`warehouse_id` AS STRING), ')'), CAST(t.`warehouse_id` AS STRING)) AS `warehouse_shown`,\n",
+        "  COALESCE(concat(n_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING), NULL) AS `workspace_shown`,\n",
+        "  COALESCE(concat(n_warehouse.n, ' (', CAST(t.`warehouse_id` AS STRING), ')'), CAST(t.`warehouse_id` AS STRING), '(no warehouse)') AS `warehouse_shown`,\n",
         "  t.`status` AS `status`,\n",
         "  t.`warehouse_kind` AS `warehouse_kind`,\n",
         "  t.`auto_stop_minutes` AS `auto_stop_minutes`,\n",
@@ -631,7 +631,7 @@
       "displayName": "check:compute_warehouse_idle_gaps",
       "queryLines": [
         "SELECT\n",
-        "  COALESCE(concat(n_warehouse.n, ' (', CAST(t.`warehouse_id` AS STRING), ')'), CAST(t.`warehouse_id` AS STRING)) AS `warehouse_shown`,\n",
+        "  COALESCE(concat(n_warehouse.n, ' (', CAST(t.`warehouse_id` AS STRING), ')'), CAST(t.`warehouse_id` AS STRING), '(no warehouse)') AS `warehouse_shown`,\n",
         "  t.`status` AS `status`,\n",
         "  t.`event_count` AS `event_count`,\n",
         "  t.`running_seconds` AS `running_seconds`,\n",
@@ -656,7 +656,7 @@
       "displayName": "check:compute_warehouse_autoscale_churn",
       "queryLines": [
         "SELECT\n",
-        "  COALESCE(concat(COALESCE(t.`warehouse_name`, n_warehouse.n), ' (', CAST(t.`warehouse_id` AS STRING), ')'), CAST(t.`warehouse_id` AS STRING)) AS `warehouse_shown`,\n",
+        "  COALESCE(concat(COALESCE(t.`warehouse_name`, n_warehouse.n), ' (', CAST(t.`warehouse_id` AS STRING), ')'), CAST(t.`warehouse_id` AS STRING), '(no warehouse)') AS `warehouse_shown`,\n",
         "  t.`status` AS `status`,\n",
         "  t.`scaled_up_events` AS `scaled_up_events`,\n",
         "  t.`scaled_down_events` AS `scaled_down_events`,\n",
@@ -691,8 +691,8 @@
       "displayName": "check:compute_warehouse_autostop_churn",
       "queryLines": [
         "SELECT\n",
-        "  COALESCE(concat(n_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING)) AS `workspace_shown`,\n",
-        "  COALESCE(concat(COALESCE(t.`warehouse_name`, n_warehouse.n), ' (', CAST(t.`warehouse_id` AS STRING), ')'), CAST(t.`warehouse_id` AS STRING)) AS `warehouse_shown`,\n",
+        "  COALESCE(concat(n_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING), NULL) AS `workspace_shown`,\n",
+        "  COALESCE(concat(COALESCE(t.`warehouse_name`, n_warehouse.n), ' (', CAST(t.`warehouse_id` AS STRING), ')'), CAST(t.`warehouse_id` AS STRING), '(no warehouse)') AS `warehouse_shown`,\n",
         "  t.`status` AS `status`,\n",
         "  t.`warehouse_kind` AS `warehouse_kind`,\n",
         "  t.`auto_stop_minutes` AS `auto_stop_minutes`,\n",
@@ -738,8 +738,8 @@
       "displayName": "check:compute_warehouse_late_autostop",
       "queryLines": [
         "SELECT\n",
-        "  COALESCE(concat(n_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING)) AS `workspace_shown`,\n",
-        "  COALESCE(concat(COALESCE(t.`warehouse_name`, n_warehouse.n), ' (', CAST(t.`warehouse_id` AS STRING), ')'), CAST(t.`warehouse_id` AS STRING)) AS `warehouse_shown`,\n",
+        "  COALESCE(concat(n_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING), NULL) AS `workspace_shown`,\n",
+        "  COALESCE(concat(COALESCE(t.`warehouse_name`, n_warehouse.n), ' (', CAST(t.`warehouse_id` AS STRING), ')'), CAST(t.`warehouse_id` AS STRING), '(no warehouse)') AS `warehouse_shown`,\n",
         "  t.`status` AS `status`,\n",
         "  t.`warehouse_kind` AS `warehouse_kind`,\n",
         "  t.`auto_stop_minutes` AS `auto_stop_minutes`,\n",
@@ -784,7 +784,7 @@
       "displayName": "check:compute_warehouse_cache_reuse",
       "queryLines": [
         "SELECT\n",
-        "  COALESCE(concat(COALESCE(t.`warehouse_name`, n_warehouse.n), ' (', CAST(t.`warehouse_id` AS STRING), ')'), CAST(t.`warehouse_id` AS STRING)) AS `warehouse_shown`,\n",
+        "  COALESCE(concat(COALESCE(t.`warehouse_name`, n_warehouse.n), ' (', CAST(t.`warehouse_id` AS STRING), ')'), CAST(t.`warehouse_id` AS STRING), '(no warehouse)') AS `warehouse_shown`,\n",
         "  t.`status` AS `status`,\n",
         "  t.`warehouse_kind` AS `warehouse_kind`,\n",
         "  t.`auto_stop_minutes` AS `auto_stop_minutes`,\n",
@@ -807,8 +807,8 @@
       "displayName": "check:sql_warehouse_events_activity",
       "queryLines": [
         "SELECT\n",
-        "  COALESCE(concat(n_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING)) AS `workspace_shown`,\n",
-        "  COALESCE(concat(COALESCE(t.`warehouse_name`, n_warehouse.n), ' (', CAST(t.`warehouse_id` AS STRING), ')'), CAST(t.`warehouse_id` AS STRING)) AS `warehouse_shown`,\n",
+        "  COALESCE(concat(n_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING), NULL) AS `workspace_shown`,\n",
+        "  COALESCE(concat(COALESCE(t.`warehouse_name`, n_warehouse.n), ' (', CAST(t.`warehouse_id` AS STRING), ')'), CAST(t.`warehouse_id` AS STRING), '(no warehouse)') AS `warehouse_shown`,\n",
         "  t.`status` AS `status`,\n",
         "  t.`event_type` AS `event_type`,\n",
         "  t.`event_count` AS `event_count`,\n",
@@ -850,9 +850,9 @@
       "displayName": "check:compute_last_activity",
       "queryLines": [
         "SELECT\n",
-        "  COALESCE(concat(n_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING)) AS `workspace_shown`,\n",
-        "  COALESCE(concat(n_warehouse.n, ' (', CAST(t.`warehouse_id` AS STRING), ')'), CAST(t.`warehouse_id` AS STRING)) AS `warehouse_shown`,\n",
-        "  COALESCE(concat(n_cluster.n, ' (', CAST(t.`cluster_id` AS STRING), ')'), CAST(t.`cluster_id` AS STRING)) AS `cluster_shown`,\n",
+        "  COALESCE(concat(n_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING), NULL) AS `workspace_shown`,\n",
+        "  COALESCE(concat(n_warehouse.n, ' (', CAST(t.`warehouse_id` AS STRING), ')'), CAST(t.`warehouse_id` AS STRING), '(no warehouse)') AS `warehouse_shown`,\n",
+        "  COALESCE(concat(n_cluster.n, ' (', CAST(t.`cluster_id` AS STRING), ')'), CAST(t.`cluster_id` AS STRING), '(no cluster)') AS `cluster_shown`,\n",
         "  t.`status` AS `status`,\n",
         "  t.`object_type` AS `object_type`,\n",
         "  t.`name` AS `name`,\n",
@@ -901,8 +901,8 @@
       "displayName": "check:sql_warehouse_config_current",
       "queryLines": [
         "SELECT\n",
-        "  COALESCE(concat(n_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING)) AS `workspace_shown`,\n",
-        "  COALESCE(concat(COALESCE(t.`warehouse_name`, n_warehouse.n), ' (', CAST(t.`warehouse_id` AS STRING), ')'), CAST(t.`warehouse_id` AS STRING)) AS `warehouse_shown`,\n",
+        "  COALESCE(concat(n_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING), NULL) AS `workspace_shown`,\n",
+        "  COALESCE(concat(COALESCE(t.`warehouse_name`, n_warehouse.n), ' (', CAST(t.`warehouse_id` AS STRING), ')'), CAST(t.`warehouse_id` AS STRING), '(no warehouse)') AS `warehouse_shown`,\n",
         "  t.`account_id` AS `account_id`,\n",
         "  t.`warehouse_type` AS `warehouse_type`,\n",
         "  t.`warehouse_channel` AS `warehouse_channel`,\n",
@@ -1237,7 +1237,7 @@
       "displayName": "check:compute_idle_node_ratio",
       "queryLines": [
         "SELECT\n",
-        "  COALESCE(concat(n_cluster.n, ' (', CAST(t.`cluster_id` AS STRING), ')'), CAST(t.`cluster_id` AS STRING)) AS `cluster_shown`,\n",
+        "  COALESCE(concat(n_cluster.n, ' (', CAST(t.`cluster_id` AS STRING), ')'), CAST(t.`cluster_id` AS STRING), '(no cluster)') AS `cluster_shown`,\n",
         "  t.`status` AS `status`,\n",
         "  t.`node_type` AS `node_type`,\n",
         "  t.`total_slices` AS `total_slices`,\n",
@@ -1266,7 +1266,7 @@
       "displayName": "check:node_timeline_utilization",
       "queryLines": [
         "SELECT\n",
-        "  COALESCE(concat(n_cluster.n, ' (', CAST(t.`cluster_id` AS STRING), ')'), CAST(t.`cluster_id` AS STRING)) AS `cluster_shown`,\n",
+        "  COALESCE(concat(n_cluster.n, ' (', CAST(t.`cluster_id` AS STRING), ')'), CAST(t.`cluster_id` AS STRING), '(no cluster)') AS `cluster_shown`,\n",
         "  t.`status` AS `status`,\n",
         "  t.`node_type` AS `node_type`,\n",
         "  CAST(t.`driver` AS STRING) AS `driver`,\n",
@@ -1293,7 +1293,7 @@
       "displayName": "check:instance_pools_idle_capacity",
       "queryLines": [
         "SELECT\n",
-        "  COALESCE(concat(n_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING)) AS `workspace_shown`,\n",
+        "  COALESCE(concat(n_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING), NULL) AS `workspace_shown`,\n",
         "  t.`status` AS `status`,\n",
         "  t.`instance_pool_id` AS `instance_pool_id`,\n",
         "  t.`instance_pool_name` AS `instance_pool_name`,\n",
@@ -1347,7 +1347,7 @@
       "displayName": "check:instance_events_idle_active",
       "queryLines": [
         "SELECT\n",
-        "  COALESCE(concat(n_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING)) AS `workspace_shown`,\n",
+        "  COALESCE(concat(n_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING), NULL) AS `workspace_shown`,\n",
         "  t.`node_type` AS `node_type`,\n",
         "  t.`availability_type` AS `availability_type`,\n",
         "  t.`state` AS `state`,\n",
@@ -1387,8 +1387,8 @@
       "displayName": "check:classic_clusters_config_current",
       "queryLines": [
         "SELECT\n",
-        "  COALESCE(concat(n_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING)) AS `workspace_shown`,\n",
-        "  COALESCE(concat(COALESCE(t.`cluster_name`, n_cluster.n), ' (', CAST(t.`cluster_id` AS STRING), ')'), CAST(t.`cluster_id` AS STRING)) AS `cluster_shown`,\n",
+        "  COALESCE(concat(n_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING), NULL) AS `workspace_shown`,\n",
+        "  COALESCE(concat(COALESCE(t.`cluster_name`, n_cluster.n), ' (', CAST(t.`cluster_id` AS STRING), ')'), CAST(t.`cluster_id` AS STRING), '(no cluster)') AS `cluster_shown`,\n",
         "  t.`owned_by` AS `owned_by`,\n",
         "  t.`driver_node_type` AS `driver_node_type`,\n",
         "  t.`worker_node_type` AS `worker_node_type`,\n",
@@ -1643,8 +1643,8 @@
       "displayName": "check:compute_cluster_config_posture",
       "queryLines": [
         "SELECT\n",
-        "  COALESCE(concat(n_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING)) AS `workspace_shown`,\n",
-        "  COALESCE(concat(COALESCE(t.`cluster_name`, n_cluster.n), ' (', CAST(t.`cluster_id` AS STRING), ')'), CAST(t.`cluster_id` AS STRING)) AS `cluster_shown`,\n",
+        "  COALESCE(concat(n_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING), NULL) AS `workspace_shown`,\n",
+        "  COALESCE(concat(COALESCE(t.`cluster_name`, n_cluster.n), ' (', CAST(t.`cluster_id` AS STRING), ')'), CAST(t.`cluster_id` AS STRING), '(no cluster)') AS `cluster_shown`,\n",
         "  t.`status` AS `status`,\n",
         "  t.`owned_by` AS `owned_by`,\n",
         "  t.`cluster_source` AS `cluster_source`,\n",
@@ -1696,8 +1696,8 @@
       "displayName": "check:compute_warehouse_config_posture",
       "queryLines": [
         "SELECT\n",
-        "  COALESCE(concat(n_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING)) AS `workspace_shown`,\n",
-        "  COALESCE(concat(COALESCE(t.`warehouse_name`, n_warehouse.n), ' (', CAST(t.`warehouse_id` AS STRING), ')'), CAST(t.`warehouse_id` AS STRING)) AS `warehouse_shown`,\n",
+        "  COALESCE(concat(n_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING), NULL) AS `workspace_shown`,\n",
+        "  COALESCE(concat(COALESCE(t.`warehouse_name`, n_warehouse.n), ' (', CAST(t.`warehouse_id` AS STRING), ')'), CAST(t.`warehouse_id` AS STRING), '(no warehouse)') AS `warehouse_shown`,\n",
         "  t.`status` AS `status`,\n",
         "  t.`created_by` AS `created_by`,\n",
         "  t.`warehouse_type` AS `warehouse_type`,\n",
@@ -5017,7 +5017,7 @@
                 "title": "Warehouse idle time",
                 "showTitle": true,
                 "showDescription": true,
-                "description": "A warehouse billed while running with no query for longer than the idle gap in the thresholds file. Possible waste."
+                "description": "A warehouse billed while running with no query for over 60 s (idle gap). Possible waste."
               }
             }
           },

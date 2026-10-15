@@ -564,10 +564,9 @@ models:
       classic/pro warehouse you know restarts often shows cold_start_risk TRUE.'
     healthy: status = OK - no day in the window had :warn_daily_autostops or more qualifying auto-stops
       with auto_stop_minutes at/above :warn_long_autostop_minutes.
-    investigate_if: status = the worst single day's status - WARN or CRITICAL per the same :warn_daily_autostops
-      / :crit_daily_autostops thresholds. cold_start_risk_days > 0 on its own is informational, not a
-      status band - a bursty warehouse that already auto-stops within policy still needs the fix, but
-      is not double-counted into a worse verdict here.
+    investigate_if: WARN - :warn_daily_autostops or more qualifying auto-stops on one day. CRITICAL -
+      :crit_daily_autostops or more. Status is the worst single day. cold_start_risk_days > 0 on its own
+      is informational, not a status band.
     actions:
     - lower auto_stop_minutes for the warehouse - serverless can go to 5 minutes in the UI (1 via the
       API), classic/pro minimum is 10 minutes (free);
@@ -1038,20 +1037,19 @@ models:
       reads warehouse_kind = serverless (the warehouse_type value SERVERLESS is not yet confirmed); 3)
       est_usd_list matches that warehouse''s list-price spend in cost_by_compute_resource over the same
       days.'
-    healthy: status = OK - counted idle is below :warn_idle_pct percent of running time, or below :min_idle_minutes
-      minutes in the window, and under :warn_waste_usd of possible waste (field heuristic).
-    investigate_if: 'status = WARN or CRITICAL - at least :min_idle_minutes idle minutes and at least
-      :warn_idle_pct (WARN) or :crit_idle_pct (CRITICAL) percent of running time idle, or possible waste
-      at/above :warn_waste_usd (WARN) or :crit_waste_usd (CRITICAL) dollars at any share, so a large idle
-      cost on a busy warehouse is flagged too; an unpriced warehouse is judged on minutes and share only
-      (field heuristic). A large stop_tail_minutes means auto-stop waits too long after the last query.
-      A large between_queries_minutes or no_query_minutes means the warehouse is kept up for sparse work.
-      NOT_ASSESSED is not a pass: read not_assessed_reason and waste_reason.'
+    healthy: OK - idle is below :warn_idle_pct of running time or below :min_idle_minutes minutes, and
+      under $:warn_waste_usd of possible waste.
+    investigate_if: 'WARN - at least :min_idle_minutes idle minutes and at least :warn_idle_pct of running
+      time idle, or possible waste at/above $:warn_waste_usd. CRITICAL - at least :min_idle_minutes idle
+      minutes and at least :crit_idle_pct idle, or possible waste at/above $:crit_waste_usd. An unpriced
+      warehouse is judged on minutes and share only. NOT_ASSESSED is not a pass: read not_assessed_reason
+      and waste_reason.'
     actions:
-    - when stop_tail_minutes dominates, lower auto_stop_minutes on the warehouse - it cannot go below
-      the lowest auto-stop Databricks allows for the warehouse type, so part of each tail stays (free);
-    - move sparse, bursty workloads onto one shared warehouse, or schedule them together, so fewer warehouses
-      sit up between queries (config);
+    - when stop_tail_minutes dominates (auto-stop waits too long after the last query), lower auto_stop_minutes
+      on the warehouse - it cannot go below the lowest auto-stop Databricks allows for the warehouse type,
+      so part of each tail stays (free);
+    - when between_queries_minutes or no_query_minutes dominates (the warehouse is kept up for sparse
+      work), move sparse, bursty workloads onto one shared warehouse, or schedule them together (config);
     - move a bursty classic or pro warehouse to serverless, which starts in seconds, so a short auto-stop
       does not cost a long cold start (spend).
     next:

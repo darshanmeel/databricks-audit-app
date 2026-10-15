@@ -776,9 +776,9 @@ models:
       on your account that a catalog you turned predictive optimization on for reads 0% bytes_without_po,
       and that a catalog you never touched reads close to 100%.
     healthy: OK (catalog_summary only) - pct_bytes_without_po below :warn_pct_bytes_without_po.
-    investigate_if: CRITICAL (catalog_summary) - pct_bytes_without_po at/above :crit_pct_bytes_without_po.
-      WARN (catalog_summary) - at/above :warn_pct_bytes_without_po. largest_table_without_po rows are
-      always WARN - work through them regardless of the catalog's own status.
+    investigate_if: CRITICAL - a catalog with pct_bytes_without_po at/above :crit_pct_bytes_without_po.
+      WARN - at/above :warn_pct_bytes_without_po. largest_table_without_po rows are always WARN - work
+      through them regardless of the catalog status.
     actions:
     - turn on predictive optimization at the catalog level (ALTER CATALOG ... SET PREDICTIVE OPTIMIZATION
       ON) so every table in it is covered going forward (config);
@@ -880,9 +880,8 @@ models:
       small-batch or streaming writes with no compaction) shows CRITICAL or WARN here, and that avg_file_size_mb
       matches DESCRIBE DETAIL's own numFiles/sizeInBytes.
     healthy: OK - active_files at/below :warn_min_files, or avg_file_size_mb at/above :warn_max_avg_mb.
-    investigate_if: CRITICAL - more than :warn_min_files active files and avg_file_size_mb under :crit_max_avg_mb.
-      WARN - more than :warn_min_files active files and avg_file_size_mb under :warn_max_avg_mb (and not
-      already CRITICAL).
+    investigate_if: WARN - more than :warn_min_files files and avg file size under :warn_max_avg_mb MB.
+      CRITICAL - avg file size under :crit_max_avg_mb MB.
     actions:
     - run OPTIMIZE on the table to compact small files (spend);
     - turn on predictive optimization at the table or catalog level so Databricks compacts automatically
@@ -1000,7 +999,9 @@ models:
     it (a lineage TARGET) on record, NULL when neither ever happened. Only the largest :top_n tables by
     est_total_usd_month keep their own row; is_other=true marks a single pooled row for the rest (workspace-free
     columns all NULL, pooled_count = how many), and always reads status=OK - see caveats. A table with
-    no size on record is still listed, status OK and price_basis no_size: unused, but not priced.'
+    no size on record is still listed, status OK and price_basis no_size: unused, but not priced. A second
+    is_other row, table_name ''(Databricks-owned)'', pools samples tables and tables owned by System user:
+    out of the list, their cost still counted.'
   meta:
     query_id: storage_unused_table_cost
     title: Unused tables - storage and upkeep cost

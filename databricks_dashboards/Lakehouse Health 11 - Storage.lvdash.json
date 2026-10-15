@@ -444,7 +444,7 @@
       "displayName": "check:po_maintenance_cost_by_table",
       "queryLines": [
         "SELECT\n",
-        "  COALESCE(concat(n_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING)) AS `workspace_shown`,\n",
+        "  COALESCE(concat(n_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING), NULL) AS `workspace_shown`,\n",
         "  t.`status` AS `status`,\n",
         "  t.`account_id` AS `account_id`,\n",
         "  t.`metastore_name` AS `metastore_name`,\n",
@@ -490,7 +490,7 @@
       "displayName": "check:po_vacuum_reclaimed_bytes",
       "queryLines": [
         "SELECT\n",
-        "  COALESCE(concat(n_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING)) AS `workspace_shown`,\n",
+        "  COALESCE(concat(n_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING), NULL) AS `workspace_shown`,\n",
         "  t.`status` AS `status`,\n",
         "  t.`catalog_name` AS `catalog_name`,\n",
         "  t.`schema_name` AS `schema_name`,\n",
@@ -531,7 +531,7 @@
       "displayName": "check:po_clustering_activity",
       "queryLines": [
         "SELECT\n",
-        "  COALESCE(concat(n_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING)) AS `workspace_shown`,\n",
+        "  COALESCE(concat(n_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING), NULL) AS `workspace_shown`,\n",
         "  t.`status` AS `status`,\n",
         "  t.`catalog_name` AS `catalog_name`,\n",
         "  t.`schema_name` AS `schema_name`,\n",
@@ -575,7 +575,7 @@
       "displayName": "check:po_clustering_column_churn",
       "queryLines": [
         "SELECT\n",
-        "  COALESCE(concat(n_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING)) AS `workspace_shown`,\n",
+        "  COALESCE(concat(n_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING), NULL) AS `workspace_shown`,\n",
         "  t.`status` AS `status`,\n",
         "  t.`catalog_name` AS `catalog_name`,\n",
         "  t.`schema_name` AS `schema_name`,\n",
@@ -619,7 +619,7 @@
       "displayName": "check:po_data_skipping_backfill",
       "queryLines": [
         "SELECT\n",
-        "  COALESCE(concat(n_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING)) AS `workspace_shown`,\n",
+        "  COALESCE(concat(n_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING), NULL) AS `workspace_shown`,\n",
         "  t.`status` AS `status`,\n",
         "  t.`catalog_name` AS `catalog_name`,\n",
         "  t.`schema_name` AS `schema_name`,\n",
@@ -662,7 +662,7 @@
       "displayName": "check:po_failure_reasons",
       "queryLines": [
         "SELECT\n",
-        "  COALESCE(concat(n_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING)) AS `workspace_shown`,\n",
+        "  COALESCE(concat(n_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING), NULL) AS `workspace_shown`,\n",
         "  t.`status` AS `status`,\n",
         "  t.`catalog_name` AS `catalog_name`,\n",
         "  t.`schema_name` AS `schema_name`,\n",

@@ -205,7 +205,7 @@ def runnable_sql(query_id: str, window_days: int) -> str | None:
 def _substituted(spec: registry.QuerySpec) -> dict:
     """read_this/healthy/investigate_if/actions/not_assessed_reasons, every :param token replaced
     by its value in effect (service.substitute_header_params)."""
-    return service.substitute_header_params(spec)
+    return service.substitute_header_params(spec, generic_window=True)
 
 
 # ---------------------------------------------------------------------------------------------
@@ -254,7 +254,8 @@ def _clean_prose(text: str | None) -> str:
     cleaned = _ID_INLINE_RE.sub("", cleaned)
     cleaned = re.sub(r"\(\s*,\s*", "(", cleaned)
     cleaned = _PAREN_LEFTOVER_RE.sub("", cleaned)
-    cleaned = re.sub(r"[ \t]+(?=[:,]|\.(?:\s|$))", "", cleaned)
+    cleaned = re.sub(r"[ \t]+(?=[:,](?:\s|$)|\.(?:\s|$))", "", cleaned)
+    cleaned = re.sub(r"\s*\(field\s+heuristic\)", "", cleaned)
     cleaned = _DOUBLE_DASH_RE.sub(" — ", cleaned)
     cleaned = _SHOUTED_BOOL_RE.sub(lambda m: m.group(1).lower(), cleaned)
     # "carries no workspace_id" is a column talking; a reader wants "has no workspace".
@@ -547,7 +548,7 @@ def _finding_json(spec: registry.QuerySpec, by_id: dict, docs_map, thresholds: d
         "not_assessed_reasons": [_clean_prose(r) for r in sub["not_assessed_reasons"].values()],
         "empty_if": list(spec.empty_if),
         "empty_if_words": [EMPTY_IF_WORDS.get(token, token) for token in spec.empty_if],
-        "caveats": _clean_prose(spec.caveats),
+        "caveats": _clean_prose(sub["caveats"]),
         "confidence": spec.confidence,
         "confidence_note": _clean_prose(spec.confidence_note),
         "requires": _clean_prose(spec.requires),

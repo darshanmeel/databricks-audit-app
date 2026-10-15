@@ -1,1 +1,2 @@
-cost_chargeback_by_job: [workspace_id, job_id]
+# is_other separates the pooled row from the account-level no-job row (both NULL ids).
+cost_chargeback_by_job: [workspace_id, job_id, is_other]

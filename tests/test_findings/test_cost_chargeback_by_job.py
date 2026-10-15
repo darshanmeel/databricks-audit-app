@@ -44,7 +44,7 @@ def _jobs(window_days: int = W) -> dict:
         r["job_id"]: r
         for r in dbutil.rows(QID, window_days)
         # The pooled is_other row (job_id NULL) appears once the account has more than top_n jobs.
-        if r["workspace_id"] is None and not r["is_other"] and r["job_id"].startswith("cb2_j_")
+        if r["workspace_id"] is None and not r["is_other"] and (r["job_id"] or "").startswith("cb2_j_")
     }
 
 
@@ -53,7 +53,7 @@ def test_grain_uniqueness():
     cols = grains[QID]
     out = [
         r for r in dbutil.rows(QID, W)
-        if r["workspace_id"] is None and not r["is_other"] and r["job_id"].startswith("cb2_j_")
+        if r["workspace_id"] is None and not r["is_other"] and (r["job_id"] or "").startswith("cb2_j_")
     ]
     assert out
     keys = [tuple(r[c] for c in cols) for r in out]

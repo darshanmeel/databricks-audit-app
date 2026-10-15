@@ -339,11 +339,11 @@ models:
       in this library); "any row = scanned" is this query's own definition of coverage, not a documented
       status column, since the system table carries no per-table "scanned, nothing found" marker - only
       detections.
-    healthy: status = OK; covered_pct at/above :warn_coverage_pct - field heuristic; a catalog with little
-      sensitive data can still show a low share honestly.
-    investigate_if: status = WARN, covered_pct below :warn_coverage_pct - a real coverage gap, either
-      a catalog never enabled for classification or one whose scans have not caught up; status = NOT_ASSESSED
-      means coverage could not be measured at all (read not_assessed_reason), never a zero.
+    healthy: OK - covered_pct at/above :warn_coverage_pct. A catalog with little sensitive data can still
+      show a low share honestly.
+    investigate_if: 'WARN - covered_pct below :warn_coverage_pct: a catalog never enabled for classification,
+      or one whose scans have not caught up. NOT_ASSESSED - coverage could not be measured at all (read
+      not_assessed_reason), never a zero.'
     actions:
     - 'confirm the catalog has BOTH the data-classification feature and the system.data_classification
       schema enabled - Databricks: enable Unity Catalog automatic data classification for the catalog

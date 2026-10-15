@@ -23,20 +23,10 @@
 --   price (DEC-66.1). est_current_usd_list and est_previous_usd_list are the two totals;
 --   est_change_usd_list and change_pct compare them. price_basis (free/priced/unpriced) discloses
 --   pricing coverage across both windows combined; not_assessed_reason explains a NOT_ASSESSED row.
--- healthy: status OK - no increase at/above :warn_increase_pct, or the row's own current-period
---   spend (a real $0 counts) sits below :min_spend_usd
--- investigate_if: CRITICAL - the increase is at/above :crit_increase_pct on at least
---   :min_spend_usd of current spend, or the row is brand-new spend above the floor with nothing
---   in the previous period to compare against (there is no honest percentage for a jump from
---   zero, so it reads CRITICAL outright); WARN - at/above :warn_increase_pct. NOT_ASSESSED - read
---   not_assessed_reason: 'previous_window_not_covered' when the whole account's own earliest
---   recorded usage (across every workspace and product, not just this row) does not reach back
---   far enough to cover the previous window (DEC-64), so no comparison anywhere can be trusted at
---   this window length; 'current_period_unpriced' when ANY of this row's current-period usage
---   could not be priced (at least one current-period SKU was unmatched in list_prices and was not
---   FREE_USAGE), so est_current_usd_list understates the true figure and no verdict is safe to
---   judge on it, even when the rest of the period priced fine; 'previous_period_unpriced' is the
---   same gap on the previous period's own side.
+-- healthy: OK - up less than :warn_increase_pct, or current spend under $:min_spend_usd.
+-- investigate_if: CRITICAL - up :crit_increase_pct or more on at least $:min_spend_usd of current
+--   spend, or brand-new spend above the floor with nothing before. WARN - up :warn_increase_pct or
+--   more. NOT_ASSESSED - read not_assessed_reason.
 -- actions: 1) open cost_dollarized_by_sku_day for this workspace and window, sorted by day and
 --   SKU, to see which SKU actually moved (free); 2) check cost_monthly_actuals for the same
 --   workspace/product to see whether this is a genuine trend or one busy stretch inside an

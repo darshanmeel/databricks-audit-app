@@ -48,19 +48,10 @@
 --   present only when pooled_count > 0 for that status (identity_run_as/source/workspace_id/
 --   warehouse_id all NULL on both). share_of_total_pct still adds up to ~100% including these.
 --   Warehouse name is not resolved here - join sql_warehouse_config_current on warehouse_id.
--- healthy: status OK - no increase at/above :warn_increase_pct, or the row's own current-period
---   spend (a real $0 counts) sits below :min_spend_usd, and its source's pricing coverage is not a
---   full gap (see investigate_if).
--- investigate_if: CRITICAL - the increase is at/above :crit_increase_pct on at least
---   :min_spend_usd of current spend, or brand-new spend above the floor with nothing in the
---   previous period to compare against - a growing 'unknown' identity is judged the same way, so a
---   widening attribution gap shows up as a real WARN/CRITICAL. WARN - at/above
---   :warn_increase_pct. NOT_ASSESSED - read not_assessed_reason: 'previous_window_not_covered'
---   when the account's own earliest recorded usage does not reach back far enough to cover the
---   previous window at this window length (every row, every source); 'current_period_unpriced' /
---   'previous_period_unpriced' when that ROW's OWN SOURCE had no priced spend at all, account-wide,
---   on that side of the window - every row of that source reads NOT_ASSESSED together (see
---   caveats). A row with is_other=true is always OK or NOT_ASSESSED, never WARN/CRITICAL.
+-- healthy: OK - up less than :warn_increase_pct, or current spend under $:min_spend_usd.
+-- investigate_if: CRITICAL - up :crit_increase_pct or more on at least $:min_spend_usd of current
+--   spend, or brand-new spend above the floor with nothing before. WARN - up :warn_increase_pct or
+--   more. NOT_ASSESSED - read not_assessed_reason.
 -- actions: 1) open cost_chargeback_by_allocation_tag or the Cost > Allocation tab to see which
 --   cost_center/team this identity's spend rolls up under (free); 2) for a sql_warehouse row, open
 --   sql_warehouse_config_current for warehouse_id to see the warehouse's own size/config (free);

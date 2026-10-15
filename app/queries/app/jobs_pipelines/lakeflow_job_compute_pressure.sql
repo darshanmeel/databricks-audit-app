@@ -46,27 +46,21 @@
 --   reached its configured maximum workers, which decides whether "more workers" is even a lever. The
 --   query cannot see the Spark stage; it names the shape of the problem so the Spark UI is opened
 --   knowing what to look for.
--- healthy: pressure = NONE, or pressure = CPU with no scale-out lever: at_ceiling FALSE - the
---   workers were doing the work and could still grow; NULL - the cluster config was not found, or
---   the cluster is single-node and cannot grow by workers (its lever, a larger node, is not named
---   here); field heuristic, every threshold is a header param.
--- investigate_if: MEMORY (CRITICAL) - p90 worker memory at/above :crit_mem_pct or p90 swap
---   at/above :crit_swap_pct: the job's input per run is larger than what its workers hold in
---   memory, so spill and OOM are the likely cost; CPU at the ceiling (at_ceiling TRUE), SKEW,
---   DRIVER, IO_WAIT or IDLE (WARN). NOT_ASSESSED is not a pass: read not_assessed_reason.
--- actions: 1) read scaling_hint with pressure_reason, hottest_task_key and on_all_purpose in hand:
---   MEMORY (SCALE_UP_MEMORY) - the job's input per run is larger than what its workers hold in
---   memory, so first cut the input per run (narrow the reprocessed window, filter and prune
---   earlier, process incrementally); SKEW (FIX_SKEW) - salt or repartition the hot key, adding
---   nodes will not help; DRIVER (DISTRIBUTE_WORK) - move pandas / collect() / driver-side loops
---   onto Spark; IO_WAIT (FIX_IO) - compact small files or cache the input; IDLE (SCALE_DOWN) -
---   find the pause in the driver log, an external call or a serial loop (free); 2) MEMORY - raise
---   spark.sql.shuffle.partitions so each Spark task holds less, or split the widest stage; IDLE -
---   fewer or smaller workers, or autoscale down to the minimum; CPU with headroom - nothing,
---   autoscale can still grow (config); 3) MEMORY - scale up: a worker node type with more memory
---   per worker (Databricks: increase the amount of memory available on your instances); CPU at
---   the ceiling (SCALE_OUT) - scale out: raise max_autoscale_workers or the fixed worker count, or
---   a faster family / Photon (spend).
+-- healthy: pressure = NONE, or pressure = CPU with no scale-out lever. at_ceiling FALSE: the workers
+--   were doing the work and could still grow. at_ceiling NULL: the cluster config was not found, or
+--   the cluster is single-node and cannot grow by workers.
+-- investigate_if: CRITICAL - MEMORY: p90 worker memory at/above :crit_mem_pct or p90 swap at/above
+--   :crit_swap_pct. WARN - SKEW, DRIVER, IO_WAIT or IDLE, or CPU at the ceiling (at_ceiling TRUE).
+--   NOT_ASSESSED is not a pass: read not_assessed_reason.
+-- actions: 1) read scaling_hint with pressure_reason, hottest_task_key and on_all_purpose in hand;
+--   MEMORY - cut the input per run (filter, prune, process incrementally); SKEW - salt or repartition
+--   the hot key, adding nodes will not help; DRIVER - move pandas, collect() and driver-side loops
+--   onto Spark; IO_WAIT - compact small files or cache the input; IDLE - find the pause in the driver
+--   log, an external call or a serial loop (free); 2) MEMORY - raise spark.sql.shuffle.partitions so
+--   each Spark task holds less, or split the widest stage; IDLE - fewer or smaller workers, or
+--   autoscale down to the minimum; CPU with headroom - nothing, autoscale can still grow (config); 3)
+--   MEMORY - a worker node type with more memory per worker; CPU at the ceiling - raise
+--   max_autoscale_workers or the fixed worker count, or a faster family / Photon (spend).
 -- next: task_cluster_utilization (per task run, for runs over two hours),
 --   lakeflow_long_running_runs, node_timeline_utilization, classic_clusters_config_current,
 --   lakeflow_jobs_on_all_purpose (if on_all_purpose)

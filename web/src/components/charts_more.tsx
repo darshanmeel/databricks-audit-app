@@ -102,13 +102,13 @@ function maxOrOne(vals: number[]): number {
 // streak") -- ranking many individual entities by a rainbow is not a category. ───────────
 export function RankedBars({
   items, n = 8, categorical = false, color = "var(--c1)", wholeColor = "var(--seq-1)",
-  valueFmt, unitLabel, width = 760, note, ariaLabel, emptyText, more,
+  valueFmt, unitLabel, width = 760, note, ariaLabel, emptyText, more, untaggedFirst = false,
 }: {
   items: RankedItem[] | null; n?: number; categorical?: boolean; color?: string; wholeColor?: string;
   valueFmt?: NodeFmt; unitLabel?: string; width?: number; note?: React.ReactNode; ariaLabel?: string; emptyText?: string | null;
-  more?: React.ReactNode;
+  more?: React.ReactNode; untaggedFirst?: boolean;
 }) {
-  const folded = foldTopNOther(items, { n, categorical, color });
+  const folded = foldTopNOther(items, { n, categorical, color, untaggedFirst });
   const hatchId = useHatchId();
   const [measureRef, W, printFull] = useChartWidth(width);
   if (!folded.length) return <div ref={measureRef}><EmptyChart text={emptyText} /></div>;

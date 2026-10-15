@@ -421,7 +421,7 @@ function AllFindingsPanel({ filters, allFindingsIndex, goTo, meta, roleAreas, on
               <option value="none">None — by $</option>
             </select>
           </label>
-          <button type="button" className="csv-download-btn" onClick={downloadCsv} title="Download every check matching the current area/search, across all tabs, as a CSV file.">
+          <button type="button" className="csv-download-btn" onClick={downloadCsv} title="Download matching checks as CSV">
             Download CSV
           </button>
         </div>

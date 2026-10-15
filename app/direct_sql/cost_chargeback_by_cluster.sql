@@ -8,11 +8,13 @@ WITH snapshot AS (
 priced AS (
   SELECT u.workspace_id,
          CASE
+           WHEN NOT (upper(u.usage_unit) = 'DBU' AND u.usage_metadata.cluster_id IS NOT NULL) THEN 'no_cluster'
            WHEN u.usage_metadata.dlt_pipeline_id IS NOT NULL THEN 'pipeline'
            WHEN u.usage_metadata.job_id IS NULL THEN 'all_purpose'
            ELSE 'job_cluster'
          END AS cluster_kind,
          CASE
+           WHEN NOT (upper(u.usage_unit) = 'DBU' AND u.usage_metadata.cluster_id IS NOT NULL) THEN CAST(NULL AS STRING)
            WHEN u.usage_metadata.dlt_pipeline_id IS NOT NULL THEN u.usage_metadata.dlt_pipeline_id
            WHEN u.usage_metadata.job_id IS NULL THEN u.usage_metadata.cluster_id
            ELSE u.usage_metadata.job_id
@@ -59,9 +61,9 @@ priced AS (
    AND u.usage_unit = lp.usage_unit
    AND u.usage_end_time >= lp.price_start_time
    AND (lp.price_end_time IS NULL OR u.usage_end_time < lp.price_end_time)
-  WHERE upper(u.usage_unit) = 'DBU'
-    AND u.usage_metadata.cluster_id IS NOT NULL
-    AND u.usage_date >= dateadd(day, -(__WINDOW_DAYS__ * 2), __AS_OF_DATE__)
+  -- no unit/id filter: usage with no cluster id (and any non-DBU unit) becomes the workspace's own
+  -- 'no_cluster' row, so the rows add up to total spend
+  WHERE u.usage_date >= dateadd(day, -(__WINDOW_DAYS__ * 2), __AS_OF_DATE__)
     AND u.usage_date <  __AS_OF_DATE__
 ),
 raw_agg AS (
@@ -151,6 +153,8 @@ scored AS (
              THEN 'NOT_ASSESSED'
            WHEN a.previous_cost IS NULL AND a.previous_unpriced_quantity > 0
              THEN 'NOT_ASSESSED'
+           -- Spend outside any cluster is context for the total, not a cluster to fix.
+           WHEN a.cluster_kind = 'no_cluster' THEN 'OK'
            WHEN COALESCE(a.eff_current_cost, 0) < 20 THEN 'OK'
            WHEN a.eff_previous_cost = 0 THEN 'CRITICAL'
            WHEN (a.eff_current_cost - a.eff_previous_cost) / NULLIF(a.eff_previous_cost, 0) * 100 >= 50
@@ -183,13 +187,13 @@ flagged AS (
          est_current_usd_list, share_of_total_pct, est_previous_usd_list, est_change_usd_list,
          change_pct, price_basis, status, not_assessed_reason
   FROM scored
-  WHERE status != 'OK'
+  WHERE status != 'OK' OR cluster_kind = 'no_cluster'   -- the no-cluster row is never pooled
 ),
 ok_ranked AS (
   SELECT scored.*,
          ROW_NUMBER() OVER (ORDER BY est_current_usd_list DESC NULLS LAST, cluster_kind, entity_id) AS rn
   FROM scored
-  WHERE status = 'OK'
+  WHERE status = 'OK' AND cluster_kind <> 'no_cluster'
 ),
 ok_kept AS (
   -- The top 20 OK rows by current spend, kept as their own row.

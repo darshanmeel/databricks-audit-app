@@ -41,6 +41,7 @@ export interface FoldOptions {
   categorical?: boolean;
   color?: string;
   otherLabel?: string;
+  untaggedFirst?: boolean;
 }
 
 export interface LegendItem {
@@ -161,11 +162,14 @@ export function foldTopNOther(items: Entry[] | null | undefined, opts?: FoldOpti
   }));
   const tail = rest.slice(n);
   const tailTotal = tail.reduce((s, it) => s + it.value, 0) + pooledTotal;
-  const out = head.slice();
+  const out: FoldedItem[] = [];
+  const pushUntagged = () => untagged.forEach((it) => out.push({ ...it, color: CHART_UNTAGGED_LINE, bg: CHART_UNTAGGED_BG, hatch: true }));
+  if (o.untaggedFirst) pushUntagged();
+  out.push(...head);
   // "Other (12)" says how many it holds; a pooled row hides its own count, so then just "Other".
   const otherName = tail.length && !pooledTotal ? `${otherLabel} (${tail.length})` : otherLabel;
   if (tailTotal > 0) out.push({ name: otherName, value: tailTotal, color: CHART_OTHER_COLOR, hatch: false, isOther: true });
-  untagged.forEach((it) => out.push({ ...it, color: CHART_UNTAGGED_LINE, bg: CHART_UNTAGGED_BG, hatch: true }));
+  if (!o.untaggedFirst) pushUntagged();
   return out;
 }
 

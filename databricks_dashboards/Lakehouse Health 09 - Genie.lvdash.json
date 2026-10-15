@@ -342,7 +342,7 @@
         "       l.warn AS warn_rows,\n",
         "       l.error AS error\n",
         "FROM (VALUES\n",
-        "       (0, 'genie_usage', 'Genie usage by user', 'Genie')) AS c(ord, query_id, title, page)\n",
+        "       (0, 'genie_usage', 'Genie usage by workspace and surface', 'Genie')) AS c(ord, query_id, title, page)\n",
         "LEFT JOIN databricks_audit_dashboard.snapshot_log l ON l.query_id = c.query_id\n",
         "ORDER BY CASE WHEN l.critical > 0 THEN 0 WHEN l.warn > 0 THEN 1 WHEN NOT l.ok THEN 2 ELSE 3 END, c.ord\n"
       ]
@@ -352,7 +352,7 @@
       "displayName": "check:genie_usage",
       "queryLines": [
         "SELECT\n",
-        "  COALESCE(concat(n_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING)) AS `workspace_shown`,\n",
+        "  COALESCE(concat(n_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING), NULL) AS `workspace_shown`,\n",
         "  CAST(t.`usage_date` AS STRING) AS `usage_date`,\n",
         "  t.`period` AS `period`,\n",
         "  t.`surface` AS `surface`,\n",
@@ -2222,7 +2222,7 @@
                 ]
               },
               "frame": {
-                "title": "Genie usage by user",
+                "title": "Genie usage by workspace and surface",
                 "showTitle": true,
                 "showDescription": true,
                 "description": "Genie DBUs and dollars by user, workspace, kind of use and channel, this period and the one before. Reference list, not judged."

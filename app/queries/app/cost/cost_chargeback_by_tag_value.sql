@@ -38,17 +38,10 @@
 --   caveats). prev_usd_list / change_usd_list / change_pct compare it against the equal-length
 --   window right before. price_basis discloses pricing coverage across both windows combined;
 --   not_assessed_reason explains a NOT_ASSESSED row.
--- healthy: status OK - no increase at/above :warn_increase_pct, or the row's own current-period
---   spend (a real $0 counts) sits below :min_spend_usd. The comparison is judged per workspace,
---   not account-wide (see caveats), so a tag value's account-wide swing may not itself flag.
--- investigate_if: CRITICAL - the increase is at/above :crit_increase_pct on at least
---   :min_spend_usd of current spend, or the row is brand-new spend above the floor with nothing in
---   the previous period to compare against; WARN - at/above :warn_increase_pct - this applies to a
---   growing "(untagged)" row exactly like any real value, so a widening tagging gap shows up as a
---   real WARN/CRITICAL, not just a percentage aside. NOT_ASSESSED - read not_assessed_reason:
---   'previous_window_not_covered' when the account's own earliest recorded usage does not reach
---   back far enough to cover the previous window; 'current_period_unpriced' / 'previous_period_
---   unpriced' when that side's whole spend for this row could not be priced at all.
+-- healthy: OK - up less than :warn_increase_pct, or current spend under $:min_spend_usd.
+-- investigate_if: CRITICAL - up :crit_increase_pct or more on at least $:min_spend_usd of current
+--   spend, or brand-new spend above the floor with nothing before. WARN - up :warn_increase_pct or
+--   more. NOT_ASSESSED - read not_assessed_reason.
 -- actions: 1) open cost_chargeback_by_allocation_tag for the canonical cost_center/team cut of the
 --   same spend, or cost_chargeback_by_job / cost_chargeback_by_cluster to find which resource is
 --   driving a growing (untagged) row (free); 2) tag the untagged resource, or fix a value that is
@@ -196,7 +189,9 @@ other_values AS (
   GROUP BY workspace_id, tag_key
 ),
 untagged_values AS (
-  SELECT kp.workspace_id, kp.tag_key, CAST(NULL AS STRING) AS tag_value,
+  -- every workspace with spend x every key seen anywhere in the account, so a workspace that never
+  -- carries a key still gets its whole spend as (untagged) and each key's rows sum to the total.
+  SELECT t.workspace_id, k.tag_key, CAST(NULL AS STRING) AS tag_value,
          t.cur_total_usd  - COALESCE(kp.cur_present_usd, 0)  AS cur_usd,
          t.prev_total_usd - COALESCE(kp.prev_present_usd, 0) AS prev_usd,
          t.cur_total_unpriced_q  - COALESCE(kp.cur_present_unpriced_q, 0)  AS cur_unpriced_q,
@@ -204,13 +199,21 @@ untagged_values AS (
          t.prev_total_unpriced_q - COALESCE(kp.prev_present_unpriced_q, 0) AS prev_unpriced_q,
          t.prev_total_priced_q  - COALESCE(kp.prev_present_priced_q, 0)   AS prev_priced_q,
          FALSE AS is_other, TRUE AS is_untagged, CAST(NULL AS BIGINT) AS pooled_count
-  FROM key_present kp
-  JOIN ws_totals t ON t.workspace_id IS NOT DISTINCT FROM kp.workspace_id
+  FROM ws_totals t
+  CROSS JOIN (SELECT DISTINCT tag_key FROM key_present) k
+  LEFT JOIN key_present kp
+    ON kp.workspace_id IS NOT DISTINCT FROM t.workspace_id AND kp.tag_key = k.tag_key
+),
+untagged_nonzero AS (
+  SELECT * FROM untagged_values
+  WHERE ABS(COALESCE(cur_usd, 0)) > 0.000001 OR ABS(COALESCE(prev_usd, 0)) > 0.000001
+     OR cur_unpriced_q > 0.000001 OR prev_unpriced_q > 0.000001
+     OR cur_priced_q > 0.000001 OR prev_priced_q > 0.000001
 ),
 combined AS (
   SELECT * FROM top_values
   UNION ALL SELECT * FROM other_values
-  UNION ALL SELECT * FROM untagged_values
+  UNION ALL SELECT * FROM untagged_nonzero
 ),
 resolved AS (
   -- same NULL-vs-real-zero resolution cost_period_over_period's own `agg` CTE uses: a side with

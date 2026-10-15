@@ -25,9 +25,8 @@
 --   open/seek overhead per read and bloat the file listing even when total size is small.
 -- healthy: OK - active_files at/below :warn_min_files, or avg_file_size_mb at/above
 --   :warn_max_avg_mb.
--- investigate_if: CRITICAL - more than :warn_min_files active files and avg_file_size_mb under
---   :crit_max_avg_mb. WARN - more than :warn_min_files active files and avg_file_size_mb under
---   :warn_max_avg_mb (and not already CRITICAL).
+-- investigate_if: WARN - more than :warn_min_files files and avg file size under :warn_max_avg_mb
+--   MB. CRITICAL - avg file size under :crit_max_avg_mb MB.
 -- actions: 1) run OPTIMIZE on the table to compact small files (spend); 2) turn on predictive
 --   optimization at the table or catalog level so Databricks compacts automatically going forward
 --   (config - see storage_po_coverage for tables missing it); 3) for a table with a high write

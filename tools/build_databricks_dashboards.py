@@ -1046,7 +1046,10 @@ def check_dataset(schema: str, query_id: str, cols: list[tuple[str, str]], curat
         )
         name = f"COALESCE(t.`{by_lower[name_col]}`, {alias}.n)" if name_col in by_lower else f"{alias}.n"
         id_text = f"CAST(t.`{by_lower[id_col]}` AS STRING)"
-        select.append(f"COALESCE(concat({name}, ' (', {id_text}, ')'), {id_text}) AS `{key}_shown`")
+        # A NULL id is either the pooled Other row or spend outside any warehouse/job/cluster.
+        none = "NULL" if key == "workspace" else (
+            f"CASE WHEN t.`{by_lower['is_other']}` THEN 'Other' ELSE '(no {key})' END" if "is_other" in by_lower else f"'(no {key})'")
+        select.append(f"COALESCE(concat({name}, ' (', {id_text}, ')'), {id_text}, {none}) AS `{key}_shown`")
         shown.append((f"{key}_shown", key.capitalize(), "string", None))
         hidden |= {id_col, name_col}
         if key == "workspace":

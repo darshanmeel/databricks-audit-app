@@ -75,10 +75,6 @@ export function regionWorkspaceNames(list: RegionGap[] | null | undefined, max?:
   return `${names.slice(0, cap).join(", ")} and ${names.length - cap} more`;
 }
 
-function regionGapTitle(list: RegionGap[] | null | undefined): string {
-  return (list || []).map((w) => `${w.name || w.workspace_id} (${w.workspace_id}): ${w.reason}`).join("\n");
-}
-
 // Top bar, one line: the selected workspaces WITH spend that the snapshot's regional tables
 // cannot see (/api/findings `region_gap`). Nothing when there are none. "Why" expands the full
 // sentence -- names, which checks, what's still counted -- so the one-line default never hides
@@ -88,14 +84,22 @@ export function RegionScopeBanner({ regionGap }: { meta?: Meta | null; regionGap
   const [open, setOpen] = React.useState(false);
   if (!regionGap || regionGap.length === 0) return null;
   const n = regionGap.length;
-  const detail = `${REGIONAL_CHECK_AREAS} checks are not assessed for ${n === 1 ? "it" : "them"} `
-    + `(${regionWorkspaceNames(regionGap, 5)}); ${n === 1 ? "its" : "their"} spend is still counted.`;
   return (
-    <div className="scope-banner one-line" title={regionGapTitle(regionGap)}>
+    <div className="scope-banner one-line">
       <span className="scope-banner-text">{`${fmtInt(n)} workspace${n === 1 ? "" : "s"} show${n === 1 ? "s" : ""} spend only`}</span>
       <span aria-hidden="true">·</span>
       <button type="button" className="scope-banner-why" aria-expanded={open} onClick={() => setOpen(!open)}>Why</button>
-      {open && <span className="scope-banner-detail">{detail}</span>}
+      {open && (
+        <div className="scope-banner-detail">
+          <ul className="pop-points">
+            <li className="pt-bad"><b>Not checked:</b> {REGIONAL_CHECK_AREAS} checks</li>
+            <li className="pt-good"><b>Still counted:</b> {n === 1 ? "its" : "their"} spend</li>
+          </ul>
+          <ul className="pop-points pop-names">
+            {regionGap.map((w) => <li key={w.workspace_id}>{w.name ? `${w.name} (${w.workspace_id})` : `workspace ${w.workspace_id}`}</li>)}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }
@@ -105,9 +109,17 @@ function RegionGapLine({ data }: { data: ScopedData }) {
   const gap = data && data.scope && data.scope.region_gap;
   if (!gap || gap.length === 0 || isOutsideRegion(data)) return null;
   const n = gap.length;
-  const text = `Not assessed for ${n} selected workspace${n === 1 ? "" : "s"} with spend ${OUTSIDE_REGION_LABEL} `
-    + `(${regionWorkspaceNames(gap, 5)}). This check reads regional system tables, so the result below covers the snapshot's region only.`;
-  return <div className="scope-note" title={regionGapTitle(gap)}>{text}</div>;
+  return (
+    <div className="scope-note">
+      <ul className="pop-points">
+        <li className="pt-bad"><b>Not assessed:</b> {fmtInt(n)} selected workspace{n === 1 ? "" : "s"} with spend {OUTSIDE_REGION_LABEL}</li>
+        <li className="pt-good"><b>Covered:</b> the snapshot's region only</li>
+      </ul>
+      <ul className="pop-points pop-names">
+        {gap.map((w) => <li key={w.workspace_id} title={w.reason || undefined}>{w.name ? `${w.name} (${w.workspace_id})` : `workspace ${w.workspace_id}`}</li>)}
+      </ul>
+    </div>
+  );
 }
 
 // The NOT_ASSESSED card when every selected workspace is outside the snapshot's region.

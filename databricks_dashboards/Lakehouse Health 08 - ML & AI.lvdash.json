@@ -220,7 +220,7 @@
       "displayName": "check:cost_by_serving_endpoint",
       "queryLines": [
         "SELECT\n",
-        "  COALESCE(concat(n_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING)) AS `workspace_shown`,\n",
+        "  COALESCE(concat(n_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING), NULL) AS `workspace_shown`,\n",
         "  CAST(t.`usage_date` AS STRING) AS `usage_date`,\n",
         "  t.`cloud` AS `cloud`,\n",
         "  t.`billing_origin_product` AS `billing_origin_product`,\n",
@@ -259,7 +259,7 @@
       "displayName": "check:cost_serving_mode_by_endpoint",
       "queryLines": [
         "SELECT\n",
-        "  COALESCE(concat(n_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING)) AS `workspace_shown`,\n",
+        "  COALESCE(concat(n_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING), NULL) AS `workspace_shown`,\n",
         "  t.`status` AS `status`,\n",
         "  CAST(t.`usage_date` AS STRING) AS `usage_date`,\n",
         "  t.`endpoint_id` AS `endpoint_id`,\n",
@@ -305,7 +305,7 @@
       "displayName": "check:cost_vector_search_spend",
       "queryLines": [
         "SELECT\n",
-        "  COALESCE(concat(n_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING)) AS `workspace_shown`,\n",
+        "  COALESCE(concat(n_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING), NULL) AS `workspace_shown`,\n",
         "  t.`status` AS `status`,\n",
         "  CAST(t.`usage_date` AS STRING) AS `usage_date`,\n",
         "  t.`cloud` AS `cloud`,\n",
@@ -662,7 +662,7 @@
       "displayName": "check:compute_serving_dormant_endpoints",
       "queryLines": [
         "SELECT\n",
-        "  COALESCE(concat(n_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING)) AS `workspace_shown`,\n",
+        "  COALESCE(concat(n_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING), NULL) AS `workspace_shown`,\n",
         "  t.`status` AS `status`,\n",
         "  t.`endpoint_id` AS `endpoint_id`,\n",
         "  t.`endpoint_name` AS `endpoint_name`,\n",
@@ -705,7 +705,7 @@
       "displayName": "check:compute_serving_endpoint_cost_status",
       "queryLines": [
         "SELECT\n",
-        "  COALESCE(concat(COALESCE(t.`workspace_name`, n_workspace.n), ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING)) AS `workspace_shown`,\n",
+        "  COALESCE(concat(COALESCE(t.`workspace_name`, n_workspace.n), ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING), NULL) AS `workspace_shown`,\n",
         "  t.`status` AS `status`,\n",
         "  t.`endpoint_id` AS `endpoint_id`,\n",
         "  t.`endpoint_name` AS `endpoint_name`,\n",
@@ -769,7 +769,7 @@
       "displayName": "check:compute_serving_endpoint_usage",
       "queryLines": [
         "SELECT\n",
-        "  COALESCE(concat(n_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING)) AS `workspace_shown`,\n",
+        "  COALESCE(concat(n_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING), NULL) AS `workspace_shown`,\n",
         "  CAST(t.`usage_date` AS STRING) AS `usage_date`,\n",
         "  t.`endpoint_id` AS `endpoint_id`,\n",
         "  t.`endpoint_name` AS `endpoint_name`,\n",
@@ -816,7 +816,7 @@
       "displayName": "check:access_vector_search_traffic",
       "queryLines": [
         "SELECT\n",
-        "  COALESCE(concat(n_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING)) AS `workspace_shown`,\n",
+        "  COALESCE(concat(n_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING), NULL) AS `workspace_shown`,\n",
         "  CAST(t.`event_date` AS STRING) AS `event_date`,\n",
         "  t.`action_name` AS `action_name`,\n",
         "  t.`vector_search_key` AS `vector_search_key`,\n",
@@ -854,7 +854,7 @@
       "displayName": "check:serving_endpoint_traffic_by_endpoint",
       "queryLines": [
         "SELECT\n",
-        "  COALESCE(concat(n_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING)) AS `workspace_shown`,\n",
+        "  COALESCE(concat(n_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING), NULL) AS `workspace_shown`,\n",
         "  t.`endpoint_id` AS `endpoint_id`,\n",
         "  t.`endpoint_name` AS `endpoint_name`,\n",
         "  t.`request_count` AS `request_count`,\n",
@@ -1058,7 +1058,7 @@
       "displayName": "check:compute_ai_gateway_usage",
       "queryLines": [
         "SELECT\n",
-        "  COALESCE(concat(n_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING)) AS `workspace_shown`,\n",
+        "  COALESCE(concat(n_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING), NULL) AS `workspace_shown`,\n",
         "  CAST(t.`usage_date` AS STRING) AS `usage_date`,\n",
         "  t.`endpoint_name` AS `endpoint_name`,\n",
         "  t.`requester` AS `requester`,\n",

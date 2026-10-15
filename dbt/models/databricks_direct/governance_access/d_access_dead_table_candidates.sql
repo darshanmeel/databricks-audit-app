@@ -27,7 +27,8 @@ inventory AS (
          created,
          last_altered
   FROM {{ source('system_information_schema', 'tables') }}
-  WHERE table_catalog NOT IN ('system', '__databricks_internal')   -- pipeline backing tables
+  WHERE table_catalog NOT IN ('system', '__databricks_internal', 'samples')   -- pipeline backing tables, Databricks samples
+    AND COALESCE(table_owner, '') <> 'System user'
     AND table_schema <> 'information_schema'
     AND table_type IN ('MANAGED', 'EXTERNAL')
 )

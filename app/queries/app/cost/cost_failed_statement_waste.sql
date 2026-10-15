@@ -25,11 +25,10 @@
 --   row counts $0 (it failed before using compute). Cancelled statements are shown
 --   (est_canceled_usd_list) and NOT counted: cancelling a runaway query is often the fix.
 --   waste_reason says it in one line.
--- healthy: status = OK - failed statements on the warehouse used under :warn_waste_usd dollars of
---   compute in the window (field heuristic).
--- investigate_if: status = WARN (at/above :warn_waste_usd) or CRITICAL (at/above :crit_waste_usd)
---   dollars of compute used by failed statements (field heuristic). NOT_ASSESSED is not a pass:
---   read not_assessed_reason.
+-- healthy: OK - failed statements on the warehouse used under $:warn_waste_usd of compute in the
+--   window.
+-- investigate_if: WARN - $:warn_waste_usd or more of compute used by failed statements. CRITICAL -
+--   $:crit_waste_usd or more. NOT_ASSESSED is not a pass: read not_assessed_reason.
 -- actions: 1) find the failing statements and their error in query_failed_queries_daily, and fix the
 --   SQL, permission or schema problem they point to (free); 2) add a statement timeout or a
 --   fail-fast check in the calling job or app, so a statement bound to fail stops early (config);

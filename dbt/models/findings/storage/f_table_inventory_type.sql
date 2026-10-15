@@ -6,12 +6,16 @@ FROM (
 SELECT table_catalog, table_schema, table_type, data_source_format,
        COUNT(*) AS table_count
 FROM {{ source('system_information_schema', 'tables') }}
+WHERE table_catalog NOT IN ('system', 'samples')
+  AND COALESCE(table_owner, '') <> 'System user'
 GROUP BY table_catalog, table_schema, table_type, data_source_format
 ORDER BY table_catalog, table_schema, table_type
 {%- else %}
 SELECT table_catalog, table_schema, table_type, data_source_format,
        COUNT(*) AS table_count
 FROM {{ source('system_information_schema', 'tables') }}
+WHERE table_catalog NOT IN ('system', 'samples')
+  AND COALESCE(table_owner, '') <> 'System user'
 GROUP BY table_catalog, table_schema, table_type, data_source_format
 ORDER BY table_catalog, table_schema, table_type
 {%- endif %}

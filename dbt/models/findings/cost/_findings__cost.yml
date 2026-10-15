@@ -926,18 +926,20 @@ models:
         - allocation_key
         - allocation_value
 - name: f_cost_chargeback_by_cluster
-  description: One row = one all-purpose cluster (workspace_id, cluster_id, cluster_kind = 'all_purpose'),
+  description: 'One row = one all-purpose cluster (workspace_id, cluster_id, cluster_kind = ''all_purpose''),
     by name and owner; one row per job whose runs used job clusters in the window (workspace_id, job_id,
-    cluster_kind = 'job_cluster') - a job's short-lived job clusters are rolled up to the job rather than
-    listed one ephemeral cluster_id at a time; PLUS one row per classic (non-serverless) Lakeflow Declarative
-    Pipeline whose compute billed with a cluster_id in the window (workspace_id, pipeline_id, cluster_kind
-    = 'pipeline'), by pipeline name. The three kinds are mutually exclusive by construction (split on
-    dlt_pipeline_id first, then job_id), so nothing is double-counted across them. est_current_usd_list
+    cluster_kind = ''job_cluster'') - a job''s short-lived job clusters are rolled up to the job rather
+    than listed one ephemeral cluster_id at a time; PLUS one row per classic (non-serverless) Lakeflow
+    Declarative Pipeline whose compute billed with a cluster_id in the window (workspace_id, pipeline_id,
+    cluster_kind = ''pipeline''), by pipeline name. The three kinds are mutually exclusive by construction
+    (split on dlt_pipeline_id first, then job_id), so nothing is double-counted across them. est_current_usd_list
     / est_previous_usd_list are the two totals; est_change_usd_list and change_pct compare them. price_basis
     discloses pricing coverage across both windows combined; not_assessed_reason explains a NOT_ASSESSED
     row. is_other=true is the one pooled row for every status=OK row ranked below :top_n by current spend
     (every other column NULL on that row, pooled_count says how many); it always reads status OK (see
-    caveats).
+    caveats). One row per workspace has cluster_kind = ''no_cluster'' and entity_id NULL: its spend with
+    no cluster id (serverless, storage, anything not on classic compute), judged by the same growth rule
+    and never pooled, so all rows add up to total spend.'
   meta:
     query_id: cost_chargeback_by_cluster
     title: Chargeback by cluster, job cluster or pipeline, current period versus the one before it
@@ -989,15 +991,10 @@ models:
       a cluster, job or pipeline you know grew or shrank between two recent equal periods matches this
       query's change_pct, and that "all-purpose" here (a billed cluster_id with no dlt_pipeline_id or
       job_id at all) matches how you expect interactive clusters to be billed.
-    healthy: status OK - no increase at/above :warn_increase_pct, or the row's own current-period spend
-      (a real $0 counts) sits below :min_spend_usd
-    investigate_if: 'CRITICAL - the increase is at/above :crit_increase_pct on at least :min_spend_usd
-      of current spend, or the row is brand-new spend above the floor with nothing in the previous period
-      to compare against; WARN - at/above :warn_increase_pct. NOT_ASSESSED - read not_assessed_reason:
-      ''previous_window_not_covered'' when the account''s own earliest recorded usage does not reach back
-      far enough to cover the previous window at this window length; ''current_period_unpriced'' when
-      this row''s current-period spend could not be priced at all; ''previous_period_unpriced'' is the
-      same gap on the previous period''s own side.'
+    healthy: OK - up less than :warn_increase_pct, or current spend under $:min_spend_usd.
+    investigate_if: CRITICAL - up :crit_increase_pct or more on at least $:min_spend_usd of current spend,
+      or brand-new spend above the floor with nothing before. WARN - up :warn_increase_pct or more. NOT_ASSESSED
+      - read not_assessed_reason.
     actions:
     - open cost_chargeback_by_job for a job_cluster row, or cost_chargeback_by_tag_value for the tag behind
       the growth (free);
@@ -1123,14 +1120,15 @@ models:
         - identity_owned_by
         - identity_created_by
 - name: f_cost_chargeback_by_job
-  description: One row = one job's (workspace_id, job_id) billed jobs-compute DBU usage (usage_metadata.job_id),
+  description: 'One row = one job''s (workspace_id, job_id) billed jobs-compute DBU usage (usage_metadata.job_id),
     at the effective list price (DEC-66.1), in the selected window versus the equal-length window right
     before it. est_current_usd_list / est_previous_usd_list are the two totals; est_change_usd_list and
-    change_pct compare them. share_of_total_pct is this job's share of every job's current-period spend
+    change_pct compare them. share_of_total_pct is this job''s share of every job''s current-period spend
     combined. price_basis discloses pricing coverage across both windows combined; not_assessed_reason
     explains a NOT_ASSESSED row. is_other=true is the one pooled row for every status=OK job ranked below
     :top_n by current spend (every other column NULL on that row, pooled_count says how many); it always
-    reads status OK (see caveats).
+    reads status OK (see caveats). One row per workspace has job_id NULL and is_other=false: its spend
+    with no job id, judged by the same growth rule and never pooled, so all rows add up to total spend.'
   meta:
     query_id: cost_chargeback_by_job
     title: Chargeback by job at list price, current period versus the one before it
@@ -1178,17 +1176,10 @@ models:
       per job instead of per workspace+product); confirm on your account that a job you know grew or shrank
       between two recent equal periods matches this query's change_pct, and that job_name/run_as resolve
       for a job you recognise.
-    healthy: status OK - no increase at/above :warn_increase_pct, or the job's own current-period spend
-      (a real $0 counts) sits below :min_spend_usd
-    investigate_if: 'CRITICAL - the increase is at/above :crit_increase_pct on at least :min_spend_usd
-      of current spend, or the job is brand-new spend above the floor with nothing in the previous period
-      to compare against (there is no honest percentage for a jump from zero, so it reads CRITICAL outright);
-      WARN - at/above :warn_increase_pct. NOT_ASSESSED - read not_assessed_reason: ''previous_window_not_covered''
-      when the account''s own earliest recorded usage does not reach back far enough to cover the previous
-      window at this window length; ''current_period_unpriced'' when this job''s current-period spend
-      could not be priced at all (every current-period SKU unmatched in list_prices, none FREE_USAGE)
-      - no dollar figure, priced or a real free $0, to judge; ''previous_period_unpriced'' is the same
-      gap on the previous period''s own side.'
+    healthy: OK - up less than :warn_increase_pct, or current spend under $:min_spend_usd.
+    investigate_if: CRITICAL - up :crit_increase_pct or more on at least $:min_spend_usd of current spend,
+      or brand-new spend above the floor with nothing before. WARN - up :warn_increase_pct or more. NOT_ASSESSED
+      - read not_assessed_reason.
     actions:
     - open cost_chargeback_by_cluster for this job's workspace to see which cluster ran it, or cost_chargeback_by_tag_value
       for the tag behind the growth (free);
@@ -1247,6 +1238,7 @@ models:
         - window_days
         - workspace_id
         - job_id
+        - is_other
 - name: f_cost_chargeback_by_service
   description: One row = one workspace's spend on one product line in the selected window against the
     equal-length window right before it, both at the effective list price (DEC-66.1). A NULL billing_origin_product
@@ -1295,15 +1287,10 @@ models:
       product_label CASE already uses for the billing_origin_product values seen elsewhere in this app
       - confirm both against your own account's values, and that a product line you know grew or shrank
       between two recent equal periods matches change_pct.
-    healthy: status OK - no increase at/above :warn_increase_pct, or the row's own current-period spend
-      (a real $0 counts) sits below :min_spend_usd. The comparison is judged per workspace, not account-wide
-      (see caveats), so a product line's account-wide swing may not itself flag.
-    investigate_if: 'CRITICAL - the increase is at/above :crit_increase_pct on at least :min_spend_usd
-      of current spend, or brand-new spend above the floor with nothing in the previous period to compare
-      against. WARN - at/above :warn_increase_pct. NOT_ASSESSED - read not_assessed_reason: ''previous_window_not_covered''
-      when the account''s own earliest recorded usage does not reach back far enough to cover the previous
-      window at this window length; ''current_period_unpriced'' / ''previous_period_unpriced'' when that
-      side''s whole spend could not be priced at all.'
+    healthy: OK - up less than :warn_increase_pct, or current spend under $:min_spend_usd.
+    investigate_if: CRITICAL - up :crit_increase_pct or more on at least $:min_spend_usd of current spend,
+      or brand-new spend above the floor with nothing before. WARN - up :warn_increase_pct or more. NOT_ASSESSED
+      - read not_assessed_reason.
     actions:
     - open cost_by_billing_origin_product for the same window to see the raw DBU/byte volume behind the
       dollar move (free);
@@ -1414,15 +1401,10 @@ models:
       band and NOT_ASSESSED coverage guard (DEC-62/DEC-64), applied at the SKU grain instead of workspace
       + product line; confirm a SKU you know grew or shrank between two recent equal periods matches this
       query's change_pct.
-    healthy: status OK - no increase at/above :warn_increase_pct, or the row's own current-period spend
-      (a real $0 counts) sits below :min_spend_usd. The comparison is judged per workspace, not account-wide
-      (see caveats), so a SKU's account-wide swing may not itself flag.
-    investigate_if: 'CRITICAL - the increase is at/above :crit_increase_pct on at least :min_spend_usd
-      of current spend, or brand-new spend above the floor with nothing in the previous period to compare
-      against. WARN - at/above :warn_increase_pct. NOT_ASSESSED - read not_assessed_reason: ''previous_window_not_covered''
-      when the account''s own earliest recorded usage does not reach back far enough to cover the previous
-      window at this window length; ''current_period_unpriced'' / ''previous_period_unpriced'' when that
-      side''s whole spend could not be priced at all.'
+    healthy: OK - up less than :warn_increase_pct, or current spend under $:min_spend_usd.
+    investigate_if: CRITICAL - up :crit_increase_pct or more on at least $:min_spend_usd of current spend,
+      or brand-new spend above the floor with nothing before. WARN - up :warn_increase_pct or more. NOT_ASSESSED
+      - read not_assessed_reason.
     actions:
     - open cost_sku_trend_12m for the same SKU to see whether this window's move is a one-off or part
       of a 12-month growth trend (free);
@@ -1610,17 +1592,10 @@ models:
       a live workspace and the exact current-vs-previous-window contract cost_period_over_period established;
       confirm on your account that a tag key/value you know carries real spend shows up with the right
       dollar figure and the right (other)/(untagged) split.
-    healthy: status OK - no increase at/above :warn_increase_pct, or the row's own current-period spend
-      (a real $0 counts) sits below :min_spend_usd. The comparison is judged per workspace, not account-wide
-      (see caveats), so a tag value's account-wide swing may not itself flag.
-    investigate_if: 'CRITICAL - the increase is at/above :crit_increase_pct on at least :min_spend_usd
-      of current spend, or the row is brand-new spend above the floor with nothing in the previous period
-      to compare against; WARN - at/above :warn_increase_pct - this applies to a growing "(untagged)"
-      row exactly like any real value, so a widening tagging gap shows up as a real WARN/CRITICAL, not
-      just a percentage aside. NOT_ASSESSED - read not_assessed_reason: ''previous_window_not_covered''
-      when the account''s own earliest recorded usage does not reach back far enough to cover the previous
-      window; ''current_period_unpriced'' / ''previous_period_ unpriced'' when that side''s whole spend
-      for this row could not be priced at all.'
+    healthy: OK - up less than :warn_increase_pct, or current spend under $:min_spend_usd.
+    investigate_if: CRITICAL - up :crit_increase_pct or more on at least $:min_spend_usd of current spend,
+      or brand-new spend above the floor with nothing before. WARN - up :warn_increase_pct or more. NOT_ASSESSED
+      - read not_assessed_reason.
     actions:
     - open cost_chargeback_by_allocation_tag for the canonical cost_center/team cut of the same spend,
       or cost_chargeback_by_job / cost_chargeback_by_cluster to find which resource is driving a growing
@@ -1699,7 +1674,9 @@ models:
     warehouse ranked below :top_n (reads status NOT_ASSESSED, not_assessed_reason NULL - the pooled rows
     can carry different reasons); either is present only when pooled_count > 0 for that status (workspace_id/warehouse_id
     NULL on both). share_of_total_pct still adds up to ~100% across every row including these. Warehouse
-    name/type/size are not resolved here - join sql_warehouse_config_current on warehouse_id.'
+    name/type/size are not resolved here - join sql_warehouse_config_current on warehouse_id. One row
+    per workspace has warehouse_id NULL and is_other=false: its spend with no warehouse id, judged by
+    the same growth rule and never pooled, so all rows add up to total spend.'
   meta:
     query_id: cost_chargeback_by_warehouse
     title: Chargeback by SQL warehouse, with change vs the previous period
@@ -1751,15 +1728,10 @@ models:
       a hour with more than one billed SKU row. Confirm on your account that a warehouse you know grew
       or shrank between two recent equal periods matches change_pct, and that a warehouse's own billed_hours
       matches its known up-time in whole billed hours.
-    healthy: status OK - no increase at/above :warn_increase_pct, or the row's own current-period spend
-      (a real $0 counts) sits below :min_spend_usd.
-    investigate_if: 'CRITICAL - the increase is at/above :crit_increase_pct on at least :min_spend_usd
-      of current spend, or brand-new spend above the floor with nothing in the previous period to compare
-      against. WARN - at/above :warn_increase_pct. NOT_ASSESSED - read not_assessed_reason: ''previous_window_not_covered''
-      when the account''s own earliest recorded usage does not reach back far enough to cover the previous
-      window at this window length; ''current_period_unpriced'' / ''previous_period_unpriced'' when that
-      side''s whole spend could not be priced at all. A row with is_other=true is always OK or NOT_ASSESSED,
-      never WARN/CRITICAL (see caveats).'
+    healthy: OK - up less than :warn_increase_pct, or current spend under $:min_spend_usd.
+    investigate_if: CRITICAL - up :crit_increase_pct or more on at least $:min_spend_usd of current spend,
+      or brand-new spend above the floor with nothing before. WARN - up :warn_increase_pct or more. NOT_ASSESSED
+      - read not_assessed_reason.
     actions:
     - open sql_warehouse_config_current for this warehouse_id to see its size, auto-stop and channel (free);
     - open compute_warehouse_idle_gaps for the same warehouse to see whether the spend increase tracks
@@ -1820,6 +1792,7 @@ models:
         - window_days
         - workspace_id
         - warehouse_id
+        - is_other
         - status
 - name: f_cost_chargeback_by_workspace
   description: One row = one workspace's spend in the selected window against the equal-length window
@@ -1868,14 +1841,10 @@ models:
       band and NOT_ASSESSED coverage guard (DEC-62/DEC-64), collapsed to workspace_id alone instead of
       workspace + product line; confirm a workspace you know grew or shrank between two recent equal periods
       matches this query's change_pct.
-    healthy: status OK - no increase at/above :warn_increase_pct, or the row's own current-period spend
-      (a real $0 counts) sits below :min_spend_usd.
-    investigate_if: 'CRITICAL - the increase is at/above :crit_increase_pct on at least :min_spend_usd
-      of current spend, or brand-new spend above the floor with nothing in the previous period to compare
-      against. WARN - at/above :warn_increase_pct. NOT_ASSESSED - read not_assessed_reason: ''previous_window_not_covered''
-      when the account''s own earliest recorded usage does not reach back far enough to cover the previous
-      window at this window length; ''current_period_unpriced'' / ''previous_period_unpriced'' when that
-      side''s whole spend could not be priced at all.'
+    healthy: OK - up less than :warn_increase_pct, or current spend under $:min_spend_usd.
+    investigate_if: CRITICAL - up :crit_increase_pct or more on at least $:min_spend_usd of current spend,
+      or brand-new spend above the floor with nothing before. WARN - up :warn_increase_pct or more. NOT_ASSESSED
+      - read not_assessed_reason.
     actions:
     - open cost_period_over_period for the same workspace to see which product line is driving the move
       (free);
@@ -2004,18 +1973,10 @@ models:
       you know grew spend between two recent equal periods matches change_pct, and that all-purpose-cluster
       usage (identity_metadata.run_as blank there per Databricks'' own documentation) resolves through
       owned_by or the cluster fallback instead of collapsing to ''unknown''.'
-    healthy: status OK - no increase at/above :warn_increase_pct, or the row's own current-period spend
-      (a real $0 counts) sits below :min_spend_usd, and its source's pricing coverage is not a full gap
-      (see investigate_if).
-    investigate_if: 'CRITICAL - the increase is at/above :crit_increase_pct on at least :min_spend_usd
-      of current spend, or brand-new spend above the floor with nothing in the previous period to compare
-      against - a growing ''unknown'' identity is judged the same way, so a widening attribution gap shows
-      up as a real WARN/CRITICAL. WARN - at/above :warn_increase_pct. NOT_ASSESSED - read not_assessed_reason:
-      ''previous_window_not_covered'' when the account''s own earliest recorded usage does not reach back
-      far enough to cover the previous window at this window length (every row, every source); ''current_period_unpriced''
-      / ''previous_period_unpriced'' when that ROW''s OWN SOURCE had no priced spend at all, account-wide,
-      on that side of the window - every row of that source reads NOT_ASSESSED together (see caveats).
-      A row with is_other=true is always OK or NOT_ASSESSED, never WARN/CRITICAL.'
+    healthy: OK - up less than :warn_increase_pct, or current spend under $:min_spend_usd.
+    investigate_if: CRITICAL - up :crit_increase_pct or more on at least $:min_spend_usd of current spend,
+      or brand-new spend above the floor with nothing before. WARN - up :warn_increase_pct or more. NOT_ASSESSED
+      - read not_assessed_reason.
     actions:
     - open cost_chargeback_by_allocation_tag or the Cost > Allocation tab to see which cost_center/team
       this identity's spend rolls up under (free);
@@ -2399,26 +2360,15 @@ models:
       every priced cost query here already uses; confirm on your account that a day you know had an unusual
       spend jump (a backfill, a burst of job runs, a new SKU turned on) reads WARN here with a spike_ratio_actual
       and top_skus that match what you already know happened.
-    healthy: 'status = OK is never itself returned as a row (see caveats: this query emits ONLY WARN or
-      NOT_ASSESSED days) - a day whose own spend never clears :min_spend_usd, or that clears the floor
-      but not :spike_ratio, or that clears both but has no baseline, simply has no row when the floor
-      alone is what stops it, so "no row for a workspace/product in the window" is (mostly) the healthy
-      case - see NOT_ASSESSED below for the one exception.'
-    investigate_if: 'WARN - every row returned above the floor with a real trailing baseline of at least
-      :min_baseline_days days: a real jump on a real amount of money. NOT_ASSESSED - read not_assessed_reason:
-      ''no_baseline_history'' when this workspace/product cleared :min_spend_usd on this day but has no
-      earlier spend at all in the trailing :baseline_days before it (a brand-new workspace or a SKU that
-      only just started billing); ''short_baseline'' when it has some earlier spend but fewer than :min_baseline_days
-      days of it, too thin a median to trust - the $ floor is checked first, so a NOT_ASSESSED row always
-      represents a day with real money behind it, never a $1 non-event.'
+    healthy: 'OK days are not listed: a day under $:min_spend_usd, under :spike_ratio times its median,
+      or with no baseline has no row.'
+    investigate_if: WARN - spend at least :spike_ratio times the trailing :baseline_days-day median and
+      at least $:min_spend_usd, with at least :min_baseline_days baseline days. NOT_ASSESSED - read not_assessed_reason.
     actions:
-    - open cost_dollarized_by_sku_day for this workspace and day and read top_skus against it - a backfill
-      or restatement usually shows as one SKU/day, a genuine spike as many (free);
-    - check cost_period_over_period for the same workspace/product - one spike day inside an otherwise
-      flat period reads differently from a period that is trending up throughout (free);
-    - if the spike is real new usage (a job that started running more often, a new endpoint, a bigger
-      backfill) rather than a one-off correction, the matching domain tab names the resource and whether
-      it is worth scaling down (config) or is deliberate growth (spend).
+    - 'open cost_dollarized_by_sku_day for that day: one SKU means a backfill or restatement, many SKUs
+      a real spike (free);'
+    - 'check cost_period_over_period: one spike day or a rising trend? (free);'
+    - 'real new usage: the domain tab names the resource; scale it down or accept the growth (config).'
     next:
     - query_id: cost_dollarized_by_sku_day
       if: for the SKU-level detail behind one spike day
@@ -2766,10 +2716,9 @@ models:
       equals query.history''s statement_id, are not yet confirmed on a live workspace (P4-04). Confirm
       on your account: 1) a statement you ran has an attributed_usage row with the same statement id;
       2) a statement that failed after running for a while has one too.'
-    healthy: status = OK - failed statements on the warehouse used under :warn_waste_usd dollars of compute
-      in the window (field heuristic).
-    investigate_if: 'status = WARN (at/above :warn_waste_usd) or CRITICAL (at/above :crit_waste_usd) dollars
-      of compute used by failed statements (field heuristic). NOT_ASSESSED is not a pass: read not_assessed_reason.'
+    healthy: OK - failed statements on the warehouse used under $:warn_waste_usd of compute in the window.
+    investigate_if: 'WARN - $:warn_waste_usd or more of compute used by failed statements. CRITICAL -
+      $:crit_waste_usd or more. NOT_ASSESSED is not a pass: read not_assessed_reason.'
     actions:
     - find the failing statements and their error in query_failed_queries_daily, and fix the SQL, permission
       or schema problem they point to (free);
@@ -3106,19 +3055,10 @@ models:
       never scale one" rule DEC-62 and lakeflow_job_duration_regression already established for a within-window
       split; confirm on your account that a workspace/product pair you know grew or shrank between two
       recent equal periods matches this query's change_pct.
-    healthy: status OK - no increase at/above :warn_increase_pct, or the row's own current-period spend
-      (a real $0 counts) sits below :min_spend_usd
-    investigate_if: 'CRITICAL - the increase is at/above :crit_increase_pct on at least :min_spend_usd
-      of current spend, or the row is brand-new spend above the floor with nothing in the previous period
-      to compare against (there is no honest percentage for a jump from zero, so it reads CRITICAL outright);
-      WARN - at/above :warn_increase_pct. NOT_ASSESSED - read not_assessed_reason: ''previous_window_not_covered''
-      when the whole account''s own earliest recorded usage (across every workspace and product, not just
-      this row) does not reach back far enough to cover the previous window (DEC-64), so no comparison
-      anywhere can be trusted at this window length; ''current_period_unpriced'' when ANY of this row''s
-      current-period usage could not be priced (at least one current-period SKU was unmatched in list_prices
-      and was not FREE_USAGE), so est_current_usd_list understates the true figure and no verdict is safe
-      to judge on it, even when the rest of the period priced fine; ''previous_period_unpriced'' is the
-      same gap on the previous period''s own side.'
+    healthy: OK - up less than :warn_increase_pct, or current spend under $:min_spend_usd.
+    investigate_if: CRITICAL - up :crit_increase_pct or more on at least $:min_spend_usd of current spend,
+      or brand-new spend above the floor with nothing before. WARN - up :warn_increase_pct or more. NOT_ASSESSED
+      - read not_assessed_reason.
     actions:
     - open cost_dollarized_by_sku_day for this workspace and window, sorted by day and SKU, to see which
       SKU actually moved (free);

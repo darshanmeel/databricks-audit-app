@@ -27,10 +27,9 @@
 --   restart pays a cold start regardless of how short the auto-stop was.
 -- healthy: status = OK - no day in the window had :warn_daily_autostops or more qualifying
 --   auto-stops with auto_stop_minutes at/above :warn_long_autostop_minutes.
--- investigate_if: status = the worst single day's status - WARN or CRITICAL per the same
---   :warn_daily_autostops / :crit_daily_autostops thresholds. cold_start_risk_days > 0 on its own is
---   informational, not a status band - a bursty warehouse that already auto-stops within policy
---   still needs the fix, but is not double-counted into a worse verdict here.
+-- investigate_if: WARN - :warn_daily_autostops or more qualifying auto-stops on one day. CRITICAL -
+--   :crit_daily_autostops or more. Status is the worst single day. cold_start_risk_days > 0 on its own
+--   is informational, not a status band.
 -- actions: 1) lower auto_stop_minutes for the warehouse - serverless can go to 5 minutes in the UI (1
 --   via the API), classic/pro minimum is 10 minutes (free); 2) for cold_start_risk, move the workload
 --   to serverless (starts in seconds) or consolidate several bursty jobs onto one shared warehouse so

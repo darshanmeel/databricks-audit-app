@@ -712,12 +712,13 @@ export function MoneyTab({ filters, meta, findingsById, goTo, showPerformance, o
   const clCostRows = showPerformance ? rowsOnceReady(clCostState) : null;
   const netOf = (st: FindingState) => 1 - numOrZero(st.data && st.data.discount_pct);
   const computeItems = whCostRows && clCostRows ? [
-    ...whCostRows.map((r) => ({
+    // Not-attributed rows (no warehouse / no cluster) are the rest of the bill, not compute.
+    ...whCostRows.filter((r) => r.is_other || r.warehouse_id != null).map((r) => ({
       pooled: !!r.is_other,
       name: `${resolveName("warehouse", r.workspace_id, r.warehouse_id) || r.warehouse_id} · warehouse`,
       value: numOrZero(r.usd_list) * netOf(whCostState),
     })),
-    ...clCostRows.map((r) => ({
+    ...clCostRows.filter((r) => r.cluster_kind !== "no_cluster").map((r) => ({
       pooled: !!r.is_other,
       name: `${r.name || r.entity_id} · ${CLUSTER_KIND_WORD[r.cluster_kind] || "cluster"}`,
       value: numOrZero(r.est_current_usd_list) * netOf(clCostState),

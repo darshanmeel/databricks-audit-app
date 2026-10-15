@@ -40,22 +40,19 @@
 --   a gap up to N minutes stays idle, a longer one idles N minutes and then the next query waits
 --   for a cold start. Compare a setting with now: fewer idle minutes, more cold starts.
 --   usd_per_cluster_minute prices an idle minute on this warehouse.
--- healthy: status = OK - counted idle is below :warn_idle_pct percent of running time, or below
---   :min_idle_minutes minutes in the window, and under :warn_waste_usd of possible waste (field
---   heuristic).
--- investigate_if: status = WARN or CRITICAL - at least :min_idle_minutes idle minutes and at least
---   :warn_idle_pct (WARN) or :crit_idle_pct (CRITICAL) percent of running time idle, or possible
---   waste at/above :warn_waste_usd (WARN) or :crit_waste_usd (CRITICAL) dollars at any share, so a
---   large idle cost on a busy warehouse is flagged too; an unpriced warehouse is judged on minutes
---   and share only (field heuristic). A large stop_tail_minutes means auto-stop waits too long
---   after the last query. A large between_queries_minutes or no_query_minutes means the warehouse
---   is kept up for sparse work. NOT_ASSESSED is not a pass: read not_assessed_reason and
---   waste_reason.
--- actions: 1) when stop_tail_minutes dominates, lower auto_stop_minutes on the warehouse - it
---   cannot go below the lowest auto-stop Databricks allows for the warehouse type, so part of each
---   tail stays (free); 2) move sparse, bursty workloads onto one shared warehouse, or schedule them
---   together, so fewer warehouses sit up between queries (config); 3) move a bursty classic or pro
---   warehouse to serverless, which starts in seconds, so a short auto-stop does not cost a long
+-- healthy: OK - idle is below :warn_idle_pct of running time or below :min_idle_minutes minutes, and
+--   under $:warn_waste_usd of possible waste.
+-- investigate_if: WARN - at least :min_idle_minutes idle minutes and at least :warn_idle_pct of
+--   running time idle, or possible waste at/above $:warn_waste_usd. CRITICAL - at least
+--   :min_idle_minutes idle minutes and at least :crit_idle_pct idle, or possible waste at/above
+--   $:crit_waste_usd. An unpriced warehouse is judged on minutes and share only. NOT_ASSESSED is not a
+--   pass: read not_assessed_reason and waste_reason.
+-- actions: 1) when stop_tail_minutes dominates (auto-stop waits too long after the last query),
+--   lower auto_stop_minutes on the warehouse - it cannot go below the lowest auto-stop Databricks
+--   allows for the warehouse type, so part of each tail stays (free); 2) when between_queries_minutes
+--   or no_query_minutes dominates (the warehouse is kept up for sparse work), move sparse, bursty
+--   workloads onto one shared warehouse, or schedule them together (config); 3) move a bursty classic
+--   or pro warehouse to serverless, which starts in seconds, so a short auto-stop does not cost a long
 --   cold start (spend).
 -- next: compute_warehouse_config_posture (to see auto_stop_minutes and whether it is flagged),
 --   query_cache_coldstart (before lowering auto-stop - how often statements already wait for a

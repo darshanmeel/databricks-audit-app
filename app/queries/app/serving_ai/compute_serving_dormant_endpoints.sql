@@ -20,9 +20,9 @@
 --   WARN then NOT_ASSESSED then OK) so the findings tab shows the highest-risk endpoints first.
 -- healthy: status = OK - at least :warn_low_requests requests in the window, or idle but billing
 --   nothing (scale-to-zero, external model, pay-per-token).
--- investigate_if: status = CRITICAL (tracked, billed, and zero requests = idle waste) or WARN
---   (billed with very few requests) or NOT_ASSESSED (usage tracking off, or reconfigured inside
---   the window, with little traffic).
+-- investigate_if: CRITICAL - billed, tracked, 0 requests (idle waste). WARN - billed with very few
+--   requests. NOT_ASSESSED - usage tracking off, or reconfigured inside the window, with little
+--   traffic.
 -- actions: 1) scale-to-zero or delete endpoints flagged CRITICAL idle (free); 2) for NOT_ASSESSED,
 --   wait out of the window to re-assess if the endpoint becomes active; 3) for WARN, evaluate if
 --   provisioned throughput or endpoint count matches the measured traffic (spend optimization).

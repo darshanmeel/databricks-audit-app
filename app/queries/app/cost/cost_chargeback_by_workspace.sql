@@ -26,15 +26,10 @@
 --   change_usd_list and change_pct compare them. price_basis discloses pricing coverage across
 --   both windows combined; not_assessed_reason explains a NOT_ASSESSED row. workspace_name is not
 --   resolved here - join cost_workspace_names on workspace_id for the human label.
--- healthy: status OK - no increase at/above :warn_increase_pct, or the row's own current-period
---   spend (a real $0 counts) sits below :min_spend_usd.
--- investigate_if: CRITICAL - the increase is at/above :crit_increase_pct on at least
---   :min_spend_usd of current spend, or brand-new spend above the floor with nothing in the
---   previous period to compare against. WARN - at/above :warn_increase_pct. NOT_ASSESSED - read
---   not_assessed_reason: 'previous_window_not_covered' when the account's own earliest recorded
---   usage does not reach back far enough to cover the previous window at this window length;
---   'current_period_unpriced' / 'previous_period_unpriced' when that side's whole spend could not
---   be priced at all.
+-- healthy: OK - up less than :warn_increase_pct, or current spend under $:min_spend_usd.
+-- investigate_if: CRITICAL - up :crit_increase_pct or more on at least $:min_spend_usd of current
+--   spend, or brand-new spend above the floor with nothing before. WARN - up :warn_increase_pct or
+--   more. NOT_ASSESSED - read not_assessed_reason.
 -- actions: 1) open cost_period_over_period for the same workspace to see which product line is
 --   driving the move (free); 2) open cost_chargeback_by_allocation_tag for the same workspace to
 --   see which cost_center/team is behind it (free); 3) if the increase is deliberate growth, set

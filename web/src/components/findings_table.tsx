@@ -364,7 +364,7 @@ export function FindingsTable({ findings, refIds, filters, initialFocusId, allFi
           <div className="card-title">Checks in this view</div>
           <div className="metric-note">Click a check for its rows and the fix. * marks a first-audit pick.</div>
         </div>
-        <button type="button" className="csv-download-btn" onClick={downloadCsv} title="Download every check matching the current search, across all tabs, as a CSV file.">
+        <button type="button" className="csv-download-btn" onClick={downloadCsv} title="Download matching checks as CSV">
           Download check list (CSV)
         </button>
       </div>

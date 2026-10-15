@@ -9,6 +9,7 @@
 // P2-FILTERS' tag/attribute-filter plumbing, P4-T-IDX's tag seam and P4-44's shareable-hash-state
 // discipline are unchanged from before this redesign -- only the shell around them is new.
 
+import { Tip, type TipPoint } from "./components/tip";
 import React from "react";
 import type { Workspace } from "./types";
 import { Api, REFRESH_DAYS } from "./api";
@@ -143,7 +144,7 @@ function ThemeIconToggle() {
 // The role ("lens") picks which pages the rail lists.
 function LensSelect({ role, onChange }: LooseProps) {
   return (
-    <label className="c-lens" title="Picks which pages you see. The data is the same in every lens.">
+    <label className="c-lens" title="Picks which pages you see; data is the same">
       <span className="c-rail-label">Lens</span>
       <select value={role} onChange={(e) => onChange(e.target.value)} aria-label="View as">
         {ROLES.map((r) => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}
@@ -184,20 +185,20 @@ function SnapshotStatus({ meta, checksAssessed }: LooseProps) {
   const partialToday = !!(direct && direct.includes_today);
   const whenText = when ? `Data as of ${partialToday ? `${when} UTC` : when}` : source;
   const parts = [whenText, partialToday ? "today partial" : null].filter(Boolean);
-  const notes = [];
-  if (source && when) notes.push(`Source: ${source}`);
-  if (m.failed || m.not_built) notes.push(`${fmtInt(m.failed || 0)} failed, ${fmtInt(m.not_built || 0)} not built`);
-  if (partialToday) notes.push(`Today is included up to ${when} UTC; its figures are partial and billing can lag a few hours`);
-  const title = notes.length ? notes.join(". ") : undefined;
+  const notes: TipPoint[] = [];
+  if (source && when) notes.push({ label: "Source:", text: source });
+  if (m.failed || m.not_built) notes.push({ tone: "bad", label: "Not run:", text: `${fmtInt(m.failed || 0)} failed, ${fmtInt(m.not_built || 0)} not built` });
+  if (partialToday) notes.push({ tone: "bad", label: "Today partial:", text: `up to ${when} UTC; billing can lag a few hours` });
+  const dot = <span className={`snapshot-dot ${dotCls}`}></span>;
   return (
-    <span className="row snapshot-status" style={{ gap: 6 }} title={title}>
-      <span className={`snapshot-dot ${dotCls}`}></span>
+    <span className="row snapshot-status" style={{ gap: 6 }}>
+      {notes.length ? <Tip points={notes}>{dot}</Tip> : dot}
       <span className="muted snapshot-text">
         {parts.length ? parts.join(" · ") : "no snapshot captured yet"}
         {checksText && (
           <React.Fragment>
             {" · "}
-            <span title="Counts checks on the content tabs, without the reference lists, so it differs from the guide's total.">{checksText}</span>
+            <Tip points={[{ text: "Content tabs only" }, { text: "Reference lists not counted" }, { text: "Differs from the guide's total" }]}>{checksText}</Tip>
           </React.Fragment>
         )}
       </span>

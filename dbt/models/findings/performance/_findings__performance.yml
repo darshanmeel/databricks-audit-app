@@ -1880,25 +1880,20 @@ models:
     healthy: pressure = NONE - spill_time_pct below :warn_spill_time_pct, the worst day's local spill
       below :warn_spill_gb GB and capacity_wait_pct below :warn_queue_time_pct (field heuristic; every
       threshold is a header param).
-    investigate_if: 'MEMORY - spill_time_pct at/above :warn_spill_time_pct (WARN) or :crit_spill_time_pct
-      (CRITICAL), or the worst day''s local spill at/above :warn_spill_gb GB (WARN) or :crit_spill_gb
-      GB (CRITICAL): statements on this warehouse do not fit in its memory, so the lever is size; CAPACITY
-      - capacity_wait_pct at/above :warn_queue_time_pct (WARN) or :crit_queue_time_pct (CRITICAL): statements
-      queue because every cluster is busy, so the lever is clusters at the ceiling or a warm cluster below
-      it; MEMORY_AND_CAPACITY - both. status is the worse of the two bands (field heuristic). NOT_ASSESSED
-      (fewer than :min_queries statements) is not a pass: read not_assessed_reason.'
+    investigate_if: 'WARN - MEMORY: spill_time_pct at/above :warn_spill_time_pct or worst-day local spill
+      at/above :warn_spill_gb GB, or CAPACITY: capacity_wait_pct at/above :warn_queue_time_pct. CRITICAL
+      - MEMORY: spill_time_pct at/above :crit_spill_time_pct or worst-day local spill at/above :crit_spill_gb
+      GB, or CAPACITY: capacity_wait_pct at/above :crit_queue_time_pct. Status is the worse of the two
+      bands. NOT_ASSESSED (fewer than :min_queries statements) is not a pass: read not_assessed_reason.'
     actions:
     - 'MEMORY (SCALE_UP) - find the spilling statements in query_local_spillage and cut their shuffle:
       broadcast the small side, filter earlier, avoid exploding joins; CAPACITY - check with query_workload_mix_hours
       whether the queueing clusters at a few hours before changing the warehouse (free);'
     - CAPACITY below the ceiling (KEEP_WARM) - raise min_clusters so a second cluster is already running
       when the load arrives, or route the heaviest recurring shapes to their own warehouse (config);
-    - 'MEMORY - scale up: a larger warehouse_size gives every cluster more memory per statement; CAPACITY
-      at the ceiling (SCALE_OUT) - scale out: raise max_clusters so concurrent statements stop queueing,
-      or a larger size if the queued statements are themselves heavy; MEMORY_AND_CAPACITY at the ceiling
-      or with the ceiling unseen (SCALE_UP_THEN_OUT) - size first, then clusters; MEMORY_AND_CAPACITY
-      below the ceiling (SCALE_UP_THEN_WARM) - size first, then raise min_clusters so a second cluster
-      is already running when the load arrives (spend).'
+    - 'MEMORY - larger warehouse_size: more memory per statement; CAPACITY at the ceiling - raise max_clusters
+      so statements stop queueing; MEMORY_AND_CAPACITY at the ceiling - size first, then clusters; MEMORY_AND_CAPACITY
+      below the ceiling - size first, then raise min_clusters (spend).'
     next:
     - query_id: query_local_spillage
       if: MEMORY - the spilling days and users

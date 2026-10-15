@@ -22,10 +22,9 @@
 --   off, biggest first; a to-do list, always WARN on its own regardless of its catalog's status -
 --   check that catalog's own catalog_summary row for the account-wide severity.
 -- healthy: OK (catalog_summary only) - pct_bytes_without_po below :warn_pct_bytes_without_po.
--- investigate_if: CRITICAL (catalog_summary) - pct_bytes_without_po at/above
---   :crit_pct_bytes_without_po. WARN (catalog_summary) - at/above :warn_pct_bytes_without_po.
---   largest_table_without_po rows are always WARN - work through them regardless of the catalog's
---   own status.
+-- investigate_if: CRITICAL - a catalog with pct_bytes_without_po at/above
+--   :crit_pct_bytes_without_po. WARN - at/above :warn_pct_bytes_without_po. largest_table_without_po
+--   rows are always WARN - work through them regardless of the catalog status.
 -- actions: 1) turn on predictive optimization at the catalog level (ALTER CATALOG ... SET
 --   PREDICTIVE OPTIMIZATION ON) so every table in it is covered going forward (config); 2) or turn
 --   it on per table for just the largest offenders in largest_table_without_po first (config);

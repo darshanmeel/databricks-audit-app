@@ -41,16 +41,12 @@
 --   (workspace_id/warehouse_id NULL on both). share_of_total_pct still adds up to ~100% across
 --   every row including these. Warehouse name/type/size are not resolved here - join
 --   sql_warehouse_config_current on warehouse_id.
--- healthy: status OK - no increase at/above :warn_increase_pct, or the row's own current-period
---   spend (a real $0 counts) sits below :min_spend_usd.
--- investigate_if: CRITICAL - the increase is at/above :crit_increase_pct on at least
---   :min_spend_usd of current spend, or brand-new spend above the floor with nothing in the
---   previous period to compare against. WARN - at/above :warn_increase_pct. NOT_ASSESSED - read
---   not_assessed_reason: 'previous_window_not_covered' when the account's own earliest recorded
---   usage does not reach back far enough to cover the previous window at this window length;
---   'current_period_unpriced' / 'previous_period_unpriced' when that side's whole spend could not
---   be priced at all. A row with is_other=true is always OK or NOT_ASSESSED, never WARN/CRITICAL
---   (see caveats).
+--   One row per workspace has warehouse_id NULL and is_other=false: its spend with no warehouse
+--   id, judged by the same growth rule and never pooled, so all rows add up to total spend.
+-- healthy: OK - up less than :warn_increase_pct, or current spend under $:min_spend_usd.
+-- investigate_if: CRITICAL - up :crit_increase_pct or more on at least $:min_spend_usd of current
+--   spend, or brand-new spend above the floor with nothing before. WARN - up :warn_increase_pct or
+--   more. NOT_ASSESSED - read not_assessed_reason.
 -- actions: 1) open sql_warehouse_config_current for this warehouse_id to see its size, auto-stop
 --   and channel (free); 2) open compute_warehouse_idle_gaps for the same warehouse to see whether
 --   the spend increase tracks more real query load or more idle running time (free); 3) if the
@@ -84,7 +80,7 @@ WITH snapshot AS (
   FROM system.billing.usage
 ),
 priced AS (
-  SELECT u.workspace_id, u.usage_metadata.warehouse_id AS warehouse_id, u.usage_date,
+  SELECT u.workspace_id, CASE WHEN upper(u.usage_unit) = 'DBU' THEN u.usage_metadata.warehouse_id END AS warehouse_id, u.usage_date,
          u.record_type, u.usage_start_time, u.sku_name,
          u.usage_quantity                AS usage_quantity,
          u.usage_quantity * lp.list_rate AS list_cost,
@@ -100,9 +96,9 @@ priced AS (
    AND u.usage_unit = lp.usage_unit
    AND u.usage_end_time >= lp.price_start_time
    AND (lp.price_end_time IS NULL OR u.usage_end_time < lp.price_end_time)
-  WHERE upper(u.usage_unit) = 'DBU'
-    AND u.usage_metadata.warehouse_id IS NOT NULL
-    AND u.usage_date >= dateadd(day, -(:period_days * 2), current_date())
+  -- no unit/id filter: usage with no warehouse id (and any non-DBU unit) becomes the workspace's
+  -- own NULL-warehouse row, so the rows add up to total spend
+  WHERE u.usage_date >= dateadd(day, -(:period_days * 2), current_date())
     AND u.usage_date <  current_date()
 ),
 raw_agg AS (
@@ -168,6 +164,8 @@ scored AS (
            WHEN s.snapshot_start > dateadd(day, -(:period_days * 2), current_date()) THEN 'NOT_ASSESSED'
            WHEN a.current_cost IS NULL AND a.current_unpriced_quantity > 0           THEN 'NOT_ASSESSED'
            WHEN a.previous_cost IS NULL AND a.previous_unpriced_quantity > 0         THEN 'NOT_ASSESSED'
+           -- Spend outside any warehouse is context for the total, not a warehouse to fix.
+           WHEN a.warehouse_id IS NULL THEN 'OK'
            WHEN COALESCE(a.eff_current_cost, 0) < :min_spend_usd                    THEN 'OK'
            WHEN a.eff_previous_cost = 0                                             THEN 'CRITICAL'
            WHEN (a.eff_current_cost - a.eff_previous_cost) / NULLIF(a.eff_previous_cost, 0) * 100 >= :crit_increase_pct
@@ -193,7 +191,7 @@ flagged AS (
          billed_hours, queries, usd_per_1000_queries, usd_list, share_of_total_pct, prev_usd_list,
          change_usd_list, change_pct, price_basis, status, not_assessed_reason
   FROM scored
-  WHERE status IN ('WARN', 'CRITICAL')
+  WHERE status IN ('WARN', 'CRITICAL') OR warehouse_id IS NULL   -- the not-on-a-warehouse row is never pooled
 ),
 poolable_ranked AS (
   -- OK and NOT_ASSESSED warehouses are both poolable - on an account short of 2x :period_days of
@@ -205,7 +203,7 @@ poolable_ranked AS (
   SELECT scored.*,
          ROW_NUMBER() OVER (PARTITION BY status ORDER BY usd_list DESC NULLS LAST, warehouse_id) AS rn
   FROM scored
-  WHERE status IN ('OK', 'NOT_ASSESSED')
+  WHERE status IN ('OK', 'NOT_ASSESSED') AND warehouse_id IS NOT NULL
 ),
 poolable_kept AS (
   -- The top :top_n OK/NOT_ASSESSED warehouses by current spend, kept as their own row.

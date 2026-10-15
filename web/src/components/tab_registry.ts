@@ -394,6 +394,7 @@ function buildQueryHome(): Record<string, Home> {
   GOVERNANCE_SUBTABS.forEach((s) => add("governance", s.key, [...s.ids, ...(s.refIds || [])]));
   STORAGE_SUBTABS.forEach((s) => add("storage", s.key, [...s.ids, ...(s.refIds || [])]));
   add("overview", null, OVERVIEW_IDS);
+  add("genie", null, AREA_REGISTRY.genie.refIds || []);
   add("coverage", "sources", [...COVERAGE_SOURCES_IDS, ...COVERAGE_REF_IDS]);
   return home;
 }

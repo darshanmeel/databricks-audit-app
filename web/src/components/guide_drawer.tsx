@@ -28,20 +28,38 @@ export function fetchGuideData(): Promise<GuideData> {
   return guideDataCache;
 }
 
-// "(default)" after a threshold is noise here too -- a short mirror of guide.tsx's own
-// cleanFlagPrefix, kept separate rather than imported (see the file banner above).
+// Drops the "status = OK -" lead-in and "(default)" noise from a rule text.
 function cleanFlagPrefix(text: string): string {
   if (!text) return text;
-  const s = String(text).replace(/^status\s*=\s*[A-Z_]+(?:\s+or\s+[A-Z_]+)?\s*-?\s*/i, "").replace(/\s*\(default\)/g, "");
+  const s = String(text).replace(/^status\s*=\s*[A-Z_]+(?:\s+or\s+[A-Z_]+)?\s*-?\s*/i, "").replace(/^(?:status\s+)?(?:OK|WARN|CRITICAL)\s*[-–:]\s+/i, "").replace(/\s*\(default\)/g, "");
   return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+// First clause of a long rule: keeps a parenthetical only when it holds a number or a level word.
+export function firstClause(text: string): string {
+  let t = String(text || "").replace(/\s*\(default\)/g, "");
+  t = t.replace(/\s*\(([^()]{30,})\)/g, (m, inner) => (/\d|WARN|CRITICAL/.test(inner) ? m : ""));
+  t = t.split(/(?<=[.;])\s|\s-\s/)[0].replace(/[\s;.,]+$/, "");
+  if (t.length > 150) t = `${t.slice(0, 147).replace(/\s+\S*$/, "")}…`;
+  return t;
+}
+// Colour the "Warn:" / "Critical:" / "OK:" prefix of a bullet; the body stays neutral.
+function leadLabel(text: string): React.ReactNode {
+  const m = /^(Critical|Warn(?: \(top band\))?|Flags|OK|Not assessed|Missing):\s(.*)$/s.exec(text);
+  if (!m) return text;
+  const cls = m[1] === "Critical" ? "gd-v-crit" : m[1] === "OK" ? "gd-v-ok" : "gd-v-warn";
+  return <React.Fragment><b className={cls}>{m[1]}:</b> {m[2]}</React.Fragment>;
+}
+
+// A snake_case column name stays lowercase at the start of a bullet.
+export function upperFirst(t: string): string {
+  return /^[a-z0-9]+_[a-z0-9_]+/.test(t) ? t : t.charAt(0).toUpperCase() + t.slice(1);
 }
 
 const BAND_WORD: Record<string, string> = {
   CRITICAL: "Critical", WARN: "Warn", OK: "OK", RANKED: "Ranked", NOT_ASSESSED: "Not assessed", ERROR: "Error",
   EMPTY_WINDOW: "No data in this window", EMPTY_FILTERS: "Hidden by filters", INVENTORY: "Reference list",
 };
-
-const LONG_RULE = 130;
 
 export type FlagClause = { level: "WARN" | "CRITICAL" | "BOTH"; body: string };
 
@@ -64,16 +82,18 @@ export function splitFlagClauses(text: string): FlagClause[] {
   return out;
 }
 
-const CLAUSE_LABEL = { WARN: "Warn", CRITICAL: "Critical", BOTH: "Warn or Critical" };
+const CLAUSE_LABEL = { WARN: "Warn", CRITICAL: "Critical", BOTH: "Flags" };
 
-function flagRowsOf(f: GuideData["findings"][number], windowDays: number | null): { text: string; long?: boolean }[] {
-  const rows: { text: string; long?: boolean }[] = [];
+function flagRowsOf(f: GuideData["findings"][number], windowDays: number | null): { text: string }[] {
+  const rows: { text: string }[] = [];
   const add = (label: string, body: string) => {
-    const t = cleanFlagPrefix(body.replace(/^[\s\-–,:]+/, "").replace(/[\s;]+$/, ""));
-    if (t) rows.push({ text: `${label}: ${t}`, long: t.length > LONG_RULE });
+    const t = firstClause(cleanFlagPrefix(body.replace(/^[\s\-–,:]+/, "").replace(/[\s;]+$/, "")));
+    if (t.length >= 12 && !/^(or\s|\()/i.test(t)) rows.push({ text: `${label}: ${upperFirst(t)}` });
   };
-  if (f.is_finding && f.investigate_if) splitFlagClauses(f.investigate_if).forEach((c) => add(CLAUSE_LABEL[c.level], c.body));
-  if (f.is_finding && f.healthy) add("Reads OK", f.healthy);
+  // A capped check never reads Critical, so its Critical rule is the top Warn band.
+  const labels = f.severity_cap === "WARN" ? { WARN: "Warn", CRITICAL: "Warn (top band)", BOTH: "Warn" } : CLAUSE_LABEL;
+  if (f.is_finding && f.investigate_if) splitFlagClauses(f.investigate_if).forEach((c) => add(labels[c.level], c.body));
+  if (f.is_finding && f.healthy) add("OK", f.healthy);
   if (f.period_kind === "days" && windowDays) rows.push({ text: `Window: the last ${windowDays} days up to the export` });
   return rows;
 }
@@ -120,13 +140,10 @@ export function GuideDrawer() {
   const [loadError, setLoadError] = React.useState(false);
   const closeRef = React.useRef<HTMLButtonElement | null>(null);
   const panelRef = React.useRef<HTMLElement | null>(null);
-  const [openRows, setOpenRows] = React.useState<Set<number>>(new Set());
-  const toggleRow = (i: number) => setOpenRows((prev) => { const n = new Set(prev); if (n.has(i)) n.delete(i); else n.add(i); return n; });
   React.useEffect(() => {
     if (!state) return;
     setLoadError(false);
     fetchGuideData().then(setData).catch(() => setLoadError(true));
-    setOpenRows(new Set());
   }, [state && state.queryId]);
   React.useEffect(() => {
     if (!state) return undefined;
@@ -156,8 +173,8 @@ export function GuideDrawer() {
   if (!state) return null;
 
   const f = data ? data.findings.find((x) => x.query_id === state.queryId) : null;
-  const home = f ? homeForQuery(f) : { tab: "findings", subtab: null };
-  const area = AREA_REGISTRY[home.tab] || null;
+  const home = f ? homeForQuery(f) : null;
+  const area = home ? AREA_REGISTRY[home.tab] || null : null;
   const label = f ? getCheckLabel(f.query_id, f.title) : null;
   const flagRows = f ? flagRowsOf(f, state.windowDays || (data ? data.app.default_window : null)) : [];
   let whyLine: string | null = null;
@@ -195,18 +212,13 @@ export function GuideDrawer() {
             {flagRows.length > 0 && (
               <ul className="gdw-list">
                 {flagRows.map((r, i) => (
-                  <li key={i}>
-                    <span className={r.long && !openRows.has(i) ? "gdw-clamp" : undefined}>{r.text}</span>
-                    {r.long && (
-                      <button type="button" className="gdw-more" aria-expanded={openRows.has(i)} onClick={() => toggleRow(i)}>{openRows.has(i) ? "Less" : "More"}</button>
-                    )}
-                  </li>
+                  <li key={i}>{leadLabel(r.text)}</li>
                 ))}
               </ul>
             )}
             {whyLine && (
               <div className="gdw-why">
-                <span className="muted gd-small">Why this panel has its current status</span>
+                <span className="muted gd-small">Status</span>
                 <span>{whyLine}</span>
               </div>
             )}

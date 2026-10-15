@@ -12,6 +12,8 @@ SELECT
     data_source_format
 FROM {{ source('system_information_schema', 'tables') }}
 WHERE table_type <> 'VIEW'
+  AND table_catalog NOT IN ('system', 'samples')
+  AND COALESCE(table_owner, '') <> 'System user'
 ORDER BY table_catalog, table_schema, table_name
 {%- else %}
 SELECT
@@ -23,6 +25,8 @@ SELECT
     data_source_format
 FROM {{ source('system_information_schema', 'tables') }}
 WHERE table_type <> 'VIEW'
+  AND table_catalog NOT IN ('system', 'samples')
+  AND COALESCE(table_owner, '') <> 'System user'
 ORDER BY table_catalog, table_schema, table_name
 {%- endif %}
 ) q

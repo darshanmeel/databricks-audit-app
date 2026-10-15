@@ -26,7 +26,9 @@ last_write AS (
   GROUP BY target_table_catalog, target_table_schema, target_table_name
 ),
 inventory AS (
-  SELECT table_catalog, table_schema, table_name, table_type, table_owner, last_altered
+  SELECT table_catalog, table_schema, table_name, table_type, table_owner, last_altered,
+         -- Databricks' own tables (samples, owned by System user): kept out of the list, their $ pooled below.
+         (table_catalog = 'samples' OR COALESCE(table_owner, '') = 'System user') AS is_system_owned
   FROM `system`.`information_schema`.`tables`
   WHERE table_catalog <> 'system'
     AND table_schema <> 'information_schema'
@@ -125,7 +127,7 @@ po_rate AS (
 ),
 sized AS (
   SELECT
-    u.table_catalog, u.table_schema, u.table_name, u.table_type, u.table_owner, u.last_altered,
+    u.table_catalog, u.table_schema, u.table_name, u.table_type, u.table_owner, u.last_altered, u.is_system_owned,
     ls.active_bytes,
     COALESCE(po.po_dbu_sum, 0) AS po_dbu_sum,
     lw.last_write_time,
@@ -197,10 +199,10 @@ assessed AS (
     ORDER BY b.est_total_usd_month DESC, b.table_catalog, b.table_schema, b.table_name
   ) AS rn
   FROM banded b
-  WHERE b.est_total_usd_month IS NOT NULL
+  WHERE b.est_total_usd_month IS NOT NULL AND NOT b.is_system_owned
 ),
 unpriced_rows AS (
-  SELECT b.* FROM banded b WHERE b.est_total_usd_month IS NULL
+  SELECT b.* FROM banded b WHERE b.est_total_usd_month IS NULL AND NOT b.is_system_owned
 ),
 kept AS (
   SELECT
@@ -242,11 +244,32 @@ pooled AS (
     'OK' AS status
   FROM assessed
   WHERE rn > 500
+),
+system_pooled AS (
+  -- Databricks-owned tables in one is_other row, table_name '(Databricks-owned)': their cost stays
+  -- counted, the tables stay out of the list.
+  SELECT
+    CAST(NULL AS STRING) AS table_catalog, CAST(NULL AS STRING) AS table_schema,
+    '(Databricks-owned)' AS table_name, CAST(NULL AS STRING) AS table_type,
+    'System user' AS table_owner,
+    ROUND(SUM(active_gb), 3)              AS active_gb,
+    ROUND(SUM(est_storage_usd_month), 2)  AS est_storage_usd_month,
+    ROUND(SUM(po_upkeep_usd_window), 2)   AS po_upkeep_usd_window,
+    MAX(price_basis)                      AS price_basis,
+    ROUND(SUM(est_total_usd_month), 2)    AS est_total_usd_month,
+    CAST(NULL AS BIGINT) AS days_since_altered, CAST(NULL AS BIGINT) AS days_since_last_write,
+    TRUE AS is_other, COUNT(*) AS pooled_count,
+    CAST(NULL AS STRING) AS not_assessed_reason,
+    'OK' AS status
+  FROM banded
+  WHERE is_system_owned
 )
 SELECT * FROM (
   SELECT * FROM kept
   UNION ALL
   SELECT * FROM pooled WHERE pooled_count > 0
+  UNION ALL
+  SELECT * FROM system_pooled WHERE pooled_count > 0
 ) u
 ORDER BY CASE status WHEN 'CRITICAL' THEN 0 WHEN 'WARN' THEN 1 WHEN 'NOT_ASSESSED' THEN 2 ELSE 3 END,
          is_other,

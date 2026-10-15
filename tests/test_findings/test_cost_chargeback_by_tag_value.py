@@ -47,8 +47,13 @@ def _grains():
         return yaml.safe_load(f)
 
 
-def _my_rows(window_days: int = W) -> list[dict]:
+def _all_key_rows(window_days: int = W) -> list[dict]:
     return [r for r in dbutil.rows(QID, window_days) if r["tag_key"] in MY_KEYS]
+
+
+def _my_rows(window_days: int = W) -> list[dict]:
+    # this fixture's own rows: the NULL-workspace bucket (other workspaces only add (untagged))
+    return [r for r in _all_key_rows(window_days) if r["workspace_id"] is None]
 
 
 def _by_key_value(rows_: list[dict]) -> dict:
@@ -173,3 +178,17 @@ def test_share_of_total_pct_is_account_wide():
     assert r["share_of_total_pct"] == round(r["usd_list"] * 100.0 / cur_total, 1)
     for r in by.values():
         assert 0 <= r["share_of_total_pct"] <= 100
+
+
+def test_every_key_sums_to_account_total():
+    """A workspace that never carries a key still gets its whole spend as (untagged), so each
+    key's rows add up to the account's whole spend."""
+    cur_total = dbutil.priced_usage_total(W, current=True)
+    prev_total = dbutil.priced_usage_total(W, current=False)
+    rows_ = _all_key_rows()
+    for key in MY_KEYS:
+        mine = [r for r in rows_ if r["tag_key"] == key]
+        assert {r["workspace_id"] for r in mine if not r["is_untagged"]} == {None}
+        assert len({r["workspace_id"] for r in mine}) > 1, "workspaces without the key are missing"
+        assert abs(sum(r["usd_list"] or 0 for r in mine) - cur_total) < 0.05 * len(mine)
+        assert abs(sum(r["prev_usd_list"] or 0 for r in mine) - prev_total) < 0.05 * len(mine)
