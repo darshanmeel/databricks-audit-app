@@ -1,0 +1,1645 @@
+{
+  "datasets": [
+    {
+      "name": "9440c2de",
+      "displayName": "snapshot_banner",
+      "queryLines": [
+        "SELECT window_days AS days, concat('as of ', date_format(snapshot_at, 'MMM d, yyyy HH:mm'), ' UTC, list price') AS as_of FROM databricks_audit_dashboard.snapshot_info\n"
+      ]
+    },
+    {
+      "name": "67ebf40f",
+      "displayName": "workspace_options",
+      "queryLines": [
+        "SELECT DISTINCT name AS workspace_name FROM databricks_audit_dashboard.dim_workspace WHERE name IS NOT NULL ORDER BY 1\n"
+      ]
+    },
+    {
+      "name": "236b7364",
+      "displayName": "all:kpi:Critical",
+      "queryLines": [
+        "WITH v AS (\n",
+        "SELECT c.title AS check_title,\n",
+        "       c.page AS page,\n",
+        "       CASE WHEN l.query_id IS NULL THEN 'Not run'\n",
+        "            WHEN NOT l.ok THEN 'Not assessed'\n",
+        "            WHEN l.critical > 0 THEN 'Critical'\n",
+        "            WHEN l.warn > 0 THEN 'Warn'\n",
+        "            WHEN l.has_status THEN 'OK'\n",
+        "            WHEN l.row_count = 0 THEN 'No rows'\n",
+        "            ELSE 'Listed' END AS verdict,\n",
+        "       l.row_count AS row_count,\n",
+        "       l.critical AS critical_rows,\n",
+        "       l.warn AS warn_rows,\n",
+        "       l.error AS error\n",
+        "FROM (VALUES\n",
+        "       (0, 'compute_warehouse_idle_minutes', 'Warehouse idle time', 'Compute \u203a Warehouses'),\n",
+        "       (1, 'compute_idle_node_ratio', 'Idle cluster nodes', 'Compute \u203a Clusters & pools'),\n",
+        "       (2, 'lakeflow_failed_jobs_wasted_dbus', 'Compute burned on failed runs', 'Jobs \u203a Failures'),\n",
+        "       (3, 'compute_serving_endpoint_cost_status', 'Endpoints billed with no requests', 'ML & AI \u203a Endpoints'),\n",
+        "       (4, 'instance_pools_idle_capacity', 'Idle warm-pool capacity', 'Compute \u203a Clusters & pools'),\n",
+        "       (5, 'lakeflow_jobs_on_all_purpose', 'Jobs on all-purpose clusters', 'Jobs \u203a Hygiene'),\n",
+        "       (6, 'lakeflow_stale_zombie_jobs', 'Stale jobs with no recent run', 'Jobs \u203a Hygiene'),\n",
+        "       (7, 'lakeflow_pipeline_idle_tail_duration', 'Pipeline compute left running after its last update', 'Jobs \u203a Pipelines'),\n",
+        "       (8, 'compute_serving_dormant_endpoints', 'Dormant serving endpoints', 'ML & AI \u203a Endpoints'),\n",
+        "       (9, 'cost_premium_serverless_photon', 'Serverless & Photon share', 'Cost \u203a By product & SKU'),\n",
+        "       (10, 'compute_warehouse_cache_reuse', 'Warehouse result-cache reuse', 'Compute \u203a Warehouses'),\n",
+        "       (11, 'cost_dollarized_by_sku_day', 'Daily spend by SKU', 'Cost \u203a Trend'),\n",
+        "       (12, 'cost_period_over_period', 'Change vs previous period', 'Cost \u203a Trend'),\n",
+        "       (13, 'cost_monthly_actuals', 'Spend by calendar month', 'Cost \u203a Trend'),\n",
+        "       (14, 'cost_unnamed_workspaces', 'Spend on workspaces with no name', 'Cost \u203a Allocation'),\n",
+        "       (15, 'query_failed_queries_daily', 'Failed queries per day', 'Queries \u203a Reliability'),\n",
+        "       (16, 'query_queuing_waits', 'Queries waiting for a warehouse slot', 'Queries \u203a Capacity'),\n",
+        "       (17, 'perf_daily_by_resource', 'Daily query, job and pipeline performance', 'Cost \u203a Before & after'),\n",
+        "       (18, 'lakeflow_job_reliability', 'Broken or flaky jobs', 'Jobs \u203a Failures'),\n",
+        "       (19, 'lakeflow_job_duration_regression', 'Jobs running slower than usual', 'Jobs \u203a Slow & queued'),\n",
+        "       (20, 'cost_chargeback_by_warehouse', 'Chargeback by warehouse', 'Cost \u203a Chargeback'),\n",
+        "       (21, 'cost_chargeback_by_cluster', 'Chargeback by cluster, job cluster or pipeline', 'Cost \u203a Chargeback'),\n",
+        "       (22, 'cost_failed_statement_waste', 'Compute burned on failed statements', 'Queries \u203a Reliability'),\n",
+        "       (23, 'cost_daily_spikes', 'Spend spikes', 'Cost \u203a Trend'),\n",
+        "       (24, 'cost_by_hour_of_day', 'Spend concentrated by hour of day', 'Cost \u203a Trend'),\n",
+        "       (25, 'cost_totals_by_sku_day', 'Spend by product, raw rows', 'Cost \u203a Trend'),\n",
+        "       (26, 'cost_workspace_names', 'Workspace names', 'Cost \u203a Trend'),\n",
+        "       (27, 'cost_by_billing_origin_product', 'Spend by product', 'Cost \u203a By product & SKU'),\n",
+        "       (28, 'cost_sku_trend_12m', 'Fastest-growing SKUs', 'Cost \u203a By product & SKU'),\n",
+        "       (29, 'cost_chargeback_by_allocation_tag', 'Spend with no cost center or team tag', 'Cost \u203a Allocation'),\n",
+        "       (30, 'cost_chargeback_by_tag', 'Spend by cost center or team', 'Cost \u203a Allocation'),\n",
+        "       (31, 'cost_chargeback_by_identity', 'Spend by who ran it', 'Cost \u203a Allocation'),\n",
+        "       (32, 'cost_dbsql_allocation_gap', 'SQL spend that can\\'t be split by query', 'Cost \u203a Allocation'),\n",
+        "       (33, 'cost_chargeback_by_workspace', 'Chargeback by workspace', 'Cost \u203a Chargeback'),\n",
+        "       (34, 'cost_chargeback_by_service', 'Chargeback by product line', 'Cost \u203a Chargeback'),\n",
+        "       (35, 'cost_chargeback_by_sku', 'Chargeback by SKU', 'Cost \u203a Chargeback'),\n",
+        "       (36, 'cost_chargeback_by_job', 'Chargeback by job', 'Cost \u203a Chargeback'),\n",
+        "       (37, 'cost_chargeback_identity_by_source', 'Chargeback by identity', 'Cost \u203a Chargeback'),\n",
+        "       (38, 'cost_chargeback_by_tag_value', 'Chargeback by tag value', 'Cost \u203a Chargeback'),\n",
+        "       (39, 'cost_chargeback_reconcile', 'Chargeback self-check', 'Cost \u203a Chargeback'),\n",
+        "       (40, 'cost_by_job', 'Spend by job', 'Cost \u203a By resource'),\n",
+        "       (41, 'cost_by_compute_resource', 'Spend by cluster or warehouse', 'Cost \u203a By resource'),\n",
+        "       (42, 'cost_by_notebook', 'Notebooks over the daily DBU limit', 'Cost \u203a By resource'),\n",
+        "       (43, 'cost_default_storage_dsu', 'Managed storage spend', 'Cost \u203a By resource'),\n",
+        "       (44, 'cost_genai_token_gpu', 'GenAI token & GPU spend', 'Cost \u203a By resource'),\n",
+        "       (45, 'cost_daily_by_resource', 'Daily cost by resource', 'Cost \u203a Before & after'),\n",
+        "       (46, 'perf_failure_causes_daily', 'Daily failures by cause', 'Cost \u203a Before & after'),\n",
+        "       (47, 'cost_usage_policy_coverage', 'Serverless usage without a policy', 'Cost \u203a Pricing & policy'),\n",
+        "       (48, 'cost_actual_vs_list_by_sku', 'Actual price vs list price', 'Cost \u203a Pricing & policy'),\n",
+        "       (49, 'cost_networking_egress', 'Cross-region networking spend', 'Cost \u203a Pricing & policy'),\n",
+        "       (50, 'cost_cloud_infra', 'Cloud infrastructure spend', 'Cost \u203a Pricing & policy'),\n",
+        "       (51, 'cost_restatement_trust_metric', 'How much of last month\\'s bill has since changed', 'Cost \u203a Pricing & policy'),\n",
+        "       (52, 'cost_by_serving_endpoint', 'Spend by serving endpoint', 'ML & AI \u203a Spend'),\n",
+        "       (53, 'cost_serving_mode_by_endpoint', 'Serving endpoints over the daily spend limit', 'ML & AI \u203a Spend'),\n",
+        "       (54, 'cost_vector_search_spend', 'Vector Search spend', 'ML & AI \u203a Spend'),\n",
+        "       (55, 'compute_serving_endpoint_usage', 'Endpoint requests & errors', 'ML & AI \u203a Endpoints'),\n",
+        "       (56, 'access_vector_search_traffic', 'Vector Search query traffic', 'ML & AI \u203a Endpoints'),\n",
+        "       (57, 'serving_endpoint_traffic_by_endpoint', 'Endpoint traffic, raw rows', 'ML & AI \u203a Endpoints'),\n",
+        "       (58, 'compute_ai_gateway_usage', 'AI Gateway usage', 'ML & AI \u203a AI Gateway'),\n",
+        "       (59, 'genie_usage', 'Genie usage by user', 'Genie'),\n",
+        "       (60, 'compute_warehouse_idle_gaps', 'Longest running stretch per warehouse', 'Compute \u203a Warehouses'),\n",
+        "       (61, 'compute_warehouse_autoscale_churn', 'Warehouse autoscale churn', 'Compute \u203a Warehouses'),\n",
+        "       (62, 'compute_warehouse_autostop_churn', 'Warehouse auto-stop churn', 'Compute \u203a Warehouses'),\n",
+        "       (63, 'compute_warehouse_late_autostop', 'Warehouse late auto-stop', 'Compute \u203a Warehouses'),\n",
+        "       (64, 'sql_warehouse_events_activity', 'Warehouse start/stop activity', 'Compute \u203a Warehouses'),\n",
+        "       (65, 'compute_last_activity', 'Last activity', 'Compute \u203a Warehouses'),\n",
+        "       (66, 'sql_warehouse_config_current', 'Warehouse configuration, current', 'Compute \u203a Warehouses'),\n",
+        "       (67, 'node_timeline_utilization', 'Cluster node utilization over time', 'Compute \u203a Clusters & pools'),\n",
+        "       (68, 'instance_events_idle_active', 'Pool instance idle/active time', 'Compute \u203a Clusters & pools'),\n",
+        "       (69, 'classic_clusters_config_current', 'Cluster configuration, current', 'Compute \u203a Clusters & pools'),\n",
+        "       (70, 'node_types_reference', 'Node type reference', 'Compute \u203a Clusters & pools'),\n",
+        "       (71, 'compute_cluster_config_posture', 'Cluster setup risks', 'Compute \u203a Configuration'),\n",
+        "       (72, 'compute_warehouse_config_posture', 'Warehouse setup risks', 'Compute \u203a Configuration'),\n",
+        "       (73, 'lakeflow_failed_runs', 'Failed job runs', 'Jobs \u203a Failures'),\n",
+        "       (74, 'lakeflow_never_started_runs', 'Runs that never started', 'Jobs \u203a Failures'),\n",
+        "       (75, 'lakeflow_succeeded_with_failed_tasks', 'Runs that \\'succeeded\\' with a failed task', 'Jobs \u203a Failures'),\n",
+        "       (76, 'lakeflow_termination_taxonomy', 'Termination reasons, reference', 'Jobs \u203a Failures'),\n",
+        "       (77, 'lakeflow_job_run_changes', 'What changed since the last good run', 'Jobs \u203a Failures'),\n",
+        "       (78, 'lakeflow_daily_state', 'Jobs and pipelines, day by day', 'Jobs \u203a Failures'),\n",
+        "       (79, 'lakeflow_job_queue_time', 'Jobs waiting on compute', 'Jobs \u203a Slow & queued'),\n",
+        "       (80, 'lakeflow_phase_cold_start', 'Cluster cold-start time', 'Jobs \u203a Slow & queued'),\n",
+        "       (81, 'lakeflow_failed_cluster_starts', 'Failed cluster starts', 'Jobs \u203a Slow & queued'),\n",
+        "       (82, 'lakeflow_workload_mix_hours', 'Job workload by hour of day', 'Jobs \u203a Slow & queued'),\n",
+        "       (83, 'lakeflow_long_running_runs', 'Long-running runs', 'Jobs \u203a Slow & queued'),\n",
+        "       (84, 'lakeflow_retries_repairs', 'Jobs relying on retries or repairs', 'Jobs \u203a Hygiene'),\n",
+        "       (85, 'lakeflow_jobs_no_timeout', 'Jobs with no timeout set', 'Jobs \u203a Hygiene'),\n",
+        "       (86, 'lakeflow_job_tasks_no_timeout', 'Job tasks with no timeout set', 'Jobs \u203a Hygiene'),\n",
+        "       (87, 'lakeflow_health_rule_coverage', 'Jobs with no health rule', 'Jobs \u203a Hygiene'),\n",
+        "       (88, 'lakeflow_job_ownership_orphans', 'Jobs with no clear owner', 'Jobs \u203a Hygiene'),\n",
+        "       (89, 'lakeflow_tasks_near_timeout', 'Tasks running close to their timeout', 'Jobs \u203a Hygiene'),\n",
+        "       (90, 'lakeflow_job_cost_summary', 'Job cost summary, reference', 'Jobs \u203a Hygiene'),\n",
+        "       (91, 'lakeflow_job_run_cost', 'Per-run cost, reference', 'Jobs \u203a Hygiene'),\n",
+        "       (92, 'lakeflow_job_recent_runs', 'Recent runs, reference', 'Jobs \u203a Hygiene'),\n",
+        "       (93, 'lakeflow_job_compute_pressure', 'Job compute fit', 'Jobs \u203a Compute fit'),\n",
+        "       (94, 'task_cluster_utilization', 'Task-level cluster utilization', 'Jobs \u203a Compute fit'),\n",
+        "       (95, 'lakeflow_job_oversized', 'Jobs on bigger machines than they need', 'Jobs \u203a Compute fit'),\n",
+        "       (96, 'lakeflow_pipeline_cost', 'Spend by pipeline', 'Jobs \u203a Pipelines'),\n",
+        "       (97, 'lakeflow_pipeline_update_failures_retries', 'Pipeline update failures & retries', 'Jobs \u203a Pipelines'),\n",
+        "       (98, 'lakeflow_pipelines_inventory_tier', 'Pipeline inventory, reference', 'Jobs \u203a Pipelines'),\n",
+        "       (99, 'query_top_by_cost', 'Top queries by cost', 'Queries \u203a Heavy queries'),\n",
+        "       (100, 'query_provenance_by_source', 'Query traffic by source', 'Queries \u203a Heavy queries'),\n",
+        "       (101, 'audit_self_cost', 'This audit\\'s own query cost', 'Queries \u203a Heavy queries'),\n",
+        "       (102, 'query_costly_statements_grouped', 'Heaviest statement shapes', 'Queries \u203a Heavy queries'),\n",
+        "       (103, 'query_costly_statements', 'All statements, reference', 'Queries \u203a Heavy queries'),\n",
+        "       (104, 'query_per_query_estimate_lane', 'Per-query cost estimate, reference', 'Queries \u203a Heavy queries'),\n",
+        "       (105, 'query_local_spillage', 'Queries spilling to local disk', 'Queries \u203a Efficiency'),\n",
+        "       (106, 'query_shuffle_write_amplification', 'Queries shuffling too much data', 'Queries \u203a Efficiency'),\n",
+        "       (107, 'query_pruning_effectiveness', 'Queries not pruning partitions/files', 'Queries \u203a Efficiency'),\n",
+        "       (108, 'query_cache_coldstart', 'Queries missing the disk cache', 'Queries \u203a Efficiency'),\n",
+        "       (109, 'query_failed_statements_grouped', 'Failed statements by error', 'Queries \u203a Reliability'),\n",
+        "       (110, 'query_warehouse_pressure', 'Warehouse memory & concurrency pressure', 'Queries \u203a Capacity'),\n",
+        "       (111, 'query_workload_mix_hours', 'Query workload by hour of day', 'Queries \u203a Capacity'),\n",
+        "       (112, 'query_task_statement_breakdown', 'Statement breakdown by task stage', 'Queries \u203a Capacity'),\n",
+        "       (113, 'perf_queue_by_hour', 'Queueing by day and hour', 'Queries \u203a Capacity'),\n",
+        "       (114, 'query_slices', 'Query slices, reference', 'Queries \u203a Capacity'),\n",
+        "       (115, 'access_broad_grants', 'Overly broad grants', 'Governance & PII \u203a Access & grants'),\n",
+        "       (116, 'access_grants_inventory', 'Grants inventory', 'Governance & PII \u203a Access & grants'),\n",
+        "       (117, 'access_grants_inventory_extended', 'Grants inventory, extended', 'Governance & PII \u203a Access & grants'),\n",
+        "       (118, 'access_runas_escalation', 'Run-as identity escalation', 'Governance & PII \u203a Access & grants'),\n",
+        "       (119, 'access_login_concentration', 'Login concentration', 'Governance & PII \u203a Access & grants'),\n",
+        "       (120, 'access_network_inbound_denials', 'Inbound network denials', 'Governance & PII \u203a Access & grants'),\n",
+        "       (121, 'access_network_outbound_denials', 'Outbound network denials', 'Governance & PII \u203a Access & grants'),\n",
+        "       (122, 'access_admin_role_change_events', 'Admin and permission changes', 'Governance & PII \u203a Admin activity'),\n",
+        "       (123, 'access_classification_coverage', 'Sensitive-data classification coverage', 'Governance & PII \u203a Sensitive data'),\n",
+        "       (124, 'access_classified_unmasked', 'Classified data with no mask', 'Governance & PII \u203a Sensitive data'),\n",
+        "       (125, 'access_sensitive_table_reads', 'Reads of sensitive tables', 'Governance & PII \u203a Sensitive data'),\n",
+        "       (126, 'access_pii_outside_tables', 'PII outside of tagged tables', 'Governance & PII \u203a Sensitive data'),\n",
+        "       (127, 'access_data_classification_inventory', 'Data classification inventory', 'Governance & PII \u203a Sensitive data'),\n",
+        "       (128, 'access_column_masks_inventory', 'Column masks inventory', 'Governance & PII \u203a Sensitive data'),\n",
+        "       (129, 'access_row_filters_inventory', 'Row filters inventory', 'Governance & PII \u203a Sensitive data'),\n",
+        "       (130, 'access_tags_inventory', 'Table & column tags inventory', 'Governance & PII \u203a Sensitive data'),\n",
+        "       (131, 'access_table_lineage_blast_radius', 'Table lineage blast radius', 'Governance & PII \u203a Lineage'),\n",
+        "       (132, 'access_column_lineage_sensitive_reach', 'Sensitive column lineage reach', 'Governance & PII \u203a Lineage'),\n",
+        "       (133, 'access_pii_propagation_untagged', 'PII propagating into untagged tables', 'Governance & PII \u203a Lineage'),\n",
+        "       (134, 'access_views_inventory', 'Views inventory', 'Governance & PII \u203a Lineage'),\n",
+        "       (135, 'access_volumes_inventory', 'Volumes inventory', 'Governance & PII \u203a Lineage'),\n",
+        "       (136, 'access_delta_sharing_exposure', 'Delta Sharing exposure', 'Governance & PII \u203a Sharing'),\n",
+        "       (137, 'storage_target_table_discovery', 'Table discovery', 'Storage \u203a Tables'),\n",
+        "       (138, 'table_inventory_type', 'Table inventory by type', 'Storage \u203a Tables'),\n",
+        "       (139, 'access_dead_table_candidates', 'Tables not read or changed recently', 'Storage \u203a Tables'),\n",
+        "       (140, 'storage_growth', 'Table growth and drops', 'Storage \u203a Tables'),\n",
+        "       (141, 'po_maintenance_cost_by_table', 'Maintenance spend by table', 'Storage \u203a Maintenance'),\n",
+        "       (142, 'po_vacuum_reclaimed_bytes', 'Storage reclaimed by VACUUM', 'Storage \u203a Maintenance'),\n",
+        "       (143, 'po_clustering_activity', 'Liquid clustering activity', 'Storage \u203a Maintenance'),\n",
+        "       (144, 'po_clustering_column_churn', 'Clustering column changes', 'Storage \u203a Maintenance'),\n",
+        "       (145, 'po_data_skipping_backfill', 'Data-skipping statistics backfill', 'Storage \u203a Maintenance'),\n",
+        "       (146, 'po_failure_reasons', 'Predictive optimization failures', 'Storage \u203a Maintenance'),\n",
+        "       (147, 'storage_po_coverage', 'Predictive optimization coverage', 'Storage \u203a Maintenance'),\n",
+        "       (148, 'storage_small_files', 'Tables with too many small files', 'Storage \u203a Maintenance'),\n",
+        "       (149, 'access_source_table_coverage', 'System table coverage', 'Coverage & Gaps \u203a Data sources'),\n",
+        "       (150, 'cost_account_prices_raw', 'Account-specific prices, raw', 'Coverage & Gaps \u203a Data sources'),\n",
+        "       (151, 'pricing_list_prices_raw', 'List prices, raw', 'Coverage & Gaps \u203a Data sources'),\n",
+        "       (152, 'cost_audit_self_usage', 'This audit\\'s own usage, by warehouse', 'Coverage & Gaps \u203a Data sources'),\n",
+        "       (153, 'overview_daily_dbu_trend', 'Daily DBU trend, reference', 'All findings'),\n",
+        "       (154, 'overview_dbu_by_sku', 'DBUs by SKU, reference', 'All findings'),\n",
+        "       (155, 'overview_list_prices_raw', 'List prices, raw, reference', 'All findings'),\n",
+        "       (156, 'overview_serverless_classic_split', 'Serverless vs classic split, reference', 'All findings'),\n",
+        "       (157, 'overview_spend_estimate', 'Estimated spend, reference', 'All findings'),\n",
+        "       (158, 'storage_unused_table_cost', 'Storage Unused Table Cost', 'All findings')) AS c(ord, query_id, title, page)\n",
+        "LEFT JOIN databricks_audit_dashboard.snapshot_log l ON l.query_id = c.query_id\n",
+        "ORDER BY CASE WHEN l.critical > 0 THEN 0 WHEN l.warn > 0 THEN 1 WHEN NOT l.ok THEN 2 ELSE 3 END, c.ord\n",
+        ")\n",
+        "SELECT count_if(verdict = 'Critical') AS value, concat('of ', CAST(159 AS STRING), ' checks') AS target FROM v\n"
+      ]
+    },
+    {
+      "name": "e344eaf9",
+      "displayName": "all:kpi:Warn",
+      "queryLines": [
+        "WITH v AS (\n",
+        "SELECT c.title AS check_title,\n",
+        "       c.page AS page,\n",
+        "       CASE WHEN l.query_id IS NULL THEN 'Not run'\n",
+        "            WHEN NOT l.ok THEN 'Not assessed'\n",
+        "            WHEN l.critical > 0 THEN 'Critical'\n",
+        "            WHEN l.warn > 0 THEN 'Warn'\n",
+        "            WHEN l.has_status THEN 'OK'\n",
+        "            WHEN l.row_count = 0 THEN 'No rows'\n",
+        "            ELSE 'Listed' END AS verdict,\n",
+        "       l.row_count AS row_count,\n",
+        "       l.critical AS critical_rows,\n",
+        "       l.warn AS warn_rows,\n",
+        "       l.error AS error\n",
+        "FROM (VALUES\n",
+        "       (0, 'compute_warehouse_idle_minutes', 'Warehouse idle time', 'Compute \u203a Warehouses'),\n",
+        "       (1, 'compute_idle_node_ratio', 'Idle cluster nodes', 'Compute \u203a Clusters & pools'),\n",
+        "       (2, 'lakeflow_failed_jobs_wasted_dbus', 'Compute burned on failed runs', 'Jobs \u203a Failures'),\n",
+        "       (3, 'compute_serving_endpoint_cost_status', 'Endpoints billed with no requests', 'ML & AI \u203a Endpoints'),\n",
+        "       (4, 'instance_pools_idle_capacity', 'Idle warm-pool capacity', 'Compute \u203a Clusters & pools'),\n",
+        "       (5, 'lakeflow_jobs_on_all_purpose', 'Jobs on all-purpose clusters', 'Jobs \u203a Hygiene'),\n",
+        "       (6, 'lakeflow_stale_zombie_jobs', 'Stale jobs with no recent run', 'Jobs \u203a Hygiene'),\n",
+        "       (7, 'lakeflow_pipeline_idle_tail_duration', 'Pipeline compute left running after its last update', 'Jobs \u203a Pipelines'),\n",
+        "       (8, 'compute_serving_dormant_endpoints', 'Dormant serving endpoints', 'ML & AI \u203a Endpoints'),\n",
+        "       (9, 'cost_premium_serverless_photon', 'Serverless & Photon share', 'Cost \u203a By product & SKU'),\n",
+        "       (10, 'compute_warehouse_cache_reuse', 'Warehouse result-cache reuse', 'Compute \u203a Warehouses'),\n",
+        "       (11, 'cost_dollarized_by_sku_day', 'Daily spend by SKU', 'Cost \u203a Trend'),\n",
+        "       (12, 'cost_period_over_period', 'Change vs previous period', 'Cost \u203a Trend'),\n",
+        "       (13, 'cost_monthly_actuals', 'Spend by calendar month', 'Cost \u203a Trend'),\n",
+        "       (14, 'cost_unnamed_workspaces', 'Spend on workspaces with no name', 'Cost \u203a Allocation'),\n",
+        "       (15, 'query_failed_queries_daily', 'Failed queries per day', 'Queries \u203a Reliability'),\n",
+        "       (16, 'query_queuing_waits', 'Queries waiting for a warehouse slot', 'Queries \u203a Capacity'),\n",
+        "       (17, 'perf_daily_by_resource', 'Daily query, job and pipeline performance', 'Cost \u203a Before & after'),\n",
+        "       (18, 'lakeflow_job_reliability', 'Broken or flaky jobs', 'Jobs \u203a Failures'),\n",
+        "       (19, 'lakeflow_job_duration_regression', 'Jobs running slower than usual', 'Jobs \u203a Slow & queued'),\n",
+        "       (20, 'cost_chargeback_by_warehouse', 'Chargeback by warehouse', 'Cost \u203a Chargeback'),\n",
+        "       (21, 'cost_chargeback_by_cluster', 'Chargeback by cluster, job cluster or pipeline', 'Cost \u203a Chargeback'),\n",
+        "       (22, 'cost_failed_statement_waste', 'Compute burned on failed statements', 'Queries \u203a Reliability'),\n",
+        "       (23, 'cost_daily_spikes', 'Spend spikes', 'Cost \u203a Trend'),\n",
+        "       (24, 'cost_by_hour_of_day', 'Spend concentrated by hour of day', 'Cost \u203a Trend'),\n",
+        "       (25, 'cost_totals_by_sku_day', 'Spend by product, raw rows', 'Cost \u203a Trend'),\n",
+        "       (26, 'cost_workspace_names', 'Workspace names', 'Cost \u203a Trend'),\n",
+        "       (27, 'cost_by_billing_origin_product', 'Spend by product', 'Cost \u203a By product & SKU'),\n",
+        "       (28, 'cost_sku_trend_12m', 'Fastest-growing SKUs', 'Cost \u203a By product & SKU'),\n",
+        "       (29, 'cost_chargeback_by_allocation_tag', 'Spend with no cost center or team tag', 'Cost \u203a Allocation'),\n",
+        "       (30, 'cost_chargeback_by_tag', 'Spend by cost center or team', 'Cost \u203a Allocation'),\n",
+        "       (31, 'cost_chargeback_by_identity', 'Spend by who ran it', 'Cost \u203a Allocation'),\n",
+        "       (32, 'cost_dbsql_allocation_gap', 'SQL spend that can\\'t be split by query', 'Cost \u203a Allocation'),\n",
+        "       (33, 'cost_chargeback_by_workspace', 'Chargeback by workspace', 'Cost \u203a Chargeback'),\n",
+        "       (34, 'cost_chargeback_by_service', 'Chargeback by product line', 'Cost \u203a Chargeback'),\n",
+        "       (35, 'cost_chargeback_by_sku', 'Chargeback by SKU', 'Cost \u203a Chargeback'),\n",
+        "       (36, 'cost_chargeback_by_job', 'Chargeback by job', 'Cost \u203a Chargeback'),\n",
+        "       (37, 'cost_chargeback_identity_by_source', 'Chargeback by identity', 'Cost \u203a Chargeback'),\n",
+        "       (38, 'cost_chargeback_by_tag_value', 'Chargeback by tag value', 'Cost \u203a Chargeback'),\n",
+        "       (39, 'cost_chargeback_reconcile', 'Chargeback self-check', 'Cost \u203a Chargeback'),\n",
+        "       (40, 'cost_by_job', 'Spend by job', 'Cost \u203a By resource'),\n",
+        "       (41, 'cost_by_compute_resource', 'Spend by cluster or warehouse', 'Cost \u203a By resource'),\n",
+        "       (42, 'cost_by_notebook', 'Notebooks over the daily DBU limit', 'Cost \u203a By resource'),\n",
+        "       (43, 'cost_default_storage_dsu', 'Managed storage spend', 'Cost \u203a By resource'),\n",
+        "       (44, 'cost_genai_token_gpu', 'GenAI token & GPU spend', 'Cost \u203a By resource'),\n",
+        "       (45, 'cost_daily_by_resource', 'Daily cost by resource', 'Cost \u203a Before & after'),\n",
+        "       (46, 'perf_failure_causes_daily', 'Daily failures by cause', 'Cost \u203a Before & after'),\n",
+        "       (47, 'cost_usage_policy_coverage', 'Serverless usage without a policy', 'Cost \u203a Pricing & policy'),\n",
+        "       (48, 'cost_actual_vs_list_by_sku', 'Actual price vs list price', 'Cost \u203a Pricing & policy'),\n",
+        "       (49, 'cost_networking_egress', 'Cross-region networking spend', 'Cost \u203a Pricing & policy'),\n",
+        "       (50, 'cost_cloud_infra', 'Cloud infrastructure spend', 'Cost \u203a Pricing & policy'),\n",
+        "       (51, 'cost_restatement_trust_metric', 'How much of last month\\'s bill has since changed', 'Cost \u203a Pricing & policy'),\n",
+        "       (52, 'cost_by_serving_endpoint', 'Spend by serving endpoint', 'ML & AI \u203a Spend'),\n",
+        "       (53, 'cost_serving_mode_by_endpoint', 'Serving endpoints over the daily spend limit', 'ML & AI \u203a Spend'),\n",
+        "       (54, 'cost_vector_search_spend', 'Vector Search spend', 'ML & AI \u203a Spend'),\n",
+        "       (55, 'compute_serving_endpoint_usage', 'Endpoint requests & errors', 'ML & AI \u203a Endpoints'),\n",
+        "       (56, 'access_vector_search_traffic', 'Vector Search query traffic', 'ML & AI \u203a Endpoints'),\n",
+        "       (57, 'serving_endpoint_traffic_by_endpoint', 'Endpoint traffic, raw rows', 'ML & AI \u203a Endpoints'),\n",
+        "       (58, 'compute_ai_gateway_usage', 'AI Gateway usage', 'ML & AI \u203a AI Gateway'),\n",
+        "       (59, 'genie_usage', 'Genie usage by user', 'Genie'),\n",
+        "       (60, 'compute_warehouse_idle_gaps', 'Longest running stretch per warehouse', 'Compute \u203a Warehouses'),\n",
+        "       (61, 'compute_warehouse_autoscale_churn', 'Warehouse autoscale churn', 'Compute \u203a Warehouses'),\n",
+        "       (62, 'compute_warehouse_autostop_churn', 'Warehouse auto-stop churn', 'Compute \u203a Warehouses'),\n",
+        "       (63, 'compute_warehouse_late_autostop', 'Warehouse late auto-stop', 'Compute \u203a Warehouses'),\n",
+        "       (64, 'sql_warehouse_events_activity', 'Warehouse start/stop activity', 'Compute \u203a Warehouses'),\n",
+        "       (65, 'compute_last_activity', 'Last activity', 'Compute \u203a Warehouses'),\n",
+        "       (66, 'sql_warehouse_config_current', 'Warehouse configuration, current', 'Compute \u203a Warehouses'),\n",
+        "       (67, 'node_timeline_utilization', 'Cluster node utilization over time', 'Compute \u203a Clusters & pools'),\n",
+        "       (68, 'instance_events_idle_active', 'Pool instance idle/active time', 'Compute \u203a Clusters & pools'),\n",
+        "       (69, 'classic_clusters_config_current', 'Cluster configuration, current', 'Compute \u203a Clusters & pools'),\n",
+        "       (70, 'node_types_reference', 'Node type reference', 'Compute \u203a Clusters & pools'),\n",
+        "       (71, 'compute_cluster_config_posture', 'Cluster setup risks', 'Compute \u203a Configuration'),\n",
+        "       (72, 'compute_warehouse_config_posture', 'Warehouse setup risks', 'Compute \u203a Configuration'),\n",
+        "       (73, 'lakeflow_failed_runs', 'Failed job runs', 'Jobs \u203a Failures'),\n",
+        "       (74, 'lakeflow_never_started_runs', 'Runs that never started', 'Jobs \u203a Failures'),\n",
+        "       (75, 'lakeflow_succeeded_with_failed_tasks', 'Runs that \\'succeeded\\' with a failed task', 'Jobs \u203a Failures'),\n",
+        "       (76, 'lakeflow_termination_taxonomy', 'Termination reasons, reference', 'Jobs \u203a Failures'),\n",
+        "       (77, 'lakeflow_job_run_changes', 'What changed since the last good run', 'Jobs \u203a Failures'),\n",
+        "       (78, 'lakeflow_daily_state', 'Jobs and pipelines, day by day', 'Jobs \u203a Failures'),\n",
+        "       (79, 'lakeflow_job_queue_time', 'Jobs waiting on compute', 'Jobs \u203a Slow & queued'),\n",
+        "       (80, 'lakeflow_phase_cold_start', 'Cluster cold-start time', 'Jobs \u203a Slow & queued'),\n",
+        "       (81, 'lakeflow_failed_cluster_starts', 'Failed cluster starts', 'Jobs \u203a Slow & queued'),\n",
+        "       (82, 'lakeflow_workload_mix_hours', 'Job workload by hour of day', 'Jobs \u203a Slow & queued'),\n",
+        "       (83, 'lakeflow_long_running_runs', 'Long-running runs', 'Jobs \u203a Slow & queued'),\n",
+        "       (84, 'lakeflow_retries_repairs', 'Jobs relying on retries or repairs', 'Jobs \u203a Hygiene'),\n",
+        "       (85, 'lakeflow_jobs_no_timeout', 'Jobs with no timeout set', 'Jobs \u203a Hygiene'),\n",
+        "       (86, 'lakeflow_job_tasks_no_timeout', 'Job tasks with no timeout set', 'Jobs \u203a Hygiene'),\n",
+        "       (87, 'lakeflow_health_rule_coverage', 'Jobs with no health rule', 'Jobs \u203a Hygiene'),\n",
+        "       (88, 'lakeflow_job_ownership_orphans', 'Jobs with no clear owner', 'Jobs \u203a Hygiene'),\n",
+        "       (89, 'lakeflow_tasks_near_timeout', 'Tasks running close to their timeout', 'Jobs \u203a Hygiene'),\n",
+        "       (90, 'lakeflow_job_cost_summary', 'Job cost summary, reference', 'Jobs \u203a Hygiene'),\n",
+        "       (91, 'lakeflow_job_run_cost', 'Per-run cost, reference', 'Jobs \u203a Hygiene'),\n",
+        "       (92, 'lakeflow_job_recent_runs', 'Recent runs, reference', 'Jobs \u203a Hygiene'),\n",
+        "       (93, 'lakeflow_job_compute_pressure', 'Job compute fit', 'Jobs \u203a Compute fit'),\n",
+        "       (94, 'task_cluster_utilization', 'Task-level cluster utilization', 'Jobs \u203a Compute fit'),\n",
+        "       (95, 'lakeflow_job_oversized', 'Jobs on bigger machines than they need', 'Jobs \u203a Compute fit'),\n",
+        "       (96, 'lakeflow_pipeline_cost', 'Spend by pipeline', 'Jobs \u203a Pipelines'),\n",
+        "       (97, 'lakeflow_pipeline_update_failures_retries', 'Pipeline update failures & retries', 'Jobs \u203a Pipelines'),\n",
+        "       (98, 'lakeflow_pipelines_inventory_tier', 'Pipeline inventory, reference', 'Jobs \u203a Pipelines'),\n",
+        "       (99, 'query_top_by_cost', 'Top queries by cost', 'Queries \u203a Heavy queries'),\n",
+        "       (100, 'query_provenance_by_source', 'Query traffic by source', 'Queries \u203a Heavy queries'),\n",
+        "       (101, 'audit_self_cost', 'This audit\\'s own query cost', 'Queries \u203a Heavy queries'),\n",
+        "       (102, 'query_costly_statements_grouped', 'Heaviest statement shapes', 'Queries \u203a Heavy queries'),\n",
+        "       (103, 'query_costly_statements', 'All statements, reference', 'Queries \u203a Heavy queries'),\n",
+        "       (104, 'query_per_query_estimate_lane', 'Per-query cost estimate, reference', 'Queries \u203a Heavy queries'),\n",
+        "       (105, 'query_local_spillage', 'Queries spilling to local disk', 'Queries \u203a Efficiency'),\n",
+        "       (106, 'query_shuffle_write_amplification', 'Queries shuffling too much data', 'Queries \u203a Efficiency'),\n",
+        "       (107, 'query_pruning_effectiveness', 'Queries not pruning partitions/files', 'Queries \u203a Efficiency'),\n",
+        "       (108, 'query_cache_coldstart', 'Queries missing the disk cache', 'Queries \u203a Efficiency'),\n",
+        "       (109, 'query_failed_statements_grouped', 'Failed statements by error', 'Queries \u203a Reliability'),\n",
+        "       (110, 'query_warehouse_pressure', 'Warehouse memory & concurrency pressure', 'Queries \u203a Capacity'),\n",
+        "       (111, 'query_workload_mix_hours', 'Query workload by hour of day', 'Queries \u203a Capacity'),\n",
+        "       (112, 'query_task_statement_breakdown', 'Statement breakdown by task stage', 'Queries \u203a Capacity'),\n",
+        "       (113, 'perf_queue_by_hour', 'Queueing by day and hour', 'Queries \u203a Capacity'),\n",
+        "       (114, 'query_slices', 'Query slices, reference', 'Queries \u203a Capacity'),\n",
+        "       (115, 'access_broad_grants', 'Overly broad grants', 'Governance & PII \u203a Access & grants'),\n",
+        "       (116, 'access_grants_inventory', 'Grants inventory', 'Governance & PII \u203a Access & grants'),\n",
+        "       (117, 'access_grants_inventory_extended', 'Grants inventory, extended', 'Governance & PII \u203a Access & grants'),\n",
+        "       (118, 'access_runas_escalation', 'Run-as identity escalation', 'Governance & PII \u203a Access & grants'),\n",
+        "       (119, 'access_login_concentration', 'Login concentration', 'Governance & PII \u203a Access & grants'),\n",
+        "       (120, 'access_network_inbound_denials', 'Inbound network denials', 'Governance & PII \u203a Access & grants'),\n",
+        "       (121, 'access_network_outbound_denials', 'Outbound network denials', 'Governance & PII \u203a Access & grants'),\n",
+        "       (122, 'access_admin_role_change_events', 'Admin and permission changes', 'Governance & PII \u203a Admin activity'),\n",
+        "       (123, 'access_classification_coverage', 'Sensitive-data classification coverage', 'Governance & PII \u203a Sensitive data'),\n",
+        "       (124, 'access_classified_unmasked', 'Classified data with no mask', 'Governance & PII \u203a Sensitive data'),\n",
+        "       (125, 'access_sensitive_table_reads', 'Reads of sensitive tables', 'Governance & PII \u203a Sensitive data'),\n",
+        "       (126, 'access_pii_outside_tables', 'PII outside of tagged tables', 'Governance & PII \u203a Sensitive data'),\n",
+        "       (127, 'access_data_classification_inventory', 'Data classification inventory', 'Governance & PII \u203a Sensitive data'),\n",
+        "       (128, 'access_column_masks_inventory', 'Column masks inventory', 'Governance & PII \u203a Sensitive data'),\n",
+        "       (129, 'access_row_filters_inventory', 'Row filters inventory', 'Governance & PII \u203a Sensitive data'),\n",
+        "       (130, 'access_tags_inventory', 'Table & column tags inventory', 'Governance & PII \u203a Sensitive data'),\n",
+        "       (131, 'access_table_lineage_blast_radius', 'Table lineage blast radius', 'Governance & PII \u203a Lineage'),\n",
+        "       (132, 'access_column_lineage_sensitive_reach', 'Sensitive column lineage reach', 'Governance & PII \u203a Lineage'),\n",
+        "       (133, 'access_pii_propagation_untagged', 'PII propagating into untagged tables', 'Governance & PII \u203a Lineage'),\n",
+        "       (134, 'access_views_inventory', 'Views inventory', 'Governance & PII \u203a Lineage'),\n",
+        "       (135, 'access_volumes_inventory', 'Volumes inventory', 'Governance & PII \u203a Lineage'),\n",
+        "       (136, 'access_delta_sharing_exposure', 'Delta Sharing exposure', 'Governance & PII \u203a Sharing'),\n",
+        "       (137, 'storage_target_table_discovery', 'Table discovery', 'Storage \u203a Tables'),\n",
+        "       (138, 'table_inventory_type', 'Table inventory by type', 'Storage \u203a Tables'),\n",
+        "       (139, 'access_dead_table_candidates', 'Tables not read or changed recently', 'Storage \u203a Tables'),\n",
+        "       (140, 'storage_growth', 'Table growth and drops', 'Storage \u203a Tables'),\n",
+        "       (141, 'po_maintenance_cost_by_table', 'Maintenance spend by table', 'Storage \u203a Maintenance'),\n",
+        "       (142, 'po_vacuum_reclaimed_bytes', 'Storage reclaimed by VACUUM', 'Storage \u203a Maintenance'),\n",
+        "       (143, 'po_clustering_activity', 'Liquid clustering activity', 'Storage \u203a Maintenance'),\n",
+        "       (144, 'po_clustering_column_churn', 'Clustering column changes', 'Storage \u203a Maintenance'),\n",
+        "       (145, 'po_data_skipping_backfill', 'Data-skipping statistics backfill', 'Storage \u203a Maintenance'),\n",
+        "       (146, 'po_failure_reasons', 'Predictive optimization failures', 'Storage \u203a Maintenance'),\n",
+        "       (147, 'storage_po_coverage', 'Predictive optimization coverage', 'Storage \u203a Maintenance'),\n",
+        "       (148, 'storage_small_files', 'Tables with too many small files', 'Storage \u203a Maintenance'),\n",
+        "       (149, 'access_source_table_coverage', 'System table coverage', 'Coverage & Gaps \u203a Data sources'),\n",
+        "       (150, 'cost_account_prices_raw', 'Account-specific prices, raw', 'Coverage & Gaps \u203a Data sources'),\n",
+        "       (151, 'pricing_list_prices_raw', 'List prices, raw', 'Coverage & Gaps \u203a Data sources'),\n",
+        "       (152, 'cost_audit_self_usage', 'This audit\\'s own usage, by warehouse', 'Coverage & Gaps \u203a Data sources'),\n",
+        "       (153, 'overview_daily_dbu_trend', 'Daily DBU trend, reference', 'All findings'),\n",
+        "       (154, 'overview_dbu_by_sku', 'DBUs by SKU, reference', 'All findings'),\n",
+        "       (155, 'overview_list_prices_raw', 'List prices, raw, reference', 'All findings'),\n",
+        "       (156, 'overview_serverless_classic_split', 'Serverless vs classic split, reference', 'All findings'),\n",
+        "       (157, 'overview_spend_estimate', 'Estimated spend, reference', 'All findings'),\n",
+        "       (158, 'storage_unused_table_cost', 'Storage Unused Table Cost', 'All findings')) AS c(ord, query_id, title, page)\n",
+        "LEFT JOIN databricks_audit_dashboard.snapshot_log l ON l.query_id = c.query_id\n",
+        "ORDER BY CASE WHEN l.critical > 0 THEN 0 WHEN l.warn > 0 THEN 1 WHEN NOT l.ok THEN 2 ELSE 3 END, c.ord\n",
+        ")\n",
+        "SELECT count_if(verdict = 'Warn') AS value, concat('of ', CAST(159 AS STRING), ' checks') AS target FROM v\n"
+      ]
+    },
+    {
+      "name": "39061a16",
+      "displayName": "all:kpi:No data this window",
+      "queryLines": [
+        "WITH v AS (\n",
+        "SELECT c.title AS check_title,\n",
+        "       c.page AS page,\n",
+        "       CASE WHEN l.query_id IS NULL THEN 'Not run'\n",
+        "            WHEN NOT l.ok THEN 'Not assessed'\n",
+        "            WHEN l.critical > 0 THEN 'Critical'\n",
+        "            WHEN l.warn > 0 THEN 'Warn'\n",
+        "            WHEN l.has_status THEN 'OK'\n",
+        "            WHEN l.row_count = 0 THEN 'No rows'\n",
+        "            ELSE 'Listed' END AS verdict,\n",
+        "       l.row_count AS row_count,\n",
+        "       l.critical AS critical_rows,\n",
+        "       l.warn AS warn_rows,\n",
+        "       l.error AS error\n",
+        "FROM (VALUES\n",
+        "       (0, 'compute_warehouse_idle_minutes', 'Warehouse idle time', 'Compute \u203a Warehouses'),\n",
+        "       (1, 'compute_idle_node_ratio', 'Idle cluster nodes', 'Compute \u203a Clusters & pools'),\n",
+        "       (2, 'lakeflow_failed_jobs_wasted_dbus', 'Compute burned on failed runs', 'Jobs \u203a Failures'),\n",
+        "       (3, 'compute_serving_endpoint_cost_status', 'Endpoints billed with no requests', 'ML & AI \u203a Endpoints'),\n",
+        "       (4, 'instance_pools_idle_capacity', 'Idle warm-pool capacity', 'Compute \u203a Clusters & pools'),\n",
+        "       (5, 'lakeflow_jobs_on_all_purpose', 'Jobs on all-purpose clusters', 'Jobs \u203a Hygiene'),\n",
+        "       (6, 'lakeflow_stale_zombie_jobs', 'Stale jobs with no recent run', 'Jobs \u203a Hygiene'),\n",
+        "       (7, 'lakeflow_pipeline_idle_tail_duration', 'Pipeline compute left running after its last update', 'Jobs \u203a Pipelines'),\n",
+        "       (8, 'compute_serving_dormant_endpoints', 'Dormant serving endpoints', 'ML & AI \u203a Endpoints'),\n",
+        "       (9, 'cost_premium_serverless_photon', 'Serverless & Photon share', 'Cost \u203a By product & SKU'),\n",
+        "       (10, 'compute_warehouse_cache_reuse', 'Warehouse result-cache reuse', 'Compute \u203a Warehouses'),\n",
+        "       (11, 'cost_dollarized_by_sku_day', 'Daily spend by SKU', 'Cost \u203a Trend'),\n",
+        "       (12, 'cost_period_over_period', 'Change vs previous period', 'Cost \u203a Trend'),\n",
+        "       (13, 'cost_monthly_actuals', 'Spend by calendar month', 'Cost \u203a Trend'),\n",
+        "       (14, 'cost_unnamed_workspaces', 'Spend on workspaces with no name', 'Cost \u203a Allocation'),\n",
+        "       (15, 'query_failed_queries_daily', 'Failed queries per day', 'Queries \u203a Reliability'),\n",
+        "       (16, 'query_queuing_waits', 'Queries waiting for a warehouse slot', 'Queries \u203a Capacity'),\n",
+        "       (17, 'perf_daily_by_resource', 'Daily query, job and pipeline performance', 'Cost \u203a Before & after'),\n",
+        "       (18, 'lakeflow_job_reliability', 'Broken or flaky jobs', 'Jobs \u203a Failures'),\n",
+        "       (19, 'lakeflow_job_duration_regression', 'Jobs running slower than usual', 'Jobs \u203a Slow & queued'),\n",
+        "       (20, 'cost_chargeback_by_warehouse', 'Chargeback by warehouse', 'Cost \u203a Chargeback'),\n",
+        "       (21, 'cost_chargeback_by_cluster', 'Chargeback by cluster, job cluster or pipeline', 'Cost \u203a Chargeback'),\n",
+        "       (22, 'cost_failed_statement_waste', 'Compute burned on failed statements', 'Queries \u203a Reliability'),\n",
+        "       (23, 'cost_daily_spikes', 'Spend spikes', 'Cost \u203a Trend'),\n",
+        "       (24, 'cost_by_hour_of_day', 'Spend concentrated by hour of day', 'Cost \u203a Trend'),\n",
+        "       (25, 'cost_totals_by_sku_day', 'Spend by product, raw rows', 'Cost \u203a Trend'),\n",
+        "       (26, 'cost_workspace_names', 'Workspace names', 'Cost \u203a Trend'),\n",
+        "       (27, 'cost_by_billing_origin_product', 'Spend by product', 'Cost \u203a By product & SKU'),\n",
+        "       (28, 'cost_sku_trend_12m', 'Fastest-growing SKUs', 'Cost \u203a By product & SKU'),\n",
+        "       (29, 'cost_chargeback_by_allocation_tag', 'Spend with no cost center or team tag', 'Cost \u203a Allocation'),\n",
+        "       (30, 'cost_chargeback_by_tag', 'Spend by cost center or team', 'Cost \u203a Allocation'),\n",
+        "       (31, 'cost_chargeback_by_identity', 'Spend by who ran it', 'Cost \u203a Allocation'),\n",
+        "       (32, 'cost_dbsql_allocation_gap', 'SQL spend that can\\'t be split by query', 'Cost \u203a Allocation'),\n",
+        "       (33, 'cost_chargeback_by_workspace', 'Chargeback by workspace', 'Cost \u203a Chargeback'),\n",
+        "       (34, 'cost_chargeback_by_service', 'Chargeback by product line', 'Cost \u203a Chargeback'),\n",
+        "       (35, 'cost_chargeback_by_sku', 'Chargeback by SKU', 'Cost \u203a Chargeback'),\n",
+        "       (36, 'cost_chargeback_by_job', 'Chargeback by job', 'Cost \u203a Chargeback'),\n",
+        "       (37, 'cost_chargeback_identity_by_source', 'Chargeback by identity', 'Cost \u203a Chargeback'),\n",
+        "       (38, 'cost_chargeback_by_tag_value', 'Chargeback by tag value', 'Cost \u203a Chargeback'),\n",
+        "       (39, 'cost_chargeback_reconcile', 'Chargeback self-check', 'Cost \u203a Chargeback'),\n",
+        "       (40, 'cost_by_job', 'Spend by job', 'Cost \u203a By resource'),\n",
+        "       (41, 'cost_by_compute_resource', 'Spend by cluster or warehouse', 'Cost \u203a By resource'),\n",
+        "       (42, 'cost_by_notebook', 'Notebooks over the daily DBU limit', 'Cost \u203a By resource'),\n",
+        "       (43, 'cost_default_storage_dsu', 'Managed storage spend', 'Cost \u203a By resource'),\n",
+        "       (44, 'cost_genai_token_gpu', 'GenAI token & GPU spend', 'Cost \u203a By resource'),\n",
+        "       (45, 'cost_daily_by_resource', 'Daily cost by resource', 'Cost \u203a Before & after'),\n",
+        "       (46, 'perf_failure_causes_daily', 'Daily failures by cause', 'Cost \u203a Before & after'),\n",
+        "       (47, 'cost_usage_policy_coverage', 'Serverless usage without a policy', 'Cost \u203a Pricing & policy'),\n",
+        "       (48, 'cost_actual_vs_list_by_sku', 'Actual price vs list price', 'Cost \u203a Pricing & policy'),\n",
+        "       (49, 'cost_networking_egress', 'Cross-region networking spend', 'Cost \u203a Pricing & policy'),\n",
+        "       (50, 'cost_cloud_infra', 'Cloud infrastructure spend', 'Cost \u203a Pricing & policy'),\n",
+        "       (51, 'cost_restatement_trust_metric', 'How much of last month\\'s bill has since changed', 'Cost \u203a Pricing & policy'),\n",
+        "       (52, 'cost_by_serving_endpoint', 'Spend by serving endpoint', 'ML & AI \u203a Spend'),\n",
+        "       (53, 'cost_serving_mode_by_endpoint', 'Serving endpoints over the daily spend limit', 'ML & AI \u203a Spend'),\n",
+        "       (54, 'cost_vector_search_spend', 'Vector Search spend', 'ML & AI \u203a Spend'),\n",
+        "       (55, 'compute_serving_endpoint_usage', 'Endpoint requests & errors', 'ML & AI \u203a Endpoints'),\n",
+        "       (56, 'access_vector_search_traffic', 'Vector Search query traffic', 'ML & AI \u203a Endpoints'),\n",
+        "       (57, 'serving_endpoint_traffic_by_endpoint', 'Endpoint traffic, raw rows', 'ML & AI \u203a Endpoints'),\n",
+        "       (58, 'compute_ai_gateway_usage', 'AI Gateway usage', 'ML & AI \u203a AI Gateway'),\n",
+        "       (59, 'genie_usage', 'Genie usage by user', 'Genie'),\n",
+        "       (60, 'compute_warehouse_idle_gaps', 'Longest running stretch per warehouse', 'Compute \u203a Warehouses'),\n",
+        "       (61, 'compute_warehouse_autoscale_churn', 'Warehouse autoscale churn', 'Compute \u203a Warehouses'),\n",
+        "       (62, 'compute_warehouse_autostop_churn', 'Warehouse auto-stop churn', 'Compute \u203a Warehouses'),\n",
+        "       (63, 'compute_warehouse_late_autostop', 'Warehouse late auto-stop', 'Compute \u203a Warehouses'),\n",
+        "       (64, 'sql_warehouse_events_activity', 'Warehouse start/stop activity', 'Compute \u203a Warehouses'),\n",
+        "       (65, 'compute_last_activity', 'Last activity', 'Compute \u203a Warehouses'),\n",
+        "       (66, 'sql_warehouse_config_current', 'Warehouse configuration, current', 'Compute \u203a Warehouses'),\n",
+        "       (67, 'node_timeline_utilization', 'Cluster node utilization over time', 'Compute \u203a Clusters & pools'),\n",
+        "       (68, 'instance_events_idle_active', 'Pool instance idle/active time', 'Compute \u203a Clusters & pools'),\n",
+        "       (69, 'classic_clusters_config_current', 'Cluster configuration, current', 'Compute \u203a Clusters & pools'),\n",
+        "       (70, 'node_types_reference', 'Node type reference', 'Compute \u203a Clusters & pools'),\n",
+        "       (71, 'compute_cluster_config_posture', 'Cluster setup risks', 'Compute \u203a Configuration'),\n",
+        "       (72, 'compute_warehouse_config_posture', 'Warehouse setup risks', 'Compute \u203a Configuration'),\n",
+        "       (73, 'lakeflow_failed_runs', 'Failed job runs', 'Jobs \u203a Failures'),\n",
+        "       (74, 'lakeflow_never_started_runs', 'Runs that never started', 'Jobs \u203a Failures'),\n",
+        "       (75, 'lakeflow_succeeded_with_failed_tasks', 'Runs that \\'succeeded\\' with a failed task', 'Jobs \u203a Failures'),\n",
+        "       (76, 'lakeflow_termination_taxonomy', 'Termination reasons, reference', 'Jobs \u203a Failures'),\n",
+        "       (77, 'lakeflow_job_run_changes', 'What changed since the last good run', 'Jobs \u203a Failures'),\n",
+        "       (78, 'lakeflow_daily_state', 'Jobs and pipelines, day by day', 'Jobs \u203a Failures'),\n",
+        "       (79, 'lakeflow_job_queue_time', 'Jobs waiting on compute', 'Jobs \u203a Slow & queued'),\n",
+        "       (80, 'lakeflow_phase_cold_start', 'Cluster cold-start time', 'Jobs \u203a Slow & queued'),\n",
+        "       (81, 'lakeflow_failed_cluster_starts', 'Failed cluster starts', 'Jobs \u203a Slow & queued'),\n",
+        "       (82, 'lakeflow_workload_mix_hours', 'Job workload by hour of day', 'Jobs \u203a Slow & queued'),\n",
+        "       (83, 'lakeflow_long_running_runs', 'Long-running runs', 'Jobs \u203a Slow & queued'),\n",
+        "       (84, 'lakeflow_retries_repairs', 'Jobs relying on retries or repairs', 'Jobs \u203a Hygiene'),\n",
+        "       (85, 'lakeflow_jobs_no_timeout', 'Jobs with no timeout set', 'Jobs \u203a Hygiene'),\n",
+        "       (86, 'lakeflow_job_tasks_no_timeout', 'Job tasks with no timeout set', 'Jobs \u203a Hygiene'),\n",
+        "       (87, 'lakeflow_health_rule_coverage', 'Jobs with no health rule', 'Jobs \u203a Hygiene'),\n",
+        "       (88, 'lakeflow_job_ownership_orphans', 'Jobs with no clear owner', 'Jobs \u203a Hygiene'),\n",
+        "       (89, 'lakeflow_tasks_near_timeout', 'Tasks running close to their timeout', 'Jobs \u203a Hygiene'),\n",
+        "       (90, 'lakeflow_job_cost_summary', 'Job cost summary, reference', 'Jobs \u203a Hygiene'),\n",
+        "       (91, 'lakeflow_job_run_cost', 'Per-run cost, reference', 'Jobs \u203a Hygiene'),\n",
+        "       (92, 'lakeflow_job_recent_runs', 'Recent runs, reference', 'Jobs \u203a Hygiene'),\n",
+        "       (93, 'lakeflow_job_compute_pressure', 'Job compute fit', 'Jobs \u203a Compute fit'),\n",
+        "       (94, 'task_cluster_utilization', 'Task-level cluster utilization', 'Jobs \u203a Compute fit'),\n",
+        "       (95, 'lakeflow_job_oversized', 'Jobs on bigger machines than they need', 'Jobs \u203a Compute fit'),\n",
+        "       (96, 'lakeflow_pipeline_cost', 'Spend by pipeline', 'Jobs \u203a Pipelines'),\n",
+        "       (97, 'lakeflow_pipeline_update_failures_retries', 'Pipeline update failures & retries', 'Jobs \u203a Pipelines'),\n",
+        "       (98, 'lakeflow_pipelines_inventory_tier', 'Pipeline inventory, reference', 'Jobs \u203a Pipelines'),\n",
+        "       (99, 'query_top_by_cost', 'Top queries by cost', 'Queries \u203a Heavy queries'),\n",
+        "       (100, 'query_provenance_by_source', 'Query traffic by source', 'Queries \u203a Heavy queries'),\n",
+        "       (101, 'audit_self_cost', 'This audit\\'s own query cost', 'Queries \u203a Heavy queries'),\n",
+        "       (102, 'query_costly_statements_grouped', 'Heaviest statement shapes', 'Queries \u203a Heavy queries'),\n",
+        "       (103, 'query_costly_statements', 'All statements, reference', 'Queries \u203a Heavy queries'),\n",
+        "       (104, 'query_per_query_estimate_lane', 'Per-query cost estimate, reference', 'Queries \u203a Heavy queries'),\n",
+        "       (105, 'query_local_spillage', 'Queries spilling to local disk', 'Queries \u203a Efficiency'),\n",
+        "       (106, 'query_shuffle_write_amplification', 'Queries shuffling too much data', 'Queries \u203a Efficiency'),\n",
+        "       (107, 'query_pruning_effectiveness', 'Queries not pruning partitions/files', 'Queries \u203a Efficiency'),\n",
+        "       (108, 'query_cache_coldstart', 'Queries missing the disk cache', 'Queries \u203a Efficiency'),\n",
+        "       (109, 'query_failed_statements_grouped', 'Failed statements by error', 'Queries \u203a Reliability'),\n",
+        "       (110, 'query_warehouse_pressure', 'Warehouse memory & concurrency pressure', 'Queries \u203a Capacity'),\n",
+        "       (111, 'query_workload_mix_hours', 'Query workload by hour of day', 'Queries \u203a Capacity'),\n",
+        "       (112, 'query_task_statement_breakdown', 'Statement breakdown by task stage', 'Queries \u203a Capacity'),\n",
+        "       (113, 'perf_queue_by_hour', 'Queueing by day and hour', 'Queries \u203a Capacity'),\n",
+        "       (114, 'query_slices', 'Query slices, reference', 'Queries \u203a Capacity'),\n",
+        "       (115, 'access_broad_grants', 'Overly broad grants', 'Governance & PII \u203a Access & grants'),\n",
+        "       (116, 'access_grants_inventory', 'Grants inventory', 'Governance & PII \u203a Access & grants'),\n",
+        "       (117, 'access_grants_inventory_extended', 'Grants inventory, extended', 'Governance & PII \u203a Access & grants'),\n",
+        "       (118, 'access_runas_escalation', 'Run-as identity escalation', 'Governance & PII \u203a Access & grants'),\n",
+        "       (119, 'access_login_concentration', 'Login concentration', 'Governance & PII \u203a Access & grants'),\n",
+        "       (120, 'access_network_inbound_denials', 'Inbound network denials', 'Governance & PII \u203a Access & grants'),\n",
+        "       (121, 'access_network_outbound_denials', 'Outbound network denials', 'Governance & PII \u203a Access & grants'),\n",
+        "       (122, 'access_admin_role_change_events', 'Admin and permission changes', 'Governance & PII \u203a Admin activity'),\n",
+        "       (123, 'access_classification_coverage', 'Sensitive-data classification coverage', 'Governance & PII \u203a Sensitive data'),\n",
+        "       (124, 'access_classified_unmasked', 'Classified data with no mask', 'Governance & PII \u203a Sensitive data'),\n",
+        "       (125, 'access_sensitive_table_reads', 'Reads of sensitive tables', 'Governance & PII \u203a Sensitive data'),\n",
+        "       (126, 'access_pii_outside_tables', 'PII outside of tagged tables', 'Governance & PII \u203a Sensitive data'),\n",
+        "       (127, 'access_data_classification_inventory', 'Data classification inventory', 'Governance & PII \u203a Sensitive data'),\n",
+        "       (128, 'access_column_masks_inventory', 'Column masks inventory', 'Governance & PII \u203a Sensitive data'),\n",
+        "       (129, 'access_row_filters_inventory', 'Row filters inventory', 'Governance & PII \u203a Sensitive data'),\n",
+        "       (130, 'access_tags_inventory', 'Table & column tags inventory', 'Governance & PII \u203a Sensitive data'),\n",
+        "       (131, 'access_table_lineage_blast_radius', 'Table lineage blast radius', 'Governance & PII \u203a Lineage'),\n",
+        "       (132, 'access_column_lineage_sensitive_reach', 'Sensitive column lineage reach', 'Governance & PII \u203a Lineage'),\n",
+        "       (133, 'access_pii_propagation_untagged', 'PII propagating into untagged tables', 'Governance & PII \u203a Lineage'),\n",
+        "       (134, 'access_views_inventory', 'Views inventory', 'Governance & PII \u203a Lineage'),\n",
+        "       (135, 'access_volumes_inventory', 'Volumes inventory', 'Governance & PII \u203a Lineage'),\n",
+        "       (136, 'access_delta_sharing_exposure', 'Delta Sharing exposure', 'Governance & PII \u203a Sharing'),\n",
+        "       (137, 'storage_target_table_discovery', 'Table discovery', 'Storage \u203a Tables'),\n",
+        "       (138, 'table_inventory_type', 'Table inventory by type', 'Storage \u203a Tables'),\n",
+        "       (139, 'access_dead_table_candidates', 'Tables not read or changed recently', 'Storage \u203a Tables'),\n",
+        "       (140, 'storage_growth', 'Table growth and drops', 'Storage \u203a Tables'),\n",
+        "       (141, 'po_maintenance_cost_by_table', 'Maintenance spend by table', 'Storage \u203a Maintenance'),\n",
+        "       (142, 'po_vacuum_reclaimed_bytes', 'Storage reclaimed by VACUUM', 'Storage \u203a Maintenance'),\n",
+        "       (143, 'po_clustering_activity', 'Liquid clustering activity', 'Storage \u203a Maintenance'),\n",
+        "       (144, 'po_clustering_column_churn', 'Clustering column changes', 'Storage \u203a Maintenance'),\n",
+        "       (145, 'po_data_skipping_backfill', 'Data-skipping statistics backfill', 'Storage \u203a Maintenance'),\n",
+        "       (146, 'po_failure_reasons', 'Predictive optimization failures', 'Storage \u203a Maintenance'),\n",
+        "       (147, 'storage_po_coverage', 'Predictive optimization coverage', 'Storage \u203a Maintenance'),\n",
+        "       (148, 'storage_small_files', 'Tables with too many small files', 'Storage \u203a Maintenance'),\n",
+        "       (149, 'access_source_table_coverage', 'System table coverage', 'Coverage & Gaps \u203a Data sources'),\n",
+        "       (150, 'cost_account_prices_raw', 'Account-specific prices, raw', 'Coverage & Gaps \u203a Data sources'),\n",
+        "       (151, 'pricing_list_prices_raw', 'List prices, raw', 'Coverage & Gaps \u203a Data sources'),\n",
+        "       (152, 'cost_audit_self_usage', 'This audit\\'s own usage, by warehouse', 'Coverage & Gaps \u203a Data sources'),\n",
+        "       (153, 'overview_daily_dbu_trend', 'Daily DBU trend, reference', 'All findings'),\n",
+        "       (154, 'overview_dbu_by_sku', 'DBUs by SKU, reference', 'All findings'),\n",
+        "       (155, 'overview_list_prices_raw', 'List prices, raw, reference', 'All findings'),\n",
+        "       (156, 'overview_serverless_classic_split', 'Serverless vs classic split, reference', 'All findings'),\n",
+        "       (157, 'overview_spend_estimate', 'Estimated spend, reference', 'All findings'),\n",
+        "       (158, 'storage_unused_table_cost', 'Storage Unused Table Cost', 'All findings')) AS c(ord, query_id, title, page)\n",
+        "LEFT JOIN databricks_audit_dashboard.snapshot_log l ON l.query_id = c.query_id\n",
+        "ORDER BY CASE WHEN l.critical > 0 THEN 0 WHEN l.warn > 0 THEN 1 WHEN NOT l.ok THEN 2 ELSE 3 END, c.ord\n",
+        ")\n",
+        "SELECT count_if(verdict IN ('No rows', 'Not run')) AS value, concat('of ', CAST(159 AS STRING), ' checks') AS target FROM v\n"
+      ]
+    },
+    {
+      "name": "16c08d98",
+      "displayName": "all:kpi:Not assessed",
+      "queryLines": [
+        "WITH v AS (\n",
+        "SELECT c.title AS check_title,\n",
+        "       c.page AS page,\n",
+        "       CASE WHEN l.query_id IS NULL THEN 'Not run'\n",
+        "            WHEN NOT l.ok THEN 'Not assessed'\n",
+        "            WHEN l.critical > 0 THEN 'Critical'\n",
+        "            WHEN l.warn > 0 THEN 'Warn'\n",
+        "            WHEN l.has_status THEN 'OK'\n",
+        "            WHEN l.row_count = 0 THEN 'No rows'\n",
+        "            ELSE 'Listed' END AS verdict,\n",
+        "       l.row_count AS row_count,\n",
+        "       l.critical AS critical_rows,\n",
+        "       l.warn AS warn_rows,\n",
+        "       l.error AS error\n",
+        "FROM (VALUES\n",
+        "       (0, 'compute_warehouse_idle_minutes', 'Warehouse idle time', 'Compute \u203a Warehouses'),\n",
+        "       (1, 'compute_idle_node_ratio', 'Idle cluster nodes', 'Compute \u203a Clusters & pools'),\n",
+        "       (2, 'lakeflow_failed_jobs_wasted_dbus', 'Compute burned on failed runs', 'Jobs \u203a Failures'),\n",
+        "       (3, 'compute_serving_endpoint_cost_status', 'Endpoints billed with no requests', 'ML & AI \u203a Endpoints'),\n",
+        "       (4, 'instance_pools_idle_capacity', 'Idle warm-pool capacity', 'Compute \u203a Clusters & pools'),\n",
+        "       (5, 'lakeflow_jobs_on_all_purpose', 'Jobs on all-purpose clusters', 'Jobs \u203a Hygiene'),\n",
+        "       (6, 'lakeflow_stale_zombie_jobs', 'Stale jobs with no recent run', 'Jobs \u203a Hygiene'),\n",
+        "       (7, 'lakeflow_pipeline_idle_tail_duration', 'Pipeline compute left running after its last update', 'Jobs \u203a Pipelines'),\n",
+        "       (8, 'compute_serving_dormant_endpoints', 'Dormant serving endpoints', 'ML & AI \u203a Endpoints'),\n",
+        "       (9, 'cost_premium_serverless_photon', 'Serverless & Photon share', 'Cost \u203a By product & SKU'),\n",
+        "       (10, 'compute_warehouse_cache_reuse', 'Warehouse result-cache reuse', 'Compute \u203a Warehouses'),\n",
+        "       (11, 'cost_dollarized_by_sku_day', 'Daily spend by SKU', 'Cost \u203a Trend'),\n",
+        "       (12, 'cost_period_over_period', 'Change vs previous period', 'Cost \u203a Trend'),\n",
+        "       (13, 'cost_monthly_actuals', 'Spend by calendar month', 'Cost \u203a Trend'),\n",
+        "       (14, 'cost_unnamed_workspaces', 'Spend on workspaces with no name', 'Cost \u203a Allocation'),\n",
+        "       (15, 'query_failed_queries_daily', 'Failed queries per day', 'Queries \u203a Reliability'),\n",
+        "       (16, 'query_queuing_waits', 'Queries waiting for a warehouse slot', 'Queries \u203a Capacity'),\n",
+        "       (17, 'perf_daily_by_resource', 'Daily query, job and pipeline performance', 'Cost \u203a Before & after'),\n",
+        "       (18, 'lakeflow_job_reliability', 'Broken or flaky jobs', 'Jobs \u203a Failures'),\n",
+        "       (19, 'lakeflow_job_duration_regression', 'Jobs running slower than usual', 'Jobs \u203a Slow & queued'),\n",
+        "       (20, 'cost_chargeback_by_warehouse', 'Chargeback by warehouse', 'Cost \u203a Chargeback'),\n",
+        "       (21, 'cost_chargeback_by_cluster', 'Chargeback by cluster, job cluster or pipeline', 'Cost \u203a Chargeback'),\n",
+        "       (22, 'cost_failed_statement_waste', 'Compute burned on failed statements', 'Queries \u203a Reliability'),\n",
+        "       (23, 'cost_daily_spikes', 'Spend spikes', 'Cost \u203a Trend'),\n",
+        "       (24, 'cost_by_hour_of_day', 'Spend concentrated by hour of day', 'Cost \u203a Trend'),\n",
+        "       (25, 'cost_totals_by_sku_day', 'Spend by product, raw rows', 'Cost \u203a Trend'),\n",
+        "       (26, 'cost_workspace_names', 'Workspace names', 'Cost \u203a Trend'),\n",
+        "       (27, 'cost_by_billing_origin_product', 'Spend by product', 'Cost \u203a By product & SKU'),\n",
+        "       (28, 'cost_sku_trend_12m', 'Fastest-growing SKUs', 'Cost \u203a By product & SKU'),\n",
+        "       (29, 'cost_chargeback_by_allocation_tag', 'Spend with no cost center or team tag', 'Cost \u203a Allocation'),\n",
+        "       (30, 'cost_chargeback_by_tag', 'Spend by cost center or team', 'Cost \u203a Allocation'),\n",
+        "       (31, 'cost_chargeback_by_identity', 'Spend by who ran it', 'Cost \u203a Allocation'),\n",
+        "       (32, 'cost_dbsql_allocation_gap', 'SQL spend that can\\'t be split by query', 'Cost \u203a Allocation'),\n",
+        "       (33, 'cost_chargeback_by_workspace', 'Chargeback by workspace', 'Cost \u203a Chargeback'),\n",
+        "       (34, 'cost_chargeback_by_service', 'Chargeback by product line', 'Cost \u203a Chargeback'),\n",
+        "       (35, 'cost_chargeback_by_sku', 'Chargeback by SKU', 'Cost \u203a Chargeback'),\n",
+        "       (36, 'cost_chargeback_by_job', 'Chargeback by job', 'Cost \u203a Chargeback'),\n",
+        "       (37, 'cost_chargeback_identity_by_source', 'Chargeback by identity', 'Cost \u203a Chargeback'),\n",
+        "       (38, 'cost_chargeback_by_tag_value', 'Chargeback by tag value', 'Cost \u203a Chargeback'),\n",
+        "       (39, 'cost_chargeback_reconcile', 'Chargeback self-check', 'Cost \u203a Chargeback'),\n",
+        "       (40, 'cost_by_job', 'Spend by job', 'Cost \u203a By resource'),\n",
+        "       (41, 'cost_by_compute_resource', 'Spend by cluster or warehouse', 'Cost \u203a By resource'),\n",
+        "       (42, 'cost_by_notebook', 'Notebooks over the daily DBU limit', 'Cost \u203a By resource'),\n",
+        "       (43, 'cost_default_storage_dsu', 'Managed storage spend', 'Cost \u203a By resource'),\n",
+        "       (44, 'cost_genai_token_gpu', 'GenAI token & GPU spend', 'Cost \u203a By resource'),\n",
+        "       (45, 'cost_daily_by_resource', 'Daily cost by resource', 'Cost \u203a Before & after'),\n",
+        "       (46, 'perf_failure_causes_daily', 'Daily failures by cause', 'Cost \u203a Before & after'),\n",
+        "       (47, 'cost_usage_policy_coverage', 'Serverless usage without a policy', 'Cost \u203a Pricing & policy'),\n",
+        "       (48, 'cost_actual_vs_list_by_sku', 'Actual price vs list price', 'Cost \u203a Pricing & policy'),\n",
+        "       (49, 'cost_networking_egress', 'Cross-region networking spend', 'Cost \u203a Pricing & policy'),\n",
+        "       (50, 'cost_cloud_infra', 'Cloud infrastructure spend', 'Cost \u203a Pricing & policy'),\n",
+        "       (51, 'cost_restatement_trust_metric', 'How much of last month\\'s bill has since changed', 'Cost \u203a Pricing & policy'),\n",
+        "       (52, 'cost_by_serving_endpoint', 'Spend by serving endpoint', 'ML & AI \u203a Spend'),\n",
+        "       (53, 'cost_serving_mode_by_endpoint', 'Serving endpoints over the daily spend limit', 'ML & AI \u203a Spend'),\n",
+        "       (54, 'cost_vector_search_spend', 'Vector Search spend', 'ML & AI \u203a Spend'),\n",
+        "       (55, 'compute_serving_endpoint_usage', 'Endpoint requests & errors', 'ML & AI \u203a Endpoints'),\n",
+        "       (56, 'access_vector_search_traffic', 'Vector Search query traffic', 'ML & AI \u203a Endpoints'),\n",
+        "       (57, 'serving_endpoint_traffic_by_endpoint', 'Endpoint traffic, raw rows', 'ML & AI \u203a Endpoints'),\n",
+        "       (58, 'compute_ai_gateway_usage', 'AI Gateway usage', 'ML & AI \u203a AI Gateway'),\n",
+        "       (59, 'genie_usage', 'Genie usage by user', 'Genie'),\n",
+        "       (60, 'compute_warehouse_idle_gaps', 'Longest running stretch per warehouse', 'Compute \u203a Warehouses'),\n",
+        "       (61, 'compute_warehouse_autoscale_churn', 'Warehouse autoscale churn', 'Compute \u203a Warehouses'),\n",
+        "       (62, 'compute_warehouse_autostop_churn', 'Warehouse auto-stop churn', 'Compute \u203a Warehouses'),\n",
+        "       (63, 'compute_warehouse_late_autostop', 'Warehouse late auto-stop', 'Compute \u203a Warehouses'),\n",
+        "       (64, 'sql_warehouse_events_activity', 'Warehouse start/stop activity', 'Compute \u203a Warehouses'),\n",
+        "       (65, 'compute_last_activity', 'Last activity', 'Compute \u203a Warehouses'),\n",
+        "       (66, 'sql_warehouse_config_current', 'Warehouse configuration, current', 'Compute \u203a Warehouses'),\n",
+        "       (67, 'node_timeline_utilization', 'Cluster node utilization over time', 'Compute \u203a Clusters & pools'),\n",
+        "       (68, 'instance_events_idle_active', 'Pool instance idle/active time', 'Compute \u203a Clusters & pools'),\n",
+        "       (69, 'classic_clusters_config_current', 'Cluster configuration, current', 'Compute \u203a Clusters & pools'),\n",
+        "       (70, 'node_types_reference', 'Node type reference', 'Compute \u203a Clusters & pools'),\n",
+        "       (71, 'compute_cluster_config_posture', 'Cluster setup risks', 'Compute \u203a Configuration'),\n",
+        "       (72, 'compute_warehouse_config_posture', 'Warehouse setup risks', 'Compute \u203a Configuration'),\n",
+        "       (73, 'lakeflow_failed_runs', 'Failed job runs', 'Jobs \u203a Failures'),\n",
+        "       (74, 'lakeflow_never_started_runs', 'Runs that never started', 'Jobs \u203a Failures'),\n",
+        "       (75, 'lakeflow_succeeded_with_failed_tasks', 'Runs that \\'succeeded\\' with a failed task', 'Jobs \u203a Failures'),\n",
+        "       (76, 'lakeflow_termination_taxonomy', 'Termination reasons, reference', 'Jobs \u203a Failures'),\n",
+        "       (77, 'lakeflow_job_run_changes', 'What changed since the last good run', 'Jobs \u203a Failures'),\n",
+        "       (78, 'lakeflow_daily_state', 'Jobs and pipelines, day by day', 'Jobs \u203a Failures'),\n",
+        "       (79, 'lakeflow_job_queue_time', 'Jobs waiting on compute', 'Jobs \u203a Slow & queued'),\n",
+        "       (80, 'lakeflow_phase_cold_start', 'Cluster cold-start time', 'Jobs \u203a Slow & queued'),\n",
+        "       (81, 'lakeflow_failed_cluster_starts', 'Failed cluster starts', 'Jobs \u203a Slow & queued'),\n",
+        "       (82, 'lakeflow_workload_mix_hours', 'Job workload by hour of day', 'Jobs \u203a Slow & queued'),\n",
+        "       (83, 'lakeflow_long_running_runs', 'Long-running runs', 'Jobs \u203a Slow & queued'),\n",
+        "       (84, 'lakeflow_retries_repairs', 'Jobs relying on retries or repairs', 'Jobs \u203a Hygiene'),\n",
+        "       (85, 'lakeflow_jobs_no_timeout', 'Jobs with no timeout set', 'Jobs \u203a Hygiene'),\n",
+        "       (86, 'lakeflow_job_tasks_no_timeout', 'Job tasks with no timeout set', 'Jobs \u203a Hygiene'),\n",
+        "       (87, 'lakeflow_health_rule_coverage', 'Jobs with no health rule', 'Jobs \u203a Hygiene'),\n",
+        "       (88, 'lakeflow_job_ownership_orphans', 'Jobs with no clear owner', 'Jobs \u203a Hygiene'),\n",
+        "       (89, 'lakeflow_tasks_near_timeout', 'Tasks running close to their timeout', 'Jobs \u203a Hygiene'),\n",
+        "       (90, 'lakeflow_job_cost_summary', 'Job cost summary, reference', 'Jobs \u203a Hygiene'),\n",
+        "       (91, 'lakeflow_job_run_cost', 'Per-run cost, reference', 'Jobs \u203a Hygiene'),\n",
+        "       (92, 'lakeflow_job_recent_runs', 'Recent runs, reference', 'Jobs \u203a Hygiene'),\n",
+        "       (93, 'lakeflow_job_compute_pressure', 'Job compute fit', 'Jobs \u203a Compute fit'),\n",
+        "       (94, 'task_cluster_utilization', 'Task-level cluster utilization', 'Jobs \u203a Compute fit'),\n",
+        "       (95, 'lakeflow_job_oversized', 'Jobs on bigger machines than they need', 'Jobs \u203a Compute fit'),\n",
+        "       (96, 'lakeflow_pipeline_cost', 'Spend by pipeline', 'Jobs \u203a Pipelines'),\n",
+        "       (97, 'lakeflow_pipeline_update_failures_retries', 'Pipeline update failures & retries', 'Jobs \u203a Pipelines'),\n",
+        "       (98, 'lakeflow_pipelines_inventory_tier', 'Pipeline inventory, reference', 'Jobs \u203a Pipelines'),\n",
+        "       (99, 'query_top_by_cost', 'Top queries by cost', 'Queries \u203a Heavy queries'),\n",
+        "       (100, 'query_provenance_by_source', 'Query traffic by source', 'Queries \u203a Heavy queries'),\n",
+        "       (101, 'audit_self_cost', 'This audit\\'s own query cost', 'Queries \u203a Heavy queries'),\n",
+        "       (102, 'query_costly_statements_grouped', 'Heaviest statement shapes', 'Queries \u203a Heavy queries'),\n",
+        "       (103, 'query_costly_statements', 'All statements, reference', 'Queries \u203a Heavy queries'),\n",
+        "       (104, 'query_per_query_estimate_lane', 'Per-query cost estimate, reference', 'Queries \u203a Heavy queries'),\n",
+        "       (105, 'query_local_spillage', 'Queries spilling to local disk', 'Queries \u203a Efficiency'),\n",
+        "       (106, 'query_shuffle_write_amplification', 'Queries shuffling too much data', 'Queries \u203a Efficiency'),\n",
+        "       (107, 'query_pruning_effectiveness', 'Queries not pruning partitions/files', 'Queries \u203a Efficiency'),\n",
+        "       (108, 'query_cache_coldstart', 'Queries missing the disk cache', 'Queries \u203a Efficiency'),\n",
+        "       (109, 'query_failed_statements_grouped', 'Failed statements by error', 'Queries \u203a Reliability'),\n",
+        "       (110, 'query_warehouse_pressure', 'Warehouse memory & concurrency pressure', 'Queries \u203a Capacity'),\n",
+        "       (111, 'query_workload_mix_hours', 'Query workload by hour of day', 'Queries \u203a Capacity'),\n",
+        "       (112, 'query_task_statement_breakdown', 'Statement breakdown by task stage', 'Queries \u203a Capacity'),\n",
+        "       (113, 'perf_queue_by_hour', 'Queueing by day and hour', 'Queries \u203a Capacity'),\n",
+        "       (114, 'query_slices', 'Query slices, reference', 'Queries \u203a Capacity'),\n",
+        "       (115, 'access_broad_grants', 'Overly broad grants', 'Governance & PII \u203a Access & grants'),\n",
+        "       (116, 'access_grants_inventory', 'Grants inventory', 'Governance & PII \u203a Access & grants'),\n",
+        "       (117, 'access_grants_inventory_extended', 'Grants inventory, extended', 'Governance & PII \u203a Access & grants'),\n",
+        "       (118, 'access_runas_escalation', 'Run-as identity escalation', 'Governance & PII \u203a Access & grants'),\n",
+        "       (119, 'access_login_concentration', 'Login concentration', 'Governance & PII \u203a Access & grants'),\n",
+        "       (120, 'access_network_inbound_denials', 'Inbound network denials', 'Governance & PII \u203a Access & grants'),\n",
+        "       (121, 'access_network_outbound_denials', 'Outbound network denials', 'Governance & PII \u203a Access & grants'),\n",
+        "       (122, 'access_admin_role_change_events', 'Admin and permission changes', 'Governance & PII \u203a Admin activity'),\n",
+        "       (123, 'access_classification_coverage', 'Sensitive-data classification coverage', 'Governance & PII \u203a Sensitive data'),\n",
+        "       (124, 'access_classified_unmasked', 'Classified data with no mask', 'Governance & PII \u203a Sensitive data'),\n",
+        "       (125, 'access_sensitive_table_reads', 'Reads of sensitive tables', 'Governance & PII \u203a Sensitive data'),\n",
+        "       (126, 'access_pii_outside_tables', 'PII outside of tagged tables', 'Governance & PII \u203a Sensitive data'),\n",
+        "       (127, 'access_data_classification_inventory', 'Data classification inventory', 'Governance & PII \u203a Sensitive data'),\n",
+        "       (128, 'access_column_masks_inventory', 'Column masks inventory', 'Governance & PII \u203a Sensitive data'),\n",
+        "       (129, 'access_row_filters_inventory', 'Row filters inventory', 'Governance & PII \u203a Sensitive data'),\n",
+        "       (130, 'access_tags_inventory', 'Table & column tags inventory', 'Governance & PII \u203a Sensitive data'),\n",
+        "       (131, 'access_table_lineage_blast_radius', 'Table lineage blast radius', 'Governance & PII \u203a Lineage'),\n",
+        "       (132, 'access_column_lineage_sensitive_reach', 'Sensitive column lineage reach', 'Governance & PII \u203a Lineage'),\n",
+        "       (133, 'access_pii_propagation_untagged', 'PII propagating into untagged tables', 'Governance & PII \u203a Lineage'),\n",
+        "       (134, 'access_views_inventory', 'Views inventory', 'Governance & PII \u203a Lineage'),\n",
+        "       (135, 'access_volumes_inventory', 'Volumes inventory', 'Governance & PII \u203a Lineage'),\n",
+        "       (136, 'access_delta_sharing_exposure', 'Delta Sharing exposure', 'Governance & PII \u203a Sharing'),\n",
+        "       (137, 'storage_target_table_discovery', 'Table discovery', 'Storage \u203a Tables'),\n",
+        "       (138, 'table_inventory_type', 'Table inventory by type', 'Storage \u203a Tables'),\n",
+        "       (139, 'access_dead_table_candidates', 'Tables not read or changed recently', 'Storage \u203a Tables'),\n",
+        "       (140, 'storage_growth', 'Table growth and drops', 'Storage \u203a Tables'),\n",
+        "       (141, 'po_maintenance_cost_by_table', 'Maintenance spend by table', 'Storage \u203a Maintenance'),\n",
+        "       (142, 'po_vacuum_reclaimed_bytes', 'Storage reclaimed by VACUUM', 'Storage \u203a Maintenance'),\n",
+        "       (143, 'po_clustering_activity', 'Liquid clustering activity', 'Storage \u203a Maintenance'),\n",
+        "       (144, 'po_clustering_column_churn', 'Clustering column changes', 'Storage \u203a Maintenance'),\n",
+        "       (145, 'po_data_skipping_backfill', 'Data-skipping statistics backfill', 'Storage \u203a Maintenance'),\n",
+        "       (146, 'po_failure_reasons', 'Predictive optimization failures', 'Storage \u203a Maintenance'),\n",
+        "       (147, 'storage_po_coverage', 'Predictive optimization coverage', 'Storage \u203a Maintenance'),\n",
+        "       (148, 'storage_small_files', 'Tables with too many small files', 'Storage \u203a Maintenance'),\n",
+        "       (149, 'access_source_table_coverage', 'System table coverage', 'Coverage & Gaps \u203a Data sources'),\n",
+        "       (150, 'cost_account_prices_raw', 'Account-specific prices, raw', 'Coverage & Gaps \u203a Data sources'),\n",
+        "       (151, 'pricing_list_prices_raw', 'List prices, raw', 'Coverage & Gaps \u203a Data sources'),\n",
+        "       (152, 'cost_audit_self_usage', 'This audit\\'s own usage, by warehouse', 'Coverage & Gaps \u203a Data sources'),\n",
+        "       (153, 'overview_daily_dbu_trend', 'Daily DBU trend, reference', 'All findings'),\n",
+        "       (154, 'overview_dbu_by_sku', 'DBUs by SKU, reference', 'All findings'),\n",
+        "       (155, 'overview_list_prices_raw', 'List prices, raw, reference', 'All findings'),\n",
+        "       (156, 'overview_serverless_classic_split', 'Serverless vs classic split, reference', 'All findings'),\n",
+        "       (157, 'overview_spend_estimate', 'Estimated spend, reference', 'All findings'),\n",
+        "       (158, 'storage_unused_table_cost', 'Storage Unused Table Cost', 'All findings')) AS c(ord, query_id, title, page)\n",
+        "LEFT JOIN databricks_audit_dashboard.snapshot_log l ON l.query_id = c.query_id\n",
+        "ORDER BY CASE WHEN l.critical > 0 THEN 0 WHEN l.warn > 0 THEN 1 WHEN NOT l.ok THEN 2 ELSE 3 END, c.ord\n",
+        ")\n",
+        "SELECT count_if(verdict = 'Not assessed') AS value, concat('of ', CAST(159 AS STRING), ' checks') AS target FROM v\n"
+      ]
+    },
+    {
+      "name": "fd512521",
+      "displayName": "all:Every check, flagged first",
+      "queryLines": [
+        "SELECT c.title AS check_title,\n",
+        "       c.page AS page,\n",
+        "       CASE WHEN l.query_id IS NULL THEN 'Not run'\n",
+        "            WHEN NOT l.ok THEN 'Not assessed'\n",
+        "            WHEN l.critical > 0 THEN 'Critical'\n",
+        "            WHEN l.warn > 0 THEN 'Warn'\n",
+        "            WHEN l.has_status THEN 'OK'\n",
+        "            WHEN l.row_count = 0 THEN 'No rows'\n",
+        "            ELSE 'Listed' END AS verdict,\n",
+        "       l.row_count AS row_count,\n",
+        "       l.critical AS critical_rows,\n",
+        "       l.warn AS warn_rows,\n",
+        "       l.error AS error\n",
+        "FROM (VALUES\n",
+        "       (0, 'compute_warehouse_idle_minutes', 'Warehouse idle time', 'Compute \u203a Warehouses'),\n",
+        "       (1, 'compute_idle_node_ratio', 'Idle cluster nodes', 'Compute \u203a Clusters & pools'),\n",
+        "       (2, 'lakeflow_failed_jobs_wasted_dbus', 'Compute burned on failed runs', 'Jobs \u203a Failures'),\n",
+        "       (3, 'compute_serving_endpoint_cost_status', 'Endpoints billed with no requests', 'ML & AI \u203a Endpoints'),\n",
+        "       (4, 'instance_pools_idle_capacity', 'Idle warm-pool capacity', 'Compute \u203a Clusters & pools'),\n",
+        "       (5, 'lakeflow_jobs_on_all_purpose', 'Jobs on all-purpose clusters', 'Jobs \u203a Hygiene'),\n",
+        "       (6, 'lakeflow_stale_zombie_jobs', 'Stale jobs with no recent run', 'Jobs \u203a Hygiene'),\n",
+        "       (7, 'lakeflow_pipeline_idle_tail_duration', 'Pipeline compute left running after its last update', 'Jobs \u203a Pipelines'),\n",
+        "       (8, 'compute_serving_dormant_endpoints', 'Dormant serving endpoints', 'ML & AI \u203a Endpoints'),\n",
+        "       (9, 'cost_premium_serverless_photon', 'Serverless & Photon share', 'Cost \u203a By product & SKU'),\n",
+        "       (10, 'compute_warehouse_cache_reuse', 'Warehouse result-cache reuse', 'Compute \u203a Warehouses'),\n",
+        "       (11, 'cost_dollarized_by_sku_day', 'Daily spend by SKU', 'Cost \u203a Trend'),\n",
+        "       (12, 'cost_period_over_period', 'Change vs previous period', 'Cost \u203a Trend'),\n",
+        "       (13, 'cost_monthly_actuals', 'Spend by calendar month', 'Cost \u203a Trend'),\n",
+        "       (14, 'cost_unnamed_workspaces', 'Spend on workspaces with no name', 'Cost \u203a Allocation'),\n",
+        "       (15, 'query_failed_queries_daily', 'Failed queries per day', 'Queries \u203a Reliability'),\n",
+        "       (16, 'query_queuing_waits', 'Queries waiting for a warehouse slot', 'Queries \u203a Capacity'),\n",
+        "       (17, 'perf_daily_by_resource', 'Daily query, job and pipeline performance', 'Cost \u203a Before & after'),\n",
+        "       (18, 'lakeflow_job_reliability', 'Broken or flaky jobs', 'Jobs \u203a Failures'),\n",
+        "       (19, 'lakeflow_job_duration_regression', 'Jobs running slower than usual', 'Jobs \u203a Slow & queued'),\n",
+        "       (20, 'cost_chargeback_by_warehouse', 'Chargeback by warehouse', 'Cost \u203a Chargeback'),\n",
+        "       (21, 'cost_chargeback_by_cluster', 'Chargeback by cluster, job cluster or pipeline', 'Cost \u203a Chargeback'),\n",
+        "       (22, 'cost_failed_statement_waste', 'Compute burned on failed statements', 'Queries \u203a Reliability'),\n",
+        "       (23, 'cost_daily_spikes', 'Spend spikes', 'Cost \u203a Trend'),\n",
+        "       (24, 'cost_by_hour_of_day', 'Spend concentrated by hour of day', 'Cost \u203a Trend'),\n",
+        "       (25, 'cost_totals_by_sku_day', 'Spend by product, raw rows', 'Cost \u203a Trend'),\n",
+        "       (26, 'cost_workspace_names', 'Workspace names', 'Cost \u203a Trend'),\n",
+        "       (27, 'cost_by_billing_origin_product', 'Spend by product', 'Cost \u203a By product & SKU'),\n",
+        "       (28, 'cost_sku_trend_12m', 'Fastest-growing SKUs', 'Cost \u203a By product & SKU'),\n",
+        "       (29, 'cost_chargeback_by_allocation_tag', 'Spend with no cost center or team tag', 'Cost \u203a Allocation'),\n",
+        "       (30, 'cost_chargeback_by_tag', 'Spend by cost center or team', 'Cost \u203a Allocation'),\n",
+        "       (31, 'cost_chargeback_by_identity', 'Spend by who ran it', 'Cost \u203a Allocation'),\n",
+        "       (32, 'cost_dbsql_allocation_gap', 'SQL spend that can\\'t be split by query', 'Cost \u203a Allocation'),\n",
+        "       (33, 'cost_chargeback_by_workspace', 'Chargeback by workspace', 'Cost \u203a Chargeback'),\n",
+        "       (34, 'cost_chargeback_by_service', 'Chargeback by product line', 'Cost \u203a Chargeback'),\n",
+        "       (35, 'cost_chargeback_by_sku', 'Chargeback by SKU', 'Cost \u203a Chargeback'),\n",
+        "       (36, 'cost_chargeback_by_job', 'Chargeback by job', 'Cost \u203a Chargeback'),\n",
+        "       (37, 'cost_chargeback_identity_by_source', 'Chargeback by identity', 'Cost \u203a Chargeback'),\n",
+        "       (38, 'cost_chargeback_by_tag_value', 'Chargeback by tag value', 'Cost \u203a Chargeback'),\n",
+        "       (39, 'cost_chargeback_reconcile', 'Chargeback self-check', 'Cost \u203a Chargeback'),\n",
+        "       (40, 'cost_by_job', 'Spend by job', 'Cost \u203a By resource'),\n",
+        "       (41, 'cost_by_compute_resource', 'Spend by cluster or warehouse', 'Cost \u203a By resource'),\n",
+        "       (42, 'cost_by_notebook', 'Notebooks over the daily DBU limit', 'Cost \u203a By resource'),\n",
+        "       (43, 'cost_default_storage_dsu', 'Managed storage spend', 'Cost \u203a By resource'),\n",
+        "       (44, 'cost_genai_token_gpu', 'GenAI token & GPU spend', 'Cost \u203a By resource'),\n",
+        "       (45, 'cost_daily_by_resource', 'Daily cost by resource', 'Cost \u203a Before & after'),\n",
+        "       (46, 'perf_failure_causes_daily', 'Daily failures by cause', 'Cost \u203a Before & after'),\n",
+        "       (47, 'cost_usage_policy_coverage', 'Serverless usage without a policy', 'Cost \u203a Pricing & policy'),\n",
+        "       (48, 'cost_actual_vs_list_by_sku', 'Actual price vs list price', 'Cost \u203a Pricing & policy'),\n",
+        "       (49, 'cost_networking_egress', 'Cross-region networking spend', 'Cost \u203a Pricing & policy'),\n",
+        "       (50, 'cost_cloud_infra', 'Cloud infrastructure spend', 'Cost \u203a Pricing & policy'),\n",
+        "       (51, 'cost_restatement_trust_metric', 'How much of last month\\'s bill has since changed', 'Cost \u203a Pricing & policy'),\n",
+        "       (52, 'cost_by_serving_endpoint', 'Spend by serving endpoint', 'ML & AI \u203a Spend'),\n",
+        "       (53, 'cost_serving_mode_by_endpoint', 'Serving endpoints over the daily spend limit', 'ML & AI \u203a Spend'),\n",
+        "       (54, 'cost_vector_search_spend', 'Vector Search spend', 'ML & AI \u203a Spend'),\n",
+        "       (55, 'compute_serving_endpoint_usage', 'Endpoint requests & errors', 'ML & AI \u203a Endpoints'),\n",
+        "       (56, 'access_vector_search_traffic', 'Vector Search query traffic', 'ML & AI \u203a Endpoints'),\n",
+        "       (57, 'serving_endpoint_traffic_by_endpoint', 'Endpoint traffic, raw rows', 'ML & AI \u203a Endpoints'),\n",
+        "       (58, 'compute_ai_gateway_usage', 'AI Gateway usage', 'ML & AI \u203a AI Gateway'),\n",
+        "       (59, 'genie_usage', 'Genie usage by user', 'Genie'),\n",
+        "       (60, 'compute_warehouse_idle_gaps', 'Longest running stretch per warehouse', 'Compute \u203a Warehouses'),\n",
+        "       (61, 'compute_warehouse_autoscale_churn', 'Warehouse autoscale churn', 'Compute \u203a Warehouses'),\n",
+        "       (62, 'compute_warehouse_autostop_churn', 'Warehouse auto-stop churn', 'Compute \u203a Warehouses'),\n",
+        "       (63, 'compute_warehouse_late_autostop', 'Warehouse late auto-stop', 'Compute \u203a Warehouses'),\n",
+        "       (64, 'sql_warehouse_events_activity', 'Warehouse start/stop activity', 'Compute \u203a Warehouses'),\n",
+        "       (65, 'compute_last_activity', 'Last activity', 'Compute \u203a Warehouses'),\n",
+        "       (66, 'sql_warehouse_config_current', 'Warehouse configuration, current', 'Compute \u203a Warehouses'),\n",
+        "       (67, 'node_timeline_utilization', 'Cluster node utilization over time', 'Compute \u203a Clusters & pools'),\n",
+        "       (68, 'instance_events_idle_active', 'Pool instance idle/active time', 'Compute \u203a Clusters & pools'),\n",
+        "       (69, 'classic_clusters_config_current', 'Cluster configuration, current', 'Compute \u203a Clusters & pools'),\n",
+        "       (70, 'node_types_reference', 'Node type reference', 'Compute \u203a Clusters & pools'),\n",
+        "       (71, 'compute_cluster_config_posture', 'Cluster setup risks', 'Compute \u203a Configuration'),\n",
+        "       (72, 'compute_warehouse_config_posture', 'Warehouse setup risks', 'Compute \u203a Configuration'),\n",
+        "       (73, 'lakeflow_failed_runs', 'Failed job runs', 'Jobs \u203a Failures'),\n",
+        "       (74, 'lakeflow_never_started_runs', 'Runs that never started', 'Jobs \u203a Failures'),\n",
+        "       (75, 'lakeflow_succeeded_with_failed_tasks', 'Runs that \\'succeeded\\' with a failed task', 'Jobs \u203a Failures'),\n",
+        "       (76, 'lakeflow_termination_taxonomy', 'Termination reasons, reference', 'Jobs \u203a Failures'),\n",
+        "       (77, 'lakeflow_job_run_changes', 'What changed since the last good run', 'Jobs \u203a Failures'),\n",
+        "       (78, 'lakeflow_daily_state', 'Jobs and pipelines, day by day', 'Jobs \u203a Failures'),\n",
+        "       (79, 'lakeflow_job_queue_time', 'Jobs waiting on compute', 'Jobs \u203a Slow & queued'),\n",
+        "       (80, 'lakeflow_phase_cold_start', 'Cluster cold-start time', 'Jobs \u203a Slow & queued'),\n",
+        "       (81, 'lakeflow_failed_cluster_starts', 'Failed cluster starts', 'Jobs \u203a Slow & queued'),\n",
+        "       (82, 'lakeflow_workload_mix_hours', 'Job workload by hour of day', 'Jobs \u203a Slow & queued'),\n",
+        "       (83, 'lakeflow_long_running_runs', 'Long-running runs', 'Jobs \u203a Slow & queued'),\n",
+        "       (84, 'lakeflow_retries_repairs', 'Jobs relying on retries or repairs', 'Jobs \u203a Hygiene'),\n",
+        "       (85, 'lakeflow_jobs_no_timeout', 'Jobs with no timeout set', 'Jobs \u203a Hygiene'),\n",
+        "       (86, 'lakeflow_job_tasks_no_timeout', 'Job tasks with no timeout set', 'Jobs \u203a Hygiene'),\n",
+        "       (87, 'lakeflow_health_rule_coverage', 'Jobs with no health rule', 'Jobs \u203a Hygiene'),\n",
+        "       (88, 'lakeflow_job_ownership_orphans', 'Jobs with no clear owner', 'Jobs \u203a Hygiene'),\n",
+        "       (89, 'lakeflow_tasks_near_timeout', 'Tasks running close to their timeout', 'Jobs \u203a Hygiene'),\n",
+        "       (90, 'lakeflow_job_cost_summary', 'Job cost summary, reference', 'Jobs \u203a Hygiene'),\n",
+        "       (91, 'lakeflow_job_run_cost', 'Per-run cost, reference', 'Jobs \u203a Hygiene'),\n",
+        "       (92, 'lakeflow_job_recent_runs', 'Recent runs, reference', 'Jobs \u203a Hygiene'),\n",
+        "       (93, 'lakeflow_job_compute_pressure', 'Job compute fit', 'Jobs \u203a Compute fit'),\n",
+        "       (94, 'task_cluster_utilization', 'Task-level cluster utilization', 'Jobs \u203a Compute fit'),\n",
+        "       (95, 'lakeflow_job_oversized', 'Jobs on bigger machines than they need', 'Jobs \u203a Compute fit'),\n",
+        "       (96, 'lakeflow_pipeline_cost', 'Spend by pipeline', 'Jobs \u203a Pipelines'),\n",
+        "       (97, 'lakeflow_pipeline_update_failures_retries', 'Pipeline update failures & retries', 'Jobs \u203a Pipelines'),\n",
+        "       (98, 'lakeflow_pipelines_inventory_tier', 'Pipeline inventory, reference', 'Jobs \u203a Pipelines'),\n",
+        "       (99, 'query_top_by_cost', 'Top queries by cost', 'Queries \u203a Heavy queries'),\n",
+        "       (100, 'query_provenance_by_source', 'Query traffic by source', 'Queries \u203a Heavy queries'),\n",
+        "       (101, 'audit_self_cost', 'This audit\\'s own query cost', 'Queries \u203a Heavy queries'),\n",
+        "       (102, 'query_costly_statements_grouped', 'Heaviest statement shapes', 'Queries \u203a Heavy queries'),\n",
+        "       (103, 'query_costly_statements', 'All statements, reference', 'Queries \u203a Heavy queries'),\n",
+        "       (104, 'query_per_query_estimate_lane', 'Per-query cost estimate, reference', 'Queries \u203a Heavy queries'),\n",
+        "       (105, 'query_local_spillage', 'Queries spilling to local disk', 'Queries \u203a Efficiency'),\n",
+        "       (106, 'query_shuffle_write_amplification', 'Queries shuffling too much data', 'Queries \u203a Efficiency'),\n",
+        "       (107, 'query_pruning_effectiveness', 'Queries not pruning partitions/files', 'Queries \u203a Efficiency'),\n",
+        "       (108, 'query_cache_coldstart', 'Queries missing the disk cache', 'Queries \u203a Efficiency'),\n",
+        "       (109, 'query_failed_statements_grouped', 'Failed statements by error', 'Queries \u203a Reliability'),\n",
+        "       (110, 'query_warehouse_pressure', 'Warehouse memory & concurrency pressure', 'Queries \u203a Capacity'),\n",
+        "       (111, 'query_workload_mix_hours', 'Query workload by hour of day', 'Queries \u203a Capacity'),\n",
+        "       (112, 'query_task_statement_breakdown', 'Statement breakdown by task stage', 'Queries \u203a Capacity'),\n",
+        "       (113, 'perf_queue_by_hour', 'Queueing by day and hour', 'Queries \u203a Capacity'),\n",
+        "       (114, 'query_slices', 'Query slices, reference', 'Queries \u203a Capacity'),\n",
+        "       (115, 'access_broad_grants', 'Overly broad grants', 'Governance & PII \u203a Access & grants'),\n",
+        "       (116, 'access_grants_inventory', 'Grants inventory', 'Governance & PII \u203a Access & grants'),\n",
+        "       (117, 'access_grants_inventory_extended', 'Grants inventory, extended', 'Governance & PII \u203a Access & grants'),\n",
+        "       (118, 'access_runas_escalation', 'Run-as identity escalation', 'Governance & PII \u203a Access & grants'),\n",
+        "       (119, 'access_login_concentration', 'Login concentration', 'Governance & PII \u203a Access & grants'),\n",
+        "       (120, 'access_network_inbound_denials', 'Inbound network denials', 'Governance & PII \u203a Access & grants'),\n",
+        "       (121, 'access_network_outbound_denials', 'Outbound network denials', 'Governance & PII \u203a Access & grants'),\n",
+        "       (122, 'access_admin_role_change_events', 'Admin and permission changes', 'Governance & PII \u203a Admin activity'),\n",
+        "       (123, 'access_classification_coverage', 'Sensitive-data classification coverage', 'Governance & PII \u203a Sensitive data'),\n",
+        "       (124, 'access_classified_unmasked', 'Classified data with no mask', 'Governance & PII \u203a Sensitive data'),\n",
+        "       (125, 'access_sensitive_table_reads', 'Reads of sensitive tables', 'Governance & PII \u203a Sensitive data'),\n",
+        "       (126, 'access_pii_outside_tables', 'PII outside of tagged tables', 'Governance & PII \u203a Sensitive data'),\n",
+        "       (127, 'access_data_classification_inventory', 'Data classification inventory', 'Governance & PII \u203a Sensitive data'),\n",
+        "       (128, 'access_column_masks_inventory', 'Column masks inventory', 'Governance & PII \u203a Sensitive data'),\n",
+        "       (129, 'access_row_filters_inventory', 'Row filters inventory', 'Governance & PII \u203a Sensitive data'),\n",
+        "       (130, 'access_tags_inventory', 'Table & column tags inventory', 'Governance & PII \u203a Sensitive data'),\n",
+        "       (131, 'access_table_lineage_blast_radius', 'Table lineage blast radius', 'Governance & PII \u203a Lineage'),\n",
+        "       (132, 'access_column_lineage_sensitive_reach', 'Sensitive column lineage reach', 'Governance & PII \u203a Lineage'),\n",
+        "       (133, 'access_pii_propagation_untagged', 'PII propagating into untagged tables', 'Governance & PII \u203a Lineage'),\n",
+        "       (134, 'access_views_inventory', 'Views inventory', 'Governance & PII \u203a Lineage'),\n",
+        "       (135, 'access_volumes_inventory', 'Volumes inventory', 'Governance & PII \u203a Lineage'),\n",
+        "       (136, 'access_delta_sharing_exposure', 'Delta Sharing exposure', 'Governance & PII \u203a Sharing'),\n",
+        "       (137, 'storage_target_table_discovery', 'Table discovery', 'Storage \u203a Tables'),\n",
+        "       (138, 'table_inventory_type', 'Table inventory by type', 'Storage \u203a Tables'),\n",
+        "       (139, 'access_dead_table_candidates', 'Tables not read or changed recently', 'Storage \u203a Tables'),\n",
+        "       (140, 'storage_growth', 'Table growth and drops', 'Storage \u203a Tables'),\n",
+        "       (141, 'po_maintenance_cost_by_table', 'Maintenance spend by table', 'Storage \u203a Maintenance'),\n",
+        "       (142, 'po_vacuum_reclaimed_bytes', 'Storage reclaimed by VACUUM', 'Storage \u203a Maintenance'),\n",
+        "       (143, 'po_clustering_activity', 'Liquid clustering activity', 'Storage \u203a Maintenance'),\n",
+        "       (144, 'po_clustering_column_churn', 'Clustering column changes', 'Storage \u203a Maintenance'),\n",
+        "       (145, 'po_data_skipping_backfill', 'Data-skipping statistics backfill', 'Storage \u203a Maintenance'),\n",
+        "       (146, 'po_failure_reasons', 'Predictive optimization failures', 'Storage \u203a Maintenance'),\n",
+        "       (147, 'storage_po_coverage', 'Predictive optimization coverage', 'Storage \u203a Maintenance'),\n",
+        "       (148, 'storage_small_files', 'Tables with too many small files', 'Storage \u203a Maintenance'),\n",
+        "       (149, 'access_source_table_coverage', 'System table coverage', 'Coverage & Gaps \u203a Data sources'),\n",
+        "       (150, 'cost_account_prices_raw', 'Account-specific prices, raw', 'Coverage & Gaps \u203a Data sources'),\n",
+        "       (151, 'pricing_list_prices_raw', 'List prices, raw', 'Coverage & Gaps \u203a Data sources'),\n",
+        "       (152, 'cost_audit_self_usage', 'This audit\\'s own usage, by warehouse', 'Coverage & Gaps \u203a Data sources'),\n",
+        "       (153, 'overview_daily_dbu_trend', 'Daily DBU trend, reference', 'All findings'),\n",
+        "       (154, 'overview_dbu_by_sku', 'DBUs by SKU, reference', 'All findings'),\n",
+        "       (155, 'overview_list_prices_raw', 'List prices, raw, reference', 'All findings'),\n",
+        "       (156, 'overview_serverless_classic_split', 'Serverless vs classic split, reference', 'All findings'),\n",
+        "       (157, 'overview_spend_estimate', 'Estimated spend, reference', 'All findings'),\n",
+        "       (158, 'storage_unused_table_cost', 'Storage Unused Table Cost', 'All findings')) AS c(ord, query_id, title, page)\n",
+        "LEFT JOIN databricks_audit_dashboard.snapshot_log l ON l.query_id = c.query_id\n",
+        "ORDER BY CASE WHEN l.critical > 0 THEN 0 WHEN l.warn > 0 THEN 1 WHEN NOT l.ok THEN 2 ELSE 3 END, c.ord\n"
+      ]
+    }
+  ],
+  "pages": [
+    {
+      "name": "72d72334",
+      "displayName": "All findings",
+      "pageType": "PAGE_TYPE_CANVAS",
+      "layoutVersion": "GRID_V1",
+      "layout": [
+        {
+          "widget": {
+            "name": "af2238e2",
+            "multilineTextboxSpec": {
+              "lines": [
+                "# **All findings**\n",
+                "Lakehouse Health 13 - All findings \u00b7 Every check, one list\n"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 9,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "130bc370",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "9440c2de",
+                  "fields": [
+                    {
+                      "name": "as_of",
+                      "expression": "`as_of`"
+                    },
+                    {
+                      "name": "max(days)",
+                      "expression": "MAX(`days`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "max(days)",
+                  "displayName": "Days covered",
+                  "style": {
+                    "bold": true,
+                    "fontSize": 32,
+                    "color": "#1c1b18"
+                  }
+                },
+                "target": {
+                  "fieldName": "as_of",
+                  "displayName": "as_of",
+                  "style": {
+                    "fontSize": 14,
+                    "italic": true,
+                    "color": {
+                      "themeColorType": "fontColor"
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "title": "Days covered",
+                "showTitle": true,
+                "description": "Days in the snapshot. New numbers: run the notebook again.",
+                "showDescription": true
+              }
+            }
+          },
+          "position": {
+            "x": 9,
+            "y": 0,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "7775d039",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "236b7364",
+                  "fields": [
+                    {
+                      "name": "target",
+                      "expression": "`target`"
+                    },
+                    {
+                      "name": "sum(value)",
+                      "expression": "SUM(`value`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(value)",
+                  "displayName": "Critical",
+                  "style": {
+                    "bold": true,
+                    "fontSize": 32,
+                    "color": "#a8261d"
+                  }
+                },
+                "target": {
+                  "fieldName": "target",
+                  "displayName": "target",
+                  "style": {
+                    "fontSize": 14,
+                    "italic": true,
+                    "color": {
+                      "themeColorType": "fontColor"
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "title": "Critical",
+                "showTitle": true,
+                "description": "Checks whose snapshot verdict is Critical, account-wide.",
+                "showDescription": true
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 3,
+            "width": 3,
+            "height": 4
+          }
+        },
+        {
+          "widget": {
+            "name": "064b75f5",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "e344eaf9",
+                  "fields": [
+                    {
+                      "name": "target",
+                      "expression": "`target`"
+                    },
+                    {
+                      "name": "sum(value)",
+                      "expression": "SUM(`value`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(value)",
+                  "displayName": "Warn",
+                  "style": {
+                    "bold": true,
+                    "fontSize": 32,
+                    "color": "#c2610c"
+                  }
+                },
+                "target": {
+                  "fieldName": "target",
+                  "displayName": "target",
+                  "style": {
+                    "fontSize": 14,
+                    "italic": true,
+                    "color": {
+                      "themeColorType": "fontColor"
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "title": "Warn",
+                "showTitle": true,
+                "description": "Checks whose snapshot verdict is Warn, account-wide.",
+                "showDescription": true
+              }
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 3,
+            "width": 3,
+            "height": 4
+          }
+        },
+        {
+          "widget": {
+            "name": "20473f7c",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "39061a16",
+                  "fields": [
+                    {
+                      "name": "target",
+                      "expression": "`target`"
+                    },
+                    {
+                      "name": "sum(value)",
+                      "expression": "SUM(`value`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(value)",
+                  "displayName": "No data this window",
+                  "style": {
+                    "bold": true,
+                    "fontSize": 32,
+                    "color": "#1c1b18"
+                  }
+                },
+                "target": {
+                  "fieldName": "target",
+                  "displayName": "target",
+                  "style": {
+                    "fontSize": 14,
+                    "italic": true,
+                    "color": {
+                      "themeColorType": "fontColor"
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "title": "No data this window",
+                "showTitle": true,
+                "description": "Checks that ran clean but found nothing, or never ran this window, account-wide.",
+                "showDescription": true
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 3,
+            "width": 3,
+            "height": 4
+          }
+        },
+        {
+          "widget": {
+            "name": "49d65ea2",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "16c08d98",
+                  "fields": [
+                    {
+                      "name": "target",
+                      "expression": "`target`"
+                    },
+                    {
+                      "name": "sum(value)",
+                      "expression": "SUM(`value`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(value)",
+                  "displayName": "Not assessed",
+                  "style": {
+                    "bold": true,
+                    "fontSize": 32,
+                    "color": "#c2610c"
+                  }
+                },
+                "target": {
+                  "fieldName": "target",
+                  "displayName": "target",
+                  "style": {
+                    "fontSize": 14,
+                    "italic": true,
+                    "color": {
+                      "themeColorType": "fontColor"
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "title": "Not assessed",
+                "showTitle": true,
+                "description": "Checks the snapshot could not run at all -- a missing grant or a failed read, account-wide.",
+                "showDescription": true
+              }
+            }
+          },
+          "position": {
+            "x": 9,
+            "y": 3,
+            "width": 3,
+            "height": 4
+          }
+        },
+        {
+          "widget": {
+            "name": "502d0a3a",
+            "multilineTextboxSpec": {
+              "lines": [
+                "Ordered critical first, then warn, then everything else. \"Home tab\" is where each check's own rows live; \"Not assessed\" means the snapshot could not run it.\n",
+                "The snapshot's run log carries no workspace_id, so every count on this page is account-wide; the Workspace filter above does not reach it.\n"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 7,
+            "width": 12,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "fc39741e",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "fd512521",
+                  "fields": [
+                    {
+                      "name": "check_title",
+                      "expression": "`check_title`"
+                    },
+                    {
+                      "name": "page",
+                      "expression": "`page`"
+                    },
+                    {
+                      "name": "verdict",
+                      "expression": "`verdict`"
+                    },
+                    {
+                      "name": "critical_rows",
+                      "expression": "`critical_rows`"
+                    },
+                    {
+                      "name": "warn_rows",
+                      "expression": "`warn_rows`"
+                    },
+                    {
+                      "name": "row_count",
+                      "expression": "`row_count`"
+                    },
+                    {
+                      "name": "error",
+                      "expression": "`error`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 1,
+              "widgetType": "table",
+              "allowHTMLByDefault": false,
+              "condensed": false,
+              "withRowNumber": false,
+              "itemsPerPage": 20,
+              "paginationSize": "default",
+              "invisibleColumns": [],
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "check_title",
+                    "title": "Check",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 0,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "page",
+                    "title": "Home tab",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 1,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "verdict",
+                    "title": "Verdict",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 2,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "critical_rows",
+                    "title": "Critical rows",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 3,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "0,0",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "allowSearch": false
+                  },
+                  {
+                    "fieldName": "warn_rows",
+                    "title": "Warn rows",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 4,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "0,0",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "allowSearch": false
+                  },
+                  {
+                    "fieldName": "row_count",
+                    "title": "Rows",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 5,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "0,0",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "allowSearch": false
+                  },
+                  {
+                    "fieldName": "error",
+                    "title": "Why not assessed",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 6,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  }
+                ]
+              },
+              "frame": {
+                "title": "Every check, flagged first",
+                "showTitle": true,
+                "showDescription": true,
+                "description": "Every check's own verdict from the snapshot's run log, critical first then warn; account-wide."
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 9,
+            "width": 12,
+            "height": 12
+          }
+        }
+      ]
+    },
+    {
+      "name": "2b98463a",
+      "displayName": "Global Filters",
+      "pageType": "PAGE_TYPE_GLOBAL_FILTERS",
+      "layoutVersion": "GRID_V1",
+      "layout": [
+        {
+          "widget": {
+            "name": "5d277ea5",
+            "queries": [
+              {
+                "name": "q_feb6ff93",
+                "query": {
+                  "datasetName": "67ebf40f",
+                  "fields": [
+                    {
+                      "name": "workspace_name",
+                      "expression": "`workspace_name`"
+                    },
+                    {
+                      "name": "workspace_name_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-multi-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "workspace_name",
+                    "displayName": "Workspace",
+                    "queryName": "q_feb6ff93"
+                  }
+                ]
+              },
+              "frame": {
+                "title": "Workspace",
+                "showTitle": true
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 3,
+            "height": 2
+          }
+        }
+      ]
+    }
+  ],
+  "uiSettings": {
+    "theme": {
+      "canvasBackgroundColor": {
+        "light": "#f4f1ea",
+        "dark": "#0d1015"
+      },
+      "widgetBackgroundColor": {
+        "light": "#ffffff",
+        "dark": "#151a21"
+      },
+      "widgetBorderColor": {
+        "light": "#e3ded2",
+        "dark": "#262d38"
+      },
+      "fontColor": {
+        "light": "#1c1b18",
+        "dark": "#e7eaee"
+      },
+      "selectionColor": {
+        "light": "#2356a0",
+        "dark": "#5aa9ff"
+      },
+      "visualizationColors": [
+        "#2356a0",
+        "#d9822b",
+        "#3e8e88",
+        "#7a6fb0",
+        "#9a7b4f",
+        "#b8527a",
+        "#5f7f2a",
+        "#b9b3a5",
+        "#a8261d",
+        "#2f6b4b"
+      ],
+      "widgetHeaderAlignment": "LEFT"
+    },
+    "genieSpace": {
+      "isEnabled": false,
+      "enablementMode": "ENABLEMENT_MODE_UNSPECIFIED"
+    },
+    "applyModeEnabled": false
+  }
+}

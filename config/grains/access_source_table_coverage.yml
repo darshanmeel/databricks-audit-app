@@ -1,0 +1,4 @@
+# config/grains/access_source_table_coverage.yml -- grain = the query's own key columns only; the
+# generator prepends window_days. One row per system table in the inventory (schema_name,
+# table_name uniquely identify it; catalog_name is always 'system').
+access_source_table_coverage: [schema_name, table_name]

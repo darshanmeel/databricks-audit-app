@@ -1,0 +1,50 @@
+-- cost_period_over_period over the dollars a tag filter keeps (app/core/tag_spend.py); same
+-- windows, thresholds and NOT_ASSESSED rules as the check itself.
+WITH tagged AS (__TAGGED__),
+snap AS (SELECT max(as_of_date) AS d, min(usage_date) AS snapshot_start FROM tags.cost_day),
+raw_agg AS (
+  SELECT t.workspace_id, t.billing_origin_product,
+         SUM(CASE WHEN t.usage_date >= a.d - __W__ THEN t.usd END) AS current_cost,
+         SUM(CASE WHEN t.usage_date <  a.d - __W__ THEN t.usd END) AS previous_cost,
+         SUM(CASE WHEN t.usage_date >= a.d - __W__ AND upper(t.sku_name) NOT LIKE '%FREE_USAGE%'
+                  THEN t.unpriced_quantity ELSE 0 END) AS current_unpriced_quantity,
+         SUM(CASE WHEN t.usage_date >= a.d - __W__ THEN t.quantity - t.unpriced_quantity ELSE 0 END) AS current_priced_quantity,
+         SUM(CASE WHEN t.usage_date <  a.d - __W__ AND upper(t.sku_name) NOT LIKE '%FREE_USAGE%'
+                  THEN t.unpriced_quantity ELSE 0 END) AS previous_unpriced_quantity,
+         SUM(CASE WHEN t.usage_date <  a.d - __W__ THEN t.quantity - t.unpriced_quantity ELSE 0 END) AS previous_priced_quantity
+  FROM tagged t, snap a
+  WHERE t.usage_date >= a.d - 2 * __W__ AND t.usage_date < a.d
+  GROUP BY t.workspace_id, t.billing_origin_product
+),
+agg AS (
+  SELECT *,
+         CASE WHEN current_cost IS NULL AND current_unpriced_quantity = 0 THEN 0 ELSE current_cost END AS eff_current_cost,
+         CASE WHEN previous_cost IS NULL AND previous_unpriced_quantity = 0 THEN 0 ELSE previous_cost END AS eff_previous_cost
+  FROM raw_agg
+)
+SELECT __W__ AS window_days, g.workspace_id, g.billing_origin_product,
+       ROUND(g.eff_current_cost, 2) AS est_current_usd_list,
+       ROUND(g.eff_previous_cost, 2) AS est_previous_usd_list,
+       ROUND(g.eff_current_cost - g.eff_previous_cost, 2) AS est_change_usd_list,
+       ROUND((g.eff_current_cost - g.eff_previous_cost) / NULLIF(g.eff_previous_cost, 0) * 100, 1) AS change_pct,
+       CASE
+         WHEN (g.current_unpriced_quantity + g.previous_unpriced_quantity) > 0 THEN 'unpriced'
+         WHEN (g.current_priced_quantity + g.previous_priced_quantity) = 0 THEN 'free'
+         ELSE 'priced'
+       END AS price_basis,
+       CASE
+         WHEN a.snapshot_start > a.d - 2 * __W__ THEN 'NOT_ASSESSED'
+         WHEN g.current_unpriced_quantity > 0 THEN 'NOT_ASSESSED'
+         WHEN g.previous_unpriced_quantity > 0 THEN 'NOT_ASSESSED'
+         WHEN COALESCE(g.eff_current_cost, 0) < __P__min_spend_usd__ THEN 'OK'
+         WHEN g.eff_previous_cost = 0 THEN 'CRITICAL'
+         WHEN (g.eff_current_cost - g.eff_previous_cost) / NULLIF(g.eff_previous_cost, 0) * 100 >= __P__crit_increase_pct__ THEN 'CRITICAL'
+         WHEN (g.eff_current_cost - g.eff_previous_cost) / NULLIF(g.eff_previous_cost, 0) * 100 >= __P__warn_increase_pct__ THEN 'WARN'
+         ELSE 'OK'
+       END AS status,
+       CASE
+         WHEN a.snapshot_start > a.d - 2 * __W__ THEN 'previous_window_not_covered'
+         WHEN g.current_unpriced_quantity > 0 THEN 'current_period_unpriced'
+         WHEN g.previous_unpriced_quantity > 0 THEN 'previous_period_unpriced'
+       END AS not_assessed_reason
+FROM agg g, snap a

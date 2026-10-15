@@ -1,0 +1,4 @@
+# config/grains/storage_small_files.yml. Grain = the query's own key columns ONLY; the
+# generator prepends window_days (DEC-24). One row per table_id at its latest snapshot_date inside
+# the window (QUALIFY ROW_NUMBER() OVER (PARTITION BY table_id ORDER BY snapshot_date DESC) = 1).
+storage_small_files: [table_id]

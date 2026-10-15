@@ -1,0 +1,8 @@
+# config/grains/lakeflow_job_compute_pressure.yml -- T-65 (DEC-65). Grain = the query's own key
+# columns ONLY; the generator prepends window_days (DEC-24). One row per job with at least one task
+# run starting in the window: the body GROUPs task runs BY (workspace_id, job_id) in run_roll and
+# LEFT JOINs every other per-job CTE on that pair (each of them one row per pair: GROUP BY or a
+# QUALIFY ROW_NUMBER() = 1), so the pair is unique by construction.
+lakeflow_job_compute_pressure:
+  - workspace_id
+  - job_id

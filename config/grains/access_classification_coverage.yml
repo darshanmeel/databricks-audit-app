@@ -1,0 +1,9 @@
+# config/grains/access_classification_coverage.yml -- P3-CLASSIFY. Grain = the query's own key
+# columns ONLY; the generator prepends window_days (DEC-24). One row per catalog: the SELECT's own
+# `joined` CTE is built FROM catalog_tables GROUP BY table_catalog (one row per catalog already),
+# LEFT JOINed to classified_by_catalog (also one row per catalog_name, GROUP BY catalog_name), so
+# catalog_name is unique by construction. Windowless (no :period_days param) -- window_days is
+# always 0, like the other current-state inventory ids in governance_inventories.yml.
+
+access_classification_coverage:
+  - catalog_name

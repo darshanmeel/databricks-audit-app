@@ -1,0 +1,79 @@
+-- generated from dbt/models/databricks_direct/performance/d_query_failed_statements_grouped.sql by tools/build_direct_sql.py; edit the query, never this file.
+-- generated from app/queries/app/performance/query_failed_statements_grouped.sql; fix the source query and regenerate, never edit this file.
+SELECT __WINDOW_DAYS__ AS window_days, q.*
+FROM (
+WITH stmts AS (
+  SELECT q.workspace_id, q.compute.warehouse_id AS warehouse_id, q.statement_id,
+         q.execution_status, q.error_message, q.query_source, q.start_time
+  FROM `system`.`query`.`history` q
+  WHERE q.start_time >= __AS_OF_DATE__ - INTERVAL __WINDOW_DAYS__ DAYS
+    AND q.start_time < __AS_OF_DATE__
+    AND q.execution_status IN ('FAILED', 'CANCELED')
+),
+classed AS (
+  SELECT s.*,
+         -- leading [ERROR_CLASS] token: pattern built via chr(92) (backslash), not a literal
+         -- '[[]...[]]' char-class - Java regex (Databricks) reads a literal '[' inside a class as
+         -- opening a nested class and throws "Unclosed character class".
+         CASE
+           WHEN s.error_message IS NULL OR s.error_message = '' THEN 'unclassified'
+           WHEN regexp_extract(s.error_message, concat('^', chr(92), '[([A-Za-z0-9_.]+)', chr(92), ']'), 1) = '' THEN 'unclassified'
+           ELSE regexp_extract(s.error_message, concat('^', chr(92), '[([A-Za-z0-9_.]+)', chr(92), ']'), 1)
+         END AS error_class,
+         CASE
+           WHEN s.query_source.sql_query_id IS NOT NULL              THEN 'saved query'
+           WHEN s.query_source.dashboard_id IS NOT NULL              THEN 'dashboard'
+           WHEN s.query_source.legacy_dashboard_id IS NOT NULL       THEN 'dashboard'
+           WHEN s.query_source.genie_space_id IS NOT NULL            THEN 'Genie space'
+           WHEN s.query_source.alert_id IS NOT NULL                  THEN 'alert'
+           WHEN s.query_source.job_info.job_id IS NOT NULL           THEN 'job'
+           WHEN s.query_source.notebook_id IS NOT NULL               THEN 'notebook'
+           WHEN s.query_source.pipeline_info.pipeline_id IS NOT NULL THEN 'pipeline'
+         END AS source_kind,
+         CASE
+           WHEN s.query_source.sql_query_id IS NOT NULL              THEN s.query_source.sql_query_id
+           WHEN s.query_source.dashboard_id IS NOT NULL              THEN s.query_source.dashboard_id
+           WHEN s.query_source.legacy_dashboard_id IS NOT NULL       THEN s.query_source.legacy_dashboard_id
+           WHEN s.query_source.genie_space_id IS NOT NULL            THEN s.query_source.genie_space_id
+           WHEN s.query_source.alert_id IS NOT NULL                  THEN s.query_source.alert_id
+           WHEN s.query_source.job_info.job_id IS NOT NULL           THEN s.query_source.job_info.job_id
+           WHEN s.query_source.notebook_id IS NOT NULL               THEN s.query_source.notebook_id
+           WHEN s.query_source.pipeline_info.pipeline_id IS NOT NULL THEN s.query_source.pipeline_info.pipeline_id
+         END AS source_id
+  FROM stmts s
+),
+sample AS (
+  -- one representative statement per group: its most recent
+  SELECT workspace_id, warehouse_id, execution_status, error_class, source_kind, source_id,
+         statement_id AS sample_statement_id,
+         regexp_replace(
+           regexp_replace(error_message, '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+[.][A-Za-z]{2,}', '<email>'),
+           concat(chr(39), '[^', chr(39), ']*', chr(39)), '?'
+         ) AS error_message_sample
+  FROM classed
+  QUALIFY ROW_NUMBER() OVER (PARTITION BY workspace_id, warehouse_id, execution_status, error_class,
+                                          source_kind, source_id
+                             ORDER BY start_time DESC, statement_id DESC) = 1
+)
+SELECT c.workspace_id, c.warehouse_id, c.execution_status, c.error_class, c.source_kind, c.source_id,
+       COUNT(*) AS statements,
+       MIN(c.start_time) AS first_seen,
+       MAX(c.start_time) AS last_seen,
+       sm.sample_statement_id,
+       sm.error_message_sample,
+       CASE
+         WHEN c.execution_status = 'CANCELED'  THEN 'OK'
+         WHEN COUNT(*) >= 50     THEN 'CRITICAL'
+         WHEN COUNT(*) >= 10     THEN 'WARN'
+         ELSE 'OK'
+       END AS status
+FROM classed c
+JOIN sample sm
+  ON  sm.workspace_id = c.workspace_id AND sm.warehouse_id IS NOT DISTINCT FROM c.warehouse_id
+  AND sm.execution_status = c.execution_status AND sm.error_class = c.error_class
+  AND sm.source_kind IS NOT DISTINCT FROM c.source_kind
+  AND sm.source_id   IS NOT DISTINCT FROM c.source_id
+GROUP BY c.workspace_id, c.warehouse_id, c.execution_status, c.error_class, c.source_kind, c.source_id,
+         sm.sample_statement_id, sm.error_message_sample
+ORDER BY CASE status WHEN 'CRITICAL' THEN 0 WHEN 'WARN' THEN 1 ELSE 2 END, statements DESC
+) q

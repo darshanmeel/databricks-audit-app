@@ -1,0 +1,302 @@
+{
+  "branch": "long-running-runs",
+  "commit": "f700dd5",
+  "counts": {
+    "by_domain": {
+      "compute": 11,
+      "cost": 23,
+      "governance_access": 21,
+      "jobs_pipelines": 22,
+      "performance": 13,
+      "serving_ai": 4,
+      "storage": 9
+    },
+    "queries": 103
+  },
+  "dirty": true,
+  "dirty_files": [
+    ".sqlfluff",
+    "CHANGELOG.md",
+    "COVERAGE.md",
+    "README.md",
+    "databricks_system_catalog_schema.txt",
+    "lineage/query_lineage.json",
+    "lineage/query_lineage.md",
+    "lineage/sources.yml",
+    "queries/compute/README.md",
+    "queries/compute/task_cluster_utilization.sql",
+    "queries/jobs_pipelines/lakeflow_long_running_runs.sql",
+    "queries/manifest.json",
+    "queries/performance/README.md",
+    "queries/performance/query_task_statement_breakdown.sql"
+  ],
+  "diverged": {
+    "compute/compute_idle_node_ratio.sql": [
+      "Fix compute checks found wrong in review"
+    ],
+    "compute/compute_warehouse_autoscale_churn.sql": [
+      "Fix compute checks found wrong in review"
+    ],
+    "compute/compute_warehouse_idle_gaps.sql": [
+      "Fix compute checks found wrong in review"
+    ],
+    "compute/sql_warehouse_events_activity.sql": [
+      "Fix compute checks found wrong in review"
+    ],
+    "cost/cost_by_job.sql": [
+      "Fix cost checks found wrong in review"
+    ],
+    "cost/cost_chargeback_by_tag.sql": [
+      "Fix cost checks found wrong in review"
+    ],
+    "cost/cost_default_storage_dsu.sql": [
+      "Fix cost checks found wrong in review"
+    ],
+    "cost/cost_restatement_trust_metric.sql": [
+      "Fix cost checks found wrong in review"
+    ],
+    "cost/cost_serving_mode_by_endpoint.sql": [
+      "Fix cost checks found wrong in review"
+    ],
+    "cost/cost_usage_policy_coverage.sql": [
+      "Fix cost checks found wrong in review"
+    ],
+    "cost/cost_vector_search_spend.sql": [
+      "Fix cost checks found wrong in review"
+    ],
+    "governance_access/access_admin_role_change_events.sql": [
+      "Fix governance checks found wrong in review"
+    ],
+    "governance_access/access_classified_unmasked.sql": [
+      "Fix governance checks found wrong in review"
+    ],
+    "governance_access/access_column_lineage_sensitive_reach.sql": [
+      "Fix governance checks found wrong in review"
+    ],
+    "governance_access/access_dead_table_candidates.sql": [
+      "Fix governance checks found wrong in review"
+    ],
+    "governance_access/access_delta_sharing_exposure.sql": [
+      "Fix governance checks found wrong in review"
+    ],
+    "governance_access/access_network_outbound_denials.sql": [
+      "Fix governance checks found wrong in review"
+    ],
+    "governance_access/access_pii_outside_tables.sql": [
+      "Fix governance checks found wrong in review"
+    ],
+    "governance_access/access_pii_propagation_untagged.sql": [
+      "Fix governance checks found wrong in review"
+    ],
+    "governance_access/access_runas_escalation.sql": [
+      "Fix governance checks found wrong in review"
+    ],
+    "governance_access/access_vector_search_traffic.sql": [
+      "Fix governance checks found wrong in review"
+    ],
+    "governance_access/access_volumes_inventory.sql": [
+      "Fix governance checks found wrong in review"
+    ],
+    "jobs_pipelines/lakeflow_job_tasks_no_timeout.sql": [
+      "Fix job and pipeline checks found wrong in review"
+    ],
+    "jobs_pipelines/lakeflow_jobs_no_timeout.sql": [
+      "Fix job and pipeline checks found wrong in review"
+    ],
+    "jobs_pipelines/lakeflow_jobs_on_all_purpose.sql": [
+      "Fix job and pipeline checks found wrong in review",
+      "Workspace tag history and the remaining review fixes"
+    ],
+    "jobs_pipelines/lakeflow_long_running_runs.sql": [
+      "Fix job and pipeline checks found wrong in review"
+    ],
+    "jobs_pipelines/lakeflow_phase_cold_start.sql": [
+      "Fix job and pipeline checks found wrong in review"
+    ],
+    "jobs_pipelines/lakeflow_pipeline_cost.sql": [
+      "Fix job and pipeline checks found wrong in review"
+    ],
+    "jobs_pipelines/lakeflow_pipeline_idle_tail_duration.sql": [
+      "Fix job and pipeline checks found wrong in review",
+      "Workspace tag history and the remaining review fixes",
+      "P5-REVIEW"
+    ],
+    "jobs_pipelines/lakeflow_retries_repairs.sql": [
+      "Workspace tag history and the remaining review fixes"
+    ],
+    "jobs_pipelines/lakeflow_succeeded_with_failed_tasks.sql": [
+      "Fix job and pipeline checks found wrong in review"
+    ],
+    "jobs_pipelines/lakeflow_workload_mix_hours.sql": [
+      "Fix job and pipeline checks found wrong in review"
+    ],
+    "manifest.json": [
+      "Fix query checks found wrong in review",
+      "Fix compute checks found wrong in review",
+      "Fix governance checks found wrong in review",
+      "Workspace tag history and the remaining review fixes"
+    ],
+    "performance/audit_self_cost.sql": [
+      "Fix query checks found wrong in review"
+    ],
+    "performance/query_cache_coldstart.sql": [
+      "Fix query checks found wrong in review"
+    ],
+    "performance/query_costly_statements.sql": [
+      "Fix query checks found wrong in review"
+    ],
+    "performance/query_costly_statements_grouped.sql": [
+      "Fix query checks found wrong in review"
+    ],
+    "performance/query_failed_queries_daily.sql": [
+      "Fix query checks found wrong in review"
+    ],
+    "performance/query_local_spillage.sql": [
+      "Fix query checks found wrong in review"
+    ],
+    "performance/query_per_query_estimate_lane.sql": [
+      "Fix query checks found wrong in review"
+    ],
+    "performance/query_provenance_by_source.sql": [
+      "Fix query checks found wrong in review"
+    ],
+    "performance/query_queuing_waits.sql": [
+      "Fix query checks found wrong in review"
+    ],
+    "performance/query_shuffle_write_amplification.sql": [
+      "Fix query checks found wrong in review"
+    ],
+    "performance/query_task_statement_breakdown.sql": [
+      "Fix query checks found wrong in review"
+    ],
+    "performance/query_workload_mix_hours.sql": [
+      "Fix query checks found wrong in review"
+    ],
+    "serving_ai/compute_serving_endpoint_cost_status.sql": [
+      "Fix storage and serving checks found wrong in review"
+    ],
+    "serving_ai/compute_serving_endpoint_usage.sql": [
+      "Fix storage and serving checks found wrong in review"
+    ],
+    "serving_ai/serving_endpoint_traffic_by_endpoint.sql": [
+      "Fix storage and serving checks found wrong in review"
+    ],
+    "storage/po_clustering_column_churn.sql": [
+      "Fix storage and serving checks found wrong in review"
+    ],
+    "storage/po_maintenance_cost_by_table.sql": [
+      "Fix storage and serving checks found wrong in review"
+    ]
+  },
+  "files": {
+    "LICENSE": "9a408792949a36d3d36a701d4307a330cf50f084c3bd2b50e7f0138d836d8c8a",
+    "compute/classic_clusters_config_current.sql": "7620d66f964b1feed20b5b4441dc11e867c28b51f452e9680204bdfe1f33ec92",
+    "compute/compute_idle_node_ratio.sql": "6ddbe667009157ee36dced869a977b013826bd90e6c4245eea00e51fdc9a8bd5",
+    "compute/compute_warehouse_autoscale_churn.sql": "5c9d930bf933bcea63b49f5d9dc82b9face5cd604269ad0007579d018e253224",
+    "compute/compute_warehouse_idle_gaps.sql": "814c067d0c00bae9b99e54d6d9cba19d36d85d88ed27aa382fb16c2f30c6eca3",
+    "compute/instance_events_idle_active.sql": "6a14c7aaeec845673816a9cd4b326d9dd1600daac312a12117ec64d8e5732e98",
+    "compute/instance_pools_idle_capacity.sql": "b1185d2778a1e6f938cac1fda28904d7f24bbaeecac5455ea43c3d7152db30c6",
+    "compute/node_timeline_utilization.sql": "34f125d60ae2e09165e9432623b746376a83502392775d49aead4074ff53199b",
+    "compute/node_types_reference.sql": "90420433e44f92dd12341f8b7ca7375f7a96a4d7576b75ffce133fa8ebcbca5a",
+    "compute/sql_warehouse_config_current.sql": "f350839bbba288b5eb6dc87efcf87787e5933ede9cfc24adac13ff7a319cd032",
+    "compute/sql_warehouse_events_activity.sql": "f7e5362ce8555ecb3803eec6b38ccf53db8ab5b81c594723daca10db77ba1ea3",
+    "compute/task_cluster_utilization.sql": "10127bd97ef7be24f00ee75c8167941e178ea7f0585ca10a86111fac0419aac1",
+    "cost/cost_account_prices_raw.sql": "be108acd5862ae2026c26bf46419a2218a07c099e4834ae21d1ff1fe4b2f9e30",
+    "cost/cost_actual_vs_list_by_sku.sql": "ac2eb7a1752d9922a4c3a9b78688bc73e078edff2bcbe472cb6742908745ba3b",
+    "cost/cost_by_billing_origin_product.sql": "71f80a14e0bdf2bce69f00b8d7d09cc020328853c2a7387458a0a9bfa40d43ef",
+    "cost/cost_by_compute_resource.sql": "12d3dbb41d32d22dac400a9fef9ebf10a51d6121b7e8b6d4b48259f1388271ff",
+    "cost/cost_by_job.sql": "739898ec7bc28c5c5cd5d2a1139897f0e49fb3d7d1bc4de290e19ca5349a8b40",
+    "cost/cost_by_notebook.sql": "3c3c718a18fa8eaf038e2ebc07c1768801d19a37e72b34bba383e76880bf7b10",
+    "cost/cost_by_serving_endpoint.sql": "6bd5472925e22d46762305471c614e5a231330898c9027d3c076db3e5d67d761",
+    "cost/cost_chargeback_by_identity.sql": "4e3ab0ac4d56edd230a0cfdb632b379365f1463ede6094b6af8924a57aa85a8c",
+    "cost/cost_chargeback_by_tag.sql": "8d20a488dc6a4382f862776b8968523e1f4a04195b128b02be87ab8b97e9484b",
+    "cost/cost_cloud_infra.sql": "48315567cab045e6eb0ea72f31bc341aac1c94c2784460ffe4cc112e61ed3e35",
+    "cost/cost_dbsql_allocation_gap.sql": "7127805c9a17343afa382fdd3fd280b38a01f16051654c310548655581d24ce8",
+    "cost/cost_default_storage_dsu.sql": "93f6839368ba7de06d57bc0b8328afb04fbedcae5763c6a8d28af2367d4f86fc",
+    "cost/cost_dollarized_by_sku_day.sql": "6dd5abd9cac63b3ab35ae19569521707b2f71a39ab9c334927c9b31804c2b259",
+    "cost/cost_genai_token_gpu.sql": "dae30cc626f1610ac3cfc9faef7c971d15b9021f0f88ca6df02e43d2c72016d4",
+    "cost/cost_networking_egress.sql": "4230b4cfab11ef9a523a7aa90baca9aa831b5986334c06c64bcfe28153ccd455",
+    "cost/cost_premium_serverless_photon.sql": "ccb04a63cc82cfb6c93a39e73c43642c82f97961cd3a3b3d8e1db46684ecf37d",
+    "cost/cost_restatement_trust_metric.sql": "cee0e38f56699e8569bff3df18106474f8720cea56e12a03ca84202263820d90",
+    "cost/cost_serving_mode_by_endpoint.sql": "77440ecab84c0ebea69d26d4f30300638e03372c2a15a66b61a527e82fb05ec9",
+    "cost/cost_totals_by_sku_day.sql": "8985bb4f598fd3b058d3dc69eb52c39b12693d194ff294c323e8ec5ffdbd4c11",
+    "cost/cost_usage_policy_coverage.sql": "bbf7cc85617b68bdee9247cf2227dd98c04745f74b65fb62b090ee5b7495a84c",
+    "cost/cost_vector_search_spend.sql": "93a1ec6bda7b0f3e4205b0b1b237d0804825504941b6b3b80e81afd68682ebf9",
+    "cost/cost_workspace_names.sql": "4941f956529e1b11c83af9f71ec36e287e5dceb975933e9b86a9e900217711f6",
+    "cost/pricing_list_prices_raw.sql": "8c2724118ff2f21554d6509a06a656afb6c0a197b6390f6e84a1e21ea186ba09",
+    "databricks_system_catalog_schema.txt": "5fe152475510f462b1c0621bc29d1b96041fa1001afdba2b592c9115613ef101",
+    "governance_access/access_admin_role_change_events.sql": "77d1b92c2a8a72ffd39339ef9f87d09bb41bc96626b43eaaf1c26910950d24e9",
+    "governance_access/access_classified_unmasked.sql": "0f99723e7c19fcab5604926cce6dad634d950b9277c0ad2e975b07e4cf715894",
+    "governance_access/access_column_lineage_sensitive_reach.sql": "71afb42e3350f5ab21738f2cf68f8460da3754f34fcd95a8e9fa08b559866563",
+    "governance_access/access_column_masks_inventory.sql": "22d51ceee98cf63d7f978e23e706043bc62da6be2cc2ca253c13c4a87b3da213",
+    "governance_access/access_data_classification_inventory.sql": "4117c0ec732f02e5d0af925f567eb2261447fe24c0dfe2c1a6a5b9ebbf31ff5f",
+    "governance_access/access_dead_table_candidates.sql": "83c891338a13c7638b08c260ea199c51c5223beacca8d00b65d1dfa7dd14d6fd",
+    "governance_access/access_delta_sharing_exposure.sql": "fff0f8839ea1a4627540e1d4fea0f44981a9500039af9cf93705d329581c8097",
+    "governance_access/access_grants_inventory.sql": "0f7c48db2352e3881b1a62f73fc4ff3a1a97eaa5918f40ba9a162676b9f4bc20",
+    "governance_access/access_grants_inventory_extended.sql": "329014a69c68beb94dc34f716f2398af1cfe64f216ebc202e6185338dcb96d39",
+    "governance_access/access_login_concentration.sql": "5038a02f4a7f279c4fb90c0060923545abf63c145ba43376ec1b86c925fab4cc",
+    "governance_access/access_network_inbound_denials.sql": "0548550b441e2fb79df0fb6d2d75ab1a7ce7a692c145d94a091eae8bba62d244",
+    "governance_access/access_network_outbound_denials.sql": "5f655c6a1ad1495a3b169d58c6079eabe3be8a1d5ba8da11a755545d58b7f661",
+    "governance_access/access_pii_outside_tables.sql": "ed0b62ebd805a845d008bfd29329edfde25ed3bb870d1d7e9fc009d4ef1d9e18",
+    "governance_access/access_pii_propagation_untagged.sql": "036f41696468b9395bbca87d2e5ded0170ba95793bb5110ff29a2a0c0ab483a0",
+    "governance_access/access_row_filters_inventory.sql": "eee6a7243522b335d50ed3d7017c8627800f155a65f439874f7ffdd9ce20bbdb",
+    "governance_access/access_runas_escalation.sql": "828489ff8fdd84526709de84a206848750bdd4c834a4d69d946d2418f5392085",
+    "governance_access/access_table_lineage_blast_radius.sql": "16aeacb9ab8ed38fa86806cb64d7d855b93b8d32b06823685b3f6dfd9bc64be4",
+    "governance_access/access_tags_inventory.sql": "23e143debf80b2ca59e9a1285c63e55a4c8b310a2895d4a6cd6a2015f4cb9e75",
+    "governance_access/access_vector_search_traffic.sql": "ca348d7a06044ce69d298e621125803828bb4721e39afc9b25d43fd02b0d9f09",
+    "governance_access/access_views_inventory.sql": "f3efcb469e2ba7af45b676ed2e014be55529f77e38dfa0beb2bf992393e1f63d",
+    "governance_access/access_volumes_inventory.sql": "0d30ad0b8f189510d4ee0eba7af613a35a347ed6fb327d997c2f44703ed2f914",
+    "jobs_pipelines/lakeflow_failed_jobs_wasted_dbus.sql": "840cc35a7ae5811f687673d6bdee7d975b76d8ff5d98ae19b33f1606a907acdb",
+    "jobs_pipelines/lakeflow_failed_runs.sql": "00f9aa126b75820ec892fe01c6ce228045f39a423d005578199b5f3bad2127ac",
+    "jobs_pipelines/lakeflow_health_rule_coverage.sql": "dc3b57bd740094842a35a3b3829b52de8820e92a250e94353147db21e8255f31",
+    "jobs_pipelines/lakeflow_job_ownership_orphans.sql": "65c2c1aeb9b930894174a0116a5a9004afbf35ab0415a4dbe9da7110fc04ca9f",
+    "jobs_pipelines/lakeflow_job_queue_time.sql": "22d129e23521ecd43494812a5cc774579db01a1a8aeee1d1ad5fbee92d5fbe3f",
+    "jobs_pipelines/lakeflow_job_tasks_no_timeout.sql": "8572442982779e94903ad27e4d672777fe5d5f2d5d0500d682ad541a1215476f",
+    "jobs_pipelines/lakeflow_jobs_no_timeout.sql": "4f5d376327982f56a8a63718d1bf789716ba460dae56744ca8c5e654b50df182",
+    "jobs_pipelines/lakeflow_jobs_on_all_purpose.sql": "132aa24e0d1ee068243f0d8f59f326b88a6e5005b93169be53afc95fa5bbd866",
+    "jobs_pipelines/lakeflow_long_running_runs.sql": "77f916390833699f3c57ce5ffcfd1f54c10887190b63e5bb8489d94a8944b7ba",
+    "jobs_pipelines/lakeflow_never_started_runs.sql": "fe3b7160e5f8a55a27a89ce4b3f3134c9e3d92d8dd5ed93fb7b7b96f0d4d12a0",
+    "jobs_pipelines/lakeflow_phase_cold_start.sql": "238ac9dd80562ff75b6ead01da2d1cc338e4837029d94b043bfb43037df94567",
+    "jobs_pipelines/lakeflow_pipeline_cost.sql": "d3c15e70043fd1da756f2ec33598fa89ebe5ef5e60cfc2b137484a47d3779f3c",
+    "jobs_pipelines/lakeflow_pipeline_idle_tail_duration.sql": "505bcb3b490558a506afa67015ce5de67d704f9d85f19b8e6ad089c605454154",
+    "jobs_pipelines/lakeflow_pipeline_update_failures_retries.sql": "bd5fd5c8968888f1b9926386d5d8e31193a6c92543011449a2d6f71881d6a277",
+    "jobs_pipelines/lakeflow_pipelines_inventory_tier.sql": "85d08a5376241d8ff052ef818f2fbdb3ca1d33281e28b414d2e997c509b0b172",
+    "jobs_pipelines/lakeflow_retries_repairs.sql": "3296847f577e1ae13c7c9bec15f7868f7de889e93e28d3c037538e37f4d0b261",
+    "jobs_pipelines/lakeflow_stale_zombie_jobs.sql": "fad89fafde4e7b1cad452dc88b12eb866155fd38b07fbed3e4e88c839e0a4925",
+    "jobs_pipelines/lakeflow_succeeded_with_failed_tasks.sql": "daf4afe66dcb88f079ec8c77f1f90430ebfeb982b3a40402aa2872a252f7f9ea",
+    "jobs_pipelines/lakeflow_tasks_near_timeout.sql": "8bfea3b841e80efa48801acd367200c111afcae472defbc823e0856d6e2b250d",
+    "jobs_pipelines/lakeflow_termination_taxonomy.sql": "d36070bc4ab0c4af3cb145c61950f9625bfd9384d165e61f511dfdd55514138e",
+    "jobs_pipelines/lakeflow_termination_type_probe.sql": "6cbd97437ced81943896ae913680ae491c9de709ed86933a7e0ace3348686538",
+    "jobs_pipelines/lakeflow_workload_mix_hours.sql": "02a4ac3b1d1a5b506cdf240493af73dc6982dcec18f349d90af048f3cb7d3f89",
+    "lineage/sources.yml": "3803ae0f557ec4aebaf186c6cfe5b4c731b709a6b1245a114ec514af51f7cca0",
+    "manifest.json": "4dac15dbfbecc449a33a79061ef5d015884bab72be82db8546c556e76b8579cb",
+    "performance/audit_self_cost.sql": "698a3b1dbe84949b5512f6aaa78fbd365723d0731df6de82d4ca4e90502b1702",
+    "performance/query_cache_coldstart.sql": "241fe3960d6084b83e7c8f86719614af2f6ba092d051ea54ccfa2f42da737220",
+    "performance/query_costly_statements.sql": "fad089fadadb457ae3e1ecbb51ebddea6944f2d651abe30618734ddb3d3d579f",
+    "performance/query_costly_statements_grouped.sql": "5022a9495c5e3c142b336b8d9e5e9c8593fd8a9d8851c2a6ed37303ad445db79",
+    "performance/query_failed_queries_daily.sql": "7915998ada0a7e5f7ccb57016f47aaa8e046dd553d492af5a6d4dc9ef91bd811",
+    "performance/query_local_spillage.sql": "7f56661a432e29133a961c894b9477eec8b3813dda234c8b576ce87d9a104dd1",
+    "performance/query_per_query_estimate_lane.sql": "e25659fa95f31737e4bc437063ce3c30949ef6763aa9fc6ba3afbee8ba1c2e11",
+    "performance/query_provenance_by_source.sql": "131d8a21f6dc16393ff8a5eb6b64bc2e573c7ca3fd00234c37c95d16134c4167",
+    "performance/query_pruning_effectiveness.sql": "7913a78205c481631508eb8e474785b1333b6e8ca9507553e0e7604d80b5b07b",
+    "performance/query_queuing_waits.sql": "873addf43b2c411f37087e12a320896eaa845456ff0cdc86ab889a751287a6cb",
+    "performance/query_shuffle_write_amplification.sql": "35f1c5ad5dd0f3836a28e0cffd73f06a4ec36d9b666d6ecbe3544e3e247f05af",
+    "performance/query_task_statement_breakdown.sql": "5203b75f17f6bf270a76c7c0cabe40424b75a95a9eaac2e79b4f68057a0c2e45",
+    "performance/query_workload_mix_hours.sql": "ca264b6c240131d8bc1a08a606a9ec3ee4c8ca6fd3a7cf15944c337a2bf5ea39",
+    "serving_ai/compute_ai_gateway_usage.sql": "cabe92c2c0ee04f0d4e1a3ce6d1195c850e7720253644fa9f152448f8e02c722",
+    "serving_ai/compute_serving_endpoint_cost_status.sql": "0bae3b29adf42a44b3aed128207825454f6d13d16d7250c737550cc5050229e8",
+    "serving_ai/compute_serving_endpoint_usage.sql": "ae9d248e59c0c78005966ad5f1aa53cea35a235b9a7710d8e9ff221dfd711e91",
+    "serving_ai/serving_endpoint_traffic_by_endpoint.sql": "695665e890462c4d4c08ab2e2ff8bc7ec466195177a2ae2ca70e6fd89e2f4055",
+    "storage/iceberg_uniform_metadata.sql": "1c0f260a0007b4559c38c55b0791a0802e62231f44dc73f6d1a56e65912caf84",
+    "storage/po_clustering_activity.sql": "38fbad6ccd94039f7cc3e90103cb1fa324709fc421f626bd2e2c8c30c81df51d",
+    "storage/po_clustering_column_churn.sql": "f1ceb5214160bb9eb69e9cb9f700d01c8cbb3167e562abdfe29343d3af18a047",
+    "storage/po_data_skipping_backfill.sql": "fdabcc509d0eeb67a91a48db0d2e69abfbe51a3627fa78fa805e93a766bcfc35",
+    "storage/po_maintenance_cost_by_table.sql": "bd186c43d47964d2b733243cb8c8e9a1f189509ef8f27c8b86633ea00baf873a",
+    "storage/po_vacuum_reclaimed_bytes.sql": "c4e5d80fae05b753a9e5be16e0b51e9129859f8e5e2277bc575d637be5843b86",
+    "storage/storage_breakdown_analyze.sql": "6de26d09556e70e3b38c6935f6e8eef28290333907edafb15befc658b6906ef8",
+    "storage/table_inventory_type.sql": "6de53ab41fdcc0acb36719fbf7c104e6952a9c9d90f54715d74d77e18e173f6d",
+    "storage/table_props_time_travel_config.sql": "271506c7f3c4a4bed49eb99a2151b471acccf4892d8ea31bfec89d6eb8380759"
+  },
+  "synced_at": "2026-09-21T22:42:49Z",
+  "url": "https://github.com/darshanmeel/crosshire-audit-databricks-admin.git"
+}

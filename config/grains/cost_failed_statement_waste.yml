@@ -1,0 +1,6 @@
+# config/grains/cost_failed_statement_waste.yml -- P4-01-W2. Grain = the query's own key columns
+# ONLY; the generator prepends window_days (DEC-24). One row per SQL warehouse (workspace_id,
+# warehouse_id) with at least one FAILED statement in the window: `per_wh` groups
+# system.query.history statements by exactly (workspace_id, warehouse_id), and `judged` (the
+# final row set) is a 1:1 filter of `per_wh` on failed_statements > 0.
+cost_failed_statement_waste: [workspace_id, warehouse_id]

@@ -1,0 +1,2526 @@
+{
+  "datasets": [
+    {
+      "name": "c63c750d",
+      "displayName": "snapshot_banner",
+      "queryLines": [
+        "SELECT window_days AS days, concat('as of ', date_format(snapshot_at, 'MMM d, yyyy HH:mm'), ' UTC, list price') AS as_of FROM databricks_audit_dashboard.snapshot_info\n"
+      ]
+    },
+    {
+      "name": "8805feb6",
+      "displayName": "workspace_options",
+      "queryLines": [
+        "SELECT DISTINCT name AS workspace_name FROM databricks_audit_dashboard.dim_workspace WHERE name IS NOT NULL ORDER BY 1\n"
+      ]
+    },
+    {
+      "name": "77bb2df8",
+      "displayName": "usage:kpi:Genie spend",
+      "queryLines": [
+        "WITH g AS (SELECT period, SUM(usd_list) AS usd FROM (SELECT t.*, COALESCE(d_workspace.n, CAST(t.`workspace_id` AS STRING)) AS nm_workspace, COALESCE(concat(d_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING)) AS n_workspace, COALESCE(d_workspace.n, CAST(t.`workspace_id` AS STRING)) AS ws_name FROM databricks_audit_dashboard.genie_usage t LEFT JOIN (SELECT CAST(workspace_id AS STRING) AS workspace_id, max(name) AS n FROM databricks_audit_dashboard.dim_workspace GROUP BY CAST(workspace_id AS STRING)) d_workspace ON d_workspace.workspace_id = CAST(t.`workspace_id` AS STRING)) WHERE (array_contains(:workspace, COALESCE(ws_name, '')) OR array_contains(:workspace, 'all')) GROUP BY 1)\n",
+        "SELECT ROUND(COALESCE((SELECT usd FROM g WHERE period = 'current'), 0) * (1.0 - 0.0), 0) AS value,\n",
+        "       concat('Before $', CAST(ROUND(COALESCE((SELECT usd FROM g WHERE period = 'previous'), 0) * (1.0 - 0.0), 0) AS STRING)) AS target\n"
+      ],
+      "parameters": [
+        {
+          "displayName": "Workspace",
+          "keyword": "workspace",
+          "dataType": "STRING",
+          "complexType": "MULTI",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "all"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "19b743ff",
+      "displayName": "usage:kpi:DBUs",
+      "queryLines": [
+        "WITH g AS (\n",
+        "  SELECT period, SUM(dbus) AS dbus, SUM(CASE WHEN is_free THEN dbus ELSE 0 END) AS free_dbus\n",
+        "  FROM (SELECT t.*, COALESCE(d_workspace.n, CAST(t.`workspace_id` AS STRING)) AS nm_workspace, COALESCE(concat(d_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING)) AS n_workspace, COALESCE(d_workspace.n, CAST(t.`workspace_id` AS STRING)) AS ws_name FROM databricks_audit_dashboard.genie_usage t LEFT JOIN (SELECT CAST(workspace_id AS STRING) AS workspace_id, max(name) AS n FROM databricks_audit_dashboard.dim_workspace GROUP BY CAST(workspace_id AS STRING)) d_workspace ON d_workspace.workspace_id = CAST(t.`workspace_id` AS STRING)) WHERE (array_contains(:workspace, COALESCE(ws_name, '')) OR array_contains(:workspace, 'all')) GROUP BY 1\n",
+        ")\n",
+        "SELECT ROUND(COALESCE((SELECT dbus FROM g WHERE period = 'current'), 0), 0) AS value,\n",
+        "       concat('Free tier: ', CAST(ROUND(COALESCE((SELECT free_dbus FROM g WHERE period = 'current'), 0), 0) AS STRING), ' DBU') AS target\n"
+      ],
+      "parameters": [
+        {
+          "displayName": "Workspace",
+          "keyword": "workspace",
+          "dataType": "STRING",
+          "complexType": "MULTI",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "all"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "fc5a2df0",
+      "displayName": "usage:kpi:Built into apps or agents",
+      "queryLines": [
+        "WITH u AS (\n",
+        "  SELECT period, CASE WHEN identity_type = 'service_principal' OR (channel IS NOT NULL AND channel <> '' AND upper(channel) <> 'UI')\n",
+        "            THEN 'Built into apps or agents'\n",
+        "            WHEN upper(COALESCE(channel, '')) = 'UI' AND identity_type = 'user' THEN 'People in the browser'\n",
+        "            ELSE 'Not recorded' END AS use_kind, usd_list\n",
+        "  FROM (SELECT t.*, COALESCE(d_workspace.n, CAST(t.`workspace_id` AS STRING)) AS nm_workspace, COALESCE(concat(d_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING)) AS n_workspace, COALESCE(d_workspace.n, CAST(t.`workspace_id` AS STRING)) AS ws_name FROM databricks_audit_dashboard.genie_usage t LEFT JOIN (SELECT CAST(workspace_id AS STRING) AS workspace_id, max(name) AS n FROM databricks_audit_dashboard.dim_workspace GROUP BY CAST(workspace_id AS STRING)) d_workspace ON d_workspace.workspace_id = CAST(t.`workspace_id` AS STRING)) WHERE (array_contains(:workspace, COALESCE(ws_name, '')) OR array_contains(:workspace, 'all'))\n",
+        "),\n",
+        "s AS (SELECT period, use_kind, SUM(usd_list) AS usd FROM u GROUP BY 1, 2)\n",
+        "SELECT ROUND(COALESCE((SELECT usd FROM s WHERE period = 'current' AND use_kind = 'Built into apps or agents'), 0) * (1.0 - 0.0), 0) AS value,\n",
+        "       concat('Browser $', CAST(ROUND(COALESCE((SELECT usd FROM s WHERE period = 'current' AND use_kind = 'People in the browser'), 0) * (1.0 - 0.0), 0) AS STRING)) AS target\n"
+      ],
+      "parameters": [
+        {
+          "displayName": "Workspace",
+          "keyword": "workspace",
+          "dataType": "STRING",
+          "complexType": "MULTI",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "all"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "19396988",
+      "displayName": "usage:kpi:People using Genie",
+      "queryLines": [
+        "WITH g AS (SELECT * FROM (SELECT t.*, COALESCE(d_workspace.n, CAST(t.`workspace_id` AS STRING)) AS nm_workspace, COALESCE(concat(d_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING)) AS n_workspace, COALESCE(d_workspace.n, CAST(t.`workspace_id` AS STRING)) AS ws_name FROM databricks_audit_dashboard.genie_usage t LEFT JOIN (SELECT CAST(workspace_id AS STRING) AS workspace_id, max(name) AS n FROM databricks_audit_dashboard.dim_workspace GROUP BY CAST(workspace_id AS STRING)) d_workspace ON d_workspace.workspace_id = CAST(t.`workspace_id` AS STRING)) WHERE (array_contains(:workspace, COALESCE(ws_name, '')) OR array_contains(:workspace, 'all')) AND period = 'current')\n",
+        "SELECT (SELECT COUNT(DISTINCT CASE WHEN identity_type = 'user' AND dbus <> 0 THEN run_as END) FROM g) AS value,\n",
+        "       concat('Workspaces: ', CAST((SELECT COUNT(DISTINCT workspace_id) FROM g) AS STRING),\n",
+        "              '; agents: ', CAST((SELECT COUNT(DISTINCT agent_id) FROM g) AS STRING)) AS target\n"
+      ],
+      "parameters": [
+        {
+          "displayName": "Workspace",
+          "keyword": "workspace",
+          "dataType": "STRING",
+          "complexType": "MULTI",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "all"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "e0f0f1d0",
+      "displayName": "usage:Spend by kind of use",
+      "queryLines": [
+        "WITH g AS (\n",
+        "  SELECT CASE surface WHEN 'GENIE_CODE' THEN 'Genie Code' WHEN 'GENIE_AGENTS' THEN 'Genie agents'\n",
+        "            WHEN 'GENIE_ONE' THEN 'Genie One' ELSE 'Not recorded' END AS kind, period, SUM(dbus) AS dbus, SUM(usd_list) AS usd\n",
+        "  FROM (SELECT t.*, COALESCE(d_workspace.n, CAST(t.`workspace_id` AS STRING)) AS nm_workspace, COALESCE(concat(d_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING)) AS n_workspace, COALESCE(d_workspace.n, CAST(t.`workspace_id` AS STRING)) AS ws_name FROM databricks_audit_dashboard.genie_usage t LEFT JOIN (SELECT CAST(workspace_id AS STRING) AS workspace_id, max(name) AS n FROM databricks_audit_dashboard.dim_workspace GROUP BY CAST(workspace_id AS STRING)) d_workspace ON d_workspace.workspace_id = CAST(t.`workspace_id` AS STRING)) WHERE (array_contains(:workspace, COALESCE(ws_name, '')) OR array_contains(:workspace, 'all')) GROUP BY 1, 2\n",
+        ")\n",
+        "SELECT c.kind, ROUND(c.dbus, 0) AS dbus, ROUND(c.usd * (1.0 - 0.0), 0) AS usd,\n",
+        "       ROUND(100.0 * (c.usd - COALESCE(p.usd, 0)) / NULLIF(p.usd, 0), 1) AS chg_pct\n",
+        "FROM (SELECT * FROM g WHERE period = 'current') c\n",
+        "LEFT JOIN (SELECT * FROM g WHERE period = 'previous') p ON p.kind = c.kind\n",
+        "ORDER BY c.usd DESC\n"
+      ],
+      "parameters": [
+        {
+          "displayName": "Workspace",
+          "keyword": "workspace",
+          "dataType": "STRING",
+          "complexType": "MULTI",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "all"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "96ca7162",
+      "displayName": "usage:Built in or in the browser",
+      "queryLines": [
+        "WITH g AS (\n",
+        "  SELECT CASE WHEN identity_type = 'service_principal' OR (channel IS NOT NULL AND channel <> '' AND upper(channel) <> 'UI')\n",
+        "            THEN 'Built into apps or agents'\n",
+        "            WHEN upper(COALESCE(channel, '')) = 'UI' AND identity_type = 'user' THEN 'People in the browser'\n",
+        "            ELSE 'Not recorded' END AS kind, period, SUM(dbus) AS dbus, SUM(usd_list) AS usd\n",
+        "  FROM (SELECT t.*, COALESCE(d_workspace.n, CAST(t.`workspace_id` AS STRING)) AS nm_workspace, COALESCE(concat(d_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING)) AS n_workspace, COALESCE(d_workspace.n, CAST(t.`workspace_id` AS STRING)) AS ws_name FROM databricks_audit_dashboard.genie_usage t LEFT JOIN (SELECT CAST(workspace_id AS STRING) AS workspace_id, max(name) AS n FROM databricks_audit_dashboard.dim_workspace GROUP BY CAST(workspace_id AS STRING)) d_workspace ON d_workspace.workspace_id = CAST(t.`workspace_id` AS STRING)) WHERE (array_contains(:workspace, COALESCE(ws_name, '')) OR array_contains(:workspace, 'all')) GROUP BY 1, 2\n",
+        ")\n",
+        "SELECT c.kind, ROUND(c.dbus, 0) AS dbus, ROUND(c.usd * (1.0 - 0.0), 0) AS usd,\n",
+        "       ROUND(100.0 * (c.usd - COALESCE(p.usd, 0)) / NULLIF(p.usd, 0), 1) AS chg_pct\n",
+        "FROM (SELECT * FROM g WHERE period = 'current') c\n",
+        "LEFT JOIN (SELECT * FROM g WHERE period = 'previous') p ON p.kind = c.kind\n",
+        "ORDER BY c.usd DESC\n"
+      ],
+      "parameters": [
+        {
+          "displayName": "Workspace",
+          "keyword": "workspace",
+          "dataType": "STRING",
+          "complexType": "MULTI",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "all"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "baa2e18c",
+      "displayName": "usage:Who uses Genie, where and how",
+      "queryLines": [
+        "SELECT CASE WHEN identity_type = 'service_principal' THEN concat('service principal (', run_as, ')') ELSE COALESCE(run_as, 'Not recorded') END AS who,\n",
+        "       nm_workspace AS workspace,\n",
+        "       CASE surface WHEN 'GENIE_CODE' THEN 'Genie Code' WHEN 'GENIE_AGENTS' THEN 'Genie agents'\n",
+        "            WHEN 'GENIE_ONE' THEN 'Genie One' ELSE 'Not recorded' END AS kind,\n",
+        "       CASE WHEN channel IS NULL OR channel = '' THEN 'Not recorded' WHEN upper(channel) = 'UI' THEN 'UI' ELSE concat('Non-UI . ', channel) END AS channel,\n",
+        "       ROUND(SUM(dbus), 0) AS dbus,\n",
+        "       ROUND(SUM(usd_list) * (1.0 - 0.0), 0) AS usd\n",
+        "FROM (SELECT t.*, COALESCE(d_workspace.n, CAST(t.`workspace_id` AS STRING)) AS nm_workspace, COALESCE(concat(d_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING)) AS n_workspace, COALESCE(d_workspace.n, CAST(t.`workspace_id` AS STRING)) AS ws_name FROM databricks_audit_dashboard.genie_usage t LEFT JOIN (SELECT CAST(workspace_id AS STRING) AS workspace_id, max(name) AS n FROM databricks_audit_dashboard.dim_workspace GROUP BY CAST(workspace_id AS STRING)) d_workspace ON d_workspace.workspace_id = CAST(t.`workspace_id` AS STRING))\n",
+        "WHERE (array_contains(:workspace, COALESCE(ws_name, '')) OR array_contains(:workspace, 'all')) AND period = 'current'\n",
+        "GROUP BY 1, 2, 3, 4\n",
+        "HAVING SUM(dbus) <> 0 OR SUM(usd_list) <> 0\n",
+        "ORDER BY usd DESC\n",
+        "LIMIT 200\n"
+      ],
+      "parameters": [
+        {
+          "displayName": "Workspace",
+          "keyword": "workspace",
+          "dataType": "STRING",
+          "complexType": "MULTI",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "all"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "497c7f09",
+      "displayName": "usage:Genie spend by workspace",
+      "queryLines": [
+        "SELECT nm_workspace AS workspace, ROUND(SUM(usd_list) * (1.0 - 0.0), 0) AS usd\n",
+        "FROM (SELECT t.*, COALESCE(d_workspace.n, CAST(t.`workspace_id` AS STRING)) AS nm_workspace, COALESCE(concat(d_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING)) AS n_workspace, COALESCE(d_workspace.n, CAST(t.`workspace_id` AS STRING)) AS ws_name FROM databricks_audit_dashboard.genie_usage t LEFT JOIN (SELECT CAST(workspace_id AS STRING) AS workspace_id, max(name) AS n FROM databricks_audit_dashboard.dim_workspace GROUP BY CAST(workspace_id AS STRING)) d_workspace ON d_workspace.workspace_id = CAST(t.`workspace_id` AS STRING))\n",
+        "WHERE (array_contains(:workspace, COALESCE(ws_name, '')) OR array_contains(:workspace, 'all')) AND period = 'current'\n",
+        "GROUP BY 1 ORDER BY 2 DESC LIMIT 8\n"
+      ],
+      "parameters": [
+        {
+          "displayName": "Workspace",
+          "keyword": "workspace",
+          "dataType": "STRING",
+          "complexType": "MULTI",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "all"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "d58983df",
+      "displayName": "usage:Top Genie agents by spend",
+      "queryLines": [
+        "SELECT concat(nm_workspace, ' . ', agent_id) AS agent, ROUND(SUM(usd_list) * (1.0 - 0.0), 0) AS usd\n",
+        "FROM (SELECT t.*, COALESCE(d_workspace.n, CAST(t.`workspace_id` AS STRING)) AS nm_workspace, COALESCE(concat(d_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING)) AS n_workspace, COALESCE(d_workspace.n, CAST(t.`workspace_id` AS STRING)) AS ws_name FROM databricks_audit_dashboard.genie_usage t LEFT JOIN (SELECT CAST(workspace_id AS STRING) AS workspace_id, max(name) AS n FROM databricks_audit_dashboard.dim_workspace GROUP BY CAST(workspace_id AS STRING)) d_workspace ON d_workspace.workspace_id = CAST(t.`workspace_id` AS STRING))\n",
+        "WHERE (array_contains(:workspace, COALESCE(ws_name, '')) OR array_contains(:workspace, 'all')) AND period = 'current' AND agent_id IS NOT NULL\n",
+        "GROUP BY 1 ORDER BY 2 DESC LIMIT 8\n"
+      ],
+      "parameters": [
+        {
+          "displayName": "Workspace",
+          "keyword": "workspace",
+          "dataType": "STRING",
+          "complexType": "MULTI",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "all"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "d5535405",
+      "displayName": "usage:Genie spend per day",
+      "queryLines": [
+        "SELECT usage_date AS day, ROUND(SUM(usd_list) * (1.0 - 0.0), 0) AS usd\n",
+        "FROM (SELECT t.*, COALESCE(d_workspace.n, CAST(t.`workspace_id` AS STRING)) AS nm_workspace, COALESCE(concat(d_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING)) AS n_workspace, COALESCE(d_workspace.n, CAST(t.`workspace_id` AS STRING)) AS ws_name FROM databricks_audit_dashboard.genie_usage t LEFT JOIN (SELECT CAST(workspace_id AS STRING) AS workspace_id, max(name) AS n FROM databricks_audit_dashboard.dim_workspace GROUP BY CAST(workspace_id AS STRING)) d_workspace ON d_workspace.workspace_id = CAST(t.`workspace_id` AS STRING))\n",
+        "WHERE (array_contains(:workspace, COALESCE(ws_name, '')) OR array_contains(:workspace, 'all')) AND period = 'current'\n",
+        "GROUP BY 1 ORDER BY 1\n"
+      ],
+      "parameters": [
+        {
+          "displayName": "Workspace",
+          "keyword": "workspace",
+          "dataType": "STRING",
+          "complexType": "MULTI",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "all"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "d608cfba",
+      "displayName": "usage:status",
+      "queryLines": [
+        "SELECT c.title AS check_title,\n",
+        "       c.page AS page,\n",
+        "       CASE WHEN l.query_id IS NULL THEN 'Not run'\n",
+        "            WHEN NOT l.ok THEN 'Not assessed'\n",
+        "            WHEN l.critical > 0 THEN 'Critical'\n",
+        "            WHEN l.warn > 0 THEN 'Warn'\n",
+        "            WHEN l.has_status THEN 'OK'\n",
+        "            WHEN l.row_count = 0 THEN 'No rows'\n",
+        "            ELSE 'Listed' END AS verdict,\n",
+        "       l.row_count AS row_count,\n",
+        "       l.critical AS critical_rows,\n",
+        "       l.warn AS warn_rows,\n",
+        "       l.error AS error\n",
+        "FROM (VALUES\n",
+        "       (0, 'genie_usage', 'Genie usage by user', 'Genie')) AS c(ord, query_id, title, page)\n",
+        "LEFT JOIN databricks_audit_dashboard.snapshot_log l ON l.query_id = c.query_id\n",
+        "ORDER BY CASE WHEN l.critical > 0 THEN 0 WHEN l.warn > 0 THEN 1 WHEN NOT l.ok THEN 2 ELSE 3 END, c.ord\n"
+      ]
+    },
+    {
+      "name": "76914c3c",
+      "displayName": "check:genie_usage",
+      "queryLines": [
+        "SELECT\n",
+        "  COALESCE(concat(n_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING)) AS `workspace_shown`,\n",
+        "  CAST(t.`usage_date` AS STRING) AS `usage_date`,\n",
+        "  t.`period` AS `period`,\n",
+        "  t.`surface` AS `surface`,\n",
+        "  t.`channel` AS `channel`,\n",
+        "  t.`agent_id` AS `agent_id`,\n",
+        "  t.`identity_type` AS `identity_type`,\n",
+        "  t.`run_as` AS `run_as`,\n",
+        "  CAST(t.`is_free` AS STRING) AS `is_free`,\n",
+        "  t.`dbus` AS `dbus`,\n",
+        "  t.`usd_list` AS `usd_list`,\n",
+        "  t.`unpriced_dbus` AS `unpriced_dbus`,\n",
+        "  t.`price_basis` AS `price_basis`,\n",
+        "  CAST(t.`previous_period_covered` AS STRING) AS `previous_period_covered`\n",
+        "FROM databricks_audit_dashboard.genie_usage t\n",
+        "LEFT JOIN (SELECT CAST(workspace_id AS STRING) AS workspace_id, max(name) AS n FROM databricks_audit_dashboard.dim_workspace GROUP BY CAST(workspace_id AS STRING)) n_workspace\n",
+        "  ON n_workspace.workspace_id = CAST(t.`workspace_id` AS STRING)\n",
+        "WHERE (array_contains(:workspace, COALESCE(n_workspace.n, '')) OR array_contains(:workspace, 'all'))\n",
+        "ORDER BY `usage_date` DESC NULLS LAST, `usd_list` DESC NULLS LAST\n",
+        "LIMIT 5000\n"
+      ],
+      "parameters": [
+        {
+          "displayName": "Workspace",
+          "keyword": "workspace",
+          "dataType": "STRING",
+          "complexType": "MULTI",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "all"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "pages": [
+    {
+      "name": "db3d8d52",
+      "displayName": "Genie",
+      "pageType": "PAGE_TYPE_CANVAS",
+      "layoutVersion": "GRID_V1",
+      "layout": [
+        {
+          "widget": {
+            "name": "799c3a29",
+            "multilineTextboxSpec": {
+              "lines": [
+                "# **Genie**\n",
+                "Lakehouse Health 09 - Genie \u00b7 Genie billing \u00b7 list price (effective)\n"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 9,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "85d64b29",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "c63c750d",
+                  "fields": [
+                    {
+                      "name": "as_of",
+                      "expression": "`as_of`"
+                    },
+                    {
+                      "name": "max(days)",
+                      "expression": "MAX(`days`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "max(days)",
+                  "displayName": "Days covered",
+                  "style": {
+                    "bold": true,
+                    "fontSize": 32,
+                    "color": "#1c1b18"
+                  }
+                },
+                "target": {
+                  "fieldName": "as_of",
+                  "displayName": "as_of",
+                  "style": {
+                    "fontSize": 14,
+                    "italic": true,
+                    "color": {
+                      "themeColorType": "fontColor"
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "title": "Days covered",
+                "showTitle": true,
+                "description": "Days in the snapshot. New numbers: run the notebook again.",
+                "showDescription": true
+              }
+            }
+          },
+          "position": {
+            "x": 9,
+            "y": 0,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "ea2c634c",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "77bb2df8",
+                  "fields": [
+                    {
+                      "name": "target",
+                      "expression": "`target`"
+                    },
+                    {
+                      "name": "sum(value)",
+                      "expression": "SUM(`value`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(value)",
+                  "displayName": "Genie spend",
+                  "style": {
+                    "bold": true,
+                    "fontSize": 32,
+                    "color": "#1c1b18"
+                  },
+                  "format": {
+                    "type": "number-currency",
+                    "currencyCode": "USD",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 0
+                    }
+                  }
+                },
+                "target": {
+                  "fieldName": "target",
+                  "displayName": "target",
+                  "style": {
+                    "fontSize": 14,
+                    "italic": true,
+                    "color": {
+                      "themeColorType": "fontColor"
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "title": "Genie spend",
+                "showTitle": true,
+                "description": "List $ for Genie usage this period, after your discount; target is the same figure for the period before.",
+                "showDescription": true
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 3,
+            "width": 3,
+            "height": 4
+          }
+        },
+        {
+          "widget": {
+            "name": "78aad5ea",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "19b743ff",
+                  "fields": [
+                    {
+                      "name": "target",
+                      "expression": "`target`"
+                    },
+                    {
+                      "name": "max(value)",
+                      "expression": "MAX(`value`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "max(value)",
+                  "displayName": "DBUs",
+                  "style": {
+                    "bold": true,
+                    "fontSize": 32,
+                    "color": "#1c1b18"
+                  }
+                },
+                "target": {
+                  "fieldName": "target",
+                  "displayName": "target",
+                  "style": {
+                    "fontSize": 14,
+                    "italic": true,
+                    "color": {
+                      "themeColorType": "fontColor"
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "title": "DBUs",
+                "showTitle": true,
+                "description": "Genie DBUs this period; target is the part of that covered by the free tier.",
+                "showDescription": true
+              }
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 3,
+            "width": 3,
+            "height": 4
+          }
+        },
+        {
+          "widget": {
+            "name": "73fded96",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "fc5a2df0",
+                  "fields": [
+                    {
+                      "name": "target",
+                      "expression": "`target`"
+                    },
+                    {
+                      "name": "sum(value)",
+                      "expression": "SUM(`value`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(value)",
+                  "displayName": "Built into apps or agents",
+                  "style": {
+                    "bold": true,
+                    "fontSize": 32,
+                    "color": "#1c1b18"
+                  },
+                  "format": {
+                    "type": "number-currency",
+                    "currencyCode": "USD",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 0
+                    }
+                  }
+                },
+                "target": {
+                  "fieldName": "target",
+                  "displayName": "target",
+                  "style": {
+                    "fontSize": 14,
+                    "italic": true,
+                    "color": {
+                      "themeColorType": "fontColor"
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "title": "Built into apps or agents",
+                "showTitle": true,
+                "description": "Genie $ run by a service principal or a non-UI channel this period; target is the browser-UI $.",
+                "showDescription": true
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 3,
+            "width": 3,
+            "height": 4
+          }
+        },
+        {
+          "widget": {
+            "name": "c9842e58",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "19396988",
+                  "fields": [
+                    {
+                      "name": "target",
+                      "expression": "`target`"
+                    },
+                    {
+                      "name": "sum(value)",
+                      "expression": "SUM(`value`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(value)",
+                  "displayName": "People using Genie",
+                  "style": {
+                    "bold": true,
+                    "fontSize": 32,
+                    "color": "#1c1b18"
+                  }
+                },
+                "target": {
+                  "fieldName": "target",
+                  "displayName": "target",
+                  "style": {
+                    "fontSize": 14,
+                    "italic": true,
+                    "color": {
+                      "themeColorType": "fontColor"
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "title": "People using Genie",
+                "showTitle": true,
+                "description": "Distinct users with nonzero Genie DBUs this period; target counts the workspaces and agents involved.",
+                "showDescription": true
+              }
+            }
+          },
+          "position": {
+            "x": 9,
+            "y": 3,
+            "width": 3,
+            "height": 4
+          }
+        },
+        {
+          "widget": {
+            "name": "ea162843",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "e0f0f1d0",
+                  "fields": [
+                    {
+                      "name": "kind",
+                      "expression": "`kind`"
+                    },
+                    {
+                      "name": "dbus",
+                      "expression": "`dbus`"
+                    },
+                    {
+                      "name": "usd",
+                      "expression": "`usd`"
+                    },
+                    {
+                      "name": "chg_pct",
+                      "expression": "`chg_pct`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 1,
+              "widgetType": "table",
+              "allowHTMLByDefault": false,
+              "condensed": false,
+              "withRowNumber": false,
+              "itemsPerPage": 20,
+              "paginationSize": "default",
+              "invisibleColumns": [],
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "kind",
+                    "title": "Kind",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 0,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "dbus",
+                    "title": "DBUs",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 1,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "0,0.[0]",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "allowSearch": false
+                  },
+                  {
+                    "fieldName": "usd",
+                    "title": "$",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 2,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "$0,0",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "allowSearch": false
+                  },
+                  {
+                    "fieldName": "chg_pct",
+                    "title": "Change %",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 3,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "0.[0]",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "allowSearch": false
+                  }
+                ]
+              },
+              "frame": {
+                "title": "Spend by kind of use",
+                "showTitle": true,
+                "showDescription": true,
+                "description": "Genie $ and DBUs by surface (Genie Code, agents, One) this period, vs the period before."
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 7,
+            "width": 12,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "ed23e8be",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "96ca7162",
+                  "fields": [
+                    {
+                      "name": "kind",
+                      "expression": "`kind`"
+                    },
+                    {
+                      "name": "dbus",
+                      "expression": "`dbus`"
+                    },
+                    {
+                      "name": "usd",
+                      "expression": "`usd`"
+                    },
+                    {
+                      "name": "chg_pct",
+                      "expression": "`chg_pct`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 1,
+              "widgetType": "table",
+              "allowHTMLByDefault": false,
+              "condensed": false,
+              "withRowNumber": false,
+              "itemsPerPage": 20,
+              "paginationSize": "default",
+              "invisibleColumns": [],
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "kind",
+                    "title": "Kind",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 0,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "dbus",
+                    "title": "DBUs",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 1,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "0,0.[0]",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "allowSearch": false
+                  },
+                  {
+                    "fieldName": "usd",
+                    "title": "$",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 2,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "$0,0",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "allowSearch": false
+                  },
+                  {
+                    "fieldName": "chg_pct",
+                    "title": "Change %",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 3,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "0.[0]",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "allowSearch": false
+                  }
+                ]
+              },
+              "frame": {
+                "title": "Built in or in the browser",
+                "showTitle": true,
+                "showDescription": true,
+                "description": "Genie $ and DBUs split built-in (service principal or non-UI channel) vs browser-UI, vs the period before."
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 13,
+            "width": 12,
+            "height": 5
+          }
+        },
+        {
+          "widget": {
+            "name": "a7470cd8",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "baa2e18c",
+                  "fields": [
+                    {
+                      "name": "who",
+                      "expression": "`who`"
+                    },
+                    {
+                      "name": "workspace",
+                      "expression": "`workspace`"
+                    },
+                    {
+                      "name": "kind",
+                      "expression": "`kind`"
+                    },
+                    {
+                      "name": "channel",
+                      "expression": "`channel`"
+                    },
+                    {
+                      "name": "dbus",
+                      "expression": "`dbus`"
+                    },
+                    {
+                      "name": "usd",
+                      "expression": "`usd`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 1,
+              "widgetType": "table",
+              "allowHTMLByDefault": false,
+              "condensed": false,
+              "withRowNumber": false,
+              "itemsPerPage": 20,
+              "paginationSize": "default",
+              "invisibleColumns": [],
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "who",
+                    "title": "User or service principal",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 0,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "workspace",
+                    "title": "Workspace",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 1,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "kind",
+                    "title": "Kind",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 2,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "channel",
+                    "title": "Channel",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 3,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "dbus",
+                    "title": "DBUs",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 4,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "0,0.[0]",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "allowSearch": false
+                  },
+                  {
+                    "fieldName": "usd",
+                    "title": "$",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 5,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "$0,0",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "allowSearch": false
+                  }
+                ]
+              },
+              "frame": {
+                "title": "Who uses Genie, where and how",
+                "showTitle": true,
+                "showDescription": true,
+                "description": "Every user or service principal with nonzero Genie $ or DBUs this period, by workspace, surface and channel."
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 18,
+            "width": 12,
+            "height": 10
+          }
+        },
+        {
+          "widget": {
+            "name": "4eadb269",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "497c7f09",
+                  "fields": [
+                    {
+                      "name": "workspace",
+                      "expression": "`workspace`"
+                    },
+                    {
+                      "name": "sum(usd)",
+                      "expression": "SUM(`usd`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "sum(usd)",
+                  "displayName": "Spend",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "format": {
+                    "type": "number-currency",
+                    "currencyCode": "USD",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 0
+                    }
+                  }
+                },
+                "y": {
+                  "fieldName": "workspace",
+                  "displayName": "Workspace",
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "x-reversed"
+                    }
+                  }
+                },
+                "label": {
+                  "show": false
+                }
+              },
+              "frame": {
+                "title": "Genie spend by workspace",
+                "showTitle": true,
+                "description": "Genie list $ this period by workspace, after your discount.",
+                "showDescription": true
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 28,
+            "width": 6,
+            "height": 7
+          }
+        },
+        {
+          "widget": {
+            "name": "def6f570",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "d58983df",
+                  "fields": [
+                    {
+                      "name": "agent",
+                      "expression": "`agent`"
+                    },
+                    {
+                      "name": "sum(usd)",
+                      "expression": "SUM(`usd`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "sum(usd)",
+                  "displayName": "Spend",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "format": {
+                    "type": "number-currency",
+                    "currencyCode": "USD",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 0
+                    }
+                  }
+                },
+                "y": {
+                  "fieldName": "agent",
+                  "displayName": "Agent",
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "x-reversed"
+                    }
+                  }
+                },
+                "label": {
+                  "show": false
+                }
+              },
+              "frame": {
+                "title": "Top Genie agents by spend",
+                "showTitle": true,
+                "description": "Genie list $ this period by agent, labeled with its workspace so the same agent id in two workspaces stays two bars.",
+                "showDescription": true
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 28,
+            "width": 6,
+            "height": 7
+          }
+        },
+        {
+          "widget": {
+            "name": "168a8441",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "d5535405",
+                  "fields": [
+                    {
+                      "name": "day",
+                      "expression": "`day`"
+                    },
+                    {
+                      "name": "sum(usd)",
+                      "expression": "SUM(`usd`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "day",
+                  "displayName": "Day",
+                  "scale": {
+                    "type": "temporal"
+                  }
+                },
+                "y": {
+                  "fieldName": "sum(usd)",
+                  "displayName": "Spend",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "format": {
+                    "type": "number-currency",
+                    "currencyCode": "USD",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 0
+                    }
+                  }
+                },
+                "label": {
+                  "show": false
+                }
+              },
+              "frame": {
+                "title": "Genie spend per day",
+                "showTitle": true,
+                "description": "Genie list $ by day this period, after your discount.",
+                "showDescription": true
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 35,
+            "width": 12,
+            "height": 7
+          }
+        },
+        {
+          "widget": {
+            "name": "c813122c",
+            "multilineTextboxSpec": {
+              "lines": [
+                "## Every check on this page\n",
+                "Each check's own rows, worst first.\n"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 42,
+            "width": 12,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "ae50a83d",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "d608cfba",
+                  "fields": [
+                    {
+                      "name": "check_title",
+                      "expression": "`check_title`"
+                    },
+                    {
+                      "name": "verdict",
+                      "expression": "`verdict`"
+                    },
+                    {
+                      "name": "critical_rows",
+                      "expression": "`critical_rows`"
+                    },
+                    {
+                      "name": "warn_rows",
+                      "expression": "`warn_rows`"
+                    },
+                    {
+                      "name": "row_count",
+                      "expression": "`row_count`"
+                    },
+                    {
+                      "name": "error",
+                      "expression": "`error`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 1,
+              "widgetType": "table",
+              "allowHTMLByDefault": false,
+              "condensed": false,
+              "withRowNumber": false,
+              "itemsPerPage": 20,
+              "paginationSize": "default",
+              "invisibleColumns": [],
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "check_title",
+                    "title": "Check",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 0,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "verdict",
+                    "title": "Verdict",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 1,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "critical_rows",
+                    "title": "Critical rows",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 2,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "0,0",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "allowSearch": false
+                  },
+                  {
+                    "fieldName": "warn_rows",
+                    "title": "Warn rows",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 3,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "0,0",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "allowSearch": false
+                  },
+                  {
+                    "fieldName": "row_count",
+                    "title": "Rows",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 4,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "0,0",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "allowSearch": false
+                  },
+                  {
+                    "fieldName": "error",
+                    "title": "Why not assessed",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 5,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  }
+                ]
+              },
+              "frame": {
+                "title": "Checks on this page",
+                "showTitle": true,
+                "showDescription": true,
+                "description": "Each check's verdict from the snapshot: Critical or Warn when any row is flagged, Not assessed when the check could not run (the reason is in the last column)."
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 44,
+            "width": 12,
+            "height": 4
+          }
+        },
+        {
+          "widget": {
+            "name": "e71d5258",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "76914c3c",
+                  "fields": [
+                    {
+                      "name": "workspace_shown",
+                      "expression": "`workspace_shown`"
+                    },
+                    {
+                      "name": "usage_date",
+                      "expression": "`usage_date`"
+                    },
+                    {
+                      "name": "period",
+                      "expression": "`period`"
+                    },
+                    {
+                      "name": "surface",
+                      "expression": "`surface`"
+                    },
+                    {
+                      "name": "channel",
+                      "expression": "`channel`"
+                    },
+                    {
+                      "name": "agent_id",
+                      "expression": "`agent_id`"
+                    },
+                    {
+                      "name": "identity_type",
+                      "expression": "`identity_type`"
+                    },
+                    {
+                      "name": "run_as",
+                      "expression": "`run_as`"
+                    },
+                    {
+                      "name": "is_free",
+                      "expression": "`is_free`"
+                    },
+                    {
+                      "name": "dbus",
+                      "expression": "`dbus`"
+                    },
+                    {
+                      "name": "usd_list",
+                      "expression": "`usd_list`"
+                    },
+                    {
+                      "name": "unpriced_dbus",
+                      "expression": "`unpriced_dbus`"
+                    },
+                    {
+                      "name": "price_basis",
+                      "expression": "`price_basis`"
+                    },
+                    {
+                      "name": "previous_period_covered",
+                      "expression": "`previous_period_covered`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 1,
+              "widgetType": "table",
+              "allowHTMLByDefault": false,
+              "condensed": false,
+              "withRowNumber": false,
+              "itemsPerPage": 20,
+              "paginationSize": "default",
+              "invisibleColumns": [],
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "workspace_shown",
+                    "title": "Workspace",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 0,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": true,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "usage_date",
+                    "title": "Day",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 1,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "period",
+                    "title": "Period",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 2,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "surface",
+                    "title": "Surface",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 3,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "channel",
+                    "title": "Channel",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 4,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "agent_id",
+                    "title": "Agent",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 5,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "identity_type",
+                    "title": "Identity Type",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 6,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "run_as",
+                    "title": "Runs as",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 7,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "is_free",
+                    "title": "Is Free",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 8,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "dbus",
+                    "title": "DBUs",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 9,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "0,0.[00]",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "allowSearch": false
+                  },
+                  {
+                    "fieldName": "usd_list",
+                    "title": "Spend in this row ($)",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 10,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "$0,0.[00]",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "allowSearch": false
+                  },
+                  {
+                    "fieldName": "unpriced_dbus",
+                    "title": "Unpriced DBUs",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 11,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "0,0.[00]",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "allowSearch": false
+                  },
+                  {
+                    "fieldName": "price_basis",
+                    "title": "Price basis",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 12,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "previous_period_covered",
+                    "title": "Previous Period Covered",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 13,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  }
+                ]
+              },
+              "frame": {
+                "title": "Genie usage by user",
+                "showTitle": true,
+                "showDescription": true,
+                "description": "Genie DBUs and dollars by user, workspace, kind of use and channel, this period and the one before. Reference list, not judged."
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 48,
+            "width": 12,
+            "height": 8
+          }
+        }
+      ]
+    },
+    {
+      "name": "dd4be330",
+      "displayName": "Global Filters",
+      "pageType": "PAGE_TYPE_GLOBAL_FILTERS",
+      "layoutVersion": "GRID_V1",
+      "layout": [
+        {
+          "widget": {
+            "name": "5d277ea5",
+            "queries": [
+              {
+                "name": "q_26c44a84",
+                "query": {
+                  "datasetName": "8805feb6",
+                  "fields": [
+                    {
+                      "name": "workspace_name",
+                      "expression": "`workspace_name`"
+                    },
+                    {
+                      "name": "workspace_name_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_47277580",
+                "query": {
+                  "datasetName": "77bb2df8",
+                  "parameters": [
+                    {
+                      "name": "workspace",
+                      "keyword": "workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_ba9a6c05",
+                "query": {
+                  "datasetName": "19b743ff",
+                  "parameters": [
+                    {
+                      "name": "workspace",
+                      "keyword": "workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_5c34e98f",
+                "query": {
+                  "datasetName": "fc5a2df0",
+                  "parameters": [
+                    {
+                      "name": "workspace",
+                      "keyword": "workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_9e413756",
+                "query": {
+                  "datasetName": "19396988",
+                  "parameters": [
+                    {
+                      "name": "workspace",
+                      "keyword": "workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_d0c5bb07",
+                "query": {
+                  "datasetName": "e0f0f1d0",
+                  "parameters": [
+                    {
+                      "name": "workspace",
+                      "keyword": "workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_316039b0",
+                "query": {
+                  "datasetName": "96ca7162",
+                  "parameters": [
+                    {
+                      "name": "workspace",
+                      "keyword": "workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_ccef16a2",
+                "query": {
+                  "datasetName": "baa2e18c",
+                  "parameters": [
+                    {
+                      "name": "workspace",
+                      "keyword": "workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_185f6102",
+                "query": {
+                  "datasetName": "497c7f09",
+                  "parameters": [
+                    {
+                      "name": "workspace",
+                      "keyword": "workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_083215d0",
+                "query": {
+                  "datasetName": "d58983df",
+                  "parameters": [
+                    {
+                      "name": "workspace",
+                      "keyword": "workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_45d03b46",
+                "query": {
+                  "datasetName": "d5535405",
+                  "parameters": [
+                    {
+                      "name": "workspace",
+                      "keyword": "workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_239fff04",
+                "query": {
+                  "datasetName": "76914c3c",
+                  "parameters": [
+                    {
+                      "name": "workspace",
+                      "keyword": "workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-multi-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "workspace_name",
+                    "displayName": "Workspace",
+                    "queryName": "q_26c44a84"
+                  },
+                  {
+                    "parameterName": "workspace",
+                    "queryName": "q_47277580"
+                  },
+                  {
+                    "parameterName": "workspace",
+                    "queryName": "q_ba9a6c05"
+                  },
+                  {
+                    "parameterName": "workspace",
+                    "queryName": "q_5c34e98f"
+                  },
+                  {
+                    "parameterName": "workspace",
+                    "queryName": "q_9e413756"
+                  },
+                  {
+                    "parameterName": "workspace",
+                    "queryName": "q_d0c5bb07"
+                  },
+                  {
+                    "parameterName": "workspace",
+                    "queryName": "q_316039b0"
+                  },
+                  {
+                    "parameterName": "workspace",
+                    "queryName": "q_ccef16a2"
+                  },
+                  {
+                    "parameterName": "workspace",
+                    "queryName": "q_185f6102"
+                  },
+                  {
+                    "parameterName": "workspace",
+                    "queryName": "q_083215d0"
+                  },
+                  {
+                    "parameterName": "workspace",
+                    "queryName": "q_45d03b46"
+                  },
+                  {
+                    "parameterName": "workspace",
+                    "queryName": "q_239fff04"
+                  }
+                ]
+              },
+              "frame": {
+                "title": "Workspace",
+                "showTitle": true
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 3,
+            "height": 2
+          }
+        }
+      ]
+    }
+  ],
+  "uiSettings": {
+    "theme": {
+      "canvasBackgroundColor": {
+        "light": "#f4f1ea",
+        "dark": "#0d1015"
+      },
+      "widgetBackgroundColor": {
+        "light": "#ffffff",
+        "dark": "#151a21"
+      },
+      "widgetBorderColor": {
+        "light": "#e3ded2",
+        "dark": "#262d38"
+      },
+      "fontColor": {
+        "light": "#1c1b18",
+        "dark": "#e7eaee"
+      },
+      "selectionColor": {
+        "light": "#2356a0",
+        "dark": "#5aa9ff"
+      },
+      "visualizationColors": [
+        "#2356a0",
+        "#d9822b",
+        "#3e8e88",
+        "#7a6fb0",
+        "#9a7b4f",
+        "#b8527a",
+        "#5f7f2a",
+        "#b9b3a5",
+        "#a8261d",
+        "#2f6b4b"
+      ],
+      "widgetHeaderAlignment": "LEFT"
+    },
+    "genieSpace": {
+      "isEnabled": false,
+      "enablementMode": "ENABLEMENT_MODE_UNSPECIFIED"
+    },
+    "applyModeEnabled": false
+  }
+}

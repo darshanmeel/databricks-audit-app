@@ -1,0 +1,25 @@
+{{ config(enabled=(target.type == "databricks"), materialized=("table" if var("direct_mode", "run") == "table" else "direct_check"), schema="audit_direct", tags=['inventory', 'domain:governance_access', 'tier:standard', 'databricks_direct']) }}
+-- generated from app/queries/vendored/governance_access/access_grants_inventory_extended.sql; fix the source query and regenerate, never edit this file.
+SELECT 0 AS window_days, q.*
+FROM (
+SELECT 'SCHEMA' AS object_scope, PRIVILEGE_TYPE,
+       {{ mask_user('GRANTEE') }} AS GRANTEE,
+       COUNT(*) AS grant_count
+FROM {{ source('system_information_schema', 'schema_privileges') }} GROUP BY 1,2,GRANTEE
+UNION ALL
+SELECT 'CONNECTION', PRIVILEGE_TYPE,
+       {{ mask_user('GRANTEE') }},
+       COUNT(*)
+FROM {{ source('system_information_schema', 'connection_privileges') }} GROUP BY 1,2,GRANTEE
+UNION ALL
+SELECT 'CREDENTIAL', PRIVILEGE_TYPE,
+       {{ mask_user('GRANTEE') }},
+       COUNT(*)
+FROM {{ source('system_information_schema', 'credential_privileges') }} GROUP BY 1,2,GRANTEE
+UNION ALL
+SELECT 'EXTERNAL_LOCATION', PRIVILEGE_TYPE,
+       {{ mask_user('GRANTEE') }},
+       COUNT(*)
+FROM {{ source('system_information_schema', 'external_location_privileges') }} GROUP BY 1,2,GRANTEE
+ORDER BY object_scope, PRIVILEGE_TYPE, GRANTEE
+) q

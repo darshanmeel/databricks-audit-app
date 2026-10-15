@@ -1,0 +1,375 @@
+/* Guide page styles. Every colour is a token from styles.css, so the
+   Guide follows light and dark unchanged. */
+
+.guide2-topic-docs{ display: flex; flex-direction: column; gap: 10px; padding-top: 10px; border-top: 1px solid var(--border-subtle); }
+
+.guide2-flow{ display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+.guide2-flow-step{
+  font-size: 12.5px; font-weight: 600; padding: 4px 10px; border-radius: 999px;
+  background: var(--surface-2); border: 1px solid var(--border-subtle);
+}
+.guide2-flow-arrow{ color: var(--text-faint); }
+
+/* Status meanings */
+.guide2-status-grid{ display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 32px; }
+.guide2-status-row{ display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 12px; align-items: center; padding: 7px 0; border-bottom: 1px solid var(--border-subtle); font-size: var(--fs-sm); }
+.guide2-status-row .badge{ justify-self: start; }
+/* Inside a card (Guide home) the legend is one column, so each meaning has room to read. */
+.gd-card .guide2-status-grid{ grid-template-columns: minmax(0, 1fr); gap: 0; }
+
+.guide2-glossary-row{ padding: 9px 0; border-bottom: 1px solid var(--border-subtle); }
+.guide2-glossary-row:last-child{ border-bottom: none; }
+.guide2-glossary-k{ font-size: var(--fs-sm); font-weight: 600; margin-bottom: 2px; }
+
+.guide2-cloud{ position: relative; }
+.guide2-cloud-btn{
+  display: flex; align-items: center; gap: 6px; height: 34px; padding: 0 12px;
+  border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface);
+  font-size: 13px; color: var(--text); cursor: pointer;
+}
+.guide2-cloud-pop{
+  position: absolute; right: 0; top: calc(100% + 6px); z-index: 5; width: 220px;
+  display: flex; flex-direction: column; gap: 8px; padding: 12px; background: var(--surface);
+  border: 1px solid var(--border); border-radius: var(--radius-md); box-shadow: var(--shadow-card);
+}
+.guide2-cloud-note{ font-size: 12px; }
+
+.guide2-doclink{ display: flex; flex-direction: column; gap: 2px; font-size: var(--fs-sm); }
+.guide2-doc-what{ font-size: 12.5px; }
+
+.guide2-footnote{ font-size: 12px; color: var(--text-faint); text-align: center; }
+
+/* ─────────── Check page ─────────── */
+
+.guide2-sec{ display: flex; flex-direction: column; gap: 12px; }
+.guide2-sec h2{ margin: 0; font-family: var(--f-serif); font-size: 22px; font-weight: 600; }
+
+.guide2-sec > p{ margin: 0; font-size: var(--fs-md); line-height: var(--lh-md); color: var(--text-2); }
+
+.guide2-reviewer{ padding: 0; overflow: hidden; }
+.guide2-reviewer-head{ padding: 12px 16px; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; border-bottom: 1px solid var(--border-subtle); background: var(--surface-2); }
+.guide2-reviewer-row{ border-bottom: 1px solid var(--border-subtle); }
+.guide2-reviewer-row:last-child{ border-bottom: none; }
+.guide2-reviewer-toggle{
+  width: 100%; display: grid; grid-template-columns: 16px 200px minmax(0, 1fr); gap: 12px; align-items: center;
+  min-height: 44px; padding: 0 16px; border: 0; background: transparent; text-align: left; font: inherit;
+  font-size: var(--fs-sm); color: var(--text); cursor: pointer;
+}
+.guide2-reviewer-label{ font-weight: 600; }
+.guide2-reviewer-body{ padding: 0 16px 16px 44px; font-size: var(--fs-sm); line-height: var(--lh-sm); }
+.guide2-cols{ width: 100%; border-collapse: collapse; }
+.guide2-cols td{ padding: 4px 10px 4px 0; font-size: 12.5px; vertical-align: top; }
+.guide2-cols td.mono{ overflow-wrap: anywhere; }
+.guide2-issue{ padding: 8px 0; border-top: 1px solid var(--border-subtle); font-size: 12.5px; line-height: 19px; }
+.guide2-issue:first-child{ border-top: none; padding-top: 0; }
+
+@media (max-width: 900px) {
+  .guide2-status-grid { grid-template-columns: 1fr; }
+}
+
+/* ─────────── Guide, design C (gd-*): home, tab pages, check pages, troubleshooting ─────────── */
+.gd-eyebrow{ font-size: 11.5px; letter-spacing: .09em; text-transform: uppercase; color: var(--text-3); font-weight: 500; }
+.gd-small{ font-size: 12.5px; line-height: 1.45; }
+.gd-nowrap{ white-space: nowrap; }
+.gd-code{
+  display: inline-block; font-family: var(--f-mono); font-size: 11.5px; line-height: 1.5; color: var(--text-2);
+  background: var(--surface-3); border-radius: 4px; padding: 0 6px; overflow-wrap: anywhere; text-decoration: none;
+}
+a.gd-code:hover{ color: var(--link); text-decoration: underline; }
+.gd-tables{ display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.gd-chip{
+  display: inline-flex; align-items: center; height: 24px; padding: 0 10px; border-radius: 999px; font-size: 12px;
+  border: 1px solid var(--border); background: var(--surface); color: var(--text-2); white-space: nowrap;
+}
+.gd-chip.ok{ background: var(--st-ok-tint); color: var(--st-ok-ink); border-color: transparent; }
+.gd-chip.warn{ background: var(--st-warn-tint); color: var(--st-warn-ink); border-color: transparent; }
+.gd-chips{ display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 12px 0 4px; }
+.gd-flag{ color: var(--st-crit-ink); font-weight: 500; }
+.gd-card{ background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-card); padding: 18px 20px; min-width: 0; }
+.gd-section{ display: flex; flex-direction: column; gap: 12px; margin-top: 8px; }
+.gd-section-head{ display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.gd-section-head h2{ margin: 0; font-family: var(--f-serif); font-size: 24px; font-weight: 500; }
+.gd-table-wrap{ background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow-x: auto; }
+.gd-table{ width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.gd-table th{
+  text-align: left; font-size: 12px; font-weight: 500; color: var(--text-3); background: var(--surface-2);
+  padding: 10px 14px; border-bottom: 1px solid var(--border); white-space: nowrap;
+}
+.gd-table td{ padding: 12px 14px; border-bottom: 1px solid var(--border-subtle); vertical-align: top; line-height: 1.45; overflow-wrap: anywhere; }
+.gd-table tbody tr:last-child td{ border-bottom: 0; }
+
+/* Home */
+.gd-home{ display: flex; flex-direction: column; gap: 26px; }
+.gd-home-top{ display: grid; grid-template-columns: minmax(0, 1fr) minmax(260px, 330px); gap: 28px; align-items: end; }
+.gd-home-intro{ display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.gd-eyebrow-row{ display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.gd-display{ margin: 0; font-family: var(--f-serif); font-weight: 500; font-size: 40px; line-height: 1.15; letter-spacing: -.01em; max-width: 780px; text-wrap: balance; }
+.gd-rules{ background: #1c1b18; color: #f4f1ea; border-radius: var(--radius-lg); padding: 20px 22px; }
+:root[data-theme="dark"] .gd-rules{ background: var(--surface-2); border: 1px solid var(--border-strong); }
+.gd-rules-h{ font-size: 11.5px; letter-spacing: .09em; text-transform: uppercase; color: #b9b3a5; margin-bottom: 12px; }
+.gd-rules ol{ list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.gd-rules li{ display: grid; grid-template-columns: 16px minmax(0, 1fr); gap: 10px; font-size: 13.5px; line-height: 1.45; }
+.gd-rules-n{ color: #f2b872; font-family: var(--f-mono); }
+.gd-legend-row{ display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; }
+.gd-legend-item{ display: inline-flex; align-items: center; gap: 6px; }
+.gd-legend-more{ margin-left: auto; font-size: 13.5px; font-weight: 500; color: var(--link); text-decoration: none; display: inline-flex; align-items: center; min-height: 44px; }
+.gd-legend-more:hover{ text-decoration: underline; }
+.gd-legend-note{ margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--border-subtle); }
+
+/* "What brought you here?" entry cards */
+.gd-entry-grid{ display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+.gd-entry{ display: flex; flex-direction: column; gap: 8px; min-height: 160px; text-decoration: none; color: var(--text); }
+.gd-entry:hover{ border-color: var(--border-strong); }
+.gd-entry-h{ font-family: var(--f-serif); font-size: 20px; line-height: 1.25; }
+.gd-entry-link{ margin-top: auto; font-size: 13.5px; font-weight: 500; color: var(--link); }
+
+/* Every tab, grouped Start/Explore/Reference */
+.gd-tabgroup{ display: flex; flex-direction: column; gap: 10px; }
+.gd-tabcard-grid{ display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; }
+.gd-tabcard{ display: flex; flex-direction: column; gap: 6px; padding: 14px 16px; min-height: 92px; text-decoration: none; color: var(--text); }
+.gd-tabcard:hover{ border-color: var(--border-strong); }
+.gd-tabcard-link{ margin-top: auto; font-size: 13px; font-weight: 500; color: var(--link); }
+.gd-tabcard:hover .gd-tabcard-link{ text-decoration: underline; }
+.gd-tabcard-top{ display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+/* 1-2 line explanation per screen (no-fluff rule) regardless of how long the tab's own lede is. */
+.gd-tabcard > .muted{ display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+/* Docs layout: Guide page, right rail -- the Guide's own menu lives in the app rail / mobile
+   sheet instead (GuideNav, App.tsx), never a second column here. */
+.gd-layout{ display: block; }
+.gd-layout.has-rail{ display: grid; grid-template-columns: minmax(0, 1fr) 260px; gap: 32px; align-items: start; }
+.gd-main{ min-width: 0; }
+.gd-rail{ position: sticky; top: calc(var(--topbar-h, 64px) + 16px); display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.gd-rail-card{ background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; font-size: 13px; }
+.gd-rail-h{ font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--text-3); font-weight: 500; }
+.gd-rail-link{ display: block; font-size: 13px; line-height: 1.35; color: var(--link); text-decoration: none; }
+.gd-rail-link:hover{ text-decoration: underline; }
+.gd-rail-reads{ display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+
+/* The Guide's one menu (GuideNav): a dark rail list on desktop (portaled into .c-rail), the same
+   markup inside the mobile Contents sheet. Tokens, not the old cream column's own colours. */
+/* Inside .c-rail (a fixed-height flex column, App.tsx) this is the one child that scrolls --
+   brand/lens/theme have no place here since the Guide owns the whole rail, so nothing else needs
+   to stay pinned above or below it. */
+.gd-nav{ display: flex; flex-direction: column; gap: 14px; flex: 1; min-height: 0; overflow-y: auto; color: var(--rail-text); font-size: 13.5px; padding-bottom: 12px; }
+.gd-nav-back{ font-weight: 600; color: var(--rail-strong); text-decoration: none; }
+.gd-nav-back:hover{ text-decoration: underline; }
+.gd-nav-search{
+  display: flex; align-items: center; gap: 8px; height: 38px; padding: 0 10px; border-radius: 8px;
+  border: 1px solid var(--rail-border); color: var(--rail-muted);
+}
+.gd-nav-search:focus-within{ outline: 2px solid var(--focus); outline-offset: 1px; }
+.gd-nav-search input{ flex: 1; min-width: 0; border: 0; outline: none; background: transparent; font: inherit; font-size: 13px; color: var(--rail-strong); }
+.gd-nav-kbd{ font-family: var(--f-mono); font-size: 10.5px; border: 1px solid var(--rail-border); border-radius: 4px; padding: 1px 5px; }
+.gd-nav-group{ display: flex; flex-direction: column; gap: 1px; }
+.gd-nav-h{ font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--rail-muted); font-weight: 500; padding: 6px 8px 4px; }
+.gd-nav-item{ display: block; min-height: 30px; padding: 5px 8px; border-radius: 6px; line-height: 1.4; color: var(--rail-text); text-decoration: none; }
+.gd-nav-item:hover{ background: var(--rail-active); color: var(--rail-strong); }
+/* Inside the phone Contents sheet a nav row is a touch target, not the compact desktop rail. */
+.gd-sheet .gd-nav-item{ min-height: 44px; display: flex; align-items: center; }
+.gd-nav-item.active{ color: var(--rail-strong); font-weight: 600; background: var(--rail-active); }
+.gd-nav-area-h{ font-weight: 600; color: var(--rail-strong); background: transparent; cursor: default; }
+.gd-nav-area-h:hover{ background: transparent; }
+.gd-nav-sub{ margin-left: 14px; padding-left: 10px; border-left: 1px solid var(--rail-border); border-radius: 0; font-size: 13px; }
+.gd-nav-subh{
+  display: block; width: 100%; margin-left: 24px; font: inherit; font-size: 11px; color: var(--rail-muted);
+  padding: 6px 0 2px; background: none; border: none; text-align: left; cursor: pointer;
+}
+.gd-nav-subh:hover{ color: var(--rail-strong); }
+.gd-nav-start{ display: flex; flex-direction: column; gap: 1px; }
+.gd-nav-start summary{ cursor: pointer; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--rail-muted); padding: 6px 8px 4px; list-style: none; }
+.gd-nav-start summary::-webkit-details-marker{ display: none; }
+.gd-nav-start[open] summary{ margin-bottom: 2px; }
+.gd-kv{ display: flex; justify-content: space-between; gap: 10px; }
+.gd-kv b{ font-weight: 500; }
+.gd-open-btn{
+  display: flex; justify-content: center; align-items: center; min-height: 44px; padding: 0 16px; border-radius: 8px; font-weight: 500;
+  border: 1px solid var(--border-strong); background: var(--surface); color: var(--text); text-decoration: none;
+}
+.gd-open-btn:hover{ background: var(--surface-2); }
+
+/* Page parts */
+.gd-crumbs{ display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 13px; color: var(--text-3); }
+.gd-crumbs a{ color: var(--link); text-decoration: none; }
+.gd-crumb-sep{ color: var(--text-faint); }
+.gd-title{ margin: 8px 0 0; font-family: var(--f-serif); font-weight: 500; font-size: 38px; line-height: 1.15; letter-spacing: -.01em; }
+.gd-lede{ margin: 10px 0 0; font-size: 16px; line-height: 1.55; color: var(--text-2); max-width: 760px; }
+.gd-h2{ margin: 34px 0 14px; font-family: var(--f-serif); font-weight: 500; font-size: 26px; line-height: 1.2; }
+.gd-h2.flush{ margin: 0; }
+/* "On this page" jumps land below the sticky filter bar. */
+.gd-h2, .gd-section-head{ scroll-margin-top: calc(var(--topbar-h, 64px) + 16px); }
+.gd-section-head .gd-h2{ margin-bottom: 0; }
+.gd-section-head + .gd-table-wrap{ margin-top: 14px; }
+.gd-prose{ font-size: 14px; line-height: 1.6; max-width: 760px; }
+.gd-bullets{ margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; font-size: 14px; line-height: 1.5; }
+.gd-qgrid{ display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.gd-q{ display: flex; flex-direction: column; gap: 8px; font-size: 14px; line-height: 1.45; }
+.gd-numlist{ list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.gd-numlist li{ display: grid; grid-template-columns: 24px minmax(0, 1fr); gap: 12px; font-size: 14px; line-height: 1.5; }
+.gd-num{
+  display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%;
+  background: var(--link); color: var(--surface); font-size: 11.5px; font-weight: 600; font-family: var(--f-mono);
+}
+.gd-strong-link{ font-weight: 600; color: var(--text); text-decoration: underline; text-decoration-color: var(--border-strong); text-underline-offset: 3px; }
+.gd-flow{ display: grid; grid-template-columns: minmax(0, 1.3fr) 16px minmax(0, 1fr) 16px minmax(0, 1fr) 16px minmax(0, 1fr); gap: 8px; align-items: stretch; margin-top: 12px; }
+.gd-flow-step{ display: flex; flex-direction: column; gap: 8px; font-size: 13px; line-height: 1.45; padding: 14px; }
+.gd-flow-arrow{ align-self: center; color: var(--text-faint); text-align: center; }
+
+/* Check page */
+.gd-article-actions{ display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+.gd-copy-btn{
+  display: inline-flex; align-items: center; min-height: 44px; padding: 0 16px; border-radius: 8px;
+  border: 1px solid var(--border); background: var(--surface); color: var(--text); font: inherit; font-size: 14px;
+  cursor: pointer; text-decoration: none;
+}
+.gd-copy-btn:hover{ background: var(--surface-2); }
+/* Phone/touch: nav rows in the rail are touch targets too (desktop stays compact). */
+@media (max-width: 900px), (pointer: coarse) {
+  .gd-nav-item, .gd-nav-subh, .gd-nav-start summary, .gd-nav-back{ min-height: 44px; display: flex; align-items: center; }
+  .gd-nav-subh{ width: calc(100% - 24px); }
+}
+/* Phone only -- section-jump chips under the title; desktop reads the "On this page" rail instead. */
+.gd-jumpchips{ display: none; }
+.gd-statrow{ display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-top: 18px; }
+.gd-statbox{ background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 12px 14px; display: flex; flex-direction: column; gap: 2px; }
+.gd-stat-v{ font-family: var(--f-serif); font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.gd-flagrows{ display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+.gd-flagrow{ display: flex; flex-direction: column; gap: 2px; font-size: 14px; line-height: 1.5; }
+.gd-prevnext{ display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 28px; padding-top: 16px; border-top: 1px solid var(--border-subtle); }
+.gd-pn{ display: flex; flex-direction: column; gap: 4px; padding: 14px 16px; border-radius: var(--radius-md); border: 1px solid var(--border); text-decoration: none; color: var(--text); }
+.gd-pn:hover{ border-color: var(--border-strong); }
+.gd-pn-next{ text-align: right; align-items: flex-end; }
+.gd-steps{ list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.gd-steps li{ display: grid; grid-template-columns: 30px minmax(0, 1fr); gap: 12px; font-size: 14px; line-height: 1.55; }
+.gd-step-n{ color: var(--text-3); font-size: 13px; padding-top: 1px; }
+.gd-example{ display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 16px; }
+.gd-example-cell{ display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.gd-example-v{ font-size: 17px; line-height: 1.3; overflow-wrap: anywhere; }
+.gd-example-v.tone-crit{ color: var(--st-crit-ink); }
+.gd-example-cell .badge{ align-self: flex-start; }
+.gd-todo{ display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; }
+.gd-todo-card{ display: flex; flex-direction: column; gap: 10px; font-size: 13.5px; line-height: 1.5; }
+.gd-todo-card .gd-chip{ align-self: flex-start; }
+.gd-off{ display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.gd-off-card{ display: flex; flex-direction: column; gap: 6px; font-size: 13.5px; line-height: 1.5; }
+.gd-off-card ul{ margin: 0; padding-left: 18px; }
+.gd-details{ margin-top: 28px; }
+.gd-details summary{ cursor: pointer; font-weight: 600; font-size: 14px; }
+.gd-details table{ margin-top: 10px; }
+.gd-article .guide2-sec{ margin-top: 28px; }
+
+/* Troubleshooting */
+.gd-path{ display: grid; grid-template-columns: 230px minmax(0, 1fr); gap: 18px; }
+.gd-path-start{ background: #1c1b18; color: #f4f1ea; border-radius: var(--radius-lg); padding: 22px; display: flex; flex-direction: column; justify-content: center; gap: 10px; }
+:root[data-theme="dark"] .gd-path-start{ background: var(--surface-2); border: 1px solid var(--border-strong); }
+.gd-path-start .gd-eyebrow{ color: #b9b3a5; }
+.gd-path-q{ font-family: var(--f-serif); font-size: 24px; line-height: 1.2; }
+.gd-path-branches{ display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.gd-path-branch{ display: grid; grid-template-columns: 180px minmax(0, 1fr); gap: 16px; }
+.gd-path-word{ display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
+.gd-path-causes{ display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; }
+.gd-path-cause{ background: var(--surface-2); border-radius: 8px; padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; font-size: 13px; line-height: 1.4; }
+.gd-path-steps{ margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; font-size: 13.5px; line-height: 1.45; }
+.gd-faq-grid{ display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; margin-top: 28px; }
+.gd-faq h3{ margin: 0 0 8px; font-family: var(--f-serif); font-size: 19px; font-weight: 500; }
+.gd-faq .muted{ font-size: 13.5px; line-height: 1.55; }
+.gd-grants{ display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: 24px; margin-top: 28px; }
+.gd-grants-grid{ display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 20px; }
+.gd-grants-grid > div{ display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+.gd-ref-name{ width: 42%; }
+
+@media (max-width: 1200px) {
+  .gd-layout.has-rail{ grid-template-columns: minmax(0, 1fr); }
+  .gd-layout.has-rail .gd-rail{ position: static; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+}
+@media (max-width: 1100px) {
+  .gd-home-top, .gd-grants{ grid-template-columns: minmax(0, 1fr); }
+  .gd-qgrid{ grid-template-columns: minmax(0, 1fr); }
+  .gd-flow{ grid-template-columns: minmax(0, 1fr); }
+  .gd-flow-arrow{ display: none; }
+  .gd-path, .gd-path-branch{ grid-template-columns: minmax(0, 1fr); }
+  .gd-off{ grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 900px) {
+  .gd-display{ font-size: 30px; }
+  .gd-title{ font-size: 30px; }
+  /* Content first: section-jump chips replace the "On this page" rail, which is now further
+     down the stacked page instead of a side column. */
+  .gd-jumpchips{ display: flex; gap: 8px; overflow-x: auto; margin-top: 14px; padding-bottom: 2px; -webkit-overflow-scrolling: touch; }
+  .gd-jumpchip{
+    flex: none; display: inline-flex; align-items: center; min-height: 44px; padding: 0 14px; border-radius: 999px;
+    border: 1px solid var(--border); color: var(--text-2); font-size: 13px; text-decoration: none; white-space: nowrap;
+  }
+  .gd-statrow{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .gd-prevnext{ grid-template-columns: minmax(0, 1fr); }
+  .gd-pn-next{ text-align: left; align-items: flex-start; }
+}
+
+/* Phone: the reviewer rows drop the fixed label column so ids wrap instead of clipping. */
+@media (max-width: 900px){
+  .guide2-reviewer-toggle{ grid-template-columns: 16px minmax(0, 1fr); }
+  .guide2-reviewer-toggle > :nth-child(3){ grid-column: 2; overflow-wrap: anywhere; }
+  .guide2-reviewer-body{ padding-left: 16px; }
+}
+
+/* Run it yourself: a check's SQL, copyable. */
+.gd-sql { margin: 6px 0 12px; }
+.gd-sql-bar { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin: 8px 0 6px; }
+.gd-sql-code {
+  max-height: 420px; overflow: auto; margin: 0; padding: 12px 14px;
+  background: var(--surface-2); border: 1px solid var(--border-subtle); border-radius: var(--radius-md);
+  font-family: var(--f-mono); font-size: var(--fs-xs); line-height: var(--lh-xs); white-space: pre;
+}
+.gd-sql-list { margin: 8px 0 16px; }
+
+/* ─────────── Mobile Guide header + Contents sheet ───────────
+   Hidden above 900px: the Guide's own menu is already the app rail there. */
+.gd-mbar{ display: none; }
+@media (max-width: 900px) {
+  .gd-mbar{
+    display: flex; align-items: center; gap: 8px; margin: -16px -16px 16px; padding: 10px 12px;
+    border-bottom: 1px solid var(--border); background: var(--bg); position: sticky; top: var(--topbar-h, 0); z-index: 5;
+  }
+  .gd-mbar-back{ display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; color: var(--text); flex: none; }
+  .gd-mbar-title{ font-weight: 600; font-size: 15px; }
+  .gd-mbar-contents{
+    margin-left: auto; display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 14px;
+    border-radius: 8px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font: inherit; font-size: 14px; font-weight: 500;
+  }
+  .gd-mbar-icon{ width: 44px; height: 44px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); display: flex; align-items: center; justify-content: center; color: var(--text); flex: none; }
+}
+.gd-sheet-wrap{ position: fixed; inset: 0; z-index: 60; display: flex; flex-direction: column; justify-content: flex-end; }
+.gd-sheet-backdrop{ position: absolute; inset: 0; background: rgba(0, 0, 0, .45); }
+.gd-sheet{
+  position: relative; max-height: 85vh; background: var(--rail); border-radius: 16px 16px 0 0;
+  padding: 10px 14px 20px; display: flex; flex-direction: column; gap: 10px; overflow: hidden;
+}
+.gd-sheet-grab{ width: 36px; height: 4px; border-radius: 2px; background: var(--rail-border); align-self: center; }
+.gd-sheet-head{ display: flex; align-items: center; font-weight: 600; font-size: 16px; color: var(--rail-strong); }
+.gd-sheet-head-right{ margin-left: auto; display: flex; align-items: center; gap: 4px; }
+.gd-sheet-close{ width: 44px; height: 44px; border: 0; background: transparent; color: var(--rail-strong); display: flex; align-items: center; justify-content: center; cursor: pointer; }
+.gd-sheet-body{ overflow-y: auto; padding-bottom: 10px; }
+.gd-sheet-body .gd-nav-back{ display: none; }
+
+/* ─────────── "How is this worked out?" drawer ───────────
+   Over the dashboard, not a new page: a right-side panel plus a click-outside backdrop. */
+.gdw-wrap{ position: fixed; inset: 0; z-index: 70; display: flex; justify-content: flex-end; }
+.gdw-backdrop{ position: absolute; inset: 0; background: rgba(0, 0, 0, .25); }
+.gdw-panel{
+  position: relative; width: min(440px, 100vw); height: 100%; overflow-y: auto; background: var(--surface);
+  border-left: 1px solid var(--border); box-shadow: -16px 0 32px rgba(0, 0, 0, .14);
+  padding: 22px 26px 28px; display: flex; flex-direction: column; gap: 16px;
+}
+.gdw-head{ display: flex; align-items: center; gap: 10px; }
+.gdw-close{ margin-left: auto; width: 44px; height: 44px; border: 0; border-radius: 8px; background: transparent; color: var(--text); display: flex; align-items: center; justify-content: center; cursor: pointer; }
+.gdw-close:hover{ background: var(--surface-2); }
+.gdw-title{ margin: 0; font-family: var(--f-serif); font-weight: 500; font-size: 26px; line-height: 1.2; }
+.gdw-summary{ margin: 0; font-size: 14.5px; line-height: 1.5; color: var(--text-2); }
+.gdw-list{ margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; font-size: 14px; line-height: 1.5; }
+.gdw-clamp{ display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+.gdw-why{ display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; border-radius: var(--radius-md); background: var(--surface-2); font-size: 14px; }
+.gdw-reads{ display: flex; flex-direction: column; gap: 6px; }
+.gdw-actions{ margin-top: auto; display: flex; flex-wrap: wrap; gap: 10px; }
+@media (max-width: 480px) {
+  .gdw-panel{ width: 100vw; }
+}

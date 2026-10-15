@@ -1,0 +1,43 @@
+{
+  "as_of": "2026-09-21T12:00:00",
+  "as_of_date": "2026-09-21",
+  "days": 90,
+  "billing_days": 365,
+  "workspace_ids": ["1111", "2222", "3333"],
+  "host_fingerprint": "scenario-t25-step10gh",
+  "connector_version": "scenario-fixture",
+  "tables": {
+    "system.billing.usage": {
+      "state": "not_assessed",
+      "rows": 0,
+      "files": 0,
+      "time_column": "usage_date",
+      "days_requested": 90,
+      "days_effective": 0,
+      "min_time": null,
+      "max_time": null,
+      "predicate": null,
+      "elapsed_s": 0.0,
+      "slices_failed": [],
+      "error_class": null,
+      "reason": "schema_not_enabled",
+      "message": "system.billing is not enabled for this account (scenario fixture, T-25 Step 10g)."
+    },
+    "system.access.audit": {
+      "state": "ok",
+      "rows": 42,
+      "files": 1,
+      "time_column": "event_date",
+      "days_requested": 90,
+      "days_effective": 3,
+      "min_time": "2026-09-18T00:00:00",
+      "max_time": "2026-09-21T12:00:00",
+      "predicate": "event_date >= DATE '2026-09-18'",
+      "elapsed_s": 1.2,
+      "slices_failed": [],
+      "error_class": null,
+      "reason": null,
+      "message": null
+    }
+  }
+}

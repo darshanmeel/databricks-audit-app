@@ -1,0 +1,10 @@
+# The Databricks App that python tools/deploy_app.py deploys (docs/databricks-app.md).
+# Change a value here, or put just that line in config/app.local.yml (git-ignored), which wins.
+
+# The app's name in Databricks: 2-30 lowercase letters, numbers or dashes.
+name: lakehouse-health
+
+# Who the app's queries run as:
+#   user  the token in .env (yours, or another user's or service principal's); stored in app.yaml
+#   app   the app's own service principal; no token stored, a metastore admin grants it access once
+run_as: user

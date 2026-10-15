@@ -1,0 +1,4 @@
+# status is part of the grain only because the pooled is_other=true rows are synthetic
+# (workspace_id/warehouse_id both NULL) and up to two can coexist - one status=OK, one
+# status=NOT_ASSESSED - so status is what tells them apart.
+cost_chargeback_by_warehouse: [workspace_id, warehouse_id, status]

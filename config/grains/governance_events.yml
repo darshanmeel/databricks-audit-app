@@ -1,0 +1,86 @@
+# config/grains/governance_events.yml -- T-20. Grain = the query's own key columns ONLY; the
+# generator prepends window_days itself (unique_grain: {columns: [window_days] + grain}, DEC-24).
+# Do not list window_days here.
+#
+# This file covers the 12 F1 ids only (the queries that read system.access.audit directly, plus
+# the lineage and network deny-event queries). T-21's 10 F2 information_schema inventory ids get
+# their own config/grains/governance_inventories.yml (out of scope here) -- T-21's --only
+# regeneration must leave this file's models untouched, same DEC-24 pattern as every other grain
+# task.
+#
+# Every entry below is taken from the query body's own GROUP BY (SELECT-list position -> output
+# column name), or, for the two queries with no GROUP BY at all, from the natural unique key the
+# query's own JOIN guarantees one row per (see app/queries/vendored/governance_access/<id>.sql) --
+# with ONE exception, per DEC-48: four of these ids GROUP BY a raw identity/endpoint column but only
+# EMIT its 2-character mask (the CASE that turns the raw value into `first-2-chars + '****'`), so
+# the grain column listed here is NOT actually the query's own GROUP BY key -- it is that key's
+# lossy, masked projection. Uniqueness on those six therefore holds on this fixture ONLY by
+# construction (every scenario group below was deliberately given a non-masked differentiator, per
+# DEC-48 rule (3), so no two of this fixture's raw values ever collide after masking) and is NOT a
+# guarantee the real vendored query provides on a live snapshot: two real, differently-named
+# endpoints/identities that happen to share their first two characters within the same
+# non-masked-column group WILL emit duplicate-looking rows there, because the query's own SELECT
+# never exposes the raw value the GROUP BY actually used. Each of those six entries below carries
+# its own `# masked: <raw column>` comment naming the raw key it stands in for. DEC-48 rule (2)
+# downgrades the generated `unique_grain` test's severity to `warn` (via `grain_severity`) on the
+# `dev` target specifically because of this; it stays `error` on `test` (this fixture), where the
+# non-masked differentiators below keep it genuinely unique.
+#   - access_admin_role_change_events groups by workspace_id, service_name, action_name, actor (the
+#     masked COALESCE(user_identity.email, user_identity.subject_name) alias). workspace_id was
+#     added to the SELECT/GROUP BY (T-73 upstream fix: the query used to have no workspace_id at
+#     all, so a workspace-level and an account-level event by the same actor/action collapsed into
+#     one row) and is therefore now part of the grain too.
+#   - access_login_concentration groups by workspace_id, principal (masked), source_ip_address,
+#     service_name, action_name. workspace_id was added to the SELECT/GROUP BY (the query had none
+#     at all) and is therefore now part of the grain too.
+#   - access_runas_escalation groups by workspace_id, service_name, action_name, run_by, run_as
+#     (both masked). workspace_id was added the same way as access_login_concentration.
+#   - access_vector_search_traffic groups by event_date, action_name, vector_search_key
+#     (request_params['endpoint_name'] read NULL on every real event; the grain key is now
+#     COALESCE(request_params['index_name'], request_params['endpoint_name'])).
+#   - access_column_lineage_sensitive_reach groups by workspace_id, source_table_full_name,
+#     source_column_name, target_table_full_name, target_column_name, entity_type, direct_access.
+#   - access_pii_propagation_untagged groups by workspace_id plus the lineage_window CTE's
+#     source/target identifier columns; source_tags is a per-edge aggregate (one row per matching
+#     column already, via sensitive_tags' own GROUP BY) and distinct_creators a COUNT DISTINCT, so
+#     neither is part of the grain.
+#   - access_dead_table_candidates has NO GROUP BY (one row per information_schema.tables row that
+#     survives the LEFT JOIN anti-join filter) -- its natural unique key is the inventory table's
+#     own identifier triple.
+#   - access_table_lineage_blast_radius groups by workspace_id, source_table_full_name,
+#     target_table_full_name, source_type, target_type, entity_type, direct_access, and the
+#     derived access_class CASE (SELECT-list position 8, itself part of the GROUP BY list).
+#     workspace_id was added to the SELECT/GROUP BY (this table is already per-workspace) and is
+#     therefore now part of the grain too.
+#   - access_classified_unmasked has NO GROUP BY (one row per data_classification.results row,
+#     LEFT JOIN on the 4 discrete identifier columns never fans out since column_masks carries at
+#     most one mask per column) -- natural unique key: catalog_name, schema_name, table_name,
+#     column_name. Windowless (params: none) -- the generator's prepended window_days is always 0.
+#   - access_data_classification_inventory groups by catalog_name, schema_name, table_name,
+#     column_name, class_tag, confidence, data_type. Windowless (params: none) -- window_days
+#     always 0.
+#   - access_network_inbound_denials groups by workspace_id, policy_outcome, rule_label,
+#     request_path, authenticated_as (masked), and the source.ip alias (source_ip). workspace_id
+#     was added to the SELECT/GROUP BY (this table is already per-workspace but the column was
+#     never surfaced) and is therefore now part of the grain too.
+#   - access_network_outbound_denials groups by workspace_id, network_source_type,
+#     destination_type, access_type, destination, dns_rcode, storage_rejection_reason.
+#     workspace_id was added to the SELECT/GROUP BY (confirmed present on this table) and is
+#     therefore now part of the grain too.
+
+# masked: actor stands in for COALESCE(user_identity.email, user_identity.subject_name) (DEC-48)
+access_admin_role_change_events: [workspace_id, service_name, action_name, actor, granted_to, permission]
+# masked: principal stands in for COALESCE(user_identity.email, user_identity.subject_name) (DEC-48)
+access_login_concentration: [workspace_id, principal, source_ip_address, service_name, action_name]
+# masked: run_by stands in for identity_metadata.run_by, run_as for identity_metadata.run_as (DEC-48)
+access_runas_escalation: [workspace_id, service_name, action_name, run_by, run_as]
+access_vector_search_traffic: [event_date, action_name, vector_search_key]
+access_column_lineage_sensitive_reach: [workspace_id, source_table_full_name, source_column_name, target_table_full_name, target_column_name, entity_type, direct_access]
+access_pii_propagation_untagged: [workspace_id, source_table_catalog, source_table_schema, source_table_name, source_column_name, target_table_catalog, target_table_schema, target_table_name, target_column_name]
+access_dead_table_candidates: [table_catalog, table_schema, table_name]
+access_table_lineage_blast_radius: [workspace_id, source_table_full_name, target_table_full_name, source_type, target_type, entity_type, direct_access, access_class]
+access_classified_unmasked: [catalog_name, schema_name, table_name, column_name]
+access_data_classification_inventory: [catalog_name, schema_name, table_name, column_name, class_tag, confidence, data_type]
+# masked: authenticated_as stands in for the raw pre-CASE authenticated_as column (DEC-48)
+access_network_inbound_denials: [workspace_id, policy_outcome, rule_label, request_path, authenticated_as, source_ip]
+access_network_outbound_denials: [workspace_id, network_source_type, destination_type, access_type, destination, dns_rcode, storage_rejection_reason]

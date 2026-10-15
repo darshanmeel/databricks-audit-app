@@ -1,0 +1,2 @@
+# perf_queue_by_hour: one row per day, UTC hour and SQL warehouse (workspace_id:warehouse_id).
+perf_queue_by_hour: [usage_date, usage_hour, warehouse_key]

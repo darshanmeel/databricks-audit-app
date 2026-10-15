@@ -1,0 +1,17 @@
+# Threshold overrides ONLY -- shape: {<query_id>: {<param>: value}, _all: {<param>: value}}.
+# dbt/macros/param.sql looks up [query_id][name], then ['_all'][name], then the query's own
+# header default -- first match wins. An empty file (minus this one seed entry) is a valid,
+# complete threshold set: every threshold not listed here simply falls through to its header
+# default. The Settings page renders its editor from the registry's params, not from this file's
+# keys alone.
+task_cluster_utilization:
+  top_n: 100000
+# Judge a cluster's node use after 15 node-minutes, so short runs get a verdict too.
+node_timeline_utilization:
+  min_slices: 15
+# The tag keys that charge spend back (Cost > Chargeback, Actions' untagged spend), first one
+# wins, lower case without spaces, hyphens or underscores. The default is cost center, then team;
+# a company that tags department and project would set:
+# cost_chargeback_by_allocation_tag:
+#   allocation_keys: department,project
+# Then run python tools/build_direct_sql.py and export again.

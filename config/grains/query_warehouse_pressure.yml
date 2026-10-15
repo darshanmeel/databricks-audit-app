@@ -1,0 +1,3 @@
+query_warehouse_pressure:
+  - workspace_id
+  - warehouse_id

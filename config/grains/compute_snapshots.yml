@@ -1,0 +1,32 @@
+# config/grains/compute_snapshots.yml -- T-15. Grain = the query's own key columns ONLY; the
+# generator prepends window_days itself (unique_grain: {columns: [window_days] + grain}, DEC-24).
+# Do not list window_days here.
+#
+# Taken verbatim from each query body's own dedupe/group key (ROW_NUMBER PARTITION BY for the 3
+# SCD2 ids, GROUP BY for instance_events_idle_active; node_types_reference has neither -- it is a
+# static reference dimension with node_type as its natural key), cross-checked against the vendored
+# bodies in the query library's queries/compute/*.sql and the
+# per-query contract table in tasks/T-15-compute-snapshot-tests.md's Inputs section:
+#   - classic_clusters_config_current: ROW_NUMBER() OVER (PARTITION BY cluster_id ORDER BY
+#     change_time DESC) -- cluster_id is a globally-unique GUID, no workspace_id needed.
+#   - sql_warehouse_config_current: ROW_NUMBER() OVER (PARTITION BY warehouse_id ORDER BY
+#     change_time DESC) -- same.
+#   - node_types_reference: SELECT node_type, ... FROM system.compute.node_types, no dedupe, no
+#     time column -- one row per node_type.
+#   - instance_pools_idle_capacity: ROW_NUMBER() OVER (PARTITION BY instance_pool_id ORDER BY
+#     change_time DESC), but the cost-rollup CTE is keyed on (workspace_id, instance_pool_id) per
+#     the query's own caveats ("the rollup is keyed on workspace_id + instance_pool_id ... to keep
+#     the join strictly 1:1"), so the grain carries both columns.
+#   - instance_events_idle_active: GROUP BY workspace_id, node_type, availability_type, state,
+#     event_type (all 5 non-aggregate output columns).
+#
+# None of these 5 ids has a masked output column in its grain: cluster_name/owned_by (classic
+# clusters), warehouse_name (sql warehouse) and instance_pool_name (instance pools) are all masked
+# by the query body, but none of them is part of the grain below -- DEC-48 does not apply here, no
+# `# masked:` comment needed on any entry.
+
+classic_clusters_config_current: [cluster_id]
+sql_warehouse_config_current: [warehouse_id]
+node_types_reference: [node_type]
+instance_pools_idle_capacity: [workspace_id, instance_pool_id]
+instance_events_idle_active: [workspace_id, node_type, availability_type, state, event_type]

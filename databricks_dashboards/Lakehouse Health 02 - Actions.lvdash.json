@@ -1,0 +1,2237 @@
+{
+  "datasets": [
+    {
+      "name": "301a6b42",
+      "displayName": "snapshot_banner",
+      "queryLines": [
+        "SELECT window_days AS days, concat('as of ', date_format(snapshot_at, 'MMM d, yyyy HH:mm'), ' UTC, list price') AS as_of FROM databricks_audit_dashboard.snapshot_info\n"
+      ]
+    },
+    {
+      "name": "c4b2926a",
+      "displayName": "workspace_options",
+      "queryLines": [
+        "SELECT DISTINCT name AS workspace_name FROM databricks_audit_dashboard.dim_workspace WHERE name IS NOT NULL ORDER BY 1\n"
+      ]
+    },
+    {
+      "name": "21d52404",
+      "displayName": "fixes:kpi:Flagged checks",
+      "queryLines": [
+        "WITH checks AS (\n",
+        "  SELECT * FROM (VALUES\n",
+        "       ('cost_daily_spikes', 'Spend spikes', 'Cost'),\n",
+        "       ('cost_period_over_period', 'Change vs previous period', 'Cost'),\n",
+        "       ('cost_by_hour_of_day', 'Spend concentrated by hour of day', 'Cost'),\n",
+        "       ('cost_dollarized_by_sku_day', 'Daily spend by SKU', 'Cost'),\n",
+        "       ('cost_monthly_actuals', 'Spend by calendar month', 'Cost'),\n",
+        "       ('cost_totals_by_sku_day', 'Spend by product, raw rows', 'Cost'),\n",
+        "       ('cost_workspace_names', 'Workspace names', 'Cost'),\n",
+        "       ('cost_by_billing_origin_product', 'Spend by product', 'Cost'),\n",
+        "       ('cost_premium_serverless_photon', 'Serverless & Photon share', 'Cost'),\n",
+        "       ('cost_sku_trend_12m', 'Fastest-growing SKUs', 'Cost'),\n",
+        "       ('cost_chargeback_by_allocation_tag', 'Spend with no cost center or team tag', 'Cost'),\n",
+        "       ('cost_chargeback_by_tag', 'Spend by cost center or team', 'Cost'),\n",
+        "       ('cost_chargeback_by_identity', 'Spend by who ran it', 'Cost'),\n",
+        "       ('cost_dbsql_allocation_gap', 'SQL spend that can\\'t be split by query', 'Cost'),\n",
+        "       ('cost_unnamed_workspaces', 'Spend on workspaces with no name', 'Cost'),\n",
+        "       ('cost_chargeback_by_workspace', 'Chargeback by workspace', 'Cost'),\n",
+        "       ('cost_chargeback_by_service', 'Chargeback by product line', 'Cost'),\n",
+        "       ('cost_chargeback_by_sku', 'Chargeback by SKU', 'Cost'),\n",
+        "       ('cost_chargeback_by_warehouse', 'Chargeback by warehouse', 'Cost'),\n",
+        "       ('cost_chargeback_by_job', 'Chargeback by job', 'Cost'),\n",
+        "       ('cost_chargeback_by_cluster', 'Chargeback by cluster, job cluster or pipeline', 'Cost'),\n",
+        "       ('cost_chargeback_identity_by_source', 'Chargeback by identity', 'Cost'),\n",
+        "       ('cost_chargeback_by_tag_value', 'Chargeback by tag value', 'Cost'),\n",
+        "       ('cost_chargeback_reconcile', 'Chargeback self-check', 'Cost'),\n",
+        "       ('cost_by_job', 'Spend by job', 'Cost'),\n",
+        "       ('cost_by_compute_resource', 'Spend by cluster or warehouse', 'Cost'),\n",
+        "       ('cost_by_notebook', 'Notebooks over the daily DBU limit', 'Cost'),\n",
+        "       ('cost_default_storage_dsu', 'Managed storage spend', 'Cost'),\n",
+        "       ('cost_genai_token_gpu', 'GenAI token & GPU spend', 'Cost'),\n",
+        "       ('cost_daily_by_resource', 'Daily cost by resource', 'Cost'),\n",
+        "       ('perf_daily_by_resource', 'Daily query, job and pipeline performance', 'Cost'),\n",
+        "       ('perf_failure_causes_daily', 'Daily failures by cause', 'Cost'),\n",
+        "       ('cost_usage_policy_coverage', 'Serverless usage without a policy', 'Cost'),\n",
+        "       ('cost_actual_vs_list_by_sku', 'Actual price vs list price', 'Cost'),\n",
+        "       ('cost_networking_egress', 'Cross-region networking spend', 'Cost'),\n",
+        "       ('cost_cloud_infra', 'Cloud infrastructure spend', 'Cost'),\n",
+        "       ('cost_restatement_trust_metric', 'How much of last month\\'s bill has since changed', 'Cost'),\n",
+        "       ('cost_by_serving_endpoint', 'Spend by serving endpoint', 'ML & AI'),\n",
+        "       ('cost_serving_mode_by_endpoint', 'Serving endpoints over the daily spend limit', 'ML & AI'),\n",
+        "       ('cost_vector_search_spend', 'Vector Search spend', 'ML & AI'),\n",
+        "       ('compute_serving_dormant_endpoints', 'Dormant serving endpoints', 'ML & AI'),\n",
+        "       ('compute_serving_endpoint_cost_status', 'Endpoints billed with no requests', 'ML & AI'),\n",
+        "       ('compute_serving_endpoint_usage', 'Endpoint requests & errors', 'ML & AI'),\n",
+        "       ('access_vector_search_traffic', 'Vector Search query traffic', 'ML & AI'),\n",
+        "       ('serving_endpoint_traffic_by_endpoint', 'Endpoint traffic, raw rows', 'ML & AI'),\n",
+        "       ('compute_ai_gateway_usage', 'AI Gateway usage', 'ML & AI'),\n",
+        "       ('genie_usage', 'Genie usage by user', 'Genie'),\n",
+        "       ('compute_warehouse_idle_minutes', 'Warehouse idle time', 'Compute'),\n",
+        "       ('compute_warehouse_idle_gaps', 'Longest running stretch per warehouse', 'Compute'),\n",
+        "       ('compute_warehouse_autoscale_churn', 'Warehouse autoscale churn', 'Compute'),\n",
+        "       ('compute_warehouse_autostop_churn', 'Warehouse auto-stop churn', 'Compute'),\n",
+        "       ('compute_warehouse_late_autostop', 'Warehouse late auto-stop', 'Compute'),\n",
+        "       ('compute_warehouse_cache_reuse', 'Warehouse result-cache reuse', 'Compute'),\n",
+        "       ('sql_warehouse_events_activity', 'Warehouse start/stop activity', 'Compute'),\n",
+        "       ('compute_last_activity', 'Last activity', 'Compute'),\n",
+        "       ('sql_warehouse_config_current', 'Warehouse configuration, current', 'Compute'),\n",
+        "       ('compute_idle_node_ratio', 'Idle cluster nodes', 'Compute'),\n",
+        "       ('node_timeline_utilization', 'Cluster node utilization over time', 'Compute'),\n",
+        "       ('instance_pools_idle_capacity', 'Idle warm-pool capacity', 'Compute'),\n",
+        "       ('instance_events_idle_active', 'Pool instance idle/active time', 'Compute'),\n",
+        "       ('classic_clusters_config_current', 'Cluster configuration, current', 'Compute'),\n",
+        "       ('node_types_reference', 'Node type reference', 'Compute'),\n",
+        "       ('compute_cluster_config_posture', 'Cluster setup risks', 'Compute'),\n",
+        "       ('compute_warehouse_config_posture', 'Warehouse setup risks', 'Compute'),\n",
+        "       ('lakeflow_job_reliability', 'Broken or flaky jobs', 'Jobs'),\n",
+        "       ('lakeflow_failed_jobs_wasted_dbus', 'Compute burned on failed runs', 'Jobs'),\n",
+        "       ('lakeflow_failed_runs', 'Failed job runs', 'Jobs'),\n",
+        "       ('lakeflow_never_started_runs', 'Runs that never started', 'Jobs'),\n",
+        "       ('lakeflow_succeeded_with_failed_tasks', 'Runs that \\'succeeded\\' with a failed task', 'Jobs'),\n",
+        "       ('lakeflow_termination_taxonomy', 'Termination reasons, reference', 'Jobs'),\n",
+        "       ('lakeflow_job_run_changes', 'What changed since the last good run', 'Jobs'),\n",
+        "       ('lakeflow_daily_state', 'Jobs and pipelines, day by day', 'Jobs'),\n",
+        "       ('lakeflow_job_duration_regression', 'Jobs running slower than usual', 'Jobs'),\n",
+        "       ('lakeflow_job_queue_time', 'Jobs waiting on compute', 'Jobs'),\n",
+        "       ('lakeflow_phase_cold_start', 'Cluster cold-start time', 'Jobs'),\n",
+        "       ('lakeflow_failed_cluster_starts', 'Failed cluster starts', 'Jobs'),\n",
+        "       ('lakeflow_workload_mix_hours', 'Job workload by hour of day', 'Jobs'),\n",
+        "       ('lakeflow_long_running_runs', 'Long-running runs', 'Jobs'),\n",
+        "       ('lakeflow_retries_repairs', 'Jobs relying on retries or repairs', 'Jobs'),\n",
+        "       ('lakeflow_stale_zombie_jobs', 'Stale jobs with no recent run', 'Jobs'),\n",
+        "       ('lakeflow_jobs_no_timeout', 'Jobs with no timeout set', 'Jobs'),\n",
+        "       ('lakeflow_job_tasks_no_timeout', 'Job tasks with no timeout set', 'Jobs'),\n",
+        "       ('lakeflow_jobs_on_all_purpose', 'Jobs on all-purpose clusters', 'Jobs'),\n",
+        "       ('lakeflow_health_rule_coverage', 'Jobs with no health rule', 'Jobs'),\n",
+        "       ('lakeflow_job_ownership_orphans', 'Jobs with no clear owner', 'Jobs'),\n",
+        "       ('lakeflow_tasks_near_timeout', 'Tasks running close to their timeout', 'Jobs'),\n",
+        "       ('lakeflow_job_cost_summary', 'Job cost summary, reference', 'Jobs'),\n",
+        "       ('lakeflow_job_run_cost', 'Per-run cost, reference', 'Jobs'),\n",
+        "       ('lakeflow_job_recent_runs', 'Recent runs, reference', 'Jobs'),\n",
+        "       ('lakeflow_job_compute_pressure', 'Job compute fit', 'Jobs'),\n",
+        "       ('task_cluster_utilization', 'Task-level cluster utilization', 'Jobs'),\n",
+        "       ('lakeflow_job_oversized', 'Jobs on bigger machines than they need', 'Jobs'),\n",
+        "       ('lakeflow_pipeline_cost', 'Spend by pipeline', 'Jobs'),\n",
+        "       ('lakeflow_pipeline_idle_tail_duration', 'Pipeline compute left running after its last update', 'Jobs'),\n",
+        "       ('lakeflow_pipeline_update_failures_retries', 'Pipeline update failures & retries', 'Jobs'),\n",
+        "       ('lakeflow_pipelines_inventory_tier', 'Pipeline inventory, reference', 'Jobs'),\n",
+        "       ('query_top_by_cost', 'Top queries by cost', 'Queries'),\n",
+        "       ('query_provenance_by_source', 'Query traffic by source', 'Queries'),\n",
+        "       ('audit_self_cost', 'This audit\\'s own query cost', 'Queries'),\n",
+        "       ('query_costly_statements_grouped', 'Heaviest statement shapes', 'Queries'),\n",
+        "       ('query_costly_statements', 'All statements, reference', 'Queries'),\n",
+        "       ('query_per_query_estimate_lane', 'Per-query cost estimate, reference', 'Queries'),\n",
+        "       ('query_local_spillage', 'Queries spilling to local disk', 'Queries'),\n",
+        "       ('query_shuffle_write_amplification', 'Queries shuffling too much data', 'Queries'),\n",
+        "       ('query_pruning_effectiveness', 'Queries not pruning partitions/files', 'Queries'),\n",
+        "       ('query_cache_coldstart', 'Queries missing the disk cache', 'Queries'),\n",
+        "       ('query_failed_queries_daily', 'Failed queries per day', 'Queries'),\n",
+        "       ('cost_failed_statement_waste', 'Compute burned on failed statements', 'Queries'),\n",
+        "       ('query_failed_statements_grouped', 'Failed statements by error', 'Queries'),\n",
+        "       ('query_warehouse_pressure', 'Warehouse memory & concurrency pressure', 'Queries'),\n",
+        "       ('query_queuing_waits', 'Queries waiting for a warehouse slot', 'Queries'),\n",
+        "       ('query_workload_mix_hours', 'Query workload by hour of day', 'Queries'),\n",
+        "       ('query_task_statement_breakdown', 'Statement breakdown by task stage', 'Queries'),\n",
+        "       ('perf_queue_by_hour', 'Queueing by day and hour', 'Queries'),\n",
+        "       ('query_slices', 'Query slices, reference', 'Queries'),\n",
+        "       ('access_broad_grants', 'Overly broad grants', 'Governance & PII'),\n",
+        "       ('access_grants_inventory', 'Grants inventory', 'Governance & PII'),\n",
+        "       ('access_grants_inventory_extended', 'Grants inventory, extended', 'Governance & PII'),\n",
+        "       ('access_runas_escalation', 'Run-as identity escalation', 'Governance & PII'),\n",
+        "       ('access_login_concentration', 'Login concentration', 'Governance & PII'),\n",
+        "       ('access_network_inbound_denials', 'Inbound network denials', 'Governance & PII'),\n",
+        "       ('access_network_outbound_denials', 'Outbound network denials', 'Governance & PII'),\n",
+        "       ('access_admin_role_change_events', 'Admin and permission changes', 'Governance & PII'),\n",
+        "       ('access_classification_coverage', 'Sensitive-data classification coverage', 'Governance & PII'),\n",
+        "       ('access_classified_unmasked', 'Classified data with no mask', 'Governance & PII'),\n",
+        "       ('access_sensitive_table_reads', 'Reads of sensitive tables', 'Governance & PII'),\n",
+        "       ('access_pii_outside_tables', 'PII outside of tagged tables', 'Governance & PII'),\n",
+        "       ('access_data_classification_inventory', 'Data classification inventory', 'Governance & PII'),\n",
+        "       ('access_column_masks_inventory', 'Column masks inventory', 'Governance & PII'),\n",
+        "       ('access_row_filters_inventory', 'Row filters inventory', 'Governance & PII'),\n",
+        "       ('access_tags_inventory', 'Table & column tags inventory', 'Governance & PII'),\n",
+        "       ('access_table_lineage_blast_radius', 'Table lineage blast radius', 'Governance & PII'),\n",
+        "       ('access_column_lineage_sensitive_reach', 'Sensitive column lineage reach', 'Governance & PII'),\n",
+        "       ('access_pii_propagation_untagged', 'PII propagating into untagged tables', 'Governance & PII'),\n",
+        "       ('access_views_inventory', 'Views inventory', 'Governance & PII'),\n",
+        "       ('access_volumes_inventory', 'Volumes inventory', 'Governance & PII'),\n",
+        "       ('access_delta_sharing_exposure', 'Delta Sharing exposure', 'Governance & PII'),\n",
+        "       ('storage_target_table_discovery', 'Table discovery', 'Storage'),\n",
+        "       ('table_inventory_type', 'Table inventory by type', 'Storage'),\n",
+        "       ('access_dead_table_candidates', 'Tables not read or changed recently', 'Storage'),\n",
+        "       ('storage_growth', 'Table growth and drops', 'Storage'),\n",
+        "       ('po_maintenance_cost_by_table', 'Maintenance spend by table', 'Storage'),\n",
+        "       ('po_vacuum_reclaimed_bytes', 'Storage reclaimed by VACUUM', 'Storage'),\n",
+        "       ('po_clustering_activity', 'Liquid clustering activity', 'Storage'),\n",
+        "       ('po_clustering_column_churn', 'Clustering column changes', 'Storage'),\n",
+        "       ('po_data_skipping_backfill', 'Data-skipping statistics backfill', 'Storage'),\n",
+        "       ('po_failure_reasons', 'Predictive optimization failures', 'Storage'),\n",
+        "       ('storage_po_coverage', 'Predictive optimization coverage', 'Storage'),\n",
+        "       ('storage_small_files', 'Tables with too many small files', 'Storage'),\n",
+        "       ('access_source_table_coverage', 'System table coverage', 'Coverage & Gaps'),\n",
+        "       ('cost_account_prices_raw', 'Account-specific prices, raw', 'Coverage & Gaps'),\n",
+        "       ('pricing_list_prices_raw', 'List prices, raw', 'Coverage & Gaps'),\n",
+        "       ('cost_audit_self_usage', 'This audit\\'s own usage, by warehouse', 'Coverage & Gaps')\n",
+        "  ) AS c(query_id, check_title, area)\n",
+        "),\n",
+        "status AS (\n",
+        "  SELECT c.query_id, c.check_title, c.area,\n",
+        "         CASE WHEN l.query_id IS NULL THEN 'Not run'\n",
+        "              WHEN NOT l.ok THEN 'Not assessed'\n",
+        "              WHEN l.critical > 0 THEN 'Critical'\n",
+        "              WHEN l.warn > 0 THEN 'Warn'\n",
+        "              WHEN l.has_status THEN 'OK'\n",
+        "              WHEN l.row_count = 0 THEN 'No rows'\n",
+        "              ELSE 'Listed' END AS verdict,\n",
+        "         COALESCE(l.critical, 0) AS critical_rows, COALESCE(l.warn, 0) AS warn_rows\n",
+        "  FROM checks c\n",
+        "  LEFT JOIN databricks_audit_dashboard.snapshot_log l ON l.query_id = c.query_id\n",
+        ")\n",
+        "\n",
+        "SELECT (SELECT count(*) FROM status WHERE verdict IN ('Critical', 'Warn')) AS value,\n",
+        "       COALESCE(\n",
+        "         (SELECT concat('Worst: ', check_title, ', ', CAST(critical_rows AS STRING), ' critical rows')\n",
+        "          FROM status WHERE verdict = 'Critical' ORDER BY critical_rows DESC LIMIT 1),\n",
+        "         (SELECT concat('Worst: ', check_title, ', ', CAST(warn_rows AS STRING), ' warn rows')\n",
+        "          FROM status WHERE verdict = 'Warn' ORDER BY warn_rows DESC LIMIT 1),\n",
+        "         'Nothing flagged') AS target\n"
+      ]
+    },
+    {
+      "name": "907df112",
+      "displayName": "fixes:kpi:Critical checks",
+      "queryLines": [
+        "WITH checks AS (\n",
+        "  SELECT * FROM (VALUES\n",
+        "       ('cost_daily_spikes', 'Spend spikes', 'Cost'),\n",
+        "       ('cost_period_over_period', 'Change vs previous period', 'Cost'),\n",
+        "       ('cost_by_hour_of_day', 'Spend concentrated by hour of day', 'Cost'),\n",
+        "       ('cost_dollarized_by_sku_day', 'Daily spend by SKU', 'Cost'),\n",
+        "       ('cost_monthly_actuals', 'Spend by calendar month', 'Cost'),\n",
+        "       ('cost_totals_by_sku_day', 'Spend by product, raw rows', 'Cost'),\n",
+        "       ('cost_workspace_names', 'Workspace names', 'Cost'),\n",
+        "       ('cost_by_billing_origin_product', 'Spend by product', 'Cost'),\n",
+        "       ('cost_premium_serverless_photon', 'Serverless & Photon share', 'Cost'),\n",
+        "       ('cost_sku_trend_12m', 'Fastest-growing SKUs', 'Cost'),\n",
+        "       ('cost_chargeback_by_allocation_tag', 'Spend with no cost center or team tag', 'Cost'),\n",
+        "       ('cost_chargeback_by_tag', 'Spend by cost center or team', 'Cost'),\n",
+        "       ('cost_chargeback_by_identity', 'Spend by who ran it', 'Cost'),\n",
+        "       ('cost_dbsql_allocation_gap', 'SQL spend that can\\'t be split by query', 'Cost'),\n",
+        "       ('cost_unnamed_workspaces', 'Spend on workspaces with no name', 'Cost'),\n",
+        "       ('cost_chargeback_by_workspace', 'Chargeback by workspace', 'Cost'),\n",
+        "       ('cost_chargeback_by_service', 'Chargeback by product line', 'Cost'),\n",
+        "       ('cost_chargeback_by_sku', 'Chargeback by SKU', 'Cost'),\n",
+        "       ('cost_chargeback_by_warehouse', 'Chargeback by warehouse', 'Cost'),\n",
+        "       ('cost_chargeback_by_job', 'Chargeback by job', 'Cost'),\n",
+        "       ('cost_chargeback_by_cluster', 'Chargeback by cluster, job cluster or pipeline', 'Cost'),\n",
+        "       ('cost_chargeback_identity_by_source', 'Chargeback by identity', 'Cost'),\n",
+        "       ('cost_chargeback_by_tag_value', 'Chargeback by tag value', 'Cost'),\n",
+        "       ('cost_chargeback_reconcile', 'Chargeback self-check', 'Cost'),\n",
+        "       ('cost_by_job', 'Spend by job', 'Cost'),\n",
+        "       ('cost_by_compute_resource', 'Spend by cluster or warehouse', 'Cost'),\n",
+        "       ('cost_by_notebook', 'Notebooks over the daily DBU limit', 'Cost'),\n",
+        "       ('cost_default_storage_dsu', 'Managed storage spend', 'Cost'),\n",
+        "       ('cost_genai_token_gpu', 'GenAI token & GPU spend', 'Cost'),\n",
+        "       ('cost_daily_by_resource', 'Daily cost by resource', 'Cost'),\n",
+        "       ('perf_daily_by_resource', 'Daily query, job and pipeline performance', 'Cost'),\n",
+        "       ('perf_failure_causes_daily', 'Daily failures by cause', 'Cost'),\n",
+        "       ('cost_usage_policy_coverage', 'Serverless usage without a policy', 'Cost'),\n",
+        "       ('cost_actual_vs_list_by_sku', 'Actual price vs list price', 'Cost'),\n",
+        "       ('cost_networking_egress', 'Cross-region networking spend', 'Cost'),\n",
+        "       ('cost_cloud_infra', 'Cloud infrastructure spend', 'Cost'),\n",
+        "       ('cost_restatement_trust_metric', 'How much of last month\\'s bill has since changed', 'Cost'),\n",
+        "       ('cost_by_serving_endpoint', 'Spend by serving endpoint', 'ML & AI'),\n",
+        "       ('cost_serving_mode_by_endpoint', 'Serving endpoints over the daily spend limit', 'ML & AI'),\n",
+        "       ('cost_vector_search_spend', 'Vector Search spend', 'ML & AI'),\n",
+        "       ('compute_serving_dormant_endpoints', 'Dormant serving endpoints', 'ML & AI'),\n",
+        "       ('compute_serving_endpoint_cost_status', 'Endpoints billed with no requests', 'ML & AI'),\n",
+        "       ('compute_serving_endpoint_usage', 'Endpoint requests & errors', 'ML & AI'),\n",
+        "       ('access_vector_search_traffic', 'Vector Search query traffic', 'ML & AI'),\n",
+        "       ('serving_endpoint_traffic_by_endpoint', 'Endpoint traffic, raw rows', 'ML & AI'),\n",
+        "       ('compute_ai_gateway_usage', 'AI Gateway usage', 'ML & AI'),\n",
+        "       ('genie_usage', 'Genie usage by user', 'Genie'),\n",
+        "       ('compute_warehouse_idle_minutes', 'Warehouse idle time', 'Compute'),\n",
+        "       ('compute_warehouse_idle_gaps', 'Longest running stretch per warehouse', 'Compute'),\n",
+        "       ('compute_warehouse_autoscale_churn', 'Warehouse autoscale churn', 'Compute'),\n",
+        "       ('compute_warehouse_autostop_churn', 'Warehouse auto-stop churn', 'Compute'),\n",
+        "       ('compute_warehouse_late_autostop', 'Warehouse late auto-stop', 'Compute'),\n",
+        "       ('compute_warehouse_cache_reuse', 'Warehouse result-cache reuse', 'Compute'),\n",
+        "       ('sql_warehouse_events_activity', 'Warehouse start/stop activity', 'Compute'),\n",
+        "       ('compute_last_activity', 'Last activity', 'Compute'),\n",
+        "       ('sql_warehouse_config_current', 'Warehouse configuration, current', 'Compute'),\n",
+        "       ('compute_idle_node_ratio', 'Idle cluster nodes', 'Compute'),\n",
+        "       ('node_timeline_utilization', 'Cluster node utilization over time', 'Compute'),\n",
+        "       ('instance_pools_idle_capacity', 'Idle warm-pool capacity', 'Compute'),\n",
+        "       ('instance_events_idle_active', 'Pool instance idle/active time', 'Compute'),\n",
+        "       ('classic_clusters_config_current', 'Cluster configuration, current', 'Compute'),\n",
+        "       ('node_types_reference', 'Node type reference', 'Compute'),\n",
+        "       ('compute_cluster_config_posture', 'Cluster setup risks', 'Compute'),\n",
+        "       ('compute_warehouse_config_posture', 'Warehouse setup risks', 'Compute'),\n",
+        "       ('lakeflow_job_reliability', 'Broken or flaky jobs', 'Jobs'),\n",
+        "       ('lakeflow_failed_jobs_wasted_dbus', 'Compute burned on failed runs', 'Jobs'),\n",
+        "       ('lakeflow_failed_runs', 'Failed job runs', 'Jobs'),\n",
+        "       ('lakeflow_never_started_runs', 'Runs that never started', 'Jobs'),\n",
+        "       ('lakeflow_succeeded_with_failed_tasks', 'Runs that \\'succeeded\\' with a failed task', 'Jobs'),\n",
+        "       ('lakeflow_termination_taxonomy', 'Termination reasons, reference', 'Jobs'),\n",
+        "       ('lakeflow_job_run_changes', 'What changed since the last good run', 'Jobs'),\n",
+        "       ('lakeflow_daily_state', 'Jobs and pipelines, day by day', 'Jobs'),\n",
+        "       ('lakeflow_job_duration_regression', 'Jobs running slower than usual', 'Jobs'),\n",
+        "       ('lakeflow_job_queue_time', 'Jobs waiting on compute', 'Jobs'),\n",
+        "       ('lakeflow_phase_cold_start', 'Cluster cold-start time', 'Jobs'),\n",
+        "       ('lakeflow_failed_cluster_starts', 'Failed cluster starts', 'Jobs'),\n",
+        "       ('lakeflow_workload_mix_hours', 'Job workload by hour of day', 'Jobs'),\n",
+        "       ('lakeflow_long_running_runs', 'Long-running runs', 'Jobs'),\n",
+        "       ('lakeflow_retries_repairs', 'Jobs relying on retries or repairs', 'Jobs'),\n",
+        "       ('lakeflow_stale_zombie_jobs', 'Stale jobs with no recent run', 'Jobs'),\n",
+        "       ('lakeflow_jobs_no_timeout', 'Jobs with no timeout set', 'Jobs'),\n",
+        "       ('lakeflow_job_tasks_no_timeout', 'Job tasks with no timeout set', 'Jobs'),\n",
+        "       ('lakeflow_jobs_on_all_purpose', 'Jobs on all-purpose clusters', 'Jobs'),\n",
+        "       ('lakeflow_health_rule_coverage', 'Jobs with no health rule', 'Jobs'),\n",
+        "       ('lakeflow_job_ownership_orphans', 'Jobs with no clear owner', 'Jobs'),\n",
+        "       ('lakeflow_tasks_near_timeout', 'Tasks running close to their timeout', 'Jobs'),\n",
+        "       ('lakeflow_job_cost_summary', 'Job cost summary, reference', 'Jobs'),\n",
+        "       ('lakeflow_job_run_cost', 'Per-run cost, reference', 'Jobs'),\n",
+        "       ('lakeflow_job_recent_runs', 'Recent runs, reference', 'Jobs'),\n",
+        "       ('lakeflow_job_compute_pressure', 'Job compute fit', 'Jobs'),\n",
+        "       ('task_cluster_utilization', 'Task-level cluster utilization', 'Jobs'),\n",
+        "       ('lakeflow_job_oversized', 'Jobs on bigger machines than they need', 'Jobs'),\n",
+        "       ('lakeflow_pipeline_cost', 'Spend by pipeline', 'Jobs'),\n",
+        "       ('lakeflow_pipeline_idle_tail_duration', 'Pipeline compute left running after its last update', 'Jobs'),\n",
+        "       ('lakeflow_pipeline_update_failures_retries', 'Pipeline update failures & retries', 'Jobs'),\n",
+        "       ('lakeflow_pipelines_inventory_tier', 'Pipeline inventory, reference', 'Jobs'),\n",
+        "       ('query_top_by_cost', 'Top queries by cost', 'Queries'),\n",
+        "       ('query_provenance_by_source', 'Query traffic by source', 'Queries'),\n",
+        "       ('audit_self_cost', 'This audit\\'s own query cost', 'Queries'),\n",
+        "       ('query_costly_statements_grouped', 'Heaviest statement shapes', 'Queries'),\n",
+        "       ('query_costly_statements', 'All statements, reference', 'Queries'),\n",
+        "       ('query_per_query_estimate_lane', 'Per-query cost estimate, reference', 'Queries'),\n",
+        "       ('query_local_spillage', 'Queries spilling to local disk', 'Queries'),\n",
+        "       ('query_shuffle_write_amplification', 'Queries shuffling too much data', 'Queries'),\n",
+        "       ('query_pruning_effectiveness', 'Queries not pruning partitions/files', 'Queries'),\n",
+        "       ('query_cache_coldstart', 'Queries missing the disk cache', 'Queries'),\n",
+        "       ('query_failed_queries_daily', 'Failed queries per day', 'Queries'),\n",
+        "       ('cost_failed_statement_waste', 'Compute burned on failed statements', 'Queries'),\n",
+        "       ('query_failed_statements_grouped', 'Failed statements by error', 'Queries'),\n",
+        "       ('query_warehouse_pressure', 'Warehouse memory & concurrency pressure', 'Queries'),\n",
+        "       ('query_queuing_waits', 'Queries waiting for a warehouse slot', 'Queries'),\n",
+        "       ('query_workload_mix_hours', 'Query workload by hour of day', 'Queries'),\n",
+        "       ('query_task_statement_breakdown', 'Statement breakdown by task stage', 'Queries'),\n",
+        "       ('perf_queue_by_hour', 'Queueing by day and hour', 'Queries'),\n",
+        "       ('query_slices', 'Query slices, reference', 'Queries'),\n",
+        "       ('access_broad_grants', 'Overly broad grants', 'Governance & PII'),\n",
+        "       ('access_grants_inventory', 'Grants inventory', 'Governance & PII'),\n",
+        "       ('access_grants_inventory_extended', 'Grants inventory, extended', 'Governance & PII'),\n",
+        "       ('access_runas_escalation', 'Run-as identity escalation', 'Governance & PII'),\n",
+        "       ('access_login_concentration', 'Login concentration', 'Governance & PII'),\n",
+        "       ('access_network_inbound_denials', 'Inbound network denials', 'Governance & PII'),\n",
+        "       ('access_network_outbound_denials', 'Outbound network denials', 'Governance & PII'),\n",
+        "       ('access_admin_role_change_events', 'Admin and permission changes', 'Governance & PII'),\n",
+        "       ('access_classification_coverage', 'Sensitive-data classification coverage', 'Governance & PII'),\n",
+        "       ('access_classified_unmasked', 'Classified data with no mask', 'Governance & PII'),\n",
+        "       ('access_sensitive_table_reads', 'Reads of sensitive tables', 'Governance & PII'),\n",
+        "       ('access_pii_outside_tables', 'PII outside of tagged tables', 'Governance & PII'),\n",
+        "       ('access_data_classification_inventory', 'Data classification inventory', 'Governance & PII'),\n",
+        "       ('access_column_masks_inventory', 'Column masks inventory', 'Governance & PII'),\n",
+        "       ('access_row_filters_inventory', 'Row filters inventory', 'Governance & PII'),\n",
+        "       ('access_tags_inventory', 'Table & column tags inventory', 'Governance & PII'),\n",
+        "       ('access_table_lineage_blast_radius', 'Table lineage blast radius', 'Governance & PII'),\n",
+        "       ('access_column_lineage_sensitive_reach', 'Sensitive column lineage reach', 'Governance & PII'),\n",
+        "       ('access_pii_propagation_untagged', 'PII propagating into untagged tables', 'Governance & PII'),\n",
+        "       ('access_views_inventory', 'Views inventory', 'Governance & PII'),\n",
+        "       ('access_volumes_inventory', 'Volumes inventory', 'Governance & PII'),\n",
+        "       ('access_delta_sharing_exposure', 'Delta Sharing exposure', 'Governance & PII'),\n",
+        "       ('storage_target_table_discovery', 'Table discovery', 'Storage'),\n",
+        "       ('table_inventory_type', 'Table inventory by type', 'Storage'),\n",
+        "       ('access_dead_table_candidates', 'Tables not read or changed recently', 'Storage'),\n",
+        "       ('storage_growth', 'Table growth and drops', 'Storage'),\n",
+        "       ('po_maintenance_cost_by_table', 'Maintenance spend by table', 'Storage'),\n",
+        "       ('po_vacuum_reclaimed_bytes', 'Storage reclaimed by VACUUM', 'Storage'),\n",
+        "       ('po_clustering_activity', 'Liquid clustering activity', 'Storage'),\n",
+        "       ('po_clustering_column_churn', 'Clustering column changes', 'Storage'),\n",
+        "       ('po_data_skipping_backfill', 'Data-skipping statistics backfill', 'Storage'),\n",
+        "       ('po_failure_reasons', 'Predictive optimization failures', 'Storage'),\n",
+        "       ('storage_po_coverage', 'Predictive optimization coverage', 'Storage'),\n",
+        "       ('storage_small_files', 'Tables with too many small files', 'Storage'),\n",
+        "       ('access_source_table_coverage', 'System table coverage', 'Coverage & Gaps'),\n",
+        "       ('cost_account_prices_raw', 'Account-specific prices, raw', 'Coverage & Gaps'),\n",
+        "       ('pricing_list_prices_raw', 'List prices, raw', 'Coverage & Gaps'),\n",
+        "       ('cost_audit_self_usage', 'This audit\\'s own usage, by warehouse', 'Coverage & Gaps')\n",
+        "  ) AS c(query_id, check_title, area)\n",
+        "),\n",
+        "status AS (\n",
+        "  SELECT c.query_id, c.check_title, c.area,\n",
+        "         CASE WHEN l.query_id IS NULL THEN 'Not run'\n",
+        "              WHEN NOT l.ok THEN 'Not assessed'\n",
+        "              WHEN l.critical > 0 THEN 'Critical'\n",
+        "              WHEN l.warn > 0 THEN 'Warn'\n",
+        "              WHEN l.has_status THEN 'OK'\n",
+        "              WHEN l.row_count = 0 THEN 'No rows'\n",
+        "              ELSE 'Listed' END AS verdict,\n",
+        "         COALESCE(l.critical, 0) AS critical_rows, COALESCE(l.warn, 0) AS warn_rows\n",
+        "  FROM checks c\n",
+        "  LEFT JOIN databricks_audit_dashboard.snapshot_log l ON l.query_id = c.query_id\n",
+        ")\n",
+        "\n",
+        "SELECT (SELECT count(*) FROM status WHERE verdict = 'Critical') AS value,\n",
+        "       concat('of ', CAST((SELECT count(*) FROM status WHERE verdict IN ('Critical', 'Warn')) AS STRING),\n",
+        "              ' flagged checks') AS target\n"
+      ]
+    },
+    {
+      "name": "9fc9296b",
+      "displayName": "fixes:kpi:Possible waste",
+      "queryLines": [
+        "WITH src AS (\n",
+        "  SELECT 'Warehouse idle time' AS source_label, workspace_id, warehouse_id AS entity_id, 'warehouse' AS entity_kind,\n",
+        "         status, ROUND(est_wasted_usd_list * (1.0 - 0.0), 2) AS wasted, est_wasted_usd_list AS floor_value, window_days\n",
+        "  FROM databricks_audit_dashboard.compute_warehouse_idle_minutes\n",
+        "  UNION ALL\n",
+        "  SELECT 'Idle cluster nodes', dc.workspace_id, w.cluster_id, 'cluster',\n",
+        "         w.status, ROUND(w.est_wasted_usd_list * (1.0 - 0.0), 2), w.est_wasted_usd_list, w.window_days\n",
+        "  FROM databricks_audit_dashboard.compute_idle_node_ratio w\n",
+        "  LEFT JOIN databricks_audit_dashboard.dim_cluster dc ON dc.cluster_id = w.cluster_id\n",
+        "  UNION ALL\n",
+        "  SELECT 'Compute burned on failed runs', workspace_id, job_id, 'job',\n",
+        "         status, ROUND(est_wasted_usd_list * (1.0 - 0.0), 2), CAST(NULL AS DOUBLE), window_days\n",
+        "  FROM databricks_audit_dashboard.lakeflow_failed_jobs_wasted_dbus\n",
+        "  UNION ALL\n",
+        "  SELECT 'Compute burned on failed statements', workspace_id, warehouse_id, 'warehouse',\n",
+        "         status, ROUND(est_wasted_usd_list * (1.0 - 0.0), 2), est_wasted_usd_list, window_days\n",
+        "  FROM databricks_audit_dashboard.cost_failed_statement_waste\n",
+        "  UNION ALL\n",
+        "  SELECT 'Endpoints billed with no requests', workspace_id, endpoint_id, 'endpoint',\n",
+        "         status, ROUND(est_wasted_usd_list * (1.0 - 0.0), 2), est_usd_list, window_days\n",
+        "  FROM databricks_audit_dashboard.compute_serving_endpoint_cost_status\n",
+        "),\n",
+        "eff AS (\n",
+        "  SELECT *,\n",
+        "         CASE WHEN status IN ('CRITICAL', 'WARN') AND floor_value IS NOT NULL\n",
+        "                   AND floor_value < 50.0 * window_days / 30.0\n",
+        "              THEN 'OK' ELSE status END AS eff_status\n",
+        "  FROM src\n",
+        "),\n",
+        "named_all AS (\n",
+        "  SELECT e.*, COALESCE(ws.name, e.workspace_id, 'Account-level') AS workspace_name\n",
+        "  FROM eff e\n",
+        "  LEFT JOIN databricks_audit_dashboard.dim_workspace ws ON ws.workspace_id = e.workspace_id\n",
+        "),\n",
+        "flagged AS (\n",
+        "  SELECT source_label, workspace_id, entity_id, entity_kind, wasted\n",
+        "  FROM eff\n",
+        "  WHERE eff_status IN ('CRITICAL', 'WARN') AND wasted > 0\n",
+        "),\n",
+        "named AS (\n",
+        "  SELECT f.source_label, f.entity_kind, f.wasted,\n",
+        "         COALESCE(ws.name, f.workspace_id, 'Account-level') AS workspace_name,\n",
+        "         COALESCE(dw.warehouse_name, dc.cluster_name, dj.name, ep.endpoint_name, f.entity_id) AS resource_name\n",
+        "  FROM flagged f\n",
+        "  LEFT JOIN databricks_audit_dashboard.dim_workspace ws ON ws.workspace_id = f.workspace_id\n",
+        "  LEFT JOIN databricks_audit_dashboard.dim_warehouse dw ON f.entity_kind = 'warehouse' AND dw.warehouse_id = f.entity_id\n",
+        "  LEFT JOIN databricks_audit_dashboard.dim_cluster dc ON f.entity_kind = 'cluster' AND dc.cluster_id = f.entity_id\n",
+        "  LEFT JOIN databricks_audit_dashboard.dim_job dj ON f.entity_kind = 'job' AND dj.workspace_id = f.workspace_id AND dj.job_id = f.entity_id\n",
+        "  LEFT JOIN databricks_audit_dashboard.compute_serving_endpoint_cost_status ep\n",
+        "    ON f.entity_kind = 'endpoint' AND ep.workspace_id = f.workspace_id AND ep.endpoint_id = f.entity_id\n",
+        ")\n",
+        ",\n",
+        "priced AS (\n",
+        "  SELECT CASE source_label\n",
+        "           WHEN 'Warehouse idle time' THEN 'compute_warehouse_idle_minutes'\n",
+        "           WHEN 'Idle cluster nodes' THEN 'compute_idle_node_ratio'\n",
+        "           WHEN 'Compute burned on failed runs' THEN 'lakeflow_failed_jobs_wasted_dbus'\n",
+        "           WHEN 'Compute burned on failed statements' THEN 'cost_failed_statement_waste'\n",
+        "           WHEN 'Endpoints billed with no requests' THEN 'compute_serving_endpoint_cost_status'\n",
+        "         END AS query_id, source_label, wasted, workspace_name AS ws_name\n",
+        "  FROM named\n",
+        "),\n",
+        "priced_f AS (\n",
+        "  SELECT * FROM priced WHERE (array_contains(:workspace, COALESCE(ws_name, '')) OR array_contains(:workspace, 'all'))\n",
+        ")\n",
+        "\n",
+        "SELECT ROUND(COALESCE((SELECT SUM(wasted) FROM priced_f), 0), 0) AS value,\n",
+        "       concat(CAST((SELECT count(DISTINCT query_id) FROM priced_f) AS STRING),\n",
+        "              ' of 5 priced checks flagged') AS target\n"
+      ],
+      "parameters": [
+        {
+          "displayName": "Workspace",
+          "keyword": "workspace",
+          "dataType": "STRING",
+          "complexType": "MULTI",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "all"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "ccd028ec",
+      "displayName": "fixes:kpi:Not priced",
+      "queryLines": [
+        "WITH checks AS (\n",
+        "  SELECT * FROM (VALUES\n",
+        "       ('cost_daily_spikes', 'Spend spikes', 'Cost'),\n",
+        "       ('cost_period_over_period', 'Change vs previous period', 'Cost'),\n",
+        "       ('cost_by_hour_of_day', 'Spend concentrated by hour of day', 'Cost'),\n",
+        "       ('cost_dollarized_by_sku_day', 'Daily spend by SKU', 'Cost'),\n",
+        "       ('cost_monthly_actuals', 'Spend by calendar month', 'Cost'),\n",
+        "       ('cost_totals_by_sku_day', 'Spend by product, raw rows', 'Cost'),\n",
+        "       ('cost_workspace_names', 'Workspace names', 'Cost'),\n",
+        "       ('cost_by_billing_origin_product', 'Spend by product', 'Cost'),\n",
+        "       ('cost_premium_serverless_photon', 'Serverless & Photon share', 'Cost'),\n",
+        "       ('cost_sku_trend_12m', 'Fastest-growing SKUs', 'Cost'),\n",
+        "       ('cost_chargeback_by_allocation_tag', 'Spend with no cost center or team tag', 'Cost'),\n",
+        "       ('cost_chargeback_by_tag', 'Spend by cost center or team', 'Cost'),\n",
+        "       ('cost_chargeback_by_identity', 'Spend by who ran it', 'Cost'),\n",
+        "       ('cost_dbsql_allocation_gap', 'SQL spend that can\\'t be split by query', 'Cost'),\n",
+        "       ('cost_unnamed_workspaces', 'Spend on workspaces with no name', 'Cost'),\n",
+        "       ('cost_chargeback_by_workspace', 'Chargeback by workspace', 'Cost'),\n",
+        "       ('cost_chargeback_by_service', 'Chargeback by product line', 'Cost'),\n",
+        "       ('cost_chargeback_by_sku', 'Chargeback by SKU', 'Cost'),\n",
+        "       ('cost_chargeback_by_warehouse', 'Chargeback by warehouse', 'Cost'),\n",
+        "       ('cost_chargeback_by_job', 'Chargeback by job', 'Cost'),\n",
+        "       ('cost_chargeback_by_cluster', 'Chargeback by cluster, job cluster or pipeline', 'Cost'),\n",
+        "       ('cost_chargeback_identity_by_source', 'Chargeback by identity', 'Cost'),\n",
+        "       ('cost_chargeback_by_tag_value', 'Chargeback by tag value', 'Cost'),\n",
+        "       ('cost_chargeback_reconcile', 'Chargeback self-check', 'Cost'),\n",
+        "       ('cost_by_job', 'Spend by job', 'Cost'),\n",
+        "       ('cost_by_compute_resource', 'Spend by cluster or warehouse', 'Cost'),\n",
+        "       ('cost_by_notebook', 'Notebooks over the daily DBU limit', 'Cost'),\n",
+        "       ('cost_default_storage_dsu', 'Managed storage spend', 'Cost'),\n",
+        "       ('cost_genai_token_gpu', 'GenAI token & GPU spend', 'Cost'),\n",
+        "       ('cost_daily_by_resource', 'Daily cost by resource', 'Cost'),\n",
+        "       ('perf_daily_by_resource', 'Daily query, job and pipeline performance', 'Cost'),\n",
+        "       ('perf_failure_causes_daily', 'Daily failures by cause', 'Cost'),\n",
+        "       ('cost_usage_policy_coverage', 'Serverless usage without a policy', 'Cost'),\n",
+        "       ('cost_actual_vs_list_by_sku', 'Actual price vs list price', 'Cost'),\n",
+        "       ('cost_networking_egress', 'Cross-region networking spend', 'Cost'),\n",
+        "       ('cost_cloud_infra', 'Cloud infrastructure spend', 'Cost'),\n",
+        "       ('cost_restatement_trust_metric', 'How much of last month\\'s bill has since changed', 'Cost'),\n",
+        "       ('cost_by_serving_endpoint', 'Spend by serving endpoint', 'ML & AI'),\n",
+        "       ('cost_serving_mode_by_endpoint', 'Serving endpoints over the daily spend limit', 'ML & AI'),\n",
+        "       ('cost_vector_search_spend', 'Vector Search spend', 'ML & AI'),\n",
+        "       ('compute_serving_dormant_endpoints', 'Dormant serving endpoints', 'ML & AI'),\n",
+        "       ('compute_serving_endpoint_cost_status', 'Endpoints billed with no requests', 'ML & AI'),\n",
+        "       ('compute_serving_endpoint_usage', 'Endpoint requests & errors', 'ML & AI'),\n",
+        "       ('access_vector_search_traffic', 'Vector Search query traffic', 'ML & AI'),\n",
+        "       ('serving_endpoint_traffic_by_endpoint', 'Endpoint traffic, raw rows', 'ML & AI'),\n",
+        "       ('compute_ai_gateway_usage', 'AI Gateway usage', 'ML & AI'),\n",
+        "       ('genie_usage', 'Genie usage by user', 'Genie'),\n",
+        "       ('compute_warehouse_idle_minutes', 'Warehouse idle time', 'Compute'),\n",
+        "       ('compute_warehouse_idle_gaps', 'Longest running stretch per warehouse', 'Compute'),\n",
+        "       ('compute_warehouse_autoscale_churn', 'Warehouse autoscale churn', 'Compute'),\n",
+        "       ('compute_warehouse_autostop_churn', 'Warehouse auto-stop churn', 'Compute'),\n",
+        "       ('compute_warehouse_late_autostop', 'Warehouse late auto-stop', 'Compute'),\n",
+        "       ('compute_warehouse_cache_reuse', 'Warehouse result-cache reuse', 'Compute'),\n",
+        "       ('sql_warehouse_events_activity', 'Warehouse start/stop activity', 'Compute'),\n",
+        "       ('compute_last_activity', 'Last activity', 'Compute'),\n",
+        "       ('sql_warehouse_config_current', 'Warehouse configuration, current', 'Compute'),\n",
+        "       ('compute_idle_node_ratio', 'Idle cluster nodes', 'Compute'),\n",
+        "       ('node_timeline_utilization', 'Cluster node utilization over time', 'Compute'),\n",
+        "       ('instance_pools_idle_capacity', 'Idle warm-pool capacity', 'Compute'),\n",
+        "       ('instance_events_idle_active', 'Pool instance idle/active time', 'Compute'),\n",
+        "       ('classic_clusters_config_current', 'Cluster configuration, current', 'Compute'),\n",
+        "       ('node_types_reference', 'Node type reference', 'Compute'),\n",
+        "       ('compute_cluster_config_posture', 'Cluster setup risks', 'Compute'),\n",
+        "       ('compute_warehouse_config_posture', 'Warehouse setup risks', 'Compute'),\n",
+        "       ('lakeflow_job_reliability', 'Broken or flaky jobs', 'Jobs'),\n",
+        "       ('lakeflow_failed_jobs_wasted_dbus', 'Compute burned on failed runs', 'Jobs'),\n",
+        "       ('lakeflow_failed_runs', 'Failed job runs', 'Jobs'),\n",
+        "       ('lakeflow_never_started_runs', 'Runs that never started', 'Jobs'),\n",
+        "       ('lakeflow_succeeded_with_failed_tasks', 'Runs that \\'succeeded\\' with a failed task', 'Jobs'),\n",
+        "       ('lakeflow_termination_taxonomy', 'Termination reasons, reference', 'Jobs'),\n",
+        "       ('lakeflow_job_run_changes', 'What changed since the last good run', 'Jobs'),\n",
+        "       ('lakeflow_daily_state', 'Jobs and pipelines, day by day', 'Jobs'),\n",
+        "       ('lakeflow_job_duration_regression', 'Jobs running slower than usual', 'Jobs'),\n",
+        "       ('lakeflow_job_queue_time', 'Jobs waiting on compute', 'Jobs'),\n",
+        "       ('lakeflow_phase_cold_start', 'Cluster cold-start time', 'Jobs'),\n",
+        "       ('lakeflow_failed_cluster_starts', 'Failed cluster starts', 'Jobs'),\n",
+        "       ('lakeflow_workload_mix_hours', 'Job workload by hour of day', 'Jobs'),\n",
+        "       ('lakeflow_long_running_runs', 'Long-running runs', 'Jobs'),\n",
+        "       ('lakeflow_retries_repairs', 'Jobs relying on retries or repairs', 'Jobs'),\n",
+        "       ('lakeflow_stale_zombie_jobs', 'Stale jobs with no recent run', 'Jobs'),\n",
+        "       ('lakeflow_jobs_no_timeout', 'Jobs with no timeout set', 'Jobs'),\n",
+        "       ('lakeflow_job_tasks_no_timeout', 'Job tasks with no timeout set', 'Jobs'),\n",
+        "       ('lakeflow_jobs_on_all_purpose', 'Jobs on all-purpose clusters', 'Jobs'),\n",
+        "       ('lakeflow_health_rule_coverage', 'Jobs with no health rule', 'Jobs'),\n",
+        "       ('lakeflow_job_ownership_orphans', 'Jobs with no clear owner', 'Jobs'),\n",
+        "       ('lakeflow_tasks_near_timeout', 'Tasks running close to their timeout', 'Jobs'),\n",
+        "       ('lakeflow_job_cost_summary', 'Job cost summary, reference', 'Jobs'),\n",
+        "       ('lakeflow_job_run_cost', 'Per-run cost, reference', 'Jobs'),\n",
+        "       ('lakeflow_job_recent_runs', 'Recent runs, reference', 'Jobs'),\n",
+        "       ('lakeflow_job_compute_pressure', 'Job compute fit', 'Jobs'),\n",
+        "       ('task_cluster_utilization', 'Task-level cluster utilization', 'Jobs'),\n",
+        "       ('lakeflow_job_oversized', 'Jobs on bigger machines than they need', 'Jobs'),\n",
+        "       ('lakeflow_pipeline_cost', 'Spend by pipeline', 'Jobs'),\n",
+        "       ('lakeflow_pipeline_idle_tail_duration', 'Pipeline compute left running after its last update', 'Jobs'),\n",
+        "       ('lakeflow_pipeline_update_failures_retries', 'Pipeline update failures & retries', 'Jobs'),\n",
+        "       ('lakeflow_pipelines_inventory_tier', 'Pipeline inventory, reference', 'Jobs'),\n",
+        "       ('query_top_by_cost', 'Top queries by cost', 'Queries'),\n",
+        "       ('query_provenance_by_source', 'Query traffic by source', 'Queries'),\n",
+        "       ('audit_self_cost', 'This audit\\'s own query cost', 'Queries'),\n",
+        "       ('query_costly_statements_grouped', 'Heaviest statement shapes', 'Queries'),\n",
+        "       ('query_costly_statements', 'All statements, reference', 'Queries'),\n",
+        "       ('query_per_query_estimate_lane', 'Per-query cost estimate, reference', 'Queries'),\n",
+        "       ('query_local_spillage', 'Queries spilling to local disk', 'Queries'),\n",
+        "       ('query_shuffle_write_amplification', 'Queries shuffling too much data', 'Queries'),\n",
+        "       ('query_pruning_effectiveness', 'Queries not pruning partitions/files', 'Queries'),\n",
+        "       ('query_cache_coldstart', 'Queries missing the disk cache', 'Queries'),\n",
+        "       ('query_failed_queries_daily', 'Failed queries per day', 'Queries'),\n",
+        "       ('cost_failed_statement_waste', 'Compute burned on failed statements', 'Queries'),\n",
+        "       ('query_failed_statements_grouped', 'Failed statements by error', 'Queries'),\n",
+        "       ('query_warehouse_pressure', 'Warehouse memory & concurrency pressure', 'Queries'),\n",
+        "       ('query_queuing_waits', 'Queries waiting for a warehouse slot', 'Queries'),\n",
+        "       ('query_workload_mix_hours', 'Query workload by hour of day', 'Queries'),\n",
+        "       ('query_task_statement_breakdown', 'Statement breakdown by task stage', 'Queries'),\n",
+        "       ('perf_queue_by_hour', 'Queueing by day and hour', 'Queries'),\n",
+        "       ('query_slices', 'Query slices, reference', 'Queries'),\n",
+        "       ('access_broad_grants', 'Overly broad grants', 'Governance & PII'),\n",
+        "       ('access_grants_inventory', 'Grants inventory', 'Governance & PII'),\n",
+        "       ('access_grants_inventory_extended', 'Grants inventory, extended', 'Governance & PII'),\n",
+        "       ('access_runas_escalation', 'Run-as identity escalation', 'Governance & PII'),\n",
+        "       ('access_login_concentration', 'Login concentration', 'Governance & PII'),\n",
+        "       ('access_network_inbound_denials', 'Inbound network denials', 'Governance & PII'),\n",
+        "       ('access_network_outbound_denials', 'Outbound network denials', 'Governance & PII'),\n",
+        "       ('access_admin_role_change_events', 'Admin and permission changes', 'Governance & PII'),\n",
+        "       ('access_classification_coverage', 'Sensitive-data classification coverage', 'Governance & PII'),\n",
+        "       ('access_classified_unmasked', 'Classified data with no mask', 'Governance & PII'),\n",
+        "       ('access_sensitive_table_reads', 'Reads of sensitive tables', 'Governance & PII'),\n",
+        "       ('access_pii_outside_tables', 'PII outside of tagged tables', 'Governance & PII'),\n",
+        "       ('access_data_classification_inventory', 'Data classification inventory', 'Governance & PII'),\n",
+        "       ('access_column_masks_inventory', 'Column masks inventory', 'Governance & PII'),\n",
+        "       ('access_row_filters_inventory', 'Row filters inventory', 'Governance & PII'),\n",
+        "       ('access_tags_inventory', 'Table & column tags inventory', 'Governance & PII'),\n",
+        "       ('access_table_lineage_blast_radius', 'Table lineage blast radius', 'Governance & PII'),\n",
+        "       ('access_column_lineage_sensitive_reach', 'Sensitive column lineage reach', 'Governance & PII'),\n",
+        "       ('access_pii_propagation_untagged', 'PII propagating into untagged tables', 'Governance & PII'),\n",
+        "       ('access_views_inventory', 'Views inventory', 'Governance & PII'),\n",
+        "       ('access_volumes_inventory', 'Volumes inventory', 'Governance & PII'),\n",
+        "       ('access_delta_sharing_exposure', 'Delta Sharing exposure', 'Governance & PII'),\n",
+        "       ('storage_target_table_discovery', 'Table discovery', 'Storage'),\n",
+        "       ('table_inventory_type', 'Table inventory by type', 'Storage'),\n",
+        "       ('access_dead_table_candidates', 'Tables not read or changed recently', 'Storage'),\n",
+        "       ('storage_growth', 'Table growth and drops', 'Storage'),\n",
+        "       ('po_maintenance_cost_by_table', 'Maintenance spend by table', 'Storage'),\n",
+        "       ('po_vacuum_reclaimed_bytes', 'Storage reclaimed by VACUUM', 'Storage'),\n",
+        "       ('po_clustering_activity', 'Liquid clustering activity', 'Storage'),\n",
+        "       ('po_clustering_column_churn', 'Clustering column changes', 'Storage'),\n",
+        "       ('po_data_skipping_backfill', 'Data-skipping statistics backfill', 'Storage'),\n",
+        "       ('po_failure_reasons', 'Predictive optimization failures', 'Storage'),\n",
+        "       ('storage_po_coverage', 'Predictive optimization coverage', 'Storage'),\n",
+        "       ('storage_small_files', 'Tables with too many small files', 'Storage'),\n",
+        "       ('access_source_table_coverage', 'System table coverage', 'Coverage & Gaps'),\n",
+        "       ('cost_account_prices_raw', 'Account-specific prices, raw', 'Coverage & Gaps'),\n",
+        "       ('pricing_list_prices_raw', 'List prices, raw', 'Coverage & Gaps'),\n",
+        "       ('cost_audit_self_usage', 'This audit\\'s own usage, by warehouse', 'Coverage & Gaps')\n",
+        "  ) AS c(query_id, check_title, area)\n",
+        "),\n",
+        "status AS (\n",
+        "  SELECT c.query_id, c.check_title, c.area,\n",
+        "         CASE WHEN l.query_id IS NULL THEN 'Not run'\n",
+        "              WHEN NOT l.ok THEN 'Not assessed'\n",
+        "              WHEN l.critical > 0 THEN 'Critical'\n",
+        "              WHEN l.warn > 0 THEN 'Warn'\n",
+        "              WHEN l.has_status THEN 'OK'\n",
+        "              WHEN l.row_count = 0 THEN 'No rows'\n",
+        "              ELSE 'Listed' END AS verdict,\n",
+        "         COALESCE(l.critical, 0) AS critical_rows, COALESCE(l.warn, 0) AS warn_rows\n",
+        "  FROM checks c\n",
+        "  LEFT JOIN databricks_audit_dashboard.snapshot_log l ON l.query_id = c.query_id\n",
+        ")\n",
+        ",\n",
+        "src AS (\n",
+        "  SELECT 'Warehouse idle time' AS source_label, workspace_id, warehouse_id AS entity_id, 'warehouse' AS entity_kind,\n",
+        "         status, ROUND(est_wasted_usd_list * (1.0 - 0.0), 2) AS wasted, est_wasted_usd_list AS floor_value, window_days\n",
+        "  FROM databricks_audit_dashboard.compute_warehouse_idle_minutes\n",
+        "  UNION ALL\n",
+        "  SELECT 'Idle cluster nodes', dc.workspace_id, w.cluster_id, 'cluster',\n",
+        "         w.status, ROUND(w.est_wasted_usd_list * (1.0 - 0.0), 2), w.est_wasted_usd_list, w.window_days\n",
+        "  FROM databricks_audit_dashboard.compute_idle_node_ratio w\n",
+        "  LEFT JOIN databricks_audit_dashboard.dim_cluster dc ON dc.cluster_id = w.cluster_id\n",
+        "  UNION ALL\n",
+        "  SELECT 'Compute burned on failed runs', workspace_id, job_id, 'job',\n",
+        "         status, ROUND(est_wasted_usd_list * (1.0 - 0.0), 2), CAST(NULL AS DOUBLE), window_days\n",
+        "  FROM databricks_audit_dashboard.lakeflow_failed_jobs_wasted_dbus\n",
+        "  UNION ALL\n",
+        "  SELECT 'Compute burned on failed statements', workspace_id, warehouse_id, 'warehouse',\n",
+        "         status, ROUND(est_wasted_usd_list * (1.0 - 0.0), 2), est_wasted_usd_list, window_days\n",
+        "  FROM databricks_audit_dashboard.cost_failed_statement_waste\n",
+        "  UNION ALL\n",
+        "  SELECT 'Endpoints billed with no requests', workspace_id, endpoint_id, 'endpoint',\n",
+        "         status, ROUND(est_wasted_usd_list * (1.0 - 0.0), 2), est_usd_list, window_days\n",
+        "  FROM databricks_audit_dashboard.compute_serving_endpoint_cost_status\n",
+        "),\n",
+        "eff AS (\n",
+        "  SELECT *,\n",
+        "         CASE WHEN status IN ('CRITICAL', 'WARN') AND floor_value IS NOT NULL\n",
+        "                   AND floor_value < 50.0 * window_days / 30.0\n",
+        "              THEN 'OK' ELSE status END AS eff_status\n",
+        "  FROM src\n",
+        "),\n",
+        "named_all AS (\n",
+        "  SELECT e.*, COALESCE(ws.name, e.workspace_id, 'Account-level') AS workspace_name\n",
+        "  FROM eff e\n",
+        "  LEFT JOIN databricks_audit_dashboard.dim_workspace ws ON ws.workspace_id = e.workspace_id\n",
+        "),\n",
+        "flagged AS (\n",
+        "  SELECT source_label, workspace_id, entity_id, entity_kind, wasted\n",
+        "  FROM eff\n",
+        "  WHERE eff_status IN ('CRITICAL', 'WARN') AND wasted > 0\n",
+        "),\n",
+        "named AS (\n",
+        "  SELECT f.source_label, f.entity_kind, f.wasted,\n",
+        "         COALESCE(ws.name, f.workspace_id, 'Account-level') AS workspace_name,\n",
+        "         COALESCE(dw.warehouse_name, dc.cluster_name, dj.name, ep.endpoint_name, f.entity_id) AS resource_name\n",
+        "  FROM flagged f\n",
+        "  LEFT JOIN databricks_audit_dashboard.dim_workspace ws ON ws.workspace_id = f.workspace_id\n",
+        "  LEFT JOIN databricks_audit_dashboard.dim_warehouse dw ON f.entity_kind = 'warehouse' AND dw.warehouse_id = f.entity_id\n",
+        "  LEFT JOIN databricks_audit_dashboard.dim_cluster dc ON f.entity_kind = 'cluster' AND dc.cluster_id = f.entity_id\n",
+        "  LEFT JOIN databricks_audit_dashboard.dim_job dj ON f.entity_kind = 'job' AND dj.workspace_id = f.workspace_id AND dj.job_id = f.entity_id\n",
+        "  LEFT JOIN databricks_audit_dashboard.compute_serving_endpoint_cost_status ep\n",
+        "    ON f.entity_kind = 'endpoint' AND ep.workspace_id = f.workspace_id AND ep.endpoint_id = f.entity_id\n",
+        ")\n",
+        ",\n",
+        "priced AS (\n",
+        "  SELECT CASE source_label\n",
+        "           WHEN 'Warehouse idle time' THEN 'compute_warehouse_idle_minutes'\n",
+        "           WHEN 'Idle cluster nodes' THEN 'compute_idle_node_ratio'\n",
+        "           WHEN 'Compute burned on failed runs' THEN 'lakeflow_failed_jobs_wasted_dbus'\n",
+        "           WHEN 'Compute burned on failed statements' THEN 'cost_failed_statement_waste'\n",
+        "           WHEN 'Endpoints billed with no requests' THEN 'compute_serving_endpoint_cost_status'\n",
+        "         END AS query_id, source_label, wasted, workspace_name AS ws_name\n",
+        "  FROM named\n",
+        "),\n",
+        "priced_f AS (\n",
+        "  SELECT * FROM priced WHERE (array_contains(:workspace, COALESCE(ws_name, '')) OR array_contains(:workspace, 'all'))\n",
+        ")\n",
+        ", priced_sum AS (\n",
+        "  SELECT query_id, ROUND(SUM(wasted), 2) AS possible_usd FROM priced_f GROUP BY 1\n",
+        ")\n",
+        "SELECT (SELECT count(*) FROM status s LEFT JOIN priced_sum ps ON ps.query_id = s.query_id\n",
+        "        WHERE s.verdict IN ('Critical', 'Warn') AND ps.possible_usd IS NULL) AS value,\n",
+        "       'No dollar figure from this window' AS target\n"
+      ],
+      "parameters": [
+        {
+          "displayName": "Workspace",
+          "keyword": "workspace",
+          "dataType": "STRING",
+          "complexType": "MULTI",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "all"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4a208a50",
+      "displayName": "fixes:kpi:Security risks",
+      "queryLines": [
+        "WITH templates AS (\n",
+        "  SELECT * FROM (VALUES\n",
+        "       ('warehouse_autostop', 'saving', 'Platform', 'idle SQL warehouse', 'idle SQL warehouses', '5 min each', 'SQL Warehouses \u2192 the warehouse \u2192 Edit \u2192 Auto stop: 10 min (5 min on serverless).', 'compute_warehouse_idle_minutes'),\n",
+        "       ('idle_clusters', 'saving', 'Platform', 'idle cluster', 'idle clusters', '15 min each', 'Compute \u2192 the cluster \u2192 Edit: fewer workers or a shorter auto-termination. Check memory use before shrinking.', 'compute_idle_node_ratio'),\n",
+        "       ('failed_jobs', 'saving', 'Data engineering', 'failing job', 'failing jobs', '1\u20132 h each', 'Open the latest failed run, fix the cause and re-run. The job drawer shows what changed since the last good run.', 'lakeflow_failed_jobs_wasted_dbus'),\n",
+        "       ('failed_statements', 'saving', 'Data engineering', 'failing statement shape', 'failing statement shapes', '30 min each', 'Queries \u2192 Reliability groups the errors; fix the query or the table it reads, or stop the schedule that re-runs it.', 'cost_failed_statement_waste'),\n",
+        "       ('idle_endpoints', 'saving', 'ML', 'idle serving endpoint', 'idle serving endpoints', '5 min each', 'Serving \u2192 the endpoint \u2192 Edit: turn on scale to zero, or delete it if nothing calls it.', 'compute_serving_endpoint_cost_status'),\n",
+        "       ('untagged', 'policy', 'Finance', 'untagged spend line', 'untagged spend lines', '1 day', 'Require the cost_center tag in cluster policies, serverless budget policies and warehouse settings.', CAST(NULL AS STRING)),\n",
+        "       ('jobs_on_all_purpose', 'hygiene', 'Platform', 'job', 'jobs', '10 min each', 'Job \u2192 Compute \u2192 a new job cluster or serverless. Job compute costs less per DBU than all-purpose.', CAST(NULL AS STRING)),\n",
+        "       ('stale_jobs', 'hygiene', 'Data engineering', 'stale job', 'stale jobs', '5 min each', 'Pause the schedule, or delete the job if nobody needs it.', CAST(NULL AS STRING)),\n",
+        "       ('unused_compute', 'hygiene', 'Platform', 'unused warehouse, cluster or workspace', 'unused warehouses, clusters or workspaces', '5 min each', 'No activity for 90 days or more, or never: ask the owner, then delete what is not needed (Compute \u203a Warehouses and Clusters & pools, Governance \u203a Admin activity).', CAST(NULL AS STRING)),\n",
+        "       ('no_timeout', 'hygiene', 'Data engineering', 'job', 'jobs', '5 min each', 'Set a timeout of about 2 \u00d7 the job\\'s p95 run time (the job drawer suggests one), or a run-duration health rule.', CAST(NULL AS STRING)),\n",
+        "       ('warm_pools', 'hygiene', 'Platform', 'instance pool', 'instance pools', '5 min each', 'Compute \u2192 Pools \u2192 the pool: lower the minimum idle instances.', CAST(NULL AS STRING)),\n",
+        "       ('warehouse_pressure', 'hygiene', 'Platform', 'SQL warehouse', 'SQL warehouses', '10 min each', 'More max clusters when queries wait for a slot; one size up when they spill.', CAST(NULL AS STRING)),\n",
+        "       ('cluster_policies', 'policy', 'Platform', 'cluster', 'clusters', '1 day', 'Create a small set of cluster policies (size, auto-termination, tags) and make them required.', CAST(NULL AS STRING)),\n",
+        "       ('unmasked', 'risk', 'Security', 'sensitive column', 'sensitive columns', '1 h each table', 'ALTER TABLE \u2026 ALTER COLUMN \u2026 SET MASK, or one ABAC column-mask policy on the catalog.', CAST(NULL AS STRING)),\n",
+        "       ('admin_changes', 'risk', 'Security', 'admin change pattern', 'admin change patterns', '30 min', 'Check each change with the person or service that made it; revoke what nobody expected.', CAST(NULL AS STRING)),\n",
+        "       ('broad_grants', 'risk', 'Security', 'broad grant', 'broad grants', '30 min each', 'Grant through groups, not people, and only the privileges needed. List your admin groups under admin_groups in settings.yml.', CAST(NULL AS STRING))\n",
+        "  ) AS v(tkey, kind, team, noun_s, noun_p, effort, how, waste)\n",
+        "),\n",
+        "template_checks AS (\n",
+        "  SELECT * FROM (VALUES\n",
+        "       ('warehouse_autostop', 'compute_warehouse_idle_minutes'),\n",
+        "       ('idle_clusters', 'compute_idle_node_ratio'),\n",
+        "       ('failed_jobs', 'lakeflow_failed_jobs_wasted_dbus'),\n",
+        "       ('failed_jobs', 'lakeflow_job_reliability'),\n",
+        "       ('failed_statements', 'cost_failed_statement_waste'),\n",
+        "       ('idle_endpoints', 'compute_serving_endpoint_cost_status'),\n",
+        "       ('idle_endpoints', 'compute_serving_dormant_endpoints'),\n",
+        "       ('untagged', 'cost_chargeback_by_allocation_tag'),\n",
+        "       ('jobs_on_all_purpose', 'lakeflow_jobs_on_all_purpose'),\n",
+        "       ('stale_jobs', 'lakeflow_stale_zombie_jobs'),\n",
+        "       ('unused_compute', 'compute_last_activity'),\n",
+        "       ('no_timeout', 'lakeflow_jobs_no_timeout'),\n",
+        "       ('no_timeout', 'lakeflow_job_tasks_no_timeout'),\n",
+        "       ('warm_pools', 'instance_pools_idle_capacity'),\n",
+        "       ('warehouse_pressure', 'query_warehouse_pressure'),\n",
+        "       ('cluster_policies', 'compute_cluster_config_posture'),\n",
+        "       ('unmasked', 'access_classified_unmasked'),\n",
+        "       ('admin_changes', 'access_admin_role_change_events'),\n",
+        "       ('broad_grants', 'access_broad_grants')\n",
+        "  ) AS v(tkey, query_id)\n",
+        "),\n",
+        "check_status AS (\n",
+        "  SELECT tc.tkey,\n",
+        "         CASE WHEN l.query_id IS NULL THEN 'Not run'\n",
+        "              WHEN NOT l.ok THEN 'Not assessed'\n",
+        "              WHEN l.critical > 0 THEN 'Critical'\n",
+        "              WHEN l.warn > 0 THEN 'Warn'\n",
+        "              ELSE 'OK' END AS verdict,\n",
+        "         COALESCE(l.critical, 0) AS critical_rows, COALESCE(l.warn, 0) AS warn_rows\n",
+        "  FROM template_checks tc\n",
+        "  LEFT JOIN databricks_audit_dashboard.snapshot_log l ON l.query_id = tc.query_id\n",
+        "),\n",
+        "template_status AS (\n",
+        "  SELECT tkey,\n",
+        "         MAX(CASE verdict WHEN 'Critical' THEN 3 WHEN 'Warn' THEN 2 ELSE 0 END) AS sev,\n",
+        "         SUM(CASE WHEN verdict IN ('Critical', 'Warn') THEN critical_rows + warn_rows ELSE 0 END) AS rows_flagged\n",
+        "  FROM check_status\n",
+        "  GROUP BY 1\n",
+        ")\n",
+        "\n",
+        "SELECT (SELECT count(*) FROM template_status ts JOIN templates t ON t.tkey = ts.tkey\n",
+        "        WHERE t.kind = 'risk' AND ts.sev >= 2) AS value,\n",
+        "       COALESCE(\n",
+        "         (SELECT concat('Worst: ', t.how) FROM template_status ts JOIN templates t ON t.tkey = ts.tkey\n",
+        "          WHERE t.kind = 'risk' AND ts.sev >= 2 ORDER BY ts.sev DESC, ts.rows_flagged DESC LIMIT 1),\n",
+        "         'Nothing flagged') AS target\n"
+      ]
+    },
+    {
+      "name": "ff6eaa2e",
+      "displayName": "fixes:Flagged checks by area",
+      "queryLines": [
+        "WITH checks AS (\n",
+        "  SELECT * FROM (VALUES\n",
+        "       ('cost_daily_spikes', 'Spend spikes', 'Cost'),\n",
+        "       ('cost_period_over_period', 'Change vs previous period', 'Cost'),\n",
+        "       ('cost_by_hour_of_day', 'Spend concentrated by hour of day', 'Cost'),\n",
+        "       ('cost_dollarized_by_sku_day', 'Daily spend by SKU', 'Cost'),\n",
+        "       ('cost_monthly_actuals', 'Spend by calendar month', 'Cost'),\n",
+        "       ('cost_totals_by_sku_day', 'Spend by product, raw rows', 'Cost'),\n",
+        "       ('cost_workspace_names', 'Workspace names', 'Cost'),\n",
+        "       ('cost_by_billing_origin_product', 'Spend by product', 'Cost'),\n",
+        "       ('cost_premium_serverless_photon', 'Serverless & Photon share', 'Cost'),\n",
+        "       ('cost_sku_trend_12m', 'Fastest-growing SKUs', 'Cost'),\n",
+        "       ('cost_chargeback_by_allocation_tag', 'Spend with no cost center or team tag', 'Cost'),\n",
+        "       ('cost_chargeback_by_tag', 'Spend by cost center or team', 'Cost'),\n",
+        "       ('cost_chargeback_by_identity', 'Spend by who ran it', 'Cost'),\n",
+        "       ('cost_dbsql_allocation_gap', 'SQL spend that can\\'t be split by query', 'Cost'),\n",
+        "       ('cost_unnamed_workspaces', 'Spend on workspaces with no name', 'Cost'),\n",
+        "       ('cost_chargeback_by_workspace', 'Chargeback by workspace', 'Cost'),\n",
+        "       ('cost_chargeback_by_service', 'Chargeback by product line', 'Cost'),\n",
+        "       ('cost_chargeback_by_sku', 'Chargeback by SKU', 'Cost'),\n",
+        "       ('cost_chargeback_by_warehouse', 'Chargeback by warehouse', 'Cost'),\n",
+        "       ('cost_chargeback_by_job', 'Chargeback by job', 'Cost'),\n",
+        "       ('cost_chargeback_by_cluster', 'Chargeback by cluster, job cluster or pipeline', 'Cost'),\n",
+        "       ('cost_chargeback_identity_by_source', 'Chargeback by identity', 'Cost'),\n",
+        "       ('cost_chargeback_by_tag_value', 'Chargeback by tag value', 'Cost'),\n",
+        "       ('cost_chargeback_reconcile', 'Chargeback self-check', 'Cost'),\n",
+        "       ('cost_by_job', 'Spend by job', 'Cost'),\n",
+        "       ('cost_by_compute_resource', 'Spend by cluster or warehouse', 'Cost'),\n",
+        "       ('cost_by_notebook', 'Notebooks over the daily DBU limit', 'Cost'),\n",
+        "       ('cost_default_storage_dsu', 'Managed storage spend', 'Cost'),\n",
+        "       ('cost_genai_token_gpu', 'GenAI token & GPU spend', 'Cost'),\n",
+        "       ('cost_daily_by_resource', 'Daily cost by resource', 'Cost'),\n",
+        "       ('perf_daily_by_resource', 'Daily query, job and pipeline performance', 'Cost'),\n",
+        "       ('perf_failure_causes_daily', 'Daily failures by cause', 'Cost'),\n",
+        "       ('cost_usage_policy_coverage', 'Serverless usage without a policy', 'Cost'),\n",
+        "       ('cost_actual_vs_list_by_sku', 'Actual price vs list price', 'Cost'),\n",
+        "       ('cost_networking_egress', 'Cross-region networking spend', 'Cost'),\n",
+        "       ('cost_cloud_infra', 'Cloud infrastructure spend', 'Cost'),\n",
+        "       ('cost_restatement_trust_metric', 'How much of last month\\'s bill has since changed', 'Cost'),\n",
+        "       ('cost_by_serving_endpoint', 'Spend by serving endpoint', 'ML & AI'),\n",
+        "       ('cost_serving_mode_by_endpoint', 'Serving endpoints over the daily spend limit', 'ML & AI'),\n",
+        "       ('cost_vector_search_spend', 'Vector Search spend', 'ML & AI'),\n",
+        "       ('compute_serving_dormant_endpoints', 'Dormant serving endpoints', 'ML & AI'),\n",
+        "       ('compute_serving_endpoint_cost_status', 'Endpoints billed with no requests', 'ML & AI'),\n",
+        "       ('compute_serving_endpoint_usage', 'Endpoint requests & errors', 'ML & AI'),\n",
+        "       ('access_vector_search_traffic', 'Vector Search query traffic', 'ML & AI'),\n",
+        "       ('serving_endpoint_traffic_by_endpoint', 'Endpoint traffic, raw rows', 'ML & AI'),\n",
+        "       ('compute_ai_gateway_usage', 'AI Gateway usage', 'ML & AI'),\n",
+        "       ('genie_usage', 'Genie usage by user', 'Genie'),\n",
+        "       ('compute_warehouse_idle_minutes', 'Warehouse idle time', 'Compute'),\n",
+        "       ('compute_warehouse_idle_gaps', 'Longest running stretch per warehouse', 'Compute'),\n",
+        "       ('compute_warehouse_autoscale_churn', 'Warehouse autoscale churn', 'Compute'),\n",
+        "       ('compute_warehouse_autostop_churn', 'Warehouse auto-stop churn', 'Compute'),\n",
+        "       ('compute_warehouse_late_autostop', 'Warehouse late auto-stop', 'Compute'),\n",
+        "       ('compute_warehouse_cache_reuse', 'Warehouse result-cache reuse', 'Compute'),\n",
+        "       ('sql_warehouse_events_activity', 'Warehouse start/stop activity', 'Compute'),\n",
+        "       ('compute_last_activity', 'Last activity', 'Compute'),\n",
+        "       ('sql_warehouse_config_current', 'Warehouse configuration, current', 'Compute'),\n",
+        "       ('compute_idle_node_ratio', 'Idle cluster nodes', 'Compute'),\n",
+        "       ('node_timeline_utilization', 'Cluster node utilization over time', 'Compute'),\n",
+        "       ('instance_pools_idle_capacity', 'Idle warm-pool capacity', 'Compute'),\n",
+        "       ('instance_events_idle_active', 'Pool instance idle/active time', 'Compute'),\n",
+        "       ('classic_clusters_config_current', 'Cluster configuration, current', 'Compute'),\n",
+        "       ('node_types_reference', 'Node type reference', 'Compute'),\n",
+        "       ('compute_cluster_config_posture', 'Cluster setup risks', 'Compute'),\n",
+        "       ('compute_warehouse_config_posture', 'Warehouse setup risks', 'Compute'),\n",
+        "       ('lakeflow_job_reliability', 'Broken or flaky jobs', 'Jobs'),\n",
+        "       ('lakeflow_failed_jobs_wasted_dbus', 'Compute burned on failed runs', 'Jobs'),\n",
+        "       ('lakeflow_failed_runs', 'Failed job runs', 'Jobs'),\n",
+        "       ('lakeflow_never_started_runs', 'Runs that never started', 'Jobs'),\n",
+        "       ('lakeflow_succeeded_with_failed_tasks', 'Runs that \\'succeeded\\' with a failed task', 'Jobs'),\n",
+        "       ('lakeflow_termination_taxonomy', 'Termination reasons, reference', 'Jobs'),\n",
+        "       ('lakeflow_job_run_changes', 'What changed since the last good run', 'Jobs'),\n",
+        "       ('lakeflow_daily_state', 'Jobs and pipelines, day by day', 'Jobs'),\n",
+        "       ('lakeflow_job_duration_regression', 'Jobs running slower than usual', 'Jobs'),\n",
+        "       ('lakeflow_job_queue_time', 'Jobs waiting on compute', 'Jobs'),\n",
+        "       ('lakeflow_phase_cold_start', 'Cluster cold-start time', 'Jobs'),\n",
+        "       ('lakeflow_failed_cluster_starts', 'Failed cluster starts', 'Jobs'),\n",
+        "       ('lakeflow_workload_mix_hours', 'Job workload by hour of day', 'Jobs'),\n",
+        "       ('lakeflow_long_running_runs', 'Long-running runs', 'Jobs'),\n",
+        "       ('lakeflow_retries_repairs', 'Jobs relying on retries or repairs', 'Jobs'),\n",
+        "       ('lakeflow_stale_zombie_jobs', 'Stale jobs with no recent run', 'Jobs'),\n",
+        "       ('lakeflow_jobs_no_timeout', 'Jobs with no timeout set', 'Jobs'),\n",
+        "       ('lakeflow_job_tasks_no_timeout', 'Job tasks with no timeout set', 'Jobs'),\n",
+        "       ('lakeflow_jobs_on_all_purpose', 'Jobs on all-purpose clusters', 'Jobs'),\n",
+        "       ('lakeflow_health_rule_coverage', 'Jobs with no health rule', 'Jobs'),\n",
+        "       ('lakeflow_job_ownership_orphans', 'Jobs with no clear owner', 'Jobs'),\n",
+        "       ('lakeflow_tasks_near_timeout', 'Tasks running close to their timeout', 'Jobs'),\n",
+        "       ('lakeflow_job_cost_summary', 'Job cost summary, reference', 'Jobs'),\n",
+        "       ('lakeflow_job_run_cost', 'Per-run cost, reference', 'Jobs'),\n",
+        "       ('lakeflow_job_recent_runs', 'Recent runs, reference', 'Jobs'),\n",
+        "       ('lakeflow_job_compute_pressure', 'Job compute fit', 'Jobs'),\n",
+        "       ('task_cluster_utilization', 'Task-level cluster utilization', 'Jobs'),\n",
+        "       ('lakeflow_job_oversized', 'Jobs on bigger machines than they need', 'Jobs'),\n",
+        "       ('lakeflow_pipeline_cost', 'Spend by pipeline', 'Jobs'),\n",
+        "       ('lakeflow_pipeline_idle_tail_duration', 'Pipeline compute left running after its last update', 'Jobs'),\n",
+        "       ('lakeflow_pipeline_update_failures_retries', 'Pipeline update failures & retries', 'Jobs'),\n",
+        "       ('lakeflow_pipelines_inventory_tier', 'Pipeline inventory, reference', 'Jobs'),\n",
+        "       ('query_top_by_cost', 'Top queries by cost', 'Queries'),\n",
+        "       ('query_provenance_by_source', 'Query traffic by source', 'Queries'),\n",
+        "       ('audit_self_cost', 'This audit\\'s own query cost', 'Queries'),\n",
+        "       ('query_costly_statements_grouped', 'Heaviest statement shapes', 'Queries'),\n",
+        "       ('query_costly_statements', 'All statements, reference', 'Queries'),\n",
+        "       ('query_per_query_estimate_lane', 'Per-query cost estimate, reference', 'Queries'),\n",
+        "       ('query_local_spillage', 'Queries spilling to local disk', 'Queries'),\n",
+        "       ('query_shuffle_write_amplification', 'Queries shuffling too much data', 'Queries'),\n",
+        "       ('query_pruning_effectiveness', 'Queries not pruning partitions/files', 'Queries'),\n",
+        "       ('query_cache_coldstart', 'Queries missing the disk cache', 'Queries'),\n",
+        "       ('query_failed_queries_daily', 'Failed queries per day', 'Queries'),\n",
+        "       ('cost_failed_statement_waste', 'Compute burned on failed statements', 'Queries'),\n",
+        "       ('query_failed_statements_grouped', 'Failed statements by error', 'Queries'),\n",
+        "       ('query_warehouse_pressure', 'Warehouse memory & concurrency pressure', 'Queries'),\n",
+        "       ('query_queuing_waits', 'Queries waiting for a warehouse slot', 'Queries'),\n",
+        "       ('query_workload_mix_hours', 'Query workload by hour of day', 'Queries'),\n",
+        "       ('query_task_statement_breakdown', 'Statement breakdown by task stage', 'Queries'),\n",
+        "       ('perf_queue_by_hour', 'Queueing by day and hour', 'Queries'),\n",
+        "       ('query_slices', 'Query slices, reference', 'Queries'),\n",
+        "       ('access_broad_grants', 'Overly broad grants', 'Governance & PII'),\n",
+        "       ('access_grants_inventory', 'Grants inventory', 'Governance & PII'),\n",
+        "       ('access_grants_inventory_extended', 'Grants inventory, extended', 'Governance & PII'),\n",
+        "       ('access_runas_escalation', 'Run-as identity escalation', 'Governance & PII'),\n",
+        "       ('access_login_concentration', 'Login concentration', 'Governance & PII'),\n",
+        "       ('access_network_inbound_denials', 'Inbound network denials', 'Governance & PII'),\n",
+        "       ('access_network_outbound_denials', 'Outbound network denials', 'Governance & PII'),\n",
+        "       ('access_admin_role_change_events', 'Admin and permission changes', 'Governance & PII'),\n",
+        "       ('access_classification_coverage', 'Sensitive-data classification coverage', 'Governance & PII'),\n",
+        "       ('access_classified_unmasked', 'Classified data with no mask', 'Governance & PII'),\n",
+        "       ('access_sensitive_table_reads', 'Reads of sensitive tables', 'Governance & PII'),\n",
+        "       ('access_pii_outside_tables', 'PII outside of tagged tables', 'Governance & PII'),\n",
+        "       ('access_data_classification_inventory', 'Data classification inventory', 'Governance & PII'),\n",
+        "       ('access_column_masks_inventory', 'Column masks inventory', 'Governance & PII'),\n",
+        "       ('access_row_filters_inventory', 'Row filters inventory', 'Governance & PII'),\n",
+        "       ('access_tags_inventory', 'Table & column tags inventory', 'Governance & PII'),\n",
+        "       ('access_table_lineage_blast_radius', 'Table lineage blast radius', 'Governance & PII'),\n",
+        "       ('access_column_lineage_sensitive_reach', 'Sensitive column lineage reach', 'Governance & PII'),\n",
+        "       ('access_pii_propagation_untagged', 'PII propagating into untagged tables', 'Governance & PII'),\n",
+        "       ('access_views_inventory', 'Views inventory', 'Governance & PII'),\n",
+        "       ('access_volumes_inventory', 'Volumes inventory', 'Governance & PII'),\n",
+        "       ('access_delta_sharing_exposure', 'Delta Sharing exposure', 'Governance & PII'),\n",
+        "       ('storage_target_table_discovery', 'Table discovery', 'Storage'),\n",
+        "       ('table_inventory_type', 'Table inventory by type', 'Storage'),\n",
+        "       ('access_dead_table_candidates', 'Tables not read or changed recently', 'Storage'),\n",
+        "       ('storage_growth', 'Table growth and drops', 'Storage'),\n",
+        "       ('po_maintenance_cost_by_table', 'Maintenance spend by table', 'Storage'),\n",
+        "       ('po_vacuum_reclaimed_bytes', 'Storage reclaimed by VACUUM', 'Storage'),\n",
+        "       ('po_clustering_activity', 'Liquid clustering activity', 'Storage'),\n",
+        "       ('po_clustering_column_churn', 'Clustering column changes', 'Storage'),\n",
+        "       ('po_data_skipping_backfill', 'Data-skipping statistics backfill', 'Storage'),\n",
+        "       ('po_failure_reasons', 'Predictive optimization failures', 'Storage'),\n",
+        "       ('storage_po_coverage', 'Predictive optimization coverage', 'Storage'),\n",
+        "       ('storage_small_files', 'Tables with too many small files', 'Storage'),\n",
+        "       ('access_source_table_coverage', 'System table coverage', 'Coverage & Gaps'),\n",
+        "       ('cost_account_prices_raw', 'Account-specific prices, raw', 'Coverage & Gaps'),\n",
+        "       ('pricing_list_prices_raw', 'List prices, raw', 'Coverage & Gaps'),\n",
+        "       ('cost_audit_self_usage', 'This audit\\'s own usage, by warehouse', 'Coverage & Gaps')\n",
+        "  ) AS c(query_id, check_title, area)\n",
+        "),\n",
+        "status AS (\n",
+        "  SELECT c.query_id, c.check_title, c.area,\n",
+        "         CASE WHEN l.query_id IS NULL THEN 'Not run'\n",
+        "              WHEN NOT l.ok THEN 'Not assessed'\n",
+        "              WHEN l.critical > 0 THEN 'Critical'\n",
+        "              WHEN l.warn > 0 THEN 'Warn'\n",
+        "              WHEN l.has_status THEN 'OK'\n",
+        "              WHEN l.row_count = 0 THEN 'No rows'\n",
+        "              ELSE 'Listed' END AS verdict,\n",
+        "         COALESCE(l.critical, 0) AS critical_rows, COALESCE(l.warn, 0) AS warn_rows\n",
+        "  FROM checks c\n",
+        "  LEFT JOIN databricks_audit_dashboard.snapshot_log l ON l.query_id = c.query_id\n",
+        ")\n",
+        "\n",
+        "SELECT area, count(*) AS flagged\n",
+        "FROM status\n",
+        "WHERE verdict IN ('Critical', 'Warn')\n",
+        "GROUP BY 1\n"
+      ]
+    },
+    {
+      "name": "ab21006f",
+      "displayName": "fixes:Possible $ by source",
+      "queryLines": [
+        "WITH src AS (\n",
+        "  SELECT 'Warehouse idle time' AS source_label, workspace_id, warehouse_id AS entity_id, 'warehouse' AS entity_kind,\n",
+        "         status, ROUND(est_wasted_usd_list * (1.0 - 0.0), 2) AS wasted, est_wasted_usd_list AS floor_value, window_days\n",
+        "  FROM databricks_audit_dashboard.compute_warehouse_idle_minutes\n",
+        "  UNION ALL\n",
+        "  SELECT 'Idle cluster nodes', dc.workspace_id, w.cluster_id, 'cluster',\n",
+        "         w.status, ROUND(w.est_wasted_usd_list * (1.0 - 0.0), 2), w.est_wasted_usd_list, w.window_days\n",
+        "  FROM databricks_audit_dashboard.compute_idle_node_ratio w\n",
+        "  LEFT JOIN databricks_audit_dashboard.dim_cluster dc ON dc.cluster_id = w.cluster_id\n",
+        "  UNION ALL\n",
+        "  SELECT 'Compute burned on failed runs', workspace_id, job_id, 'job',\n",
+        "         status, ROUND(est_wasted_usd_list * (1.0 - 0.0), 2), CAST(NULL AS DOUBLE), window_days\n",
+        "  FROM databricks_audit_dashboard.lakeflow_failed_jobs_wasted_dbus\n",
+        "  UNION ALL\n",
+        "  SELECT 'Compute burned on failed statements', workspace_id, warehouse_id, 'warehouse',\n",
+        "         status, ROUND(est_wasted_usd_list * (1.0 - 0.0), 2), est_wasted_usd_list, window_days\n",
+        "  FROM databricks_audit_dashboard.cost_failed_statement_waste\n",
+        "  UNION ALL\n",
+        "  SELECT 'Endpoints billed with no requests', workspace_id, endpoint_id, 'endpoint',\n",
+        "         status, ROUND(est_wasted_usd_list * (1.0 - 0.0), 2), est_usd_list, window_days\n",
+        "  FROM databricks_audit_dashboard.compute_serving_endpoint_cost_status\n",
+        "),\n",
+        "eff AS (\n",
+        "  SELECT *,\n",
+        "         CASE WHEN status IN ('CRITICAL', 'WARN') AND floor_value IS NOT NULL\n",
+        "                   AND floor_value < 50.0 * window_days / 30.0\n",
+        "              THEN 'OK' ELSE status END AS eff_status\n",
+        "  FROM src\n",
+        "),\n",
+        "named_all AS (\n",
+        "  SELECT e.*, COALESCE(ws.name, e.workspace_id, 'Account-level') AS workspace_name\n",
+        "  FROM eff e\n",
+        "  LEFT JOIN databricks_audit_dashboard.dim_workspace ws ON ws.workspace_id = e.workspace_id\n",
+        "),\n",
+        "flagged AS (\n",
+        "  SELECT source_label, workspace_id, entity_id, entity_kind, wasted\n",
+        "  FROM eff\n",
+        "  WHERE eff_status IN ('CRITICAL', 'WARN') AND wasted > 0\n",
+        "),\n",
+        "named AS (\n",
+        "  SELECT f.source_label, f.entity_kind, f.wasted,\n",
+        "         COALESCE(ws.name, f.workspace_id, 'Account-level') AS workspace_name,\n",
+        "         COALESCE(dw.warehouse_name, dc.cluster_name, dj.name, ep.endpoint_name, f.entity_id) AS resource_name\n",
+        "  FROM flagged f\n",
+        "  LEFT JOIN databricks_audit_dashboard.dim_workspace ws ON ws.workspace_id = f.workspace_id\n",
+        "  LEFT JOIN databricks_audit_dashboard.dim_warehouse dw ON f.entity_kind = 'warehouse' AND dw.warehouse_id = f.entity_id\n",
+        "  LEFT JOIN databricks_audit_dashboard.dim_cluster dc ON f.entity_kind = 'cluster' AND dc.cluster_id = f.entity_id\n",
+        "  LEFT JOIN databricks_audit_dashboard.dim_job dj ON f.entity_kind = 'job' AND dj.workspace_id = f.workspace_id AND dj.job_id = f.entity_id\n",
+        "  LEFT JOIN databricks_audit_dashboard.compute_serving_endpoint_cost_status ep\n",
+        "    ON f.entity_kind = 'endpoint' AND ep.workspace_id = f.workspace_id AND ep.endpoint_id = f.entity_id\n",
+        ")\n",
+        ",\n",
+        "priced AS (\n",
+        "  SELECT CASE source_label\n",
+        "           WHEN 'Warehouse idle time' THEN 'compute_warehouse_idle_minutes'\n",
+        "           WHEN 'Idle cluster nodes' THEN 'compute_idle_node_ratio'\n",
+        "           WHEN 'Compute burned on failed runs' THEN 'lakeflow_failed_jobs_wasted_dbus'\n",
+        "           WHEN 'Compute burned on failed statements' THEN 'cost_failed_statement_waste'\n",
+        "           WHEN 'Endpoints billed with no requests' THEN 'compute_serving_endpoint_cost_status'\n",
+        "         END AS query_id, source_label, wasted, workspace_name AS ws_name\n",
+        "  FROM named\n",
+        "),\n",
+        "priced_f AS (\n",
+        "  SELECT * FROM priced WHERE (array_contains(:workspace, COALESCE(ws_name, '')) OR array_contains(:workspace, 'all'))\n",
+        ")\n",
+        "\n",
+        "SELECT source_label, ROUND(SUM(wasted), 2) AS usd\n",
+        "FROM priced_f\n",
+        "GROUP BY 1\n"
+      ],
+      "parameters": [
+        {
+          "displayName": "Workspace",
+          "keyword": "workspace",
+          "dataType": "STRING",
+          "complexType": "MULTI",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "all"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "b67b3328",
+      "displayName": "fixes:Fixes, worst first",
+      "queryLines": [
+        "WITH templates AS (\n",
+        "  SELECT * FROM (VALUES\n",
+        "       ('warehouse_autostop', 'saving', 'Platform', 'idle SQL warehouse', 'idle SQL warehouses', '5 min each', 'SQL Warehouses \u2192 the warehouse \u2192 Edit \u2192 Auto stop: 10 min (5 min on serverless).', 'compute_warehouse_idle_minutes'),\n",
+        "       ('idle_clusters', 'saving', 'Platform', 'idle cluster', 'idle clusters', '15 min each', 'Compute \u2192 the cluster \u2192 Edit: fewer workers or a shorter auto-termination. Check memory use before shrinking.', 'compute_idle_node_ratio'),\n",
+        "       ('failed_jobs', 'saving', 'Data engineering', 'failing job', 'failing jobs', '1\u20132 h each', 'Open the latest failed run, fix the cause and re-run. The job drawer shows what changed since the last good run.', 'lakeflow_failed_jobs_wasted_dbus'),\n",
+        "       ('failed_statements', 'saving', 'Data engineering', 'failing statement shape', 'failing statement shapes', '30 min each', 'Queries \u2192 Reliability groups the errors; fix the query or the table it reads, or stop the schedule that re-runs it.', 'cost_failed_statement_waste'),\n",
+        "       ('idle_endpoints', 'saving', 'ML', 'idle serving endpoint', 'idle serving endpoints', '5 min each', 'Serving \u2192 the endpoint \u2192 Edit: turn on scale to zero, or delete it if nothing calls it.', 'compute_serving_endpoint_cost_status'),\n",
+        "       ('untagged', 'policy', 'Finance', 'untagged spend line', 'untagged spend lines', '1 day', 'Require the cost_center tag in cluster policies, serverless budget policies and warehouse settings.', CAST(NULL AS STRING)),\n",
+        "       ('jobs_on_all_purpose', 'hygiene', 'Platform', 'job', 'jobs', '10 min each', 'Job \u2192 Compute \u2192 a new job cluster or serverless. Job compute costs less per DBU than all-purpose.', CAST(NULL AS STRING)),\n",
+        "       ('stale_jobs', 'hygiene', 'Data engineering', 'stale job', 'stale jobs', '5 min each', 'Pause the schedule, or delete the job if nobody needs it.', CAST(NULL AS STRING)),\n",
+        "       ('unused_compute', 'hygiene', 'Platform', 'unused warehouse, cluster or workspace', 'unused warehouses, clusters or workspaces', '5 min each', 'No activity for 90 days or more, or never: ask the owner, then delete what is not needed (Compute \u203a Warehouses and Clusters & pools, Governance \u203a Admin activity).', CAST(NULL AS STRING)),\n",
+        "       ('no_timeout', 'hygiene', 'Data engineering', 'job', 'jobs', '5 min each', 'Set a timeout of about 2 \u00d7 the job\\'s p95 run time (the job drawer suggests one), or a run-duration health rule.', CAST(NULL AS STRING)),\n",
+        "       ('warm_pools', 'hygiene', 'Platform', 'instance pool', 'instance pools', '5 min each', 'Compute \u2192 Pools \u2192 the pool: lower the minimum idle instances.', CAST(NULL AS STRING)),\n",
+        "       ('warehouse_pressure', 'hygiene', 'Platform', 'SQL warehouse', 'SQL warehouses', '10 min each', 'More max clusters when queries wait for a slot; one size up when they spill.', CAST(NULL AS STRING)),\n",
+        "       ('cluster_policies', 'policy', 'Platform', 'cluster', 'clusters', '1 day', 'Create a small set of cluster policies (size, auto-termination, tags) and make them required.', CAST(NULL AS STRING)),\n",
+        "       ('unmasked', 'risk', 'Security', 'sensitive column', 'sensitive columns', '1 h each table', 'ALTER TABLE \u2026 ALTER COLUMN \u2026 SET MASK, or one ABAC column-mask policy on the catalog.', CAST(NULL AS STRING)),\n",
+        "       ('admin_changes', 'risk', 'Security', 'admin change pattern', 'admin change patterns', '30 min', 'Check each change with the person or service that made it; revoke what nobody expected.', CAST(NULL AS STRING)),\n",
+        "       ('broad_grants', 'risk', 'Security', 'broad grant', 'broad grants', '30 min each', 'Grant through groups, not people, and only the privileges needed. List your admin groups under admin_groups in settings.yml.', CAST(NULL AS STRING))\n",
+        "  ) AS v(tkey, kind, team, noun_s, noun_p, effort, how, waste)\n",
+        "),\n",
+        "template_checks AS (\n",
+        "  SELECT * FROM (VALUES\n",
+        "       ('warehouse_autostop', 'compute_warehouse_idle_minutes'),\n",
+        "       ('idle_clusters', 'compute_idle_node_ratio'),\n",
+        "       ('failed_jobs', 'lakeflow_failed_jobs_wasted_dbus'),\n",
+        "       ('failed_jobs', 'lakeflow_job_reliability'),\n",
+        "       ('failed_statements', 'cost_failed_statement_waste'),\n",
+        "       ('idle_endpoints', 'compute_serving_endpoint_cost_status'),\n",
+        "       ('idle_endpoints', 'compute_serving_dormant_endpoints'),\n",
+        "       ('untagged', 'cost_chargeback_by_allocation_tag'),\n",
+        "       ('jobs_on_all_purpose', 'lakeflow_jobs_on_all_purpose'),\n",
+        "       ('stale_jobs', 'lakeflow_stale_zombie_jobs'),\n",
+        "       ('unused_compute', 'compute_last_activity'),\n",
+        "       ('no_timeout', 'lakeflow_jobs_no_timeout'),\n",
+        "       ('no_timeout', 'lakeflow_job_tasks_no_timeout'),\n",
+        "       ('warm_pools', 'instance_pools_idle_capacity'),\n",
+        "       ('warehouse_pressure', 'query_warehouse_pressure'),\n",
+        "       ('cluster_policies', 'compute_cluster_config_posture'),\n",
+        "       ('unmasked', 'access_classified_unmasked'),\n",
+        "       ('admin_changes', 'access_admin_role_change_events'),\n",
+        "       ('broad_grants', 'access_broad_grants')\n",
+        "  ) AS v(tkey, query_id)\n",
+        "),\n",
+        "check_status AS (\n",
+        "  SELECT tc.tkey,\n",
+        "         CASE WHEN l.query_id IS NULL THEN 'Not run'\n",
+        "              WHEN NOT l.ok THEN 'Not assessed'\n",
+        "              WHEN l.critical > 0 THEN 'Critical'\n",
+        "              WHEN l.warn > 0 THEN 'Warn'\n",
+        "              ELSE 'OK' END AS verdict,\n",
+        "         COALESCE(l.critical, 0) AS critical_rows, COALESCE(l.warn, 0) AS warn_rows\n",
+        "  FROM template_checks tc\n",
+        "  LEFT JOIN databricks_audit_dashboard.snapshot_log l ON l.query_id = tc.query_id\n",
+        "),\n",
+        "template_status AS (\n",
+        "  SELECT tkey,\n",
+        "         MAX(CASE verdict WHEN 'Critical' THEN 3 WHEN 'Warn' THEN 2 ELSE 0 END) AS sev,\n",
+        "         SUM(CASE WHEN verdict IN ('Critical', 'Warn') THEN critical_rows + warn_rows ELSE 0 END) AS rows_flagged\n",
+        "  FROM check_status\n",
+        "  GROUP BY 1\n",
+        ")\n",
+        ",\n",
+        "src AS (\n",
+        "  SELECT 'Warehouse idle time' AS source_label, workspace_id, warehouse_id AS entity_id, 'warehouse' AS entity_kind,\n",
+        "         status, ROUND(est_wasted_usd_list * (1.0 - 0.0), 2) AS wasted, est_wasted_usd_list AS floor_value, window_days\n",
+        "  FROM databricks_audit_dashboard.compute_warehouse_idle_minutes\n",
+        "  UNION ALL\n",
+        "  SELECT 'Idle cluster nodes', dc.workspace_id, w.cluster_id, 'cluster',\n",
+        "         w.status, ROUND(w.est_wasted_usd_list * (1.0 - 0.0), 2), w.est_wasted_usd_list, w.window_days\n",
+        "  FROM databricks_audit_dashboard.compute_idle_node_ratio w\n",
+        "  LEFT JOIN databricks_audit_dashboard.dim_cluster dc ON dc.cluster_id = w.cluster_id\n",
+        "  UNION ALL\n",
+        "  SELECT 'Compute burned on failed runs', workspace_id, job_id, 'job',\n",
+        "         status, ROUND(est_wasted_usd_list * (1.0 - 0.0), 2), CAST(NULL AS DOUBLE), window_days\n",
+        "  FROM databricks_audit_dashboard.lakeflow_failed_jobs_wasted_dbus\n",
+        "  UNION ALL\n",
+        "  SELECT 'Compute burned on failed statements', workspace_id, warehouse_id, 'warehouse',\n",
+        "         status, ROUND(est_wasted_usd_list * (1.0 - 0.0), 2), est_wasted_usd_list, window_days\n",
+        "  FROM databricks_audit_dashboard.cost_failed_statement_waste\n",
+        "  UNION ALL\n",
+        "  SELECT 'Endpoints billed with no requests', workspace_id, endpoint_id, 'endpoint',\n",
+        "         status, ROUND(est_wasted_usd_list * (1.0 - 0.0), 2), est_usd_list, window_days\n",
+        "  FROM databricks_audit_dashboard.compute_serving_endpoint_cost_status\n",
+        "),\n",
+        "eff AS (\n",
+        "  SELECT *,\n",
+        "         CASE WHEN status IN ('CRITICAL', 'WARN') AND floor_value IS NOT NULL\n",
+        "                   AND floor_value < 50.0 * window_days / 30.0\n",
+        "              THEN 'OK' ELSE status END AS eff_status\n",
+        "  FROM src\n",
+        "),\n",
+        "named_all AS (\n",
+        "  SELECT e.*, COALESCE(ws.name, e.workspace_id, 'Account-level') AS workspace_name\n",
+        "  FROM eff e\n",
+        "  LEFT JOIN databricks_audit_dashboard.dim_workspace ws ON ws.workspace_id = e.workspace_id\n",
+        "),\n",
+        "flagged AS (\n",
+        "  SELECT source_label, workspace_id, entity_id, entity_kind, wasted\n",
+        "  FROM eff\n",
+        "  WHERE eff_status IN ('CRITICAL', 'WARN') AND wasted > 0\n",
+        "),\n",
+        "named AS (\n",
+        "  SELECT f.source_label, f.entity_kind, f.wasted,\n",
+        "         COALESCE(ws.name, f.workspace_id, 'Account-level') AS workspace_name,\n",
+        "         COALESCE(dw.warehouse_name, dc.cluster_name, dj.name, ep.endpoint_name, f.entity_id) AS resource_name\n",
+        "  FROM flagged f\n",
+        "  LEFT JOIN databricks_audit_dashboard.dim_workspace ws ON ws.workspace_id = f.workspace_id\n",
+        "  LEFT JOIN databricks_audit_dashboard.dim_warehouse dw ON f.entity_kind = 'warehouse' AND dw.warehouse_id = f.entity_id\n",
+        "  LEFT JOIN databricks_audit_dashboard.dim_cluster dc ON f.entity_kind = 'cluster' AND dc.cluster_id = f.entity_id\n",
+        "  LEFT JOIN databricks_audit_dashboard.dim_job dj ON f.entity_kind = 'job' AND dj.workspace_id = f.workspace_id AND dj.job_id = f.entity_id\n",
+        "  LEFT JOIN databricks_audit_dashboard.compute_serving_endpoint_cost_status ep\n",
+        "    ON f.entity_kind = 'endpoint' AND ep.workspace_id = f.workspace_id AND ep.endpoint_id = f.entity_id\n",
+        ")\n",
+        ",\n",
+        "priced AS (\n",
+        "  SELECT CASE source_label\n",
+        "           WHEN 'Warehouse idle time' THEN 'compute_warehouse_idle_minutes'\n",
+        "           WHEN 'Idle cluster nodes' THEN 'compute_idle_node_ratio'\n",
+        "           WHEN 'Compute burned on failed runs' THEN 'lakeflow_failed_jobs_wasted_dbus'\n",
+        "           WHEN 'Compute burned on failed statements' THEN 'cost_failed_statement_waste'\n",
+        "           WHEN 'Endpoints billed with no requests' THEN 'compute_serving_endpoint_cost_status'\n",
+        "         END AS query_id, source_label, wasted, workspace_name AS ws_name\n",
+        "  FROM named\n",
+        "),\n",
+        "priced_f AS (\n",
+        "  SELECT * FROM priced WHERE (array_contains(:workspace, COALESCE(ws_name, '')) OR array_contains(:workspace, 'all'))\n",
+        ")\n",
+        ", priced_sum AS (\n",
+        "  SELECT query_id, ROUND(SUM(wasted), 2) AS possible_usd FROM priced_f GROUP BY 1\n",
+        ")\n",
+        "SELECT CASE ts.sev WHEN 3 THEN 'Critical' WHEN 2 THEN 'Warn' ELSE 'OK' END AS status,\n",
+        "       t.kind AS kind,\n",
+        "       concat(CAST(COALESCE(ts.rows_flagged, 0) AS STRING), ' ',\n",
+        "              CASE WHEN COALESCE(ts.rows_flagged, 0) = 1 THEN t.noun_s ELSE t.noun_p END) AS fix,\n",
+        "       t.team AS team, t.effort AS effort, t.how AS how,\n",
+        "       ROUND(ps.possible_usd, 0) AS possible_usd\n",
+        "FROM templates t\n",
+        "JOIN template_status ts ON ts.tkey = t.tkey\n",
+        "LEFT JOIN priced_sum ps ON ps.query_id = t.waste\n",
+        "WHERE ts.sev >= 2\n",
+        "ORDER BY ts.sev DESC, ps.possible_usd DESC NULLS LAST, t.tkey\n",
+        "LIMIT 100\n"
+      ],
+      "parameters": [
+        {
+          "displayName": "Workspace",
+          "keyword": "workspace",
+          "dataType": "STRING",
+          "complexType": "MULTI",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "all"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "pages": [
+    {
+      "name": "98bc0201",
+      "displayName": "Actions",
+      "pageType": "PAGE_TYPE_CANVAS",
+      "layoutVersion": "GRID_V1",
+      "layout": [
+        {
+          "widget": {
+            "name": "43b0b172",
+            "multilineTextboxSpec": {
+              "lines": [
+                "# **Actions**\n",
+                "Lakehouse Health 02 - Actions \u00b7 Flagged checks as fixes \u00b7 possible waste at list price (effective)\n"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 9,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "170d1b20",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "301a6b42",
+                  "fields": [
+                    {
+                      "name": "as_of",
+                      "expression": "`as_of`"
+                    },
+                    {
+                      "name": "max(days)",
+                      "expression": "MAX(`days`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "max(days)",
+                  "displayName": "Days covered",
+                  "style": {
+                    "bold": true,
+                    "fontSize": 32,
+                    "color": "#1c1b18"
+                  }
+                },
+                "target": {
+                  "fieldName": "as_of",
+                  "displayName": "as_of",
+                  "style": {
+                    "fontSize": 14,
+                    "italic": true,
+                    "color": {
+                      "themeColorType": "fontColor"
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "title": "Days covered",
+                "showTitle": true,
+                "description": "Days in the snapshot. New numbers: run the notebook again.",
+                "showDescription": true
+              }
+            }
+          },
+          "position": {
+            "x": 9,
+            "y": 0,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "9df04ced",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "21d52404",
+                  "fields": [
+                    {
+                      "name": "target",
+                      "expression": "`target`"
+                    },
+                    {
+                      "name": "sum(value)",
+                      "expression": "SUM(`value`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(value)",
+                  "displayName": "Flagged checks",
+                  "style": {
+                    "bold": true,
+                    "fontSize": 32,
+                    "color": "#c2610c"
+                  }
+                },
+                "target": {
+                  "fieldName": "target",
+                  "displayName": "target",
+                  "style": {
+                    "fontSize": 14,
+                    "italic": true,
+                    "color": {
+                      "themeColorType": "fontColor"
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "title": "Flagged checks",
+                "showTitle": true,
+                "description": "Checks across every tab at Critical or Warn in the last snapshot; account-wide, not filtered by workspace.",
+                "showDescription": true
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 3,
+            "width": 3,
+            "height": 4
+          }
+        },
+        {
+          "widget": {
+            "name": "30b6560b",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "907df112",
+                  "fields": [
+                    {
+                      "name": "target",
+                      "expression": "`target`"
+                    },
+                    {
+                      "name": "sum(value)",
+                      "expression": "SUM(`value`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(value)",
+                  "displayName": "Critical checks",
+                  "style": {
+                    "bold": true,
+                    "fontSize": 32,
+                    "color": "#a8261d"
+                  }
+                },
+                "target": {
+                  "fieldName": "target",
+                  "displayName": "target",
+                  "style": {
+                    "fontSize": 14,
+                    "italic": true,
+                    "color": {
+                      "themeColorType": "fontColor"
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "title": "Critical checks",
+                "showTitle": true,
+                "description": "Of the flagged checks above, the ones where every row is Critical, not just some.",
+                "showDescription": true
+              }
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 3,
+            "width": 3,
+            "height": 4
+          }
+        },
+        {
+          "widget": {
+            "name": "aa8aac97",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "9fc9296b",
+                  "fields": [
+                    {
+                      "name": "target",
+                      "expression": "`target`"
+                    },
+                    {
+                      "name": "sum(value)",
+                      "expression": "SUM(`value`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(value)",
+                  "displayName": "Possible waste",
+                  "style": {
+                    "bold": true,
+                    "fontSize": 32,
+                    "color": "#c2610c"
+                  },
+                  "format": {
+                    "type": "number-currency",
+                    "currencyCode": "USD",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 0
+                    }
+                  }
+                },
+                "target": {
+                  "fieldName": "target",
+                  "displayName": "target",
+                  "style": {
+                    "fontSize": 14,
+                    "italic": true,
+                    "color": {
+                      "themeColorType": "fontColor"
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "title": "Possible waste",
+                "showTitle": true,
+                "description": "$ from the 5 priced waste checks (see Waste & savings), floored and discounted; follows the Workspace filter above.",
+                "showDescription": true
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 3,
+            "width": 3,
+            "height": 4
+          }
+        },
+        {
+          "widget": {
+            "name": "5176d23f",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ccd028ec",
+                  "fields": [
+                    {
+                      "name": "target",
+                      "expression": "`target`"
+                    },
+                    {
+                      "name": "sum(value)",
+                      "expression": "SUM(`value`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(value)",
+                  "displayName": "Not priced",
+                  "style": {
+                    "bold": true,
+                    "fontSize": 32,
+                    "color": "#1c1b18"
+                  }
+                },
+                "target": {
+                  "fieldName": "target",
+                  "displayName": "target",
+                  "style": {
+                    "fontSize": 14,
+                    "italic": true,
+                    "color": {
+                      "themeColorType": "fontColor"
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "title": "Not priced",
+                "showTitle": true,
+                "description": "Flagged checks that match none of the 5 priced checks, so no $ figure; account-wide.",
+                "showDescription": true
+              }
+            }
+          },
+          "position": {
+            "x": 9,
+            "y": 3,
+            "width": 3,
+            "height": 4
+          }
+        },
+        {
+          "widget": {
+            "name": "2fc37cd2",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "4a208a50",
+                  "fields": [
+                    {
+                      "name": "target",
+                      "expression": "`target`"
+                    },
+                    {
+                      "name": "sum(value)",
+                      "expression": "SUM(`value`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(value)",
+                  "displayName": "Security risks",
+                  "style": {
+                    "bold": true,
+                    "fontSize": 32,
+                    "color": "#a8261d"
+                  }
+                },
+                "target": {
+                  "fieldName": "target",
+                  "displayName": "target",
+                  "style": {
+                    "fontSize": 14,
+                    "italic": true,
+                    "color": {
+                      "themeColorType": "fontColor"
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "title": "Security risks",
+                "showTitle": true,
+                "description": "Unmasked sensitive columns, admin role changes or broad grants flagged Critical or Warn; account-wide.",
+                "showDescription": true
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 7,
+            "width": 12,
+            "height": 4
+          }
+        },
+        {
+          "widget": {
+            "name": "677db52d",
+            "multilineTextboxSpec": {
+              "lines": [
+                "Rebuilt from the data on every refresh: a fix disappears once its check stops flagging.\n",
+                "Flagged checks, Critical checks, Security risks and every fix below are account-wide; only their $ follows the Workspace filter above.\n"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 11,
+            "width": 12,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "746958af",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ff6eaa2e",
+                  "fields": [
+                    {
+                      "name": "area",
+                      "expression": "`area`"
+                    },
+                    {
+                      "name": "sum(flagged)",
+                      "expression": "SUM(`flagged`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "sum(flagged)",
+                  "displayName": "Flagged checks",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "y": {
+                  "fieldName": "area",
+                  "displayName": "Area",
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "x-reversed"
+                    }
+                  }
+                },
+                "label": {
+                  "show": false
+                }
+              },
+              "frame": {
+                "title": "Flagged checks by area",
+                "showTitle": true,
+                "description": "Flagged checks (Critical or Warn) grouped by the tab they live on; account-wide.",
+                "showDescription": true
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 13,
+            "width": 6,
+            "height": 7
+          }
+        },
+        {
+          "widget": {
+            "name": "94aab8c9",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ab21006f",
+                  "fields": [
+                    {
+                      "name": "source_label",
+                      "expression": "`source_label`"
+                    },
+                    {
+                      "name": "sum(usd)",
+                      "expression": "SUM(`usd`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "sum(usd)",
+                  "displayName": "Possible $",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "format": {
+                    "type": "number-currency",
+                    "currencyCode": "USD",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 0
+                    }
+                  }
+                },
+                "y": {
+                  "fieldName": "source_label",
+                  "displayName": "Source",
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "x-reversed"
+                    }
+                  }
+                },
+                "label": {
+                  "show": false
+                }
+              },
+              "frame": {
+                "title": "Possible $ by source",
+                "showTitle": true,
+                "description": "Possible-waste $ per priced check, from Waste & savings' own floor and discount.",
+                "showDescription": true
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 13,
+            "width": 6,
+            "height": 7
+          }
+        },
+        {
+          "widget": {
+            "name": "21c34c09",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "b67b3328",
+                  "fields": [
+                    {
+                      "name": "status",
+                      "expression": "`status`"
+                    },
+                    {
+                      "name": "kind",
+                      "expression": "`kind`"
+                    },
+                    {
+                      "name": "fix",
+                      "expression": "`fix`"
+                    },
+                    {
+                      "name": "team",
+                      "expression": "`team`"
+                    },
+                    {
+                      "name": "effort",
+                      "expression": "`effort`"
+                    },
+                    {
+                      "name": "how",
+                      "expression": "`how`"
+                    },
+                    {
+                      "name": "possible_usd",
+                      "expression": "`possible_usd`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 1,
+              "widgetType": "table",
+              "allowHTMLByDefault": false,
+              "condensed": false,
+              "withRowNumber": false,
+              "itemsPerPage": 20,
+              "paginationSize": "default",
+              "invisibleColumns": [],
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "status",
+                    "title": "Status",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 0,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "kind",
+                    "title": "Kind",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 1,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "fix",
+                    "title": "Fix",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 2,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "team",
+                    "title": "Team",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 3,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "effort",
+                    "title": "Effort",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 4,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "how",
+                    "title": "How",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 5,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "possible_usd",
+                    "title": "Possible $",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 6,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "$0,0",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "allowSearch": false
+                  }
+                ]
+              },
+              "frame": {
+                "title": "Fixes, worst first",
+                "showTitle": true,
+                "showDescription": true,
+                "description": "One row per fix template (action_templates.ts) with a Critical or Warn check; $ only where it names one of the 5 priced waste checks."
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 20,
+            "width": 12,
+            "height": 12
+          }
+        }
+      ]
+    },
+    {
+      "name": "b3db5708",
+      "displayName": "Global Filters",
+      "pageType": "PAGE_TYPE_GLOBAL_FILTERS",
+      "layoutVersion": "GRID_V1",
+      "layout": [
+        {
+          "widget": {
+            "name": "5d277ea5",
+            "queries": [
+              {
+                "name": "q_95df07c6",
+                "query": {
+                  "datasetName": "c4b2926a",
+                  "fields": [
+                    {
+                      "name": "workspace_name",
+                      "expression": "`workspace_name`"
+                    },
+                    {
+                      "name": "workspace_name_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_a92b48f3",
+                "query": {
+                  "datasetName": "9fc9296b",
+                  "parameters": [
+                    {
+                      "name": "workspace",
+                      "keyword": "workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_91a948ee",
+                "query": {
+                  "datasetName": "ccd028ec",
+                  "parameters": [
+                    {
+                      "name": "workspace",
+                      "keyword": "workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_2a117b18",
+                "query": {
+                  "datasetName": "ab21006f",
+                  "parameters": [
+                    {
+                      "name": "workspace",
+                      "keyword": "workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_380fd931",
+                "query": {
+                  "datasetName": "b67b3328",
+                  "parameters": [
+                    {
+                      "name": "workspace",
+                      "keyword": "workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-multi-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "workspace_name",
+                    "displayName": "Workspace",
+                    "queryName": "q_95df07c6"
+                  },
+                  {
+                    "parameterName": "workspace",
+                    "queryName": "q_a92b48f3"
+                  },
+                  {
+                    "parameterName": "workspace",
+                    "queryName": "q_91a948ee"
+                  },
+                  {
+                    "parameterName": "workspace",
+                    "queryName": "q_2a117b18"
+                  },
+                  {
+                    "parameterName": "workspace",
+                    "queryName": "q_380fd931"
+                  }
+                ]
+              },
+              "frame": {
+                "title": "Workspace",
+                "showTitle": true
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 3,
+            "height": 2
+          }
+        }
+      ]
+    }
+  ],
+  "uiSettings": {
+    "theme": {
+      "canvasBackgroundColor": {
+        "light": "#f4f1ea",
+        "dark": "#0d1015"
+      },
+      "widgetBackgroundColor": {
+        "light": "#ffffff",
+        "dark": "#151a21"
+      },
+      "widgetBorderColor": {
+        "light": "#e3ded2",
+        "dark": "#262d38"
+      },
+      "fontColor": {
+        "light": "#1c1b18",
+        "dark": "#e7eaee"
+      },
+      "selectionColor": {
+        "light": "#2356a0",
+        "dark": "#5aa9ff"
+      },
+      "visualizationColors": [
+        "#2356a0",
+        "#d9822b",
+        "#3e8e88",
+        "#7a6fb0",
+        "#9a7b4f",
+        "#b8527a",
+        "#5f7f2a",
+        "#b9b3a5",
+        "#a8261d",
+        "#2f6b4b"
+      ],
+      "widgetHeaderAlignment": "LEFT"
+    },
+    "genieSpace": {
+      "isEnabled": false,
+      "enablementMode": "ENABLEMENT_MODE_UNSPECIFIED"
+    },
+    "applyModeEnabled": false
+  }
+}

@@ -1,0 +1,3 @@
+# config/grains/compute_warehouse_cache_reuse.yml -- grain = the query's own key columns only; the
+# generator prepends window_days. One row per SQL warehouse over the window (agg's own GROUP BY).
+compute_warehouse_cache_reuse: [warehouse_id]

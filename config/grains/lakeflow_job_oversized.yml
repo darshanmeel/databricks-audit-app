@@ -1,0 +1,3 @@
+# Grain = the query's own key columns ONLY; the generator prepends window_days (DEC-24). One row
+# per job with at least one task run in the window (same universe as lakeflow_job_compute_pressure).
+lakeflow_job_oversized: [workspace_id, job_id]

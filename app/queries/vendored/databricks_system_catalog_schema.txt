@@ -1,0 +1,1033 @@
+==============================================================================
+CATALOGS available:
+   - samples
+   - system
+==============================================================================
+
+##############################################################################
+# CATALOG: system
+##############################################################################
+
+==== system.__internal_data_quality_monitoring  [SKIPPED per config] ====
+
+==============================================================================
+==== SCHEMA: system.__internal_logging ====
+   1 table(s): payload_logs
+
+──────────────────────────────────────────────────────────────────────────
+── system.__internal_logging.payload_logs
+   size: [n/a: (com.databricks.sql.transaction.tahoe.DeltaIOException) [DELTA_UNSUPPORTED_FILE_SYSTEM] The file system for path uc-deltasharing://system.__internal_logging.payload_logs/_delta_log is not supported. P]
+   selectable: yes (15 cols)
+   columns (name : type):
+       account_id : string
+       workspace_id : string
+       request_date : date
+       databricks_request_id : string
+       client_request_id : string
+       request_time : timestamp
+       status_code : int
+       sampling_fraction : double
+       execution_duration_ms : bigint
+       request : string
+       response : string
+       logging_error_codes : array<string>
+       served_entity_id : string
+       endpoint_table_id : string
+       requester : string
+
+==============================================================================
+==== SCHEMA: system.access ====
+   8 table(s): assistant_events, audit, clean_room_events, column_lineage, inbound_network, outbound_network, table_lineage, workspaces_latest
+
+──────────────────────────────────────────────────────────────────────────
+── system.access.assistant_events
+   size: [n/a: (com.databricks.sql.transaction.tahoe.DeltaIOException) [DELTA_UNSUPPORTED_FILE_SYSTEM] The file system for path uc-deltasharing://system.access.assistant_events/_delta_log is not supported. Please ve]
+   selectable: yes (7 cols)
+   columns (name : type):
+       account_id : string
+       workspace_id : string
+       event_id : string
+       event_time : timestamp
+       event_date : date
+       user_agent : string
+       initiated_by : string
+
+──────────────────────────────────────────────────────────────────────────
+── system.access.audit
+   size: [n/a: (com.databricks.sql.transaction.tahoe.DeltaIOException) [DELTA_UNSUPPORTED_FILE_SYSTEM] The file system for path uc-deltasharing://system.access.audit/_delta_log is not supported. Please verify that t]
+   selectable: yes (17 cols)
+   columns (name : type):
+       account_id : string
+       workspace_id : string
+       version : string
+       event_time : timestamp
+       event_date : date
+       source_ip_address : string
+       user_agent : string
+       session_id : string
+       user_identity : struct<email:string,subject_name:string>
+       service_name : string
+       action_name : string
+       request_id : string
+       request_params : map<string,string>
+       response : struct<status_code:int,error_message:string,result:string>
+       audit_level : string
+       event_id : string
+       identity_metadata : struct<run_by:string,run_as:string,acting_resource:string,run_by_display_name:string,run_as_display_name:string>
+
+──────────────────────────────────────────────────────────────────────────
+── system.access.clean_room_events
+   size: [n/a: (com.databricks.sql.transaction.tahoe.DeltaIOException) [DELTA_UNSUPPORTED_FILE_SYSTEM] The file system for path uc-deltasharing://system.access.clean_room_events/_delta_log is not supported. Please v]
+   selectable: yes (16 cols)
+   columns (name : type):
+       account_id : string
+       metastore_id : string
+       event_id : string
+       clean_room_name : string
+       central_clean_room_id : string
+       initiator_global_metastore_id : string
+       event_type : string
+       clean_room_created_metadata : struct<collaborators:array<struct<collaborator_global_metastore_id:string,collaborator_alias:string>>,egress_network_policy:struct<internet_access:struct<restriction_mode:string,allowed_internet_destinations:array<struct<destination:string,type:string,protocol:string>>>>,compliance_profile:struct<is_enabled:boolean,compliance_standards:array<string>>>
+       clean_room_deleted_metadata : struct<central_clean_room_id:string>
+       run_notebook_started_metadata : struct<notebook_name:string,notebook_checksum:string,run_id:string,notebook_etag:string,notebook_update_time:timestamp>
+       run_notebook_completed_metadata : struct<notebook_name:string,run_id:string,state:string,duration_in_seconds:int,output_schema:struct<name:string,owner_global_metastore_id:string,action:string,expire_time:timestamp,assets_added:array<struct<name:string,data_object_type:string>>>>
+       clean_room_assets_updated_metadata : struct<added_assets:array<struct<data_object_type:string,catalog:string,name:string,notebook_metadata:struct<etag:string,checksum:string,runner_collaborator_aliases:array<string>>>>,updated_assets:array<struct<data_object_type:string,catalog:string,name:string,notebook_metadata:struct<etag:string,checksum:string,runner_collaborator_aliases:array<string>>>>,removed_assets:array<struct<data_object_type:string,catalog:string,name:string,notebook_metadata:struct<etag:string,checksum:string,runner_collaborator_aliases:array<string>>>>>
+       event_time : timestamp
+       output_schema_deleted_metadata : struct<name:string,owner_global_metastore_id:string,action:string,expire_time:timestamp>
+       initiator_collaborator_alias : string
+       asset_review_created_metadata : struct<asset_name:string,data_object_type:string,review_state:string,review_sub_reason:string,auto_approval_rule_id:string,notebook_metadata:struct<etag:string>>
+
+──────────────────────────────────────────────────────────────────────────
+── system.access.column_lineage
+   size: [n/a: (com.databricks.sql.transaction.tahoe.DeltaIOException) [DELTA_UNSUPPORTED_FILE_SYSTEM] The file system for path uc-deltasharing://system.access.column_lineage/_delta_log is not supported. Please veri]
+   selectable: yes (28 cols)
+   columns (name : type):
+       account_id : string
+       metastore_id : string
+       workspace_id : string
+       entity_type : string
+       entity_id : string
+       entity_run_id : string
+       source_table_full_name : string
+       source_table_catalog : string
+       source_table_schema : string
+       source_table_name : string
+       source_path : string
+       source_type : string
+       source_column_name : string
+       target_table_full_name : string
+       target_table_catalog : string
+       target_table_schema : string
+       target_table_name : string
+       target_path : string
+       target_type : string
+       target_column_name : string
+       created_by : string
+       event_time : timestamp
+       event_date : date
+       record_id : string
+       event_id : string
+       statement_id : string
+       entity_metadata : struct<job_info:struct<job_id:string,job_run_id:string>,dashboard_id:string,legacy_dashboard_id:string,notebook_id:string,sql_query_id:string,dlt_pipeline_info:struct<dlt_pipeline_id:string,dlt_update_id:string>,genie_space_id:string,alert_id:string>
+       direct_access : boolean
+
+──────────────────────────────────────────────────────────────────────────
+── system.access.inbound_network
+   size: [n/a: (com.databricks.sql.transaction.tahoe.DeltaIOException) [DELTA_UNSUPPORTED_FILE_SYSTEM] The file system for path uc-deltasharing://system.access.inbound_network/_delta_log is not supported. Please ver]
+   selectable: yes (9 cols)
+   columns (name : type):
+       account_id : string
+       workspace_id : string
+       event_id : string
+       request_path : string
+       source : struct<ip:string>
+       authenticated_as : string
+       event_time : timestamp
+       policy_outcome : string
+       rule_label : string
+
+──────────────────────────────────────────────────────────────────────────
+── system.access.outbound_network
+   size: [n/a: (com.databricks.sql.transaction.tahoe.DeltaIOException) [DELTA_UNSUPPORTED_FILE_SYSTEM] The file system for path uc-deltasharing://system.access.outbound_network/_delta_log is not supported. Please ve]
+   selectable: yes (10 cols)
+   columns (name : type):
+       account_id : string
+       workspace_id : string
+       destination_type : string
+       destination : string
+       dns_event : struct<domain_name:string,rcode:int,rdata:array<string>>
+       storage_event : struct<hostname:string,path:string,rejection_reason:string,rdata:array<string>>
+       event_time : timestamp
+       access_type : string
+       event_id : string
+       network_source_type : string
+
+──────────────────────────────────────────────────────────────────────────
+── system.access.table_lineage
+   size: [n/a: (com.databricks.sql.transaction.tahoe.DeltaIOException) [DELTA_UNSUPPORTED_FILE_SYSTEM] The file system for path uc-deltasharing://system.access.table_lineage/_delta_log is not supported. Please verif]
+   selectable: yes (26 cols)
+   columns (name : type):
+       account_id : string
+       metastore_id : string
+       workspace_id : string
+       entity_type : string
+       entity_id : string
+       entity_run_id : string
+       source_table_full_name : string
+       source_table_catalog : string
+       source_table_schema : string
+       source_table_name : string
+       source_path : string
+       source_type : string
+       target_table_full_name : string
+       target_table_catalog : string
+       target_table_schema : string
+       target_table_name : string
+       target_path : string
+       target_type : string
+       created_by : string
+       event_time : timestamp
+       event_date : date
+       record_id : string
+       event_id : string
+       statement_id : string
+       entity_metadata : struct<job_info:struct<job_id:string,job_run_id:string>,dashboard_id:string,legacy_dashboard_id:string,notebook_id:string,sql_query_id:string,dlt_pipeline_info:struct<dlt_pipeline_id:string,dlt_update_id:string>,genie_space_id:string,alert_id:string>
+       direct_access : boolean
+
+──────────────────────────────────────────────────────────────────────────
+── system.access.workspaces_latest
+   size: [n/a: (com.databricks.sql.transaction.tahoe.DeltaIOException) [DELTA_UNSUPPORTED_FILE_SYSTEM] The file system for path uc-deltasharing://system.access.workspaces_latest/_delta_log is not supported. Please v]
+   selectable: yes (6 cols)
+   columns (name : type):
+       account_id : string
+       workspace_id : string
+       workspace_name : string
+       workspace_url : string
+       create_time : timestamp
+       status : string
+
+==============================================================================
+==== SCHEMA: system.ai ====
+   0 table(s): 
+
+==============================================================================
+==== SCHEMA: system.ai_gateway ====
+   1 table(s): usage
+
+──────────────────────────────────────────────────────────────────────────
+── system.ai_gateway.usage
+   size: [n/a: (com.databricks.sql.transaction.tahoe.DeltaIOException) [DELTA_UNSUPPORTED_FILE_SYSTEM] The file system for path uc-deltasharing://system.ai_gateway.usage/_delta_log is not supported. Please verify th]
+   selectable: yes (36 cols)
+   columns (name : type):
+       account_id : string
+       workspace_id : string
+       request_id : string
+       schema_version : int
+       endpoint_id : string
+       endpoint_name : string
+       endpoint_tags : map<string,string>
+       endpoint_metadata : struct<creator:string,creation_time:timestamp,last_updated_time:timestamp,destinations:array<struct<name:string,traffic_percent:double,type:string>>,inference_table:string,fallbacks:array<struct<name:string,traffic_percent:double,type:string>>>
+       event_time : timestamp
+       latency_ms : bigint
+       time_to_first_byte_ms : bigint
+       destination_type : string
+       destination_name : string
+       destination_id : string
+       destination_model : string
+       requester : string
+       requester_type : string
+       ip_address : string
+       url : string
+       user_agent : string
+       api_type : string
+       request_tags : map<string,string>
+       input_tokens : bigint
+       output_tokens : bigint
+       total_tokens : bigint
+       token_details : struct<cache_read_input_tokens:bigint,cache_creation_input_tokens:bigint,output_reasoning_tokens:bigint>
+       response_content_type : string
+       status_code : int
+       routing_information : struct<attempts:array<struct<priority:string,action:string,destination:string,destination_id:string,status_code:int,error_code:string,latency_ms:bigint,start_time:timestamp,end_time:timestamp>>>
+       invocation_id : string
+       invocation_metadata : struct<source:string,service_tier:string>
+       service_type : string
+       service_id : string
+       service_name : string
+       service_tags : map<string,string>
+       mcp_metadata : struct<tool_name:string,server_type:string,client_name:string,json_rpc_method:string>
+
+==============================================================================
+==== SCHEMA: system.billing ====
+   3 table(s): attributed_usage, list_prices, usage
+
+──────────────────────────────────────────────────────────────────────────
+── system.billing.attributed_usage
+   size: [n/a: (com.databricks.sql.transaction.tahoe.DeltaIOException) [DELTA_UNSUPPORTED_FILE_SYSTEM] The file system for path uc-deltasharing://system.billing.attributed_usage/_delta_log is not supported. Please v]
+   selectable: yes (16 cols)
+   columns (name : type):
+       record_id : string
+       usage_metadata : struct<dbsql_statement_id:string,warehouse_id:string,client_application:string>
+       identity_metadata : struct<executed_by:string>
+       start_time : timestamp
+       end_time : timestamp
+       usage_date : date
+       usage_unit : string
+       active_usage_quantity : decimal(38,18)
+       granular_tags : struct<query_tags:map<string,string>>
+       usage_record_ids : array<string>
+       account_id : string
+       workspace_id : string
+       sku_name : string
+       cloud : string
+       billing_origin_product : string
+       custom_tags : map<string,string>
+
+──────────────────────────────────────────────────────────────────────────
+── system.billing.list_prices
+   size: [n/a: (com.databricks.sql.transaction.tahoe.DeltaIOException) [DELTA_UNSUPPORTED_FILE_SYSTEM] The file system for path uc-deltasharing://system.billing.list_prices/_delta_log is not supported. Please verify]
+   selectable: yes (8 cols)
+   columns (name : type):
+       account_id : string
+       price_start_time : timestamp
+       price_end_time : timestamp
+       sku_name : string
+       cloud : string
+       currency_code : string
+       usage_unit : string
+       pricing : struct<default:decimal(38,18),promotional:struct<default:decimal(38,18)>,effective_list:struct<default:decimal(38,18)>>
+
+──────────────────────────────────────────────────────────────────────────
+── system.billing.usage
+   size: [n/a: (com.databricks.sql.transaction.tahoe.DeltaIOException) [DELTA_UNSUPPORTED_FILE_SYSTEM] The file system for path uc-deltasharing://system.billing.usage/_delta_log is not supported. Please verify that ]
+   selectable: yes (18 cols)
+   columns (name : type):
+       account_id : string
+       workspace_id : string
+       record_id : string
+       sku_name : string
+       cloud : string
+       usage_start_time : timestamp
+       usage_end_time : timestamp
+       usage_date : date
+       custom_tags : map<string,string>
+       usage_unit : string
+       usage_quantity : decimal(38,18)
+       usage_metadata : struct<cluster_id:string,job_id:string,warehouse_id:string,instance_pool_id:string,node_type:string,job_run_id:string,notebook_id:string,dlt_pipeline_id:string,endpoint_name:string,endpoint_id:string,dlt_update_id:string,dlt_maintenance_id:string,run_name:string,job_name:string,notebook_path:string,central_clean_room_id:string,source_region:string,destination_region:string,app_id:string,app_name:string,metastore_id:string,private_endpoint_name:string,storage_api_type:string,budget_policy_id:string,ai_runtime_pool_id:string,... 25 more fields>
+       identity_metadata : struct<run_as:string,created_by:string,owned_by:string,run_by:string>
+       record_type : string
+       ingestion_date : date
+       billing_origin_product : string
+       product_features : struct<jobs_tier:string,sql_tier:string,dlt_tier:string,is_serverless:boolean,is_photon:boolean,serving_type:string,networking:struct<connectivity_type:string>,ai_runtime:struct<compute_type:string>,model_serving:struct<offering_type:string>,ai_gateway:struct<feature_type:string>,serverless_gpu:struct<workload_type:string>,agent_bricks:struct<problem_type:string,workload_type:string>,performance_target:string,ai_functions:struct<ai_function:string>,apps:struct<compute_size:string>,lakeflow_connect:struct<task_type:string,zerobus_request_type:string>,lakebase:struct<storage_type:string,compute_type:string>,ai_bi_genie:struct<capability_type:string,offering_type:string>,genie:struct<offering_type:string>>
+       usage_type : string
+
+==============================================================================
+==== SCHEMA: system.compute ====
+   7 table(s): clusters, instance_events, instance_pools, node_timeline, node_types, warehouse_events, warehouses
+
+──────────────────────────────────────────────────────────────────────────
+── system.compute.clusters
+   size: [n/a: (com.databricks.sql.transaction.tahoe.DeltaIOException) [DELTA_UNSUPPORTED_FILE_SYSTEM] The file system for path uc-deltasharing://system.compute.clusters/_delta_log is not supported. Please verify th]
+   selectable: yes (27 cols)
+   columns (name : type):
+       account_id : string
+       workspace_id : string
+       cluster_id : string
+       cluster_name : string
+       owned_by : string
+       create_time : timestamp
+       delete_time : timestamp
+       driver_node_type : string
+       worker_node_type : string
+       worker_count : bigint
+       min_autoscale_workers : bigint
+       max_autoscale_workers : bigint
+       auto_termination_minutes : bigint
+       enable_elastic_disk : boolean
+       tags : map<string,string>
+       cluster_source : string
+       init_scripts : array<string>
+       aws_attributes : struct<first_on_demand:bigint,availability:string,zone_id:string,instance_profile_arn:string,spot_bid_price_percent:bigint,ebs_volume_type:string,ebs_volume_count:bigint,ebs_volume_size:bigint,ebs_volume_iops:bigint,ebs_volume_throughput:bigint>
+       azure_attributes : struct<first_on_demand:bigint,availability:string,spot_bid_max_price:double>
+       gcp_attributes : struct<use_preemptible_executors:boolean,google_service_account:string,boot_disk_size:bigint,availability:string,zone_id:string,local_ssd_count:bigint>
+       driver_instance_pool_id : string
+       worker_instance_pool_id : string
+       dbr_version : string
+       change_time : timestamp
+       change_date : date
+       data_security_mode : string
+       policy_id : string
+
+──────────────────────────────────────────────────────────────────────────
+── system.compute.instance_events
+   size: [n/a: (com.databricks.sql.transaction.tahoe.DeltaIOException) [DELTA_UNSUPPORTED_FILE_SYSTEM] The file system for path uc-deltasharing://system.compute.instance_events/_delta_log is not supported. Please ve]
+   selectable: yes (10 cols)
+   columns (name : type):
+       account_id : string
+       workspace_id : string
+       instance_id : string
+       event_time : timestamp
+       event_type : string
+       instance_pool_id : string
+       cluster_id : string
+       node_type : string
+       state : string
+       availability_type : string
+
+──────────────────────────────────────────────────────────────────────────
+── system.compute.instance_pools
+   size: [n/a: (com.databricks.sql.transaction.tahoe.DeltaIOException) [DELTA_UNSUPPORTED_FILE_SYSTEM] The file system for path uc-deltasharing://system.compute.instance_pools/_delta_log is not supported. Please ver]
+   selectable: yes (19 cols)
+   columns (name : type):
+       account_id : string
+       workspace_id : string
+       instance_pool_id : string
+       change_time : timestamp
+       create_time : timestamp
+       delete_time : timestamp
+       instance_pool_name : string
+       tags : map<string,string>
+       node_type : string
+       idle_instance_autotermination_minutes : bigint
+       min_idle_instances : bigint
+       max_capacity : bigint
+       enable_elastic_disk : boolean
+       disk_spec : struct<disk_type:string,disk_count:bigint,disk_size:bigint,disk_iops:bigint,disk_throughput:bigint>
+       preloaded_docker_images : array<string>
+       preloaded_spark_version : string
+       aws_attributes : struct<availability:string,zone_id:string,spot_bid_price_percent:bigint>
+       azure_attributes : struct<availability:string,spot_bid_max_price:double>
+       gcp_attributes : struct<zone_id:string,local_ssd_count:bigint,availability:string>
+
+──────────────────────────────────────────────────────────────────────────
+── system.compute.node_timeline
+   size: [n/a: (com.databricks.sql.transaction.tahoe.DeltaIOException) [DELTA_UNSUPPORTED_FILE_SYSTEM] The file system for path uc-deltasharing://system.compute.node_timeline/_delta_log is not supported. Please veri]
+   selectable: yes (17 cols)
+   columns (name : type):
+       account_id : string
+       workspace_id : string
+       cluster_id : string
+       instance_id : string
+       start_time : timestamp
+       end_time : timestamp
+       driver : boolean
+       cpu_user_percent : double
+       cpu_system_percent : double
+       cpu_wait_percent : double
+       mem_used_percent : double
+       mem_swap_percent : double
+       network_sent_bytes : bigint
+       network_received_bytes : bigint
+       disk_free_bytes_per_mount_point : map<string,bigint>
+       node_type : string
+       private_ip : string
+
+──────────────────────────────────────────────────────────────────────────
+── system.compute.node_types
+   size: [n/a: (com.databricks.sql.transaction.tahoe.DeltaIOException) [DELTA_UNSUPPORTED_FILE_SYSTEM] The file system for path uc-deltasharing://system.compute.node_types/_delta_log is not supported. Please verify ]
+   selectable: yes (5 cols)
+   columns (name : type):
+       account_id : string
+       node_type : string
+       core_count : double
+       memory_mb : bigint
+       gpu_count : bigint
+
+──────────────────────────────────────────────────────────────────────────
+── system.compute.warehouse_events
+   size: [n/a: (com.databricks.sql.transaction.tahoe.DeltaIOException) [DELTA_UNSUPPORTED_FILE_SYSTEM] The file system for path uc-deltasharing://system.compute.warehouse_events/_delta_log is not supported. Please v]
+   selectable: yes (6 cols)
+   columns (name : type):
+       account_id : string
+       workspace_id : string
+       warehouse_id : string
+       event_type : string
+       cluster_count : int
+       event_time : timestamp
+
+──────────────────────────────────────────────────────────────────────────
+── system.compute.warehouses
+   size: [n/a: (com.databricks.sql.transaction.tahoe.DeltaIOException) [DELTA_UNSUPPORTED_FILE_SYSTEM] The file system for path uc-deltasharing://system.compute.warehouses/_delta_log is not supported. Please verify ]
+   selectable: yes (14 cols)
+   columns (name : type):
+       warehouse_id : string
+       workspace_id : string
+       account_id : string
+       warehouse_name : string
+       warehouse_type : string
+       warehouse_channel : string
+       warehouse_size : string
+       min_clusters : int
+       max_clusters : int
+       auto_stop_minutes : int
+       tags : map<string,string>
+       change_time : timestamp
+       delete_time : timestamp
+       created_by : string
+
+==== system.data_quality_monitoring  [SKIPPED per config] ====
+
+==============================================================================
+==== SCHEMA: system.information_schema ====
+   47 table(s): catalog_privileges, catalog_provider_share_usage, catalog_tags, catalogs, check_constraints, column_masks, column_tags, columns, connection_privileges, connections, constraint_column_usage, constraint_table_usage, credential_privileges, credentials, external_location_privileges, external_locations, information_schema_catalog_name, key_column_usage, metastore_privileges, metastores, parameters, providers, recipient_allowed_ip_ranges, recipient_tokens, recipients, referential_constraints, routine_columns, routine_privileges, routines, row_filters, schema_privileges, schema_share_usage, schema_tags, schemata, share_recipient_privileges, shares, storage_credential_privileges, storage_credentials, table_constraints, table_privileges, table_share_usage, table_tags, tables, views, volume_privileges, volume_tags, volumes
+
+──────────────────────────────────────────────────────────────────────────
+── system.information_schema.catalog_privileges
+   size: [n/a: [DELTA_OPERATION_MISSING_PATH] Please provide the path or table identifier for DESCRIBE DETAIL.]
+   selectable: yes (6 cols)
+   columns (name : type):
+       grantor : string
+       grantee : string
+       catalog_name : string
+       privilege_type : string
+       is_grantable : string
+       in
+
+... [*** WARNING: max output size exceeded, skipping output. ***] ...
+
+
+
+──────────────────────────────────────────────────────────────────────────
+── system.information_schema.schema_share_usage
+   size: [n/a: [DELTA_OPERATION_MISSING_PATH] Please provide the path or table identifier for DESCRIBE DETAIL.]
+   selectable: yes (5 cols)
+   columns (name : type):
+       catalog_name : string
+       schema_name : string
+       share_name : string
+       shared_as_schema : string
+       comment : string
+
+──────────────────────────────────────────────────────────────────────────
+── system.information_schema.schema_tags
+   size: [n/a: [DELTA_OPERATION_MISSING_PATH] Please provide the path or table identifier for DESCRIBE DETAIL.]
+   selectable: yes (4 cols)
+   columns (name : type):
+       catalog_name : string
+       schema_name : string
+       tag_name : string
+       tag_value : string
+
+──────────────────────────────────────────────────────────────────────────
+── system.information_schema.schemata
+   size: [n/a: [DELTA_OPERATION_MISSING_PATH] Please provide the path or table identifier for DESCRIBE DETAIL.]
+   selectable: yes (8 cols)
+   columns (name : type):
+       catalog_name : string
+       schema_name : string
+       schema_owner : string
+       comment : string
+       created : timestamp
+       created_by : string
+       last_altered : timestamp
+       last_altered_by : string
+
+──────────────────────────────────────────────────────────────────────────
+── system.information_schema.share_recipient_privileges
+   size: [n/a: [DELTA_OPERATION_MISSING_PATH] Please provide the path or table identifier for DESCRIBE DETAIL.]
+   selectable: yes (4 cols)
+   columns (name : type):
+       grantor : string
+       recipient_name : string
+       share_name : string
+       privilege_type : string
+
+──────────────────────────────────────────────────────────────────────────
+── system.information_schema.shares
+   size: [n/a: [DELTA_OPERATION_MISSING_PATH] Please provide the path or table identifier for DESCRIBE DETAIL.]
+   selectable: yes (7 cols)
+   columns (name : type):
+       share_name : string
+       share_owner : string
+       comment : string
+       created : timestamp
+       created_by : string
+       last_altered : timestamp
+       last_altered_by : string
+
+──────────────────────────────────────────────────────────────────────────
+── system.information_schema.storage_credential_privileges
+   size: [n/a: [DELTA_OPERATION_MISSING_PATH] Please provide the path or table identifier for DESCRIBE DETAIL.]
+   selectable: yes (6 cols)
+   columns (name : type):
+       grantor : string
+       grantee : string
+       storage_credential_name : string
+       privilege_type : string
+       is_grantable : string
+       inherited_from : string
+
+──────────────────────────────────────────────────────────────────────────
+── system.information_schema.storage_credentials
+   size: [n/a: [DELTA_OPERATION_MISSING_PATH] Please provide the path or table identifier for DESCRIBE DETAIL.]
+   selectable: yes (11 cols)
+   columns (name : type):
+       storage_credential_id : string
+       storage_credential_name : string
+       storage_credential_owner : string
+       credential_type : string
+       credential : string
+       used_for_managed_storage : string
+       comment : string
+       created : timestamp
+       created_by : string
+       last_altered : timestamp
+       last_altered_by : string
+
+──────────────────────────────────────────────────────────────────────────
+── system.information_schema.table_constraints
+   size: [n/a: [DELTA_OPERATION_MISSING_PATH] Please provide the path or table identifier for DESCRIBE DETAIL.]
+   selectable: yes (10 cols)
+   columns (name : type):
+       constraint_catalog : string
+       constraint_schema : string
+       constraint_name : string
+       table_catalog : string
+       table_schema : string
+       table_name : string
+       constraint_type : string
+       is_deferrable : string
+       initially_deferred : string
+       enforced : string
+
+──────────────────────────────────────────────────────────────────────────
+── system.information_schema.table_privileges
+   size: [n/a: [DELTA_OPERATION_MISSING_PATH] Please provide the path or table identifier for DESCRIBE DETAIL.]
+   selectable: yes (8 cols)
+   columns (name : type):
+       grantor : string
+       grantee : string
+       table_catalog : string
+       table_schema : string
+       table_name : string
+       privilege_type : string
+       is_grantable : string
+       inherited_from : string
+
+──────────────────────────────────────────────────────────────────────────
+── system.information_schema.table_share_usage
+   size: [n/a: [DELTA_OPERATION_MISSING_PATH] Please provide the path or table identifier for DESCRIBE DETAIL.]
+   selectable: yes (10 cols)
+   columns (name : type):
+       catalog_name : string
+       schema_name : string
+       table_name : string
+       share_name : string
+       partition_spec : string
+       cdf_enabled : string
+       start_version : bigint
+       shared_as_schema : string
+       shared_as_table : string
+       comment : string
+
+──────────────────────────────────────────────────────────────────────────
+── system.information_schema.table_tags
+   size: [n/a: [DELTA_OPERATION_MISSING_PATH] Please provide the path or table identifier for DESCRIBE DETAIL.]
+   selectable: yes (5 cols)
+   columns (name : type):
+       catalog_name : string
+       schema_name : string
+       table_name : string
+       tag_name : string
+       tag_value : string
+
+──────────────────────────────────────────────────────────────────────────
+── system.information_schema.tables
+   size: [n/a: [DELTA_OPERATION_MISSING_PATH] Please provide the path or table identifier for DESCRIBE DETAIL.]
+   selectable: yes (15 cols)
+   columns (name : type):
+       table_catalog : string
+       table_schema : string
+       table_name : string
+       table_type : string
+       is_insertable_into : string
+       commit_action : string
+       table_owner : string
+       comment : string
+       created : timestamp
+       created_by : string
+       last_altered : timestamp
+       last_altered_by : string
+       data_source_format : string
+       storage_sub_directory : string
+       storage_path : string
+
+──────────────────────────────────────────────────────────────────────────
+── system.information_schema.views
+   size: [n/a: [DELTA_OPERATION_MISSING_PATH] Please provide the path or table identifier for DESCRIBE DETAIL.]
+   selectable: yes (9 cols)
+   columns (name : type):
+       table_catalog : string
+       table_schema : string
+       table_name : string
+       view_definition : string
+       check_option : string
+       is_updatable : string
+       is_insertable_into : string
+       sql_path : string
+       is_materialized : string
+
+──────────────────────────────────────────────────────────────────────────
+── system.information_schema.volume_privileges
+   size: [n/a: [DELTA_OPERATION_MISSING_PATH] Please provide the path or table identifier for DESCRIBE DETAIL.]
+   selectable: yes (8 cols)
+   columns (name : type):
+       grantor : string
+       grantee : string
+       volume_catalog : string
+       volume_schema : string
+       volume_name : string
+       privilege_type : string
+       is_grantable : string
+       inherited_from : string
+
+──────────────────────────────────────────────────────────────────────────
+── system.information_schema.volume_tags
+   size: [n/a: [DELTA_OPERATION_MISSING_PATH] Please provide the path or table identifier for DESCRIBE DETAIL.]
+   selectable: yes (5 cols)
+   columns (name : type):
+       catalog_name : string
+       schema_name : string
+       volume_name : string
+       tag_name : string
+       tag_value : string
+
+──────────────────────────────────────────────────────────────────────────
+── system.information_schema.volumes
+   size: [n/a: [DELTA_OPERATION_MISSING_PATH] Please provide the path or table identifier for DESCRIBE DETAIL.]
+   selectable: yes (11 cols)
+   columns (name : type):
+       volume_catalog : string
+       volume_schema : string
+       volume_name : string
+       volume_type : string
+       volume_owner : string
+       comment : string
+       storage_location : string
+       created : timestamp
+       created_by : string
+       last_altered : timestamp
+       last_altered_by : string
+
+==============================================================================
+==== SCHEMA: system.lakeflow ====
+   8 table(s): job_run_timeline, job_task_run_timeline, job_tasks, jobs, pipeline_update_timeline, pipelines, zerobus_ingest, zerobus_stream
+
+──────────────────────────────────────────────────────────────────────────
+── system.lakeflow.job_run_timeline
+   size: [n/a: (com.databricks.sql.transaction.tahoe.DeltaIOException) [DELTA_UNSUPPORTED_FILE_SYSTEM] The file system for path uc-deltasharing://system.lakeflow.job_run_timeline/_delta_log is not supported. Please ]
+   selectable: yes (22 cols)
+   columns (name : type):
+       account_id : string
+       workspace_id : string
+       job_id : string
+       run_id : string
+       period_start_time : timestamp
+       period_end_time : timestamp
+       trigger_type : string
+       result_state : string
+       run_type : string
+       run_name : string
+       compute_ids : array<string>
+       termination_code : string
+       job_parameters : map<string,map<string,string>>
+       source_task_run_id : string
+       root_task_run_id : string
+       compute : array<struct<type:string,cluster_id:string,warehouse_id:string>>
+       termination_type : string
+       setup_duration_seconds : bigint
+       queue_duration_seconds : bigint
+       run_duration_seconds : bigint
+       cleanup_duration_seconds : bigint
+       execution_duration_seconds : bigint
+
+──────────────────────────────────────────────────────────────────────────
+── system.lakeflow.job_task_run_timeline
+   size: [n/a: (com.databricks.sql.transaction.tahoe.DeltaIOException) [DELTA_UNSUPPORTED_FILE_SYSTEM] The file system for path uc-deltasharing://system.lakeflow.job_task_run_timeline/_delta_log is not supported. Pl]
+   selectable: yes (18 cols)
+   columns (name : type):
+       account_id : string
+       workspace_id : string
+       job_id : string
+       run_id : string
+       period_start_time : timestamp
+       period_end_time : timestamp
+       task_key : string
+       compute_ids : array<string>
+       result_state : string
+       job_run_id : string
+       parent_run_id : string
+       termination_code : string
+       compute : array<struct<type:string,cluster_id:string,warehouse_id:string>>
+       termination_type : string
+       task_parameters : map<string,map<string,string>>
+       setup_duration_seconds : bigint
+       cleanup_duration_seconds : bigint
+       execution_duration_seconds : bigint
+
+──────────────────────────────────────────────────────────────────────────
+── system.lakeflow.job_tasks
+   size: [n/a: (com.databricks.sql.transaction.tahoe.DeltaIOException) [DELTA_UNSUPPORTED_FILE_SYSTEM] The file system for path uc-deltasharing://system.lakeflow.job_tasks/_delta_log is not supported. Please verify ]
+   selectable: yes (9 cols)
+   columns (name : type):
+       account_id : string
+       workspace_id : string
+       job_id : string
+       task_key : string
+       depends_on_keys : array<string>
+       change_time : timestamp
+       delete_time : timestamp
+       timeout_seconds : bigint
+       health_rules : array<struct<metric:string,operator:string,value:bigint>>
+
+──────────────────────────────────────────────────────────────────────────
+── system.lakeflow.jobs
+   size: [n/a: (com.databricks.sql.transaction.tahoe.DeltaIOException) [DELTA_UNSUPPORTED_FILE_SYSTEM] The file system for path uc-deltasharing://system.lakeflow.jobs/_delta_log is not supported. Please verify that ]
+   selectable: yes (19 cols)
+   columns (name : type):
+       account_id : string
+       workspace_id : string
+       job_id : string
+       name : string
+       creator_id : string
+       tags : map<string,string>
+       run_as : string
+       change_time : timestamp
+       delete_time : timestamp
+       description : string
+       trigger : struct<file_arrival:struct<url:string,min_time_between_triggers_seconds:int,wait_after_last_change_seconds:int>,periodic:struct<interval:int,units:string>,continuous:struct<enabled:boolean>,table_update:struct<table_names:array<string>,min_time_between_triggers_seconds:bigint,wait_after_last_change_seconds:bigint,condition:string>,schedule:struct<quartz_cron_expression:string,timezone_id:string>>
+       trigger_type : string
+       run_as_user_name : string
+       creator_user_name : string
+       paused : boolean
+       timeout_seconds : bigint
+       health_rules : array<struct<metric:string,operator:string,value:bigint>>
+       deployment : struct<kind:string,metadata_file_path:string>
+       create_time : timestamp
+
+──────────────────────────────────────────────────────────────────────────
+── system.lakeflow.pipeline_update_timeline
+   size: [n/a: (com.databricks.sql.transaction.tahoe.DeltaIOException) [DELTA_UNSUPPORTED_FILE_SYSTEM] The file system for path uc-deltasharing://system.lakeflow.pipeline_update_timeline/_delta_log is not supported.]
+   selectable: yes (16 cols)
+   columns (name : type):
+       workspace_id : string
+       pipeline_id : string
+       update_id : string
+       update_type : string
+       request_id : string
+       run_as_user_name : string
+       trigger_type : string
+       trigger_details : struct<job_task:struct<job_id:string,job_task_run_id:string,performance_target:string>>
+       result_state : string
+       compute : struct<type:string,cluster_id:string>
+       period_start_time : timestamp
+       period_end_time : timestamp
+       refresh_selection : array<struct<table_catalog:string,table_schema:string,table_name:string>>
+       full_refresh_selection : array<struct<table_catalog:string,table_schema:string,table_name:string>>
+       reset_checkpoint_selection : array<string>
+       account_id : string
+
+──────────────────────────────────────────────────────────────────────────
+── system.lakeflow.pipelines
+   size: [n/a: (com.databricks.sql.transaction.tahoe.DeltaIOException) [DELTA_UNSUPPORTED_FILE_SYSTEM] The file system for path uc-deltasharing://system.lakeflow.pipelines/_delta_log is not supported. Please verify ]
+   selectable: yes (13 cols)
+   columns (name : type):
+       workspace_id : string
+       pipeline_id : string
+       pipeline_type : string
+       name : string
+       created_by : string
+       run_as : string
+       tags : map<string,string>
+       settings : struct<photon:boolean,development:boolean,continuous:boolean,serverless:boolean,edition:string,channel:string>
+       configuration : map<string,string>
+       change_time : timestamp
+       delete_time : timestamp
+       account_id : string
+       create_time : timestamp
+
+──────────────────────────────────────────────────────────────────────────
+── system.lakeflow.zerobus_ingest
+   size: [n/a: (com.databricks.sql.transaction.tahoe.DeltaIOException) [DELTA_UNSUPPORTED_FILE_SYSTEM] The file system for path uc-deltasharing://system.lakeflow.zerobus_ingest/_delta_log is not supported. Please ve]
+   selectable: yes (11 cols)
+   columns (name : type):
+       commit_version : bigint
+       stream_id : string
+       workspace_id : string
+       account_id : string
+       table_id : string
+       table_name : string
+       commit_time : timestamp
+       committed_bytes : bigint
+       committed_records : bigint
+       tags : array<string>
+       errors : array<struct<error_code:bigint,error_message:string,timestamp:timestamp>>
+
+──────────────────────────────────────────────────────────────────────────
+── system.lakeflow.zerobus_stream
+   size: [n/a: (com.databricks.sql.transaction.tahoe.DeltaIOException) [DELTA_UNSUPPORTED_FILE_SYSTEM] The file system for path uc-deltasharing://system.lakeflow.zerobus_stream/_delta_log is not supported. Please ve]
+   selectable: yes (12 cols)
+   columns (name : type):
+       stream_id : string
+       event_time : timestamp
+       workspace_id : string
+       account_id : string
+       producer_id : string
+       opened_time : timestamp
+       closed_time : timestamp
+       table_id : string
+       table_name : string
+       protocol : string
+       data_format : string
+       errors : array<struct<error_code:bigint,error_message:string,timestamp:timestamp>>
+
+==== system.mlflow  [SKIPPED per config] ====
+
+==============================================================================
+==== SCHEMA: system.query ====
+   1 table(s): history
+
+──────────────────────────────────────────────────────────────────────────
+── system.query.history
+   size: [n/a: (com.databricks.sql.transaction.tahoe.DeltaIOException) [DELTA_UNSUPPORTED_FILE_SYSTEM] The file system for path uc-deltasharing://system.query.history/_delta_log is not supported. Please verify that ]
+   selectable: yes (44 cols)
+   columns (name : type):
+       account_id : string
+       workspace_id : string
+       statement_id : string
+       executed_by : string
+       session_id : string
+       execution_status : string
+       compute : struct<type:string,cluster_id:string,warehouse_id:string>
+       executed_by_user_id : string
+       statement_text : string
+       statement_type : string
+       error_message : string
+       client_application : string
+       client_driver : string
+       total_duration_ms : bigint
+       waiting_for_compute_duration_ms : bigint
+       waiting_at_capacity_duration_ms : bigint
+       execution_duration_ms : bigint
+       compilation_duration_ms : bigint
+       total_task_duration_ms : bigint
+       result_fetch_duration_ms : bigint
+       start_time : timestamp
+       end_time : timestamp
+       update_time : timestamp
+       read_partitions : bigint
+       pruned_files : bigint
+       read_files : bigint
+       read_rows : bigint
+       produced_rows : bigint
+       read_bytes : bigint
+       read_io_cache_percent : tinyint
+       from_result_cache : boolean
+       spilled_local_bytes : bigint
+       written_bytes : bigint
+       shuffle_read_bytes : bigint
+       query_source : struct<job_info:struct<job_id:string,job_run_id:string,job_task_run_id:string>,legacy_dashboard_id:string,dashboard_id:string,alert_id:string,notebook_id:string,sql_query_id:string,genie_space_id:string,pipeline_info:struct<pipeline_id:string,update_id:string>>
+       executed_as_user_id : string
+       executed_as : string
+       written_rows : bigint
+       written_files : bigint
+       cache_origin_statement_id : string
+       query_parameters : struct<named_parameters:map<string,struct<exprs:array<struct<tag:string,data_type:struct<type_name:string,type_ddl:string,redacted_type_ddl:string>,literal:struct<data_type:struct<type_name:string,type_ddl:string,redacted_type_ddl:string>,int_value:int,long_value:bigint,double_value:double,float_value:float,byte_value:int,short_value:int,string_value:string,boolean_value:boolean,decimal_value:struct<value:string,precision:int,scale:int>,binary_value:binary,timestamp_value:bigint,timestamp_ntz_value:bigint,date_value:bigint,calendar_interval_value:struct<months:int,days:int,microseconds:bigint>,day_time_interval_value:bigint,year_month_interval_value:int>,seq_expression:struct<children:array<bigint>>,function:struct<function_name:string,arguments:array<bigint>>,alias:struct<expr:bigint,name:array<string>,metadata:string>,sort_order:struct<child:bigint,direction:string,null_ordering:string>,lambda_function:struct<function:bigint,arguments:array<struct<name_parts:array<string>>>>,window:struct<window_function:bigint,partition_spec:array<bigint>,order_spec:array<bigint>>,unresolved_extract_value:struct<child:bigint,extraction:bigint>,update_fields:struct<struct_expression:bigint,field_name:string,value_expression:bigint>,unresolved_named_lambda_variable:struct<name_parts:array<string>>,named_argument_expression:struct<key:string,value:bigint>,id:bigint>>>>,pos_parameters:array<struct<exprs:array<struct<tag:string,data_type:struct<type_name:string,type_ddl:string,redacted_type_ddl:string>,literal:struct<data_type:struct<type_name:string,type_ddl:string,redacted_type_ddl:string>,int_value:int,long_value:bigint,double_value:double,float_value:float,byte_value:int,short_value:int,string_value:string,boolean_value:boolean,decimal_value:struct<value:string,precision:int,scale:int>,binary_value:binary,timestamp_value:bigint,timestamp_ntz_value:bigint,date_value:bigint,calendar_interval_value:struct<months:int,days:int,microseconds:bigint>,day_time_interval_value:bigint,year_month_interval_value:int>,seq_expression:struct<children:array<bigint>>,function:struct<function_name:string,arguments:array<bigint>>,alias:struct<expr:bigint,name:array<string>,metadata:string>,sort_order:struct<child:bigint,direction:string,null_ordering:string>,lambda_function:struct<function:bigint,arguments:array<struct<name_parts:array<string>>>>,window:struct<window_function:bigint,partition_spec:array<bigint>,order_spec:array<bigint>>,unresolved_extract_value:struct<child:bigint,extraction:bigint>,update_fields:struct<struct_expression:bigint,field_name:string,value_expression:bigint>,unresolved_named_lambda_variable:struct<name_parts:array<string>>,named_argument_expression:struct<key:string,value:bigint>,id:bigint>>>>,truncated:boolean>
+       query_tags : map<string,string>
+       pruned_files_bytes : bigint
+       read_files_bytes : bigint
+
+==============================================================================
+==== SCHEMA: system.serving ====
+   2 table(s): endpoint_usage, served_entities
+
+──────────────────────────────────────────────────────────────────────────
+── system.serving.endpoint_usage
+   size: [n/a: (com.databricks.sql.transaction.tahoe.DeltaIOException) [DELTA_UNSUPPORTED_FILE_SYSTEM] The file system for path uc-deltasharing://system.serving.endpoint_usage/_delta_log is not supported. Please ver]
+   selectable: yes (14 cols)
+   columns (name : type):
+       workspace_id : string
+       account_id : string
+       client_request_id : string
+       databricks_request_id : string
+       requester : string
+       status_code : int
+       request_time : timestamp
+       input_token_count : bigint
+       output_token_count : bigint
+       input_character_count : bigint
+       output_character_count : bigint
+       usage_context : map<string,string>
+       request_streaming : boolean
+       served_entity_id : string
+
+──────────────────────────────────────────────────────────────────────────
+── system.serving.served_entities
+   size: [n/a: (com.databricks.sql.transaction.tahoe.DeltaIOException) [DELTA_UNSUPPORTED_FILE_SYSTEM] The file system for path uc-deltasharing://system.serving.served_entities/_delta_log is not supported. Please ve]
+   selectable: yes (18 cols)
+   columns (name : type):
+       served_entity_id : string
+       account_id : string
+       workspace_id : string
+       created_by : string
+       endpoint_name : string
+       endpoint_id : string
+       served_entity_name : string
+       entity_type : string
+       entity_name : string
+       entity_version : string
+       endpoint_config_version : int
+       task : string
+       external_model_config : struct<provider:string>
+       foundation_model_config : struct<min_provisioned_throughput:bigint,max_provisioned_throughput:bigint>
+       custom_model_config : struct<min_concurrency:int,max_concurrency:int,compute_type:string>
+       feature_spec_config : struct<min_concurrency:int,max_concurrency:int,compute_type:string>
+       change_time : timestamp
+       endpoint_delete_time : timestamp
+
+==============================================================================
+==== SCHEMA: system.storage ====
+   2 table(s): predictive_optimization_operations_history, table_metrics_history
+
+──────────────────────────────────────────────────────────────────────────
+── system.storage.predictive_optimization_operations_history
+   size: [n/a: (com.databricks.sql.transaction.tahoe.DeltaIOException) [DELTA_UNSUPPORTED_FILE_SYSTEM] The file system for path uc-deltasharing://system.storage.predictive_optimization_operations_history/_delta_log ]
+   selectable: yes (16 cols)
+   columns (name : type):
+       account_id : string
+       workspace_id : string
+       start_time : timestamp
+       end_time : timestamp
+       metastore_name : string
+       metastore_id : string
+       catalog_name : string
+       schema_name : string
+       table_name : string
+       table_id : string
+       operation_type : string
+       operation_id : string
+       operation_status : string
+       operation_metrics : map<string,string>
+       usage_unit : string
+       usage_quantity : decimal(38,18)
+
+──────────────────────────────────────────────────────────────────────────
+── system.storage.table_metrics_history
+   size: [n/a: (com.databricks.sql.transaction.tahoe.DeltaIOException) [DELTA_UNSUPPORTED_FILE_SYSTEM] The file system for path uc-deltasharing://system.storage.table_metrics_history/_delta_log is not supported. Ple]
+   selectable: yes (16 cols)
+   columns (name : type):
+       snapshot_date : date
+       account_id : string
+       metastore_id : string
+       table_id : string
+       catalog_name : string
+       schema_name : string
+       table_name : string
+       table_type : string
+       clone_details : struct<parent_id:string,type:string>
+       table_owner : string
+       active_bytes : bigint
+       active_files : bigint
+       table_creation_time : timestamp
+       table_dropped_time : timestamp
+       predictive_optimization_enabled : boolean
+       record_generation_time : timestamp

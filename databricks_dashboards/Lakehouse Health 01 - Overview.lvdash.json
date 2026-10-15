@@ -1,0 +1,3432 @@
+{
+  "datasets": [
+    {
+      "name": "43ecf3c2",
+      "displayName": "snapshot_banner",
+      "queryLines": [
+        "SELECT window_days AS days, concat('as of ', date_format(snapshot_at, 'MMM d, yyyy HH:mm'), ' UTC, list price') AS as_of FROM databricks_audit_dashboard.snapshot_info\n"
+      ]
+    },
+    {
+      "name": "6c84b0b6",
+      "displayName": "workspace_options",
+      "queryLines": [
+        "SELECT DISTINCT name AS workspace_name FROM databricks_audit_dashboard.dim_workspace WHERE name IS NOT NULL ORDER BY 1\n"
+      ]
+    },
+    {
+      "name": "b9cde6c2",
+      "displayName": "overview:kpi:Spend",
+      "queryLines": [
+        "WITH cur AS (SELECT * FROM (SELECT t.*, COALESCE(d_workspace.n, CAST(t.`workspace_id` AS STRING)) AS nm_workspace, COALESCE(concat(d_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING)) AS n_workspace, COALESCE(d_workspace.n, CAST(t.`workspace_id` AS STRING)) AS ws_name FROM databricks_audit_dashboard.cost_dollarized_by_sku_day t LEFT JOIN (SELECT CAST(workspace_id AS STRING) AS workspace_id, max(name) AS n FROM databricks_audit_dashboard.dim_workspace GROUP BY CAST(workspace_id AS STRING)) d_workspace ON d_workspace.workspace_id = CAST(t.`workspace_id` AS STRING)) WHERE (array_contains(:workspace, COALESCE(ws_name, '')) OR array_contains(:workspace, 'all'))),\n",
+        "     prev AS (SELECT * FROM (SELECT t.*, COALESCE(d_workspace.n, CAST(t.`workspace_id` AS STRING)) AS nm_workspace, COALESCE(concat(d_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING)) AS n_workspace, COALESCE(d_workspace.n, CAST(t.`workspace_id` AS STRING)) AS ws_name FROM databricks_audit_dashboard.cost_period_over_period t LEFT JOIN (SELECT CAST(workspace_id AS STRING) AS workspace_id, max(name) AS n FROM databricks_audit_dashboard.dim_workspace GROUP BY CAST(workspace_id AS STRING)) d_workspace ON d_workspace.workspace_id = CAST(t.`workspace_id` AS STRING)) WHERE status <> 'NOT_ASSESSED' AND (array_contains(:workspace, COALESCE(ws_name, '')) OR array_contains(:workspace, 'all'))),\n",
+        "     tot AS (\n",
+        "       SELECT COALESCE((SELECT SUM(net_list_cost) FROM cur), 0) AS cur_usd,\n",
+        "              (SELECT SUM(est_current_usd_list) FROM prev) AS cur_judged,\n",
+        "              (SELECT SUM(est_previous_usd_list) FROM prev) AS prev_usd\n",
+        "     )\n",
+        "SELECT ROUND(cur_usd * (1.0 - 0.0), 0) AS value,\n",
+        "       CASE WHEN prev_usd IS NULL OR prev_usd = 0 THEN 'No prior period to compare'\n",
+        "            WHEN ABS(cur_judged - prev_usd) < 0.5 THEN 'About flat vs the previous period'\n",
+        "            WHEN ABS(100.0 * (cur_judged - prev_usd) / prev_usd) > 999 THEN 'No prior period to compare'\n",
+        "            WHEN cur_judged > prev_usd THEN\n",
+        "              concat('Up ', CAST(CAST(ROUND(100.0 * (cur_judged - prev_usd) / prev_usd, 0) AS BIGINT) AS STRING), '% vs the previous period')\n",
+        "            ELSE\n",
+        "              concat('Down ', CAST(CAST(ROUND(100.0 * (prev_usd - cur_judged) / prev_usd, 0) AS BIGINT) AS STRING), '% vs the previous period')\n",
+        "       END AS target\n",
+        "FROM tot\n"
+      ],
+      "parameters": [
+        {
+          "displayName": "Workspace",
+          "keyword": "workspace",
+          "dataType": "STRING",
+          "complexType": "MULTI",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "all"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "f64fd34f",
+      "displayName": "overview:kpi:Possible waste",
+      "queryLines": [
+        "WITH src AS (\n",
+        "  SELECT 'Warehouse idle time' AS source_label, workspace_id, warehouse_id AS entity_id, 'warehouse' AS entity_kind,\n",
+        "         status, ROUND(est_wasted_usd_list * (1.0 - 0.0), 2) AS wasted, est_wasted_usd_list AS floor_value, window_days\n",
+        "  FROM databricks_audit_dashboard.compute_warehouse_idle_minutes\n",
+        "  UNION ALL\n",
+        "  SELECT 'Idle cluster nodes', dc.workspace_id, w.cluster_id, 'cluster',\n",
+        "         w.status, ROUND(w.est_wasted_usd_list * (1.0 - 0.0), 2), w.est_wasted_usd_list, w.window_days\n",
+        "  FROM databricks_audit_dashboard.compute_idle_node_ratio w\n",
+        "  LEFT JOIN databricks_audit_dashboard.dim_cluster dc ON dc.cluster_id = w.cluster_id\n",
+        "  UNION ALL\n",
+        "  SELECT 'Compute burned on failed runs', workspace_id, job_id, 'job',\n",
+        "         status, ROUND(est_wasted_usd_list * (1.0 - 0.0), 2), CAST(NULL AS DOUBLE), window_days\n",
+        "  FROM databricks_audit_dashboard.lakeflow_failed_jobs_wasted_dbus\n",
+        "  UNION ALL\n",
+        "  SELECT 'Compute burned on failed statements', workspace_id, warehouse_id, 'warehouse',\n",
+        "         status, ROUND(est_wasted_usd_list * (1.0 - 0.0), 2), est_wasted_usd_list, window_days\n",
+        "  FROM databricks_audit_dashboard.cost_failed_statement_waste\n",
+        "  UNION ALL\n",
+        "  SELECT 'Endpoints billed with no requests', workspace_id, endpoint_id, 'endpoint',\n",
+        "         status, ROUND(est_wasted_usd_list * (1.0 - 0.0), 2), est_usd_list, window_days\n",
+        "  FROM databricks_audit_dashboard.compute_serving_endpoint_cost_status\n",
+        "),\n",
+        "eff AS (\n",
+        "  SELECT *,\n",
+        "         CASE WHEN status IN ('CRITICAL', 'WARN') AND floor_value IS NOT NULL\n",
+        "                   AND floor_value < 50.0 * window_days / 30.0\n",
+        "              THEN 'OK' ELSE status END AS eff_status\n",
+        "  FROM src\n",
+        "),\n",
+        "named_all AS (\n",
+        "  SELECT e.*, COALESCE(ws.name, e.workspace_id, 'Account-level') AS workspace_name\n",
+        "  FROM eff e\n",
+        "  LEFT JOIN databricks_audit_dashboard.dim_workspace ws ON ws.workspace_id = e.workspace_id\n",
+        "),\n",
+        "flagged AS (\n",
+        "  SELECT source_label, workspace_id, entity_id, entity_kind, wasted\n",
+        "  FROM eff\n",
+        "  WHERE eff_status IN ('CRITICAL', 'WARN') AND wasted > 0\n",
+        "),\n",
+        "named AS (\n",
+        "  SELECT f.source_label, f.entity_kind, f.wasted,\n",
+        "         COALESCE(ws.name, f.workspace_id, 'Account-level') AS workspace_name,\n",
+        "         COALESCE(dw.warehouse_name, dc.cluster_name, dj.name, ep.endpoint_name, f.entity_id) AS resource_name\n",
+        "  FROM flagged f\n",
+        "  LEFT JOIN databricks_audit_dashboard.dim_workspace ws ON ws.workspace_id = f.workspace_id\n",
+        "  LEFT JOIN databricks_audit_dashboard.dim_warehouse dw ON f.entity_kind = 'warehouse' AND dw.warehouse_id = f.entity_id\n",
+        "  LEFT JOIN databricks_audit_dashboard.dim_cluster dc ON f.entity_kind = 'cluster' AND dc.cluster_id = f.entity_id\n",
+        "  LEFT JOIN databricks_audit_dashboard.dim_job dj ON f.entity_kind = 'job' AND dj.workspace_id = f.workspace_id AND dj.job_id = f.entity_id\n",
+        "  LEFT JOIN databricks_audit_dashboard.compute_serving_endpoint_cost_status ep\n",
+        "    ON f.entity_kind = 'endpoint' AND ep.workspace_id = f.workspace_id AND ep.endpoint_id = f.entity_id\n",
+        ")\n",
+        "SELECT ROUND(COALESCE(SUM(wasted), 0), 0) AS value,\n",
+        "       CASE WHEN COUNT(*) = 0 THEN 'Nothing flagged'\n",
+        "            ELSE concat(CAST(COUNT(*) AS STRING), ' resources; worst: ', COALESCE(MAX_BY(resource_name, wasted), 'none'))\n",
+        "       END AS target\n",
+        "FROM named\n",
+        "WHERE (array_contains(:workspace, COALESCE(workspace_name, '')) OR array_contains(:workspace, 'all'))\n"
+      ],
+      "parameters": [
+        {
+          "displayName": "Workspace",
+          "keyword": "workspace",
+          "dataType": "STRING",
+          "complexType": "MULTI",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "all"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "d4c77a22",
+      "displayName": "overview:kpi:Jobs & pipelines",
+      "queryLines": [
+        "WITH r AS (SELECT * FROM (SELECT t.*, COALESCE(d_workspace.n, CAST(t.`workspace_id` AS STRING)) AS nm_workspace, COALESCE(concat(d_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING)) AS n_workspace, COALESCE(COALESCE(t.`job_name`, d_job.n), CAST(t.`job_id` AS STRING)) AS nm_job, COALESCE(concat(COALESCE(t.`job_name`, d_job.n), ' (', CAST(t.`job_id` AS STRING), ')'), CAST(t.`job_id` AS STRING)) AS n_job, COALESCE(d_workspace.n, CAST(t.`workspace_id` AS STRING)) AS ws_name, CASE WHEN COALESCE(d_workspace.n, CAST(t.`workspace_id` AS STRING)) IS NULL THEN COALESCE(COALESCE(t.`job_name`, d_job.n), CAST(t.`job_id` AS STRING)) ELSE concat(COALESCE(COALESCE(t.`job_name`, d_job.n), CAST(t.`job_id` AS STRING)), ' \u00b7 ', COALESCE(d_workspace.n, CAST(t.`workspace_id` AS STRING))) END AS lbl_job FROM databricks_audit_dashboard.lakeflow_job_reliability t LEFT JOIN (SELECT CAST(workspace_id AS STRING) AS workspace_id, max(name) AS n FROM databricks_audit_dashboard.dim_workspace GROUP BY CAST(workspace_id AS STRING)) d_workspace ON d_workspace.workspace_id = CAST(t.`workspace_id` AS STRING) LEFT JOIN (SELECT CAST(workspace_id AS STRING) AS workspace_id, CAST(job_id AS STRING) AS job_id, max(name) AS n FROM databricks_audit_dashboard.dim_job GROUP BY CAST(workspace_id AS STRING), CAST(job_id AS STRING)) d_job ON d_job.workspace_id = CAST(t.`workspace_id` AS STRING) AND d_job.job_id = CAST(t.`job_id` AS STRING)) WHERE (array_contains(:workspace, COALESCE(ws_name, '')) OR array_contains(:workspace, 'all'))),\n",
+        "     checks AS (SELECT c.title AS check_title,\n",
+        "       c.page AS page,\n",
+        "       CASE WHEN l.query_id IS NULL THEN 'Not run'\n",
+        "            WHEN NOT l.ok THEN 'Not assessed'\n",
+        "            WHEN l.critical > 0 THEN 'Critical'\n",
+        "            WHEN l.warn > 0 THEN 'Warn'\n",
+        "            WHEN l.has_status THEN 'OK'\n",
+        "            WHEN l.row_count = 0 THEN 'No rows'\n",
+        "            ELSE 'Listed' END AS verdict,\n",
+        "       l.row_count AS row_count,\n",
+        "       l.critical AS critical_rows,\n",
+        "       l.warn AS warn_rows,\n",
+        "       l.error AS error\n",
+        "FROM (VALUES\n",
+        "       (0, 'lakeflow_job_reliability', 'Broken or flaky jobs', 'Failures'),\n",
+        "       (1, 'lakeflow_failed_jobs_wasted_dbus', 'Compute burned on failed runs', 'Failures'),\n",
+        "       (2, 'lakeflow_failed_runs', 'Failed job runs', 'Failures'),\n",
+        "       (3, 'lakeflow_never_started_runs', 'Runs that never started', 'Failures'),\n",
+        "       (4, 'lakeflow_succeeded_with_failed_tasks', 'Runs that \\'succeeded\\' with a failed task', 'Failures'),\n",
+        "       (5, 'lakeflow_job_duration_regression', 'Jobs running slower than usual', 'Slow & queued'),\n",
+        "       (6, 'lakeflow_job_queue_time', 'Jobs waiting on compute', 'Slow & queued'),\n",
+        "       (7, 'lakeflow_phase_cold_start', 'Cluster cold-start time', 'Slow & queued'),\n",
+        "       (8, 'lakeflow_retries_repairs', 'Jobs relying on retries or repairs', 'Hygiene'),\n",
+        "       (9, 'lakeflow_stale_zombie_jobs', 'Stale jobs with no recent run', 'Hygiene'),\n",
+        "       (10, 'lakeflow_jobs_no_timeout', 'Jobs with no timeout set', 'Hygiene'),\n",
+        "       (11, 'lakeflow_job_tasks_no_timeout', 'Job tasks with no timeout set', 'Hygiene'),\n",
+        "       (12, 'lakeflow_jobs_on_all_purpose', 'Jobs on all-purpose clusters', 'Hygiene'),\n",
+        "       (13, 'lakeflow_health_rule_coverage', 'Jobs with no health rule', 'Hygiene'),\n",
+        "       (14, 'lakeflow_job_ownership_orphans', 'Jobs with no clear owner', 'Hygiene'),\n",
+        "       (15, 'lakeflow_tasks_near_timeout', 'Tasks running close to their timeout', 'Hygiene'),\n",
+        "       (16, 'lakeflow_job_compute_pressure', 'Job compute fit', 'Compute fit'),\n",
+        "       (17, 'task_cluster_utilization', 'Task-level cluster utilization', 'Compute fit'),\n",
+        "       (18, 'lakeflow_job_oversized', 'Jobs on bigger machines than they need', 'Compute fit'),\n",
+        "       (19, 'lakeflow_pipeline_cost', 'Spend by pipeline', 'Pipelines'),\n",
+        "       (20, 'lakeflow_pipeline_idle_tail_duration', 'Pipeline compute left running after its last update', 'Pipelines'),\n",
+        "       (21, 'lakeflow_pipeline_update_failures_retries', 'Pipeline update failures & retries', 'Pipelines')) AS c(ord, query_id, title, page)\n",
+        "LEFT JOIN databricks_audit_dashboard.snapshot_log l ON l.query_id = c.query_id\n",
+        "ORDER BY CASE WHEN l.critical > 0 THEN 0 WHEN l.warn > 0 THEN 1 WHEN NOT l.ok THEN 2 ELSE 3 END, c.ord\n",
+        "),\n",
+        "     tot AS (\n",
+        "       SELECT (SELECT count(*) FROM r WHERE status = 'CRITICAL') AS broken,\n",
+        "              (SELECT count_if(critical_rows > 0 OR warn_rows > 0) FROM checks) AS flagged,\n",
+        "              (SELECT concat('Worst: ', nm_job, ', ', CAST(consecutive_failures AS STRING), ' runs failed in a row')\n",
+        "               FROM r WHERE status = 'CRITICAL' ORDER BY consecutive_failures DESC LIMIT 1) AS worst_job,\n",
+        "              (SELECT concat('Worst: ', check_title) FROM checks WHERE critical_rows > 0 OR warn_rows > 0\n",
+        "               ORDER BY critical_rows DESC, warn_rows DESC LIMIT 1) AS worst_check\n",
+        "     )\n",
+        "SELECT CASE WHEN broken > 0 THEN broken ELSE flagged END AS value,\n",
+        "       CASE WHEN broken > 0 THEN COALESCE(worst_job, 'Nothing flagged')\n",
+        "            ELSE COALESCE(worst_check, 'Nothing flagged') END AS target\n",
+        "FROM tot\n"
+      ],
+      "parameters": [
+        {
+          "displayName": "Workspace",
+          "keyword": "workspace",
+          "dataType": "STRING",
+          "complexType": "MULTI",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "all"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "7c2f1ad2",
+      "displayName": "overview:kpi:Query performance",
+      "queryLines": [
+        "WITH checks AS (SELECT c.title AS check_title,\n",
+        "       c.page AS page,\n",
+        "       CASE WHEN l.query_id IS NULL THEN 'Not run'\n",
+        "            WHEN NOT l.ok THEN 'Not assessed'\n",
+        "            WHEN l.critical > 0 THEN 'Critical'\n",
+        "            WHEN l.warn > 0 THEN 'Warn'\n",
+        "            WHEN l.has_status THEN 'OK'\n",
+        "            WHEN l.row_count = 0 THEN 'No rows'\n",
+        "            ELSE 'Listed' END AS verdict,\n",
+        "       l.row_count AS row_count,\n",
+        "       l.critical AS critical_rows,\n",
+        "       l.warn AS warn_rows,\n",
+        "       l.error AS error\n",
+        "FROM (VALUES\n",
+        "       (0, 'query_top_by_cost', 'Top queries by cost', 'Heavy queries'),\n",
+        "       (1, 'query_provenance_by_source', 'Query traffic by source', 'Heavy queries'),\n",
+        "       (2, 'audit_self_cost', 'This audit\\'s own query cost', 'Heavy queries'),\n",
+        "       (3, 'query_local_spillage', 'Queries spilling to local disk', 'Efficiency'),\n",
+        "       (4, 'query_shuffle_write_amplification', 'Queries shuffling too much data', 'Efficiency'),\n",
+        "       (5, 'query_pruning_effectiveness', 'Queries not pruning partitions/files', 'Efficiency'),\n",
+        "       (6, 'query_cache_coldstart', 'Queries missing the disk cache', 'Efficiency'),\n",
+        "       (7, 'query_failed_queries_daily', 'Failed queries per day', 'Reliability'),\n",
+        "       (8, 'cost_failed_statement_waste', 'Compute burned on failed statements', 'Reliability'),\n",
+        "       (9, 'query_failed_statements_grouped', 'Failed statements by error', 'Reliability'),\n",
+        "       (10, 'query_warehouse_pressure', 'Warehouse memory & concurrency pressure', 'Capacity'),\n",
+        "       (11, 'query_queuing_waits', 'Queries waiting for a warehouse slot', 'Capacity'),\n",
+        "       (12, 'query_workload_mix_hours', 'Query workload by hour of day', 'Capacity'),\n",
+        "       (13, 'query_task_statement_breakdown', 'Statement breakdown by task stage', 'Capacity')) AS c(ord, query_id, title, page)\n",
+        "LEFT JOIN databricks_audit_dashboard.snapshot_log l ON l.query_id = c.query_id\n",
+        "ORDER BY CASE WHEN l.critical > 0 THEN 0 WHEN l.warn > 0 THEN 1 WHEN NOT l.ok THEN 2 ELSE 3 END, c.ord\n",
+        ")\n",
+        "SELECT count_if(critical_rows > 0 OR warn_rows > 0) AS value,\n",
+        "       COALESCE((SELECT concat('Worst: ', check_title) FROM checks WHERE critical_rows > 0 OR warn_rows > 0\n",
+        "                 ORDER BY critical_rows DESC, warn_rows DESC LIMIT 1), 'Nothing flagged') AS target\n",
+        "FROM checks\n"
+      ]
+    },
+    {
+      "name": "73e1b44d",
+      "displayName": "overview:Every dashboard of the set",
+      "queryLines": [
+        "SELECT dashboard, url FROM databricks_audit_dashboard.dashboard_links\n",
+        "WHERE dashboard <> 'Lakehouse Health 01 - Overview'\n",
+        "ORDER BY dashboard\n"
+      ]
+    },
+    {
+      "name": "ff6b767d",
+      "displayName": "overview:Biggest movers vs the previous period",
+      "queryLines": [
+        "WITH base AS (SELECT * FROM (SELECT t.*, COALESCE(d_workspace.n, CAST(t.`workspace_id` AS STRING)) AS nm_workspace, COALESCE(concat(d_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING)) AS n_workspace, COALESCE(d_workspace.n, CAST(t.`workspace_id` AS STRING)) AS ws_name FROM databricks_audit_dashboard.cost_period_over_period t LEFT JOIN (SELECT CAST(workspace_id AS STRING) AS workspace_id, max(name) AS n FROM databricks_audit_dashboard.dim_workspace GROUP BY CAST(workspace_id AS STRING)) d_workspace ON d_workspace.workspace_id = CAST(t.`workspace_id` AS STRING)) WHERE status <> 'NOT_ASSESSED' AND (array_contains(:workspace, COALESCE(ws_name, '')) OR array_contains(:workspace, 'all')))\n",
+        "SELECT nm_workspace AS workspace, ROUND(SUM(est_current_usd_list - est_previous_usd_list) * (1.0 - 0.0), 0) AS delta_usd\n",
+        "FROM base\n",
+        "GROUP BY 1\n",
+        "ORDER BY ABS(SUM(est_current_usd_list - est_previous_usd_list)) DESC\n",
+        "LIMIT 8\n"
+      ],
+      "parameters": [
+        {
+          "displayName": "Workspace",
+          "keyword": "workspace",
+          "dataType": "STRING",
+          "complexType": "MULTI",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "all"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "7574d67f",
+      "displayName": "overview:Fix these first",
+      "queryLines": [
+        "WITH src AS (\n",
+        "  SELECT 'Warehouse idle time' AS source_label, workspace_id, warehouse_id AS entity_id, 'warehouse' AS entity_kind,\n",
+        "         status, ROUND(est_wasted_usd_list * (1.0 - 0.0), 2) AS wasted, est_wasted_usd_list AS floor_value, window_days\n",
+        "  FROM databricks_audit_dashboard.compute_warehouse_idle_minutes\n",
+        "  UNION ALL\n",
+        "  SELECT 'Idle cluster nodes', dc.workspace_id, w.cluster_id, 'cluster',\n",
+        "         w.status, ROUND(w.est_wasted_usd_list * (1.0 - 0.0), 2), w.est_wasted_usd_list, w.window_days\n",
+        "  FROM databricks_audit_dashboard.compute_idle_node_ratio w\n",
+        "  LEFT JOIN databricks_audit_dashboard.dim_cluster dc ON dc.cluster_id = w.cluster_id\n",
+        "  UNION ALL\n",
+        "  SELECT 'Compute burned on failed runs', workspace_id, job_id, 'job',\n",
+        "         status, ROUND(est_wasted_usd_list * (1.0 - 0.0), 2), CAST(NULL AS DOUBLE), window_days\n",
+        "  FROM databricks_audit_dashboard.lakeflow_failed_jobs_wasted_dbus\n",
+        "  UNION ALL\n",
+        "  SELECT 'Compute burned on failed statements', workspace_id, warehouse_id, 'warehouse',\n",
+        "         status, ROUND(est_wasted_usd_list * (1.0 - 0.0), 2), est_wasted_usd_list, window_days\n",
+        "  FROM databricks_audit_dashboard.cost_failed_statement_waste\n",
+        "  UNION ALL\n",
+        "  SELECT 'Endpoints billed with no requests', workspace_id, endpoint_id, 'endpoint',\n",
+        "         status, ROUND(est_wasted_usd_list * (1.0 - 0.0), 2), est_usd_list, window_days\n",
+        "  FROM databricks_audit_dashboard.compute_serving_endpoint_cost_status\n",
+        "),\n",
+        "eff AS (\n",
+        "  SELECT *,\n",
+        "         CASE WHEN status IN ('CRITICAL', 'WARN') AND floor_value IS NOT NULL\n",
+        "                   AND floor_value < 50.0 * window_days / 30.0\n",
+        "              THEN 'OK' ELSE status END AS eff_status\n",
+        "  FROM src\n",
+        "),\n",
+        "named_all AS (\n",
+        "  SELECT e.*, COALESCE(ws.name, e.workspace_id, 'Account-level') AS workspace_name\n",
+        "  FROM eff e\n",
+        "  LEFT JOIN databricks_audit_dashboard.dim_workspace ws ON ws.workspace_id = e.workspace_id\n",
+        "),\n",
+        "flagged AS (\n",
+        "  SELECT source_label, workspace_id, entity_id, entity_kind, wasted\n",
+        "  FROM eff\n",
+        "  WHERE eff_status IN ('CRITICAL', 'WARN') AND wasted > 0\n",
+        "),\n",
+        "named AS (\n",
+        "  SELECT f.source_label, f.entity_kind, f.wasted,\n",
+        "         COALESCE(ws.name, f.workspace_id, 'Account-level') AS workspace_name,\n",
+        "         COALESCE(dw.warehouse_name, dc.cluster_name, dj.name, ep.endpoint_name, f.entity_id) AS resource_name\n",
+        "  FROM flagged f\n",
+        "  LEFT JOIN databricks_audit_dashboard.dim_workspace ws ON ws.workspace_id = f.workspace_id\n",
+        "  LEFT JOIN databricks_audit_dashboard.dim_warehouse dw ON f.entity_kind = 'warehouse' AND dw.warehouse_id = f.entity_id\n",
+        "  LEFT JOIN databricks_audit_dashboard.dim_cluster dc ON f.entity_kind = 'cluster' AND dc.cluster_id = f.entity_id\n",
+        "  LEFT JOIN databricks_audit_dashboard.dim_job dj ON f.entity_kind = 'job' AND dj.workspace_id = f.workspace_id AND dj.job_id = f.entity_id\n",
+        "  LEFT JOIN databricks_audit_dashboard.compute_serving_endpoint_cost_status ep\n",
+        "    ON f.entity_kind = 'endpoint' AND ep.workspace_id = f.workspace_id AND ep.endpoint_id = f.entity_id\n",
+        ")\n",
+        "\n",
+        "SELECT source_label AS check_label, resource_name AS resource, workspace_name AS workspace,\n",
+        "       ROUND(wasted, 0) AS wasted_usd\n",
+        "FROM named\n",
+        "WHERE (array_contains(:workspace, COALESCE(workspace_name, '')) OR array_contains(:workspace, 'all'))\n",
+        "ORDER BY wasted DESC\n",
+        "LIMIT 10\n"
+      ],
+      "parameters": [
+        {
+          "displayName": "Workspace",
+          "keyword": "workspace",
+          "dataType": "STRING",
+          "complexType": "MULTI",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "all"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "6f6fa5a5",
+      "displayName": "overview:Jobs and pipelines by day",
+      "queryLines": [
+        "WITH q AS (\n",
+        "SELECT usage_date AS day,\n",
+        "       CASE day_state WHEN 'ok' THEN 'Ran fine' WHEN 'failed' THEN 'Failed' WHEN 'slow' THEN 'Ran slow'\n",
+        "                      WHEN 'skipped' THEN 'Skipped' ELSE day_state END AS state,\n",
+        "       count(*) AS resources\n",
+        "FROM (SELECT t.*, COALESCE(d_workspace.n, CAST(t.`workspace_id` AS STRING)) AS nm_workspace, COALESCE(concat(d_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING)) AS n_workspace, COALESCE(d_job.n, CAST(t.`job_id` AS STRING)) AS nm_job, COALESCE(concat(d_job.n, ' (', CAST(t.`job_id` AS STRING), ')'), CAST(t.`job_id` AS STRING)) AS n_job, COALESCE(d_pipeline.n, CAST(t.`pipeline_id` AS STRING)) AS nm_pipeline, COALESCE(concat(d_pipeline.n, ' (', CAST(t.`pipeline_id` AS STRING), ')'), CAST(t.`pipeline_id` AS STRING)) AS n_pipeline, COALESCE(d_workspace.n, CAST(t.`workspace_id` AS STRING)) AS ws_name, CASE WHEN COALESCE(d_workspace.n, CAST(t.`workspace_id` AS STRING)) IS NULL THEN COALESCE(d_job.n, CAST(t.`job_id` AS STRING)) ELSE concat(COALESCE(d_job.n, CAST(t.`job_id` AS STRING)), ' \u00b7 ', COALESCE(d_workspace.n, CAST(t.`workspace_id` AS STRING))) END AS lbl_job, CASE WHEN COALESCE(d_workspace.n, CAST(t.`workspace_id` AS STRING)) IS NULL THEN COALESCE(d_pipeline.n, CAST(t.`pipeline_id` AS STRING)) ELSE concat(COALESCE(d_pipeline.n, CAST(t.`pipeline_id` AS STRING)), ' \u00b7 ', COALESCE(d_workspace.n, CAST(t.`workspace_id` AS STRING))) END AS lbl_pipeline FROM databricks_audit_dashboard.lakeflow_daily_state t LEFT JOIN (SELECT CAST(workspace_id AS STRING) AS workspace_id, max(name) AS n FROM databricks_audit_dashboard.dim_workspace GROUP BY CAST(workspace_id AS STRING)) d_workspace ON d_workspace.workspace_id = CAST(t.`workspace_id` AS STRING) LEFT JOIN (SELECT CAST(workspace_id AS STRING) AS workspace_id, CAST(job_id AS STRING) AS job_id, max(name) AS n FROM databricks_audit_dashboard.dim_job GROUP BY CAST(workspace_id AS STRING), CAST(job_id AS STRING)) d_job ON d_job.workspace_id = CAST(t.`workspace_id` AS STRING) AND d_job.job_id = CAST(t.`job_id` AS STRING) LEFT JOIN (SELECT CAST(workspace_id AS STRING) AS workspace_id, CAST(pipeline_id AS STRING) AS pipeline_id, max(pipeline_name) AS n FROM databricks_audit_dashboard.dim_pipeline GROUP BY CAST(workspace_id AS STRING), CAST(pipeline_id AS STRING)) d_pipeline ON d_pipeline.workspace_id = CAST(t.`workspace_id` AS STRING) AND d_pipeline.pipeline_id = CAST(t.`pipeline_id` AS STRING))\n",
+        "WHERE (array_contains(:workspace, COALESCE(ws_name, '')) OR array_contains(:workspace, 'all'))\n",
+        "GROUP BY 1, 2\n",
+        "),\n",
+        "r AS (SELECT `state` AS s, ROW_NUMBER() OVER (ORDER BY SUM(`resources`) DESC) AS rk FROM q WHERE `state` IS NOT NULL GROUP BY `state`),\n",
+        "n AS (SELECT COUNT(*) AS n FROM r)\n",
+        "SELECT q.`day`, q.`resources`,\n",
+        "       CASE WHEN q.`state` IS NULL OR r.rk < 8 OR n.n <= 8 THEN CAST(q.`state` AS STRING) ELSE 'Other' END AS `state`\n",
+        "FROM q LEFT JOIN r ON r.s = q.`state` CROSS JOIN n\n"
+      ],
+      "parameters": [
+        {
+          "displayName": "Workspace",
+          "keyword": "workspace",
+          "dataType": "STRING",
+          "complexType": "MULTI",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "all"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "abfbd458",
+      "displayName": "overview:Queued queries by day",
+      "queryLines": [
+        "SELECT day, SUM(queued_at_capacity_count) AS queued\n",
+        "FROM (SELECT t.*, COALESCE(d_workspace.n, CAST(t.`workspace_id` AS STRING)) AS nm_workspace, COALESCE(concat(d_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING)) AS n_workspace, COALESCE(d_warehouse.n, CAST(t.`warehouse_id` AS STRING)) AS nm_warehouse, COALESCE(concat(d_warehouse.n, ' (', CAST(t.`warehouse_id` AS STRING), ')'), CAST(t.`warehouse_id` AS STRING)) AS n_warehouse, COALESCE(d_workspace.n, CAST(t.`workspace_id` AS STRING)) AS ws_name, CASE WHEN COALESCE(d_workspace.n, CAST(t.`workspace_id` AS STRING)) IS NULL THEN COALESCE(d_warehouse.n, CAST(t.`warehouse_id` AS STRING)) ELSE concat(COALESCE(d_warehouse.n, CAST(t.`warehouse_id` AS STRING)), ' \u00b7 ', COALESCE(d_workspace.n, CAST(t.`workspace_id` AS STRING))) END AS lbl_warehouse FROM databricks_audit_dashboard.query_queuing_waits t LEFT JOIN (SELECT CAST(workspace_id AS STRING) AS workspace_id, max(name) AS n FROM databricks_audit_dashboard.dim_workspace GROUP BY CAST(workspace_id AS STRING)) d_workspace ON d_workspace.workspace_id = CAST(t.`workspace_id` AS STRING) LEFT JOIN (SELECT CAST(workspace_id AS STRING) AS workspace_id, CAST(warehouse_id AS STRING) AS warehouse_id, max(warehouse_name) AS n FROM databricks_audit_dashboard.dim_warehouse GROUP BY CAST(workspace_id AS STRING), CAST(warehouse_id AS STRING)) d_warehouse ON d_warehouse.workspace_id = CAST(t.`workspace_id` AS STRING) AND d_warehouse.warehouse_id = CAST(t.`warehouse_id` AS STRING))\n",
+        "WHERE (array_contains(:workspace, COALESCE(ws_name, '')) OR array_contains(:workspace, 'all'))\n",
+        "GROUP BY 1\n"
+      ],
+      "parameters": [
+        {
+          "displayName": "Workspace",
+          "keyword": "workspace",
+          "dataType": "STRING",
+          "complexType": "MULTI",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "all"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "1b248f47",
+      "displayName": "overview:Daily spend",
+      "queryLines": [
+        "SELECT usage_date AS day, ROUND(SUM(net_list_cost) * (1.0 - 0.0), 0) AS usd\n",
+        "FROM (SELECT t.*, COALESCE(d_workspace.n, CAST(t.`workspace_id` AS STRING)) AS nm_workspace, COALESCE(concat(d_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING)) AS n_workspace, COALESCE(d_workspace.n, CAST(t.`workspace_id` AS STRING)) AS ws_name FROM databricks_audit_dashboard.cost_dollarized_by_sku_day t LEFT JOIN (SELECT CAST(workspace_id AS STRING) AS workspace_id, max(name) AS n FROM databricks_audit_dashboard.dim_workspace GROUP BY CAST(workspace_id AS STRING)) d_workspace ON d_workspace.workspace_id = CAST(t.`workspace_id` AS STRING))\n",
+        "WHERE (array_contains(:workspace, COALESCE(ws_name, '')) OR array_contains(:workspace, 'all'))\n",
+        "GROUP BY 1\n"
+      ],
+      "parameters": [
+        {
+          "displayName": "Workspace",
+          "keyword": "workspace",
+          "dataType": "STRING",
+          "complexType": "MULTI",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "all"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "46e8d802",
+      "displayName": "overview:Spend by product",
+      "queryLines": [
+        "SELECT CASE billing_origin_product\n",
+        "           WHEN 'DBSQL' THEN 'Databricks SQL' WHEN 'SQL' THEN 'SQL' WHEN 'DLT' THEN 'DLT'\n",
+        "           WHEN 'INTERACTIVE' THEN 'Serverless notebooks' WHEN 'ALL_PURPOSE' THEN 'All-purpose clusters'\n",
+        "           WHEN 'JOBS' THEN 'Jobs' WHEN 'MODEL_SERVING' THEN 'Model serving'\n",
+        "           ELSE COALESCE(initcap(replace(billing_origin_product, '_', ' ')), '(unlabeled product)')\n",
+        "         END AS product, ROUND(SUM(net_list_cost) * (1.0 - 0.0), 0) AS usd\n",
+        "FROM (SELECT t.*, COALESCE(d_workspace.n, CAST(t.`workspace_id` AS STRING)) AS nm_workspace, COALESCE(concat(d_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING)) AS n_workspace, COALESCE(d_workspace.n, CAST(t.`workspace_id` AS STRING)) AS ws_name FROM databricks_audit_dashboard.cost_dollarized_by_sku_day t LEFT JOIN (SELECT CAST(workspace_id AS STRING) AS workspace_id, max(name) AS n FROM databricks_audit_dashboard.dim_workspace GROUP BY CAST(workspace_id AS STRING)) d_workspace ON d_workspace.workspace_id = CAST(t.`workspace_id` AS STRING))\n",
+        "WHERE (array_contains(:workspace, COALESCE(ws_name, '')) OR array_contains(:workspace, 'all'))\n",
+        "GROUP BY 1\n",
+        "ORDER BY 2 DESC\n",
+        "LIMIT 10\n"
+      ],
+      "parameters": [
+        {
+          "displayName": "Workspace",
+          "keyword": "workspace",
+          "dataType": "STRING",
+          "complexType": "MULTI",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "all"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "739088cb",
+      "displayName": "overview:status",
+      "queryLines": [
+        "SELECT c.title AS check_title,\n",
+        "       c.page AS page,\n",
+        "       CASE WHEN l.query_id IS NULL THEN 'Not run'\n",
+        "            WHEN NOT l.ok THEN 'Not assessed'\n",
+        "            WHEN l.critical > 0 THEN 'Critical'\n",
+        "            WHEN l.warn > 0 THEN 'Warn'\n",
+        "            WHEN l.has_status THEN 'OK'\n",
+        "            WHEN l.row_count = 0 THEN 'No rows'\n",
+        "            ELSE 'Listed' END AS verdict,\n",
+        "       l.row_count AS row_count,\n",
+        "       l.critical AS critical_rows,\n",
+        "       l.warn AS warn_rows,\n",
+        "       l.error AS error\n",
+        "FROM (VALUES\n",
+        "       (0, 'overview_spend_estimate', 'Estimated spend, reference', 'Overview'),\n",
+        "       (1, 'overview_dbu_by_sku', 'DBUs by SKU, reference', 'Overview'),\n",
+        "       (2, 'overview_serverless_classic_split', 'Serverless vs classic split, reference', 'Overview'),\n",
+        "       (3, 'overview_daily_dbu_trend', 'Daily DBU trend, reference', 'Overview'),\n",
+        "       (4, 'overview_list_prices_raw', 'List prices, raw, reference', 'Overview')) AS c(ord, query_id, title, page)\n",
+        "LEFT JOIN databricks_audit_dashboard.snapshot_log l ON l.query_id = c.query_id\n",
+        "ORDER BY CASE WHEN l.critical > 0 THEN 0 WHEN l.warn > 0 THEN 1 WHEN NOT l.ok THEN 2 ELSE 3 END, c.ord\n"
+      ]
+    },
+    {
+      "name": "c140165d",
+      "displayName": "check:overview_spend_estimate",
+      "queryLines": [
+        "SELECT\n",
+        "  COALESCE(concat(n_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING)) AS `workspace_shown`,\n",
+        "  t.`total_net_dbus` AS `total_net_dbus`,\n",
+        "  t.`currency_code` AS `currency_code`,\n",
+        "  t.`net_list_cost_usd` AS `net_list_cost_usd`,\n",
+        "  t.`dbu_price_source` AS `dbu_price_source`,\n",
+        "  t.`price_basis` AS `price_basis`\n",
+        "FROM databricks_audit_dashboard.overview_spend_estimate t\n",
+        "LEFT JOIN (SELECT CAST(workspace_id AS STRING) AS workspace_id, max(name) AS n FROM databricks_audit_dashboard.dim_workspace GROUP BY CAST(workspace_id AS STRING)) n_workspace\n",
+        "  ON n_workspace.workspace_id = CAST(t.`workspace_id` AS STRING)\n",
+        "WHERE (array_contains(:workspace, COALESCE(n_workspace.n, '')) OR array_contains(:workspace, 'all'))\n",
+        "LIMIT 5000\n"
+      ],
+      "parameters": [
+        {
+          "displayName": "Workspace",
+          "keyword": "workspace",
+          "dataType": "STRING",
+          "complexType": "MULTI",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "all"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "c123d861",
+      "displayName": "check:overview_dbu_by_sku",
+      "queryLines": [
+        "SELECT\n",
+        "  COALESCE(concat(n_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING)) AS `workspace_shown`,\n",
+        "  t.`sku_name` AS `sku_name`,\n",
+        "  t.`billing_origin_product` AS `billing_origin_product`,\n",
+        "  t.`net_dbus` AS `net_dbus`\n",
+        "FROM databricks_audit_dashboard.overview_dbu_by_sku t\n",
+        "LEFT JOIN (SELECT CAST(workspace_id AS STRING) AS workspace_id, max(name) AS n FROM databricks_audit_dashboard.dim_workspace GROUP BY CAST(workspace_id AS STRING)) n_workspace\n",
+        "  ON n_workspace.workspace_id = CAST(t.`workspace_id` AS STRING)\n",
+        "WHERE (array_contains(:workspace, COALESCE(n_workspace.n, '')) OR array_contains(:workspace, 'all'))\n",
+        "ORDER BY `net_dbus` DESC NULLS LAST\n",
+        "LIMIT 5000\n"
+      ],
+      "parameters": [
+        {
+          "displayName": "Workspace",
+          "keyword": "workspace",
+          "dataType": "STRING",
+          "complexType": "MULTI",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "all"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5dafcb73",
+      "displayName": "check:overview_serverless_classic_split",
+      "queryLines": [
+        "SELECT\n",
+        "  COALESCE(concat(n_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING)) AS `workspace_shown`,\n",
+        "  t.`serverless_net_dbus` AS `serverless_net_dbus`,\n",
+        "  t.`classic_net_dbus` AS `classic_net_dbus`,\n",
+        "  t.`serverless_pct` AS `serverless_pct`,\n",
+        "  t.`photon_net_dbus` AS `photon_net_dbus`,\n",
+        "  t.`photon_pct` AS `photon_pct`,\n",
+        "  t.`perf_optimized_net_dbus` AS `perf_optimized_net_dbus`,\n",
+        "  t.`untagged_net_dbus` AS `untagged_net_dbus`,\n",
+        "  t.`total_net_dbus` AS `total_net_dbus`\n",
+        "FROM databricks_audit_dashboard.overview_serverless_classic_split t\n",
+        "LEFT JOIN (SELECT CAST(workspace_id AS STRING) AS workspace_id, max(name) AS n FROM databricks_audit_dashboard.dim_workspace GROUP BY CAST(workspace_id AS STRING)) n_workspace\n",
+        "  ON n_workspace.workspace_id = CAST(t.`workspace_id` AS STRING)\n",
+        "WHERE (array_contains(:workspace, COALESCE(n_workspace.n, '')) OR array_contains(:workspace, 'all'))\n",
+        "LIMIT 5000\n"
+      ],
+      "parameters": [
+        {
+          "displayName": "Workspace",
+          "keyword": "workspace",
+          "dataType": "STRING",
+          "complexType": "MULTI",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "all"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "306cc1e0",
+      "displayName": "check:overview_daily_dbu_trend",
+      "queryLines": [
+        "SELECT\n",
+        "  COALESCE(concat(n_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING)) AS `workspace_shown`,\n",
+        "  CAST(t.`usage_date` AS STRING) AS `usage_date`,\n",
+        "  t.`net_dbus` AS `net_dbus`\n",
+        "FROM databricks_audit_dashboard.overview_daily_dbu_trend t\n",
+        "LEFT JOIN (SELECT CAST(workspace_id AS STRING) AS workspace_id, max(name) AS n FROM databricks_audit_dashboard.dim_workspace GROUP BY CAST(workspace_id AS STRING)) n_workspace\n",
+        "  ON n_workspace.workspace_id = CAST(t.`workspace_id` AS STRING)\n",
+        "WHERE (array_contains(:workspace, COALESCE(n_workspace.n, '')) OR array_contains(:workspace, 'all'))\n",
+        "ORDER BY `usage_date` ASC NULLS LAST\n",
+        "LIMIT 5000\n"
+      ],
+      "parameters": [
+        {
+          "displayName": "Workspace",
+          "keyword": "workspace",
+          "dataType": "STRING",
+          "complexType": "MULTI",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "all"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "dbdfe548",
+      "displayName": "check:overview_list_prices_raw",
+      "queryLines": [
+        "SELECT\n",
+        "  date_format(t.`price_start_time`, 'yyyy-MM-dd HH:mm') AS `price_start_time`,\n",
+        "  date_format(t.`price_end_time`, 'yyyy-MM-dd HH:mm') AS `price_end_time`,\n",
+        "  t.`account_id` AS `account_id`,\n",
+        "  t.`sku_name` AS `sku_name`,\n",
+        "  t.`cloud` AS `cloud`,\n",
+        "  t.`currency_code` AS `currency_code`,\n",
+        "  t.`usage_unit` AS `usage_unit`,\n",
+        "  t.`pricing_default` AS `pricing_default`,\n",
+        "  t.`pricing_effective_list_json` AS `pricing_effective_list_json`,\n",
+        "  t.`pricing_promotional_json` AS `pricing_promotional_json`\n",
+        "FROM databricks_audit_dashboard.overview_list_prices_raw t\n",
+        "LIMIT 5000\n"
+      ]
+    }
+  ],
+  "pages": [
+    {
+      "name": "f62a5fa7",
+      "displayName": "Overview",
+      "pageType": "PAGE_TYPE_CANVAS",
+      "layoutVersion": "GRID_V1",
+      "layout": [
+        {
+          "widget": {
+            "name": "bdbf585b",
+            "multilineTextboxSpec": {
+              "lines": [
+                "# **Overview**\n",
+                "Lakehouse Health 01 - Overview \u00b7 List price (effective) \u00b7 excludes your cloud VM bill\n"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 9,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "2c2585a2",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "43ecf3c2",
+                  "fields": [
+                    {
+                      "name": "as_of",
+                      "expression": "`as_of`"
+                    },
+                    {
+                      "name": "max(days)",
+                      "expression": "MAX(`days`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "max(days)",
+                  "displayName": "Days covered",
+                  "style": {
+                    "bold": true,
+                    "fontSize": 32,
+                    "color": "#1c1b18"
+                  }
+                },
+                "target": {
+                  "fieldName": "as_of",
+                  "displayName": "as_of",
+                  "style": {
+                    "fontSize": 14,
+                    "italic": true,
+                    "color": {
+                      "themeColorType": "fontColor"
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "title": "Days covered",
+                "showTitle": true,
+                "description": "Days in the snapshot. New numbers: run the notebook again.",
+                "showDescription": true
+              }
+            }
+          },
+          "position": {
+            "x": 9,
+            "y": 0,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "49b3952e",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "b9cde6c2",
+                  "fields": [
+                    {
+                      "name": "target",
+                      "expression": "`target`"
+                    },
+                    {
+                      "name": "sum(value)",
+                      "expression": "SUM(`value`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(value)",
+                  "displayName": "Spend",
+                  "style": {
+                    "bold": true,
+                    "fontSize": 32,
+                    "color": "#1c1b18"
+                  },
+                  "format": {
+                    "type": "number-currency",
+                    "currencyCode": "USD",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 0
+                    }
+                  }
+                },
+                "target": {
+                  "fieldName": "target",
+                  "displayName": "target",
+                  "style": {
+                    "fontSize": 14,
+                    "italic": true,
+                    "color": {
+                      "themeColorType": "fontColor"
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "title": "Spend",
+                "showTitle": true,
+                "description": "Total list-price $ this window, after discount. % change compares only rows judged on both sides.",
+                "showDescription": true
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 3,
+            "width": 3,
+            "height": 4
+          }
+        },
+        {
+          "widget": {
+            "name": "a59f5063",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "f64fd34f",
+                  "fields": [
+                    {
+                      "name": "target",
+                      "expression": "`target`"
+                    },
+                    {
+                      "name": "sum(value)",
+                      "expression": "SUM(`value`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(value)",
+                  "displayName": "Possible waste",
+                  "style": {
+                    "bold": true,
+                    "fontSize": 32,
+                    "color": "#c2610c"
+                  },
+                  "format": {
+                    "type": "number-currency",
+                    "currencyCode": "USD",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 0
+                    }
+                  }
+                },
+                "target": {
+                  "fieldName": "target",
+                  "displayName": "target",
+                  "style": {
+                    "fontSize": 14,
+                    "italic": true,
+                    "color": {
+                      "themeColorType": "fontColor"
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "title": "Possible waste",
+                "showTitle": true,
+                "description": "$ from the 5 priced waste checks (idle warehouse/cluster time, failed runs/statements, idle endpoints), over the cost floor.",
+                "showDescription": true
+              }
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 3,
+            "width": 3,
+            "height": 4
+          }
+        },
+        {
+          "widget": {
+            "name": "9c70757e",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "d4c77a22",
+                  "fields": [
+                    {
+                      "name": "target",
+                      "expression": "`target`"
+                    },
+                    {
+                      "name": "sum(value)",
+                      "expression": "SUM(`value`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(value)",
+                  "displayName": "Jobs & pipelines",
+                  "style": {
+                    "bold": true,
+                    "fontSize": 32,
+                    "color": "#a8261d"
+                  }
+                },
+                "target": {
+                  "fieldName": "target",
+                  "displayName": "target",
+                  "style": {
+                    "fontSize": 14,
+                    "italic": true,
+                    "color": {
+                      "themeColorType": "fontColor"
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "title": "Jobs & pipelines",
+                "showTitle": true,
+                "description": "Jobs whose last 3+ runs all failed; with none, counts flagged jobs-area checks instead.",
+                "showDescription": true
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 3,
+            "width": 3,
+            "height": 4
+          }
+        },
+        {
+          "widget": {
+            "name": "34d6f968",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "7c2f1ad2",
+                  "fields": [
+                    {
+                      "name": "target",
+                      "expression": "`target`"
+                    },
+                    {
+                      "name": "sum(value)",
+                      "expression": "SUM(`value`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(value)",
+                  "displayName": "Query performance",
+                  "style": {
+                    "bold": true,
+                    "fontSize": 32,
+                    "color": "#c2610c"
+                  }
+                },
+                "target": {
+                  "fieldName": "target",
+                  "displayName": "target",
+                  "style": {
+                    "fontSize": 14,
+                    "italic": true,
+                    "color": {
+                      "themeColorType": "fontColor"
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "title": "Query performance",
+                "showTitle": true,
+                "description": "Count of query-area checks with a Critical or Warn row; names the worst one.",
+                "showDescription": true
+              }
+            }
+          },
+          "position": {
+            "x": 9,
+            "y": 3,
+            "width": 3,
+            "height": 4
+          }
+        },
+        {
+          "widget": {
+            "name": "dfb4a926",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "73e1b44d",
+                  "fields": [
+                    {
+                      "name": "dashboard",
+                      "expression": "`dashboard`"
+                    },
+                    {
+                      "name": "url",
+                      "expression": "`url`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 1,
+              "widgetType": "table",
+              "allowHTMLByDefault": false,
+              "condensed": false,
+              "withRowNumber": false,
+              "itemsPerPage": 20,
+              "paginationSize": "default",
+              "invisibleColumns": [],
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "dashboard",
+                    "title": "Dashboard",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 0,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "url",
+                    "title": "Link",
+                    "type": "string",
+                    "displayAs": "link",
+                    "order": 1,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "Open",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  }
+                ]
+              },
+              "frame": {
+                "title": "Every dashboard of the set",
+                "showTitle": true,
+                "showDescription": true,
+                "description": "Found by name when the notebook last ran. Empty: import the dashboards, then run the notebook's last cell."
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 7,
+            "width": 12,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "8c6dc226",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ff6b767d",
+                  "fields": [
+                    {
+                      "name": "workspace",
+                      "expression": "`workspace`"
+                    },
+                    {
+                      "name": "sum(delta_usd)",
+                      "expression": "SUM(`delta_usd`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "sum(delta_usd)",
+                  "displayName": "Change vs previous period",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "format": {
+                    "type": "number-currency",
+                    "currencyCode": "USD",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 0
+                    }
+                  }
+                },
+                "y": {
+                  "fieldName": "workspace",
+                  "displayName": "Workspace",
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "x-reversed"
+                    }
+                  }
+                },
+                "label": {
+                  "show": false
+                }
+              },
+              "frame": {
+                "title": "Biggest movers vs the previous period",
+                "showTitle": true,
+                "description": "$ change per workspace vs the prior period, rows judged on both sides only, after discount.",
+                "showDescription": true
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 13,
+            "width": 12,
+            "height": 7
+          }
+        },
+        {
+          "widget": {
+            "name": "984083e9",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "7574d67f",
+                  "fields": [
+                    {
+                      "name": "check_label",
+                      "expression": "`check_label`"
+                    },
+                    {
+                      "name": "resource",
+                      "expression": "`resource`"
+                    },
+                    {
+                      "name": "workspace",
+                      "expression": "`workspace`"
+                    },
+                    {
+                      "name": "wasted_usd",
+                      "expression": "`wasted_usd`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 1,
+              "widgetType": "table",
+              "allowHTMLByDefault": false,
+              "condensed": false,
+              "withRowNumber": false,
+              "itemsPerPage": 20,
+              "paginationSize": "default",
+              "invisibleColumns": [],
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "check_label",
+                    "title": "Check",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 0,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "resource",
+                    "title": "Resource",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 1,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "workspace",
+                    "title": "Workspace",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 2,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "wasted_usd",
+                    "title": "$ wasted",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 3,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "$0,0",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "allowSearch": false
+                  }
+                ]
+              },
+              "frame": {
+                "title": "Fix these first",
+                "showTitle": true,
+                "showDescription": true,
+                "description": "Top 10 rows from the 5 priced waste checks, worst $ first, after the cost floor and discount."
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 20,
+            "width": 12,
+            "height": 8
+          }
+        },
+        {
+          "widget": {
+            "name": "f2c0a4cd",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "6f6fa5a5",
+                  "fields": [
+                    {
+                      "name": "day",
+                      "expression": "`day`"
+                    },
+                    {
+                      "name": "state",
+                      "expression": "`state`"
+                    },
+                    {
+                      "name": "sum(resources)",
+                      "expression": "SUM(`resources`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "day",
+                  "displayName": "Day",
+                  "scale": {
+                    "type": "temporal"
+                  }
+                },
+                "y": {
+                  "fieldName": "sum(resources)",
+                  "displayName": "Jobs and pipelines",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "label": {
+                  "show": false
+                },
+                "color": {
+                  "fieldName": "state",
+                  "displayName": "state",
+                  "legend": {
+                    "position": "bottom"
+                  },
+                  "scale": {
+                    "type": "categorical"
+                  }
+                }
+              },
+              "frame": {
+                "title": "Jobs and pipelines by day",
+                "showTitle": true,
+                "description": "Per-day worst run state: Failed beats Ran slow (60s+ over its own median) beats Skipped beats Ran fine.",
+                "showDescription": true
+              },
+              "mark": {
+                "layout": "stack"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 28,
+            "width": 6,
+            "height": 7
+          }
+        },
+        {
+          "widget": {
+            "name": "d32dfe25",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "abfbd458",
+                  "fields": [
+                    {
+                      "name": "day",
+                      "expression": "`day`"
+                    },
+                    {
+                      "name": "sum(queued)",
+                      "expression": "SUM(`queued`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "day",
+                  "displayName": "Day",
+                  "scale": {
+                    "type": "temporal"
+                  }
+                },
+                "y": {
+                  "fieldName": "sum(queued)",
+                  "displayName": "Queued queries",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "label": {
+                  "show": false
+                }
+              },
+              "frame": {
+                "title": "Queued queries by day",
+                "showTitle": true,
+                "description": "Count of queries that waited for warehouse capacity before they could run.",
+                "showDescription": true
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 28,
+            "width": 6,
+            "height": 7
+          }
+        },
+        {
+          "widget": {
+            "name": "0e0cf881",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "1b248f47",
+                  "fields": [
+                    {
+                      "name": "day",
+                      "expression": "`day`"
+                    },
+                    {
+                      "name": "sum(usd)",
+                      "expression": "SUM(`usd`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "day",
+                  "displayName": "Day",
+                  "scale": {
+                    "type": "temporal"
+                  }
+                },
+                "y": {
+                  "fieldName": "sum(usd)",
+                  "displayName": "Spend",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "format": {
+                    "type": "number-currency",
+                    "currencyCode": "USD",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 0
+                    }
+                  }
+                },
+                "label": {
+                  "show": false
+                }
+              },
+              "frame": {
+                "title": "Daily spend",
+                "showTitle": true,
+                "description": "List-price $ per day across all SKUs, after discount.",
+                "showDescription": true
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 35,
+            "width": 6,
+            "height": 7
+          }
+        },
+        {
+          "widget": {
+            "name": "cad9a47b",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "46e8d802",
+                  "fields": [
+                    {
+                      "name": "product",
+                      "expression": "`product`"
+                    },
+                    {
+                      "name": "sum(usd)",
+                      "expression": "SUM(`usd`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "sum(usd)",
+                  "displayName": "Spend",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "format": {
+                    "type": "number-currency",
+                    "currencyCode": "USD",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 0
+                    }
+                  }
+                },
+                "y": {
+                  "fieldName": "product",
+                  "displayName": "Product",
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "x-reversed"
+                    }
+                  }
+                },
+                "label": {
+                  "show": false
+                }
+              },
+              "frame": {
+                "title": "Spend by product",
+                "showTitle": true,
+                "description": "Top 10 billing products by list-price $ this window, after discount.",
+                "showDescription": true
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 35,
+            "width": 6,
+            "height": 7
+          }
+        },
+        {
+          "widget": {
+            "name": "cc67c13d",
+            "multilineTextboxSpec": {
+              "lines": [
+                "## Every check on this page\n",
+                "Each check's own rows, worst first.\n"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 42,
+            "width": 12,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "9f6f4a77",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "739088cb",
+                  "fields": [
+                    {
+                      "name": "check_title",
+                      "expression": "`check_title`"
+                    },
+                    {
+                      "name": "verdict",
+                      "expression": "`verdict`"
+                    },
+                    {
+                      "name": "critical_rows",
+                      "expression": "`critical_rows`"
+                    },
+                    {
+                      "name": "warn_rows",
+                      "expression": "`warn_rows`"
+                    },
+                    {
+                      "name": "row_count",
+                      "expression": "`row_count`"
+                    },
+                    {
+                      "name": "error",
+                      "expression": "`error`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 1,
+              "widgetType": "table",
+              "allowHTMLByDefault": false,
+              "condensed": false,
+              "withRowNumber": false,
+              "itemsPerPage": 20,
+              "paginationSize": "default",
+              "invisibleColumns": [],
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "check_title",
+                    "title": "Check",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 0,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "verdict",
+                    "title": "Verdict",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 1,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "critical_rows",
+                    "title": "Critical rows",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 2,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "0,0",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "allowSearch": false
+                  },
+                  {
+                    "fieldName": "warn_rows",
+                    "title": "Warn rows",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 3,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "0,0",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "allowSearch": false
+                  },
+                  {
+                    "fieldName": "row_count",
+                    "title": "Rows",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 4,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "0,0",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "allowSearch": false
+                  },
+                  {
+                    "fieldName": "error",
+                    "title": "Why not assessed",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 5,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  }
+                ]
+              },
+              "frame": {
+                "title": "Checks on this page",
+                "showTitle": true,
+                "showDescription": true,
+                "description": "Each check's verdict from the snapshot: Critical or Warn when any row is flagged, Not assessed when the check could not run (the reason is in the last column)."
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 44,
+            "width": 12,
+            "height": 8
+          }
+        },
+        {
+          "widget": {
+            "name": "f2c2893d",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "c140165d",
+                  "fields": [
+                    {
+                      "name": "workspace_shown",
+                      "expression": "`workspace_shown`"
+                    },
+                    {
+                      "name": "total_net_dbus",
+                      "expression": "`total_net_dbus`"
+                    },
+                    {
+                      "name": "currency_code",
+                      "expression": "`currency_code`"
+                    },
+                    {
+                      "name": "net_list_cost_usd",
+                      "expression": "`net_list_cost_usd`"
+                    },
+                    {
+                      "name": "dbu_price_source",
+                      "expression": "`dbu_price_source`"
+                    },
+                    {
+                      "name": "price_basis",
+                      "expression": "`price_basis`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 1,
+              "widgetType": "table",
+              "allowHTMLByDefault": false,
+              "condensed": false,
+              "withRowNumber": false,
+              "itemsPerPage": 20,
+              "paginationSize": "default",
+              "invisibleColumns": [],
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "workspace_shown",
+                    "title": "Workspace",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 0,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": true,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "total_net_dbus",
+                    "title": "Total Net DBUs",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 1,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "0,0.[00]",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "allowSearch": false
+                  },
+                  {
+                    "fieldName": "currency_code",
+                    "title": "Currency Code",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 2,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "net_list_cost_usd",
+                    "title": "Net List Cost $",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 3,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "$0,0.[00]",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "allowSearch": false
+                  },
+                  {
+                    "fieldName": "dbu_price_source",
+                    "title": "DBU Price Source",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 4,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "price_basis",
+                    "title": "Price basis",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 5,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  }
+                ]
+              },
+              "frame": {
+                "title": "Estimated spend, reference",
+                "showTitle": true,
+                "showDescription": true,
+                "description": "DBU spend only, at list price (effective); the Overview cards use every billed unit. Reference list, not judged."
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 52,
+            "width": 12,
+            "height": 8
+          }
+        },
+        {
+          "widget": {
+            "name": "cc08fe80",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "c123d861",
+                  "fields": [
+                    {
+                      "name": "workspace_shown",
+                      "expression": "`workspace_shown`"
+                    },
+                    {
+                      "name": "sku_name",
+                      "expression": "`sku_name`"
+                    },
+                    {
+                      "name": "billing_origin_product",
+                      "expression": "`billing_origin_product`"
+                    },
+                    {
+                      "name": "net_dbus",
+                      "expression": "`net_dbus`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 1,
+              "widgetType": "table",
+              "allowHTMLByDefault": false,
+              "condensed": false,
+              "withRowNumber": false,
+              "itemsPerPage": 20,
+              "paginationSize": "default",
+              "invisibleColumns": [],
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "workspace_shown",
+                    "title": "Workspace",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 0,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": true,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "sku_name",
+                    "title": "SKU (price line)",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 1,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "billing_origin_product",
+                    "title": "Product",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 2,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "net_dbus",
+                    "title": "DBUs used (whole resource)",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 3,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "0,0.[00]",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "allowSearch": false
+                  }
+                ]
+              },
+              "frame": {
+                "title": "DBUs by SKU, reference",
+                "showTitle": true,
+                "showDescription": true,
+                "description": "Net DBU usage by SKU, for the account-shape numbers on Overview. Reference list, not judged."
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 60,
+            "width": 12,
+            "height": 8
+          }
+        },
+        {
+          "widget": {
+            "name": "29e58ca7",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "5dafcb73",
+                  "fields": [
+                    {
+                      "name": "workspace_shown",
+                      "expression": "`workspace_shown`"
+                    },
+                    {
+                      "name": "serverless_net_dbus",
+                      "expression": "`serverless_net_dbus`"
+                    },
+                    {
+                      "name": "classic_net_dbus",
+                      "expression": "`classic_net_dbus`"
+                    },
+                    {
+                      "name": "serverless_pct",
+                      "expression": "`serverless_pct`"
+                    },
+                    {
+                      "name": "photon_net_dbus",
+                      "expression": "`photon_net_dbus`"
+                    },
+                    {
+                      "name": "photon_pct",
+                      "expression": "`photon_pct`"
+                    },
+                    {
+                      "name": "perf_optimized_net_dbus",
+                      "expression": "`perf_optimized_net_dbus`"
+                    },
+                    {
+                      "name": "untagged_net_dbus",
+                      "expression": "`untagged_net_dbus`"
+                    },
+                    {
+                      "name": "total_net_dbus",
+                      "expression": "`total_net_dbus`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 1,
+              "widgetType": "table",
+              "allowHTMLByDefault": false,
+              "condensed": false,
+              "withRowNumber": false,
+              "itemsPerPage": 20,
+              "paginationSize": "default",
+              "invisibleColumns": [],
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "workspace_shown",
+                    "title": "Workspace",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 0,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": true,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "serverless_net_dbus",
+                    "title": "Serverless Net DBUs",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 1,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "0,0.[00]",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "allowSearch": false
+                  },
+                  {
+                    "fieldName": "classic_net_dbus",
+                    "title": "Classic Net DBUs",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 2,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "0,0.[00]",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "allowSearch": false
+                  },
+                  {
+                    "fieldName": "serverless_pct",
+                    "title": "Serverless %",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 3,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "0,0.[00]",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "allowSearch": false
+                  },
+                  {
+                    "fieldName": "photon_net_dbus",
+                    "title": "Photon Net DBUs",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 4,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "0,0.[00]",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "allowSearch": false
+                  },
+                  {
+                    "fieldName": "photon_pct",
+                    "title": "Photon %",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 5,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "0,0.[00]",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "allowSearch": false
+                  },
+                  {
+                    "fieldName": "perf_optimized_net_dbus",
+                    "title": "Perf Optimized Net DBUs",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 6,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "0,0.[00]",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "allowSearch": false
+                  },
+                  {
+                    "fieldName": "untagged_net_dbus",
+                    "title": "Untagged Net DBUs",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 7,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "0,0.[00]",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "allowSearch": false
+                  },
+                  {
+                    "fieldName": "total_net_dbus",
+                    "title": "Total Net DBUs",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 8,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "0,0.[00]",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "allowSearch": false
+                  }
+                ]
+              },
+              "frame": {
+                "title": "Serverless vs classic split, reference",
+                "showTitle": true,
+                "showDescription": true,
+                "description": "Serverless share of usage, for the account-shape numbers on Overview. Reference list, not judged."
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 68,
+            "width": 12,
+            "height": 8
+          }
+        },
+        {
+          "widget": {
+            "name": "3b27c271",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "306cc1e0",
+                  "fields": [
+                    {
+                      "name": "workspace_shown",
+                      "expression": "`workspace_shown`"
+                    },
+                    {
+                      "name": "usage_date",
+                      "expression": "`usage_date`"
+                    },
+                    {
+                      "name": "net_dbus",
+                      "expression": "`net_dbus`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 1,
+              "widgetType": "table",
+              "allowHTMLByDefault": false,
+              "condensed": false,
+              "withRowNumber": false,
+              "itemsPerPage": 20,
+              "paginationSize": "default",
+              "invisibleColumns": [],
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "workspace_shown",
+                    "title": "Workspace",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 0,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": true,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "usage_date",
+                    "title": "Day",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 1,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "net_dbus",
+                    "title": "DBUs used (whole resource)",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 2,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "0,0.[00]",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "allowSearch": false
+                  }
+                ]
+              },
+              "frame": {
+                "title": "Daily DBU trend, reference",
+                "showTitle": true,
+                "showDescription": true,
+                "description": "Net DBUs by day, account-wide, for reference. Reference list, not judged."
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 76,
+            "width": 12,
+            "height": 8
+          }
+        },
+        {
+          "widget": {
+            "name": "d7a9a545",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "dbdfe548",
+                  "fields": [
+                    {
+                      "name": "price_start_time",
+                      "expression": "`price_start_time`"
+                    },
+                    {
+                      "name": "price_end_time",
+                      "expression": "`price_end_time`"
+                    },
+                    {
+                      "name": "account_id",
+                      "expression": "`account_id`"
+                    },
+                    {
+                      "name": "sku_name",
+                      "expression": "`sku_name`"
+                    },
+                    {
+                      "name": "cloud",
+                      "expression": "`cloud`"
+                    },
+                    {
+                      "name": "currency_code",
+                      "expression": "`currency_code`"
+                    },
+                    {
+                      "name": "usage_unit",
+                      "expression": "`usage_unit`"
+                    },
+                    {
+                      "name": "pricing_default",
+                      "expression": "`pricing_default`"
+                    },
+                    {
+                      "name": "pricing_effective_list_json",
+                      "expression": "`pricing_effective_list_json`"
+                    },
+                    {
+                      "name": "pricing_promotional_json",
+                      "expression": "`pricing_promotional_json`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 1,
+              "widgetType": "table",
+              "allowHTMLByDefault": false,
+              "condensed": false,
+              "withRowNumber": false,
+              "itemsPerPage": 20,
+              "paginationSize": "default",
+              "invisibleColumns": [],
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "price_start_time",
+                    "title": "Price Start Time",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 0,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": true,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "price_end_time",
+                    "title": "Price End Time",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 1,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "account_id",
+                    "title": "Account",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 2,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "sku_name",
+                    "title": "SKU (price line)",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 3,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "cloud",
+                    "title": "Cloud",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 4,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "currency_code",
+                    "title": "Currency Code",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 5,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "usage_unit",
+                    "title": "Usage Unit",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 6,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "pricing_default",
+                    "title": "Pricing Default",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 7,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "pricing_effective_list_json",
+                    "title": "Pricing Effective List Json",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 8,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "pricing_promotional_json",
+                    "title": "Pricing Promotional Json",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 9,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  }
+                ]
+              },
+              "frame": {
+                "title": "List prices, raw, reference",
+                "showTitle": true,
+                "showDescription": true,
+                "description": "The list-price table every dollar figure in this app is priced from. Reference list, not judged."
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 84,
+            "width": 12,
+            "height": 8
+          }
+        }
+      ]
+    },
+    {
+      "name": "5040feb4",
+      "displayName": "Global Filters",
+      "pageType": "PAGE_TYPE_GLOBAL_FILTERS",
+      "layoutVersion": "GRID_V1",
+      "layout": [
+        {
+          "widget": {
+            "name": "5d277ea5",
+            "queries": [
+              {
+                "name": "q_bc93942f",
+                "query": {
+                  "datasetName": "6c84b0b6",
+                  "fields": [
+                    {
+                      "name": "workspace_name",
+                      "expression": "`workspace_name`"
+                    },
+                    {
+                      "name": "workspace_name_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_9a27c20b",
+                "query": {
+                  "datasetName": "b9cde6c2",
+                  "parameters": [
+                    {
+                      "name": "workspace",
+                      "keyword": "workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_28911c21",
+                "query": {
+                  "datasetName": "f64fd34f",
+                  "parameters": [
+                    {
+                      "name": "workspace",
+                      "keyword": "workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_73719ed3",
+                "query": {
+                  "datasetName": "d4c77a22",
+                  "parameters": [
+                    {
+                      "name": "workspace",
+                      "keyword": "workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_4185a579",
+                "query": {
+                  "datasetName": "ff6b767d",
+                  "parameters": [
+                    {
+                      "name": "workspace",
+                      "keyword": "workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_480117aa",
+                "query": {
+                  "datasetName": "7574d67f",
+                  "parameters": [
+                    {
+                      "name": "workspace",
+                      "keyword": "workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_cb0814c3",
+                "query": {
+                  "datasetName": "6f6fa5a5",
+                  "parameters": [
+                    {
+                      "name": "workspace",
+                      "keyword": "workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_8704b7a8",
+                "query": {
+                  "datasetName": "abfbd458",
+                  "parameters": [
+                    {
+                      "name": "workspace",
+                      "keyword": "workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_ac079145",
+                "query": {
+                  "datasetName": "1b248f47",
+                  "parameters": [
+                    {
+                      "name": "workspace",
+                      "keyword": "workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_a7b5cfe6",
+                "query": {
+                  "datasetName": "46e8d802",
+                  "parameters": [
+                    {
+                      "name": "workspace",
+                      "keyword": "workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_e6120b38",
+                "query": {
+                  "datasetName": "c140165d",
+                  "parameters": [
+                    {
+                      "name": "workspace",
+                      "keyword": "workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_c22239d0",
+                "query": {
+                  "datasetName": "c123d861",
+                  "parameters": [
+                    {
+                      "name": "workspace",
+                      "keyword": "workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_691dbc20",
+                "query": {
+                  "datasetName": "5dafcb73",
+                  "parameters": [
+                    {
+                      "name": "workspace",
+                      "keyword": "workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_fe900155",
+                "query": {
+                  "datasetName": "306cc1e0",
+                  "parameters": [
+                    {
+                      "name": "workspace",
+                      "keyword": "workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-multi-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "workspace_name",
+                    "displayName": "Workspace",
+                    "queryName": "q_bc93942f"
+                  },
+                  {
+                    "parameterName": "workspace",
+                    "queryName": "q_9a27c20b"
+                  },
+                  {
+                    "parameterName": "workspace",
+                    "queryName": "q_28911c21"
+                  },
+                  {
+                    "parameterName": "workspace",
+                    "queryName": "q_73719ed3"
+                  },
+                  {
+                    "parameterName": "workspace",
+                    "queryName": "q_4185a579"
+                  },
+                  {
+                    "parameterName": "workspace",
+                    "queryName": "q_480117aa"
+                  },
+                  {
+                    "parameterName": "workspace",
+                    "queryName": "q_cb0814c3"
+                  },
+                  {
+                    "parameterName": "workspace",
+                    "queryName": "q_8704b7a8"
+                  },
+                  {
+                    "parameterName": "workspace",
+                    "queryName": "q_ac079145"
+                  },
+                  {
+                    "parameterName": "workspace",
+                    "queryName": "q_a7b5cfe6"
+                  },
+                  {
+                    "parameterName": "workspace",
+                    "queryName": "q_e6120b38"
+                  },
+                  {
+                    "parameterName": "workspace",
+                    "queryName": "q_c22239d0"
+                  },
+                  {
+                    "parameterName": "workspace",
+                    "queryName": "q_691dbc20"
+                  },
+                  {
+                    "parameterName": "workspace",
+                    "queryName": "q_fe900155"
+                  }
+                ]
+              },
+              "frame": {
+                "title": "Workspace",
+                "showTitle": true
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 3,
+            "height": 2
+          }
+        }
+      ]
+    }
+  ],
+  "uiSettings": {
+    "theme": {
+      "canvasBackgroundColor": {
+        "light": "#f4f1ea",
+        "dark": "#0d1015"
+      },
+      "widgetBackgroundColor": {
+        "light": "#ffffff",
+        "dark": "#151a21"
+      },
+      "widgetBorderColor": {
+        "light": "#e3ded2",
+        "dark": "#262d38"
+      },
+      "fontColor": {
+        "light": "#1c1b18",
+        "dark": "#e7eaee"
+      },
+      "selectionColor": {
+        "light": "#2356a0",
+        "dark": "#5aa9ff"
+      },
+      "visualizationColors": [
+        "#2356a0",
+        "#d9822b",
+        "#3e8e88",
+        "#7a6fb0",
+        "#9a7b4f",
+        "#b8527a",
+        "#5f7f2a",
+        "#b9b3a5",
+        "#a8261d",
+        "#2f6b4b"
+      ],
+      "widgetHeaderAlignment": "LEFT"
+    },
+    "genieSpace": {
+      "isEnabled": false,
+      "enablementMode": "ENABLEMENT_MODE_UNSPECIFIED"
+    },
+    "applyModeEnabled": false
+  }
+}

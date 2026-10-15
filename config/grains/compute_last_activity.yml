@@ -1,0 +1,2 @@
+# compute_last_activity: one row per warehouse, all-purpose cluster or workspace.
+compute_last_activity: [object_type, workspace_id, warehouse_id, cluster_id]

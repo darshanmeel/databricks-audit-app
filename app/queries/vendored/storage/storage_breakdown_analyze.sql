@@ -1,0 +1,19 @@
+-- query_id: storage_breakdown_analyze
+-- title: Per-table storage breakdown: active vs time-travel vs vacuumable
+-- domain: storage   tier: deep
+-- runnable: false - COPY-PASTE ONLY: this is ANALYZE TABLE DDL against a placeholder table (main.sales.orders), NOT a plain SELECT, so it is EXCLUDED from the read-only runner tools/run_audit.py. Substitute your own catalog.schema.table and run it by hand, or use tools/run_analyze.py to sweep many tables at once (a DESTRUCTIVE, opt-in maintenance operation - read its caution banner first).
+-- reads: none - ANALYZE TABLE COMPUTE STORAGE METRICS output; not a system table
+-- requires: privilege sufficient to run ANALYZE TABLE on the target table; GA but requires DBR 18.0+ (COMPUTE STORAGE METRICS is not available on older runtimes)
+-- params: none - run per target table; substitute your own catalog.schema.table for main.sales.orders
+-- confidence: confirmed
+-- confidence_note: All 8 result columns and the DBR 18.0+ gate are verbatim-verified against Databricks docs.
+-- read_this: One result row per run = one table's true on-disk footprint at the moment you ran it, split into active_bytes (live data), time_travel_bytes (retained history), and vacuumable_bytes (already-deleted files still on disk, reclaimable by VACUUM). The columns that matter are vacuumable_bytes and time_travel_bytes relative to total_bytes - a high share of either means you are paying to store data nobody is reading.
+-- healthy: n/a - status not computed (see caveats); as a heuristic, vacuumable_bytes + time_travel_bytes under roughly 20 percent of total_bytes is the healthy shape.
+-- investigate_if: n/a - status not computed (see caveats); as a heuristic, vacuumable_bytes + time_travel_bytes at or above roughly 20 percent of total_bytes is worth a look - field heuristic, not an authoritative threshold. A large vacuumable_bytes alone means VACUUM has not run recently or retention is too long; a large time_travel_bytes alone means retention is deliberately long (or should be shortened).
+-- actions: 1) run VACUUM on the table to reclaim vacuumable_bytes, or check whether Predictive Optimization VACUUM is enabled for it (free/config); 2) shorten delta.deletedFileRetentionDuration / delta.logRetentionDuration if the retention window is longer than your compliance need requires (config, see table_props_time_travel_config); 3) if time_travel_bytes is large because of a genuine long-retention requirement, tier the underlying cloud storage location to a cheaper class via a lifecycle rule rather than treating it as reclaimable (spend/infra change).
+-- next: po_vacuum_reclaimed_bytes (see whether VACUUM already reclaimed this table recently), table_props_time_travel_config (check the retention config driving time_travel_bytes)
+-- caveats: This is computed on demand, per table, on DBR 18.0+ - the result is NOT stored in Unity Catalog and NOT returned by DESCRIBE EXTENDED, so there is no history or trend; run it yourself and persist the result if you want to track it over time. There is no fail-safe and no clone-bytes concept in the result. If you have not run this against a table, treat storage size as "not assessed - storage size not in system tables; requires ANALYZE TABLE on DBR 18.0+", never as zero bytes. Because ANALYZE TABLE COMPUTE STORAGE METRICS returns a fixed, built-in column set (not a SELECT list you can extend), this query cannot carry a computed status column the way a SELECT-based finding can - use the healthy/investigate_if heuristics above as a manual read.
+-- Result columns to read: total_bytes, num_total_files, active_bytes, num_active_files,
+-- vacuumable_bytes, num_vacuumable_files, time_travel_bytes, num_time_travel_files.
+-- Run per target table; substitute your catalog.schema.table for main.sales.orders.
+ANALYZE TABLE main.sales.orders COMPUTE STORAGE METRICS;

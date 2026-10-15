@@ -1,0 +1,5 @@
+# For running the test suite and the header linter.
+pytest==9.1.1
+sqlfluff==3.5.0
+sqlglot==30.12.0
+-r requirements-dbt.txt

@@ -1,0 +1,3 @@
+# perf_daily_by_resource: one row per day, resource type and resource (workspace_id:resource_id,
+# or workspace_id:other for the pooled tail).
+perf_daily_by_resource: [usage_date, resource_type, resource_key]

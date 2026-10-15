@@ -1,0 +1,4 @@
+# Grain = the query's own key columns ONLY; the generator prepends window_days (DEC-24). One row
+# per workspace + weekday + hour-of-day + billing product slot (job_runs_active / queries_started /
+# share_of_window_spend are broadcast onto this same grain, never a dimension of their own).
+cost_by_hour_of_day: [workspace_id, weekday_num, hour_of_day, billing_origin_product]

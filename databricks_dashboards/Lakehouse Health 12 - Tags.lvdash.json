@@ -1,0 +1,4509 @@
+{
+  "datasets": [
+    {
+      "name": "3ba79ec8",
+      "displayName": "snapshot_banner",
+      "queryLines": [
+        "SELECT window_days AS days, concat('as of ', date_format(snapshot_at, 'MMM d, yyyy HH:mm'), ' UTC, list price') AS as_of FROM databricks_audit_dashboard.snapshot_info\n"
+      ]
+    },
+    {
+      "name": "25cd6de3",
+      "displayName": "workspace_options",
+      "queryLines": [
+        "SELECT DISTINCT name AS workspace_name FROM databricks_audit_dashboard.dim_workspace WHERE name IS NOT NULL ORDER BY 1\n"
+      ]
+    },
+    {
+      "name": "f05562ff",
+      "displayName": "mandatory:kpi:Spend with no cost-center tag",
+      "queryLines": [
+        "WITH a AS (SELECT * FROM (SELECT t.*, COALESCE(d_workspace.n, CAST(t.`workspace_id` AS STRING)) AS nm_workspace, COALESCE(concat(d_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING)) AS n_workspace, COALESCE(d_workspace.n, CAST(t.`workspace_id` AS STRING)) AS ws_name FROM databricks_audit_dashboard.cost_chargeback_by_allocation_tag t LEFT JOIN (SELECT CAST(workspace_id AS STRING) AS workspace_id, max(name) AS n FROM databricks_audit_dashboard.dim_workspace GROUP BY CAST(workspace_id AS STRING)) d_workspace ON d_workspace.workspace_id = CAST(t.`workspace_id` AS STRING)) WHERE (array_contains(:workspace, COALESCE(ws_name, '')) OR array_contains(:workspace, 'all')))\n",
+        "SELECT ROUND(COALESCE((SELECT SUM(net_list_cost_usd) FROM a WHERE is_missing_allocation_key), 0) * (1.0 - 0.0), 0) AS value,\n",
+        "       concat(CAST(ROUND(100.0 * COALESCE((SELECT SUM(net_list_cost_usd) FROM a WHERE is_missing_allocation_key), 0)\n",
+        "                    / NULLIF((SELECT SUM(net_list_cost_usd) FROM a), 0), 0) AS STRING),\n",
+        "              '% of priced spend; worst: ',\n",
+        "              COALESCE((SELECT nm_workspace FROM a WHERE is_missing_allocation_key ORDER BY net_list_cost_usd DESC LIMIT 1), 'none')) AS target\n"
+      ],
+      "parameters": [
+        {
+          "displayName": "Workspace",
+          "keyword": "workspace",
+          "dataType": "STRING",
+          "complexType": "MULTI",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "all"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "de4b4225",
+      "displayName": "mandatory:kpi:Unnamed workspaces still billing",
+      "queryLines": [
+        "WITH u AS (SELECT * FROM (SELECT t.*, COALESCE(d_workspace.n, CAST(t.`workspace_id` AS STRING)) AS nm_workspace, COALESCE(concat(d_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING)) AS n_workspace, COALESCE(d_workspace.n, CAST(t.`workspace_id` AS STRING)) AS ws_name FROM databricks_audit_dashboard.cost_unnamed_workspaces t LEFT JOIN (SELECT CAST(workspace_id AS STRING) AS workspace_id, max(name) AS n FROM databricks_audit_dashboard.dim_workspace GROUP BY CAST(workspace_id AS STRING)) d_workspace ON d_workspace.workspace_id = CAST(t.`workspace_id` AS STRING)) WHERE (array_contains(:workspace, COALESCE(ws_name, '')) OR array_contains(:workspace, 'all')))\n",
+        "SELECT (SELECT count(*) FROM u WHERE status = 'CRITICAL') AS value,\n",
+        "       COALESCE((SELECT concat('Worst: workspace ', CAST(workspace_id AS STRING), ', $', CAST(ROUND(net_list_cost_usd * (1.0 - 0.0), 0) AS STRING))\n",
+        "                 FROM u WHERE status = 'CRITICAL' ORDER BY net_list_cost_usd DESC LIMIT 1), 'None currently billing') AS target\n"
+      ],
+      "parameters": [
+        {
+          "displayName": "Workspace",
+          "keyword": "workspace",
+          "dataType": "STRING",
+          "complexType": "MULTI",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "all"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "945e2e8c",
+      "displayName": "mandatory:kpi:Serverless DBUs with no policy",
+      "queryLines": [
+        "WITH c AS (SELECT * FROM (SELECT t.*, COALESCE(d_workspace.n, CAST(t.`workspace_id` AS STRING)) AS nm_workspace, COALESCE(concat(d_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING)) AS n_workspace, COALESCE(d_workspace.n, CAST(t.`workspace_id` AS STRING)) AS ws_name FROM databricks_audit_dashboard.cost_usage_policy_coverage t LEFT JOIN (SELECT CAST(workspace_id AS STRING) AS workspace_id, max(name) AS n FROM databricks_audit_dashboard.dim_workspace GROUP BY CAST(workspace_id AS STRING)) d_workspace ON d_workspace.workspace_id = CAST(t.`workspace_id` AS STRING)) WHERE (array_contains(:workspace, COALESCE(ws_name, '')) OR array_contains(:workspace, 'all')) AND is_serverless)\n",
+        "SELECT ROUND(COALESCE((SELECT SUM(net_usage_quantity) FROM c WHERE status = 'WARN'), 0), 0) AS value,\n",
+        "       concat(CAST(ROUND(100.0 * COALESCE((SELECT SUM(net_usage_quantity) FROM c WHERE status = 'WARN'), 0)\n",
+        "                    / NULLIF((SELECT SUM(net_usage_quantity) FROM c), 0), 0) AS STRING),\n",
+        "              '% of serverless DBUs; a usage or budget policy is the usual way this spend carries a tag') AS target\n"
+      ],
+      "parameters": [
+        {
+          "displayName": "Workspace",
+          "keyword": "workspace",
+          "dataType": "STRING",
+          "complexType": "MULTI",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "all"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "69efbf7f",
+      "displayName": "mandatory:kpi:Tag 1",
+      "queryLines": [
+        "WITH keys AS (\n",
+        "  SELECT 1 AS key_num, trim(try_element_at(split(tag_keys, ','), 1)) AS raw_key FROM databricks_audit_dashboard.snapshot_info\n",
+        "  UNION ALL SELECT 2, trim(try_element_at(split(tag_keys, ','), 2)) FROM databricks_audit_dashboard.snapshot_info\n",
+        "  UNION ALL SELECT 3, trim(try_element_at(split(tag_keys, ','), 3)) FROM databricks_audit_dashboard.snapshot_info\n",
+        "),\n",
+        "nk AS (\n",
+        "  SELECT key_num, raw_key, lower(regexp_replace(raw_key, '[ _-]', '')) AS norm_key\n",
+        "  FROM keys WHERE raw_key IS NOT NULL AND raw_key <> ''\n",
+        "),\n",
+        "v AS (\n",
+        "  SELECT t.*, lower(regexp_replace(t.tag_key, '[ _-]', '')) AS norm_tag_key\n",
+        "  FROM (SELECT t.*, COALESCE(d_workspace.n, CAST(t.`workspace_id` AS STRING)) AS nm_workspace, COALESCE(concat(d_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING)) AS n_workspace, COALESCE(d_workspace.n, CAST(t.`workspace_id` AS STRING)) AS ws_name FROM databricks_audit_dashboard.cost_chargeback_by_tag_value t LEFT JOIN (SELECT CAST(workspace_id AS STRING) AS workspace_id, max(name) AS n FROM databricks_audit_dashboard.dim_workspace GROUP BY CAST(workspace_id AS STRING)) d_workspace ON d_workspace.workspace_id = CAST(t.`workspace_id` AS STRING)) t\n",
+        "  WHERE (array_contains(:workspace, COALESCE(ws_name, '')) OR array_contains(:workspace, 'all'))\n",
+        "),\n",
+        "agg AS (\n",
+        "  SELECT nk.raw_key,\n",
+        "         SUM(CASE WHEN v.is_untagged THEN v.usd_list ELSE 0 END) AS untagged_usd,\n",
+        "         SUM(v.usd_list) AS total_usd\n",
+        "  FROM nk LEFT JOIN v ON v.norm_tag_key = nk.norm_key\n",
+        "  WHERE nk.key_num = 1\n",
+        "  GROUP BY nk.raw_key\n",
+        ")\n",
+        "SELECT ROUND(COALESCE((SELECT untagged_usd FROM agg), 0) * (1.0 - 0.0), 0) AS value,\n",
+        "       COALESCE((SELECT concat(raw_key, ': ',\n",
+        "                 CAST(COALESCE(ROUND(100.0 * COALESCE(untagged_usd, 0) / NULLIF(total_usd, 0), 0), 0) AS STRING),\n",
+        "                 '% of spend untagged')\n",
+        "                 FROM agg),\n",
+        "                 'No tag key configured at position 1') AS target\n"
+      ],
+      "parameters": [
+        {
+          "displayName": "Workspace",
+          "keyword": "workspace",
+          "dataType": "STRING",
+          "complexType": "MULTI",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "all"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "d92db39e",
+      "displayName": "mandatory:kpi:Tag 2",
+      "queryLines": [
+        "WITH keys AS (\n",
+        "  SELECT 1 AS key_num, trim(try_element_at(split(tag_keys, ','), 1)) AS raw_key FROM databricks_audit_dashboard.snapshot_info\n",
+        "  UNION ALL SELECT 2, trim(try_element_at(split(tag_keys, ','), 2)) FROM databricks_audit_dashboard.snapshot_info\n",
+        "  UNION ALL SELECT 3, trim(try_element_at(split(tag_keys, ','), 3)) FROM databricks_audit_dashboard.snapshot_info\n",
+        "),\n",
+        "nk AS (\n",
+        "  SELECT key_num, raw_key, lower(regexp_replace(raw_key, '[ _-]', '')) AS norm_key\n",
+        "  FROM keys WHERE raw_key IS NOT NULL AND raw_key <> ''\n",
+        "),\n",
+        "v AS (\n",
+        "  SELECT t.*, lower(regexp_replace(t.tag_key, '[ _-]', '')) AS norm_tag_key\n",
+        "  FROM (SELECT t.*, COALESCE(d_workspace.n, CAST(t.`workspace_id` AS STRING)) AS nm_workspace, COALESCE(concat(d_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING)) AS n_workspace, COALESCE(d_workspace.n, CAST(t.`workspace_id` AS STRING)) AS ws_name FROM databricks_audit_dashboard.cost_chargeback_by_tag_value t LEFT JOIN (SELECT CAST(workspace_id AS STRING) AS workspace_id, max(name) AS n FROM databricks_audit_dashboard.dim_workspace GROUP BY CAST(workspace_id AS STRING)) d_workspace ON d_workspace.workspace_id = CAST(t.`workspace_id` AS STRING)) t\n",
+        "  WHERE (array_contains(:workspace, COALESCE(ws_name, '')) OR array_contains(:workspace, 'all'))\n",
+        "),\n",
+        "agg AS (\n",
+        "  SELECT nk.raw_key,\n",
+        "         SUM(CASE WHEN v.is_untagged THEN v.usd_list ELSE 0 END) AS untagged_usd,\n",
+        "         SUM(v.usd_list) AS total_usd\n",
+        "  FROM nk LEFT JOIN v ON v.norm_tag_key = nk.norm_key\n",
+        "  WHERE nk.key_num = 2\n",
+        "  GROUP BY nk.raw_key\n",
+        ")\n",
+        "SELECT ROUND(COALESCE((SELECT untagged_usd FROM agg), 0) * (1.0 - 0.0), 0) AS value,\n",
+        "       COALESCE((SELECT concat(raw_key, ': ',\n",
+        "                 CAST(COALESCE(ROUND(100.0 * COALESCE(untagged_usd, 0) / NULLIF(total_usd, 0), 0), 0) AS STRING),\n",
+        "                 '% of spend untagged')\n",
+        "                 FROM agg),\n",
+        "                 'No tag key configured at position 2') AS target\n"
+      ],
+      "parameters": [
+        {
+          "displayName": "Workspace",
+          "keyword": "workspace",
+          "dataType": "STRING",
+          "complexType": "MULTI",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "all"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "e5f0d5df",
+      "displayName": "mandatory:kpi:Tag 3",
+      "queryLines": [
+        "WITH keys AS (\n",
+        "  SELECT 1 AS key_num, trim(try_element_at(split(tag_keys, ','), 1)) AS raw_key FROM databricks_audit_dashboard.snapshot_info\n",
+        "  UNION ALL SELECT 2, trim(try_element_at(split(tag_keys, ','), 2)) FROM databricks_audit_dashboard.snapshot_info\n",
+        "  UNION ALL SELECT 3, trim(try_element_at(split(tag_keys, ','), 3)) FROM databricks_audit_dashboard.snapshot_info\n",
+        "),\n",
+        "nk AS (\n",
+        "  SELECT key_num, raw_key, lower(regexp_replace(raw_key, '[ _-]', '')) AS norm_key\n",
+        "  FROM keys WHERE raw_key IS NOT NULL AND raw_key <> ''\n",
+        "),\n",
+        "v AS (\n",
+        "  SELECT t.*, lower(regexp_replace(t.tag_key, '[ _-]', '')) AS norm_tag_key\n",
+        "  FROM (SELECT t.*, COALESCE(d_workspace.n, CAST(t.`workspace_id` AS STRING)) AS nm_workspace, COALESCE(concat(d_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING)) AS n_workspace, COALESCE(d_workspace.n, CAST(t.`workspace_id` AS STRING)) AS ws_name FROM databricks_audit_dashboard.cost_chargeback_by_tag_value t LEFT JOIN (SELECT CAST(workspace_id AS STRING) AS workspace_id, max(name) AS n FROM databricks_audit_dashboard.dim_workspace GROUP BY CAST(workspace_id AS STRING)) d_workspace ON d_workspace.workspace_id = CAST(t.`workspace_id` AS STRING)) t\n",
+        "  WHERE (array_contains(:workspace, COALESCE(ws_name, '')) OR array_contains(:workspace, 'all'))\n",
+        "),\n",
+        "agg AS (\n",
+        "  SELECT nk.raw_key,\n",
+        "         SUM(CASE WHEN v.is_untagged THEN v.usd_list ELSE 0 END) AS untagged_usd,\n",
+        "         SUM(v.usd_list) AS total_usd\n",
+        "  FROM nk LEFT JOIN v ON v.norm_tag_key = nk.norm_key\n",
+        "  WHERE nk.key_num = 3\n",
+        "  GROUP BY nk.raw_key\n",
+        ")\n",
+        "SELECT ROUND(COALESCE((SELECT untagged_usd FROM agg), 0) * (1.0 - 0.0), 0) AS value,\n",
+        "       COALESCE((SELECT concat(raw_key, ': ',\n",
+        "                 CAST(COALESCE(ROUND(100.0 * COALESCE(untagged_usd, 0) / NULLIF(total_usd, 0), 0), 0) AS STRING),\n",
+        "                 '% of spend untagged')\n",
+        "                 FROM agg),\n",
+        "                 'No tag key configured at position 3') AS target\n"
+      ],
+      "parameters": [
+        {
+          "displayName": "Workspace",
+          "keyword": "workspace",
+          "dataType": "STRING",
+          "complexType": "MULTI",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "all"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5186ca16",
+      "displayName": "mandatory:Spend with no cost-center tag, by workspace",
+      "queryLines": [
+        "SELECT nm_workspace AS workspace, ROUND(SUM(net_list_cost_usd) * (1.0 - 0.0), 0) AS usd\n",
+        "FROM (SELECT t.*, COALESCE(d_workspace.n, CAST(t.`workspace_id` AS STRING)) AS nm_workspace, COALESCE(concat(d_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING)) AS n_workspace, COALESCE(d_workspace.n, CAST(t.`workspace_id` AS STRING)) AS ws_name FROM databricks_audit_dashboard.cost_chargeback_by_allocation_tag t LEFT JOIN (SELECT CAST(workspace_id AS STRING) AS workspace_id, max(name) AS n FROM databricks_audit_dashboard.dim_workspace GROUP BY CAST(workspace_id AS STRING)) d_workspace ON d_workspace.workspace_id = CAST(t.`workspace_id` AS STRING))\n",
+        "WHERE (array_contains(:workspace, COALESCE(ws_name, '')) OR array_contains(:workspace, 'all')) AND is_missing_allocation_key\n",
+        "GROUP BY 1 ORDER BY 2 DESC LIMIT 8\n"
+      ],
+      "parameters": [
+        {
+          "displayName": "Workspace",
+          "keyword": "workspace",
+          "dataType": "STRING",
+          "complexType": "MULTI",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "all"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "fca8004d",
+      "displayName": "mandatory:Serverless DBUs by usage-policy coverage",
+      "queryLines": [
+        "SELECT CASE policy_coverage WHEN 'usage_policy' THEN 'Usage policy'\n",
+        "            WHEN 'budget_policy_legacy' THEN 'Budget policy (legacy)' ELSE 'No policy' END AS coverage,\n",
+        "       SUM(net_usage_quantity) AS dbus\n",
+        "FROM (SELECT t.*, COALESCE(d_workspace.n, CAST(t.`workspace_id` AS STRING)) AS nm_workspace, COALESCE(concat(d_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING)) AS n_workspace, COALESCE(d_workspace.n, CAST(t.`workspace_id` AS STRING)) AS ws_name FROM databricks_audit_dashboard.cost_usage_policy_coverage t LEFT JOIN (SELECT CAST(workspace_id AS STRING) AS workspace_id, max(name) AS n FROM databricks_audit_dashboard.dim_workspace GROUP BY CAST(workspace_id AS STRING)) d_workspace ON d_workspace.workspace_id = CAST(t.`workspace_id` AS STRING))\n",
+        "WHERE (array_contains(:workspace, COALESCE(ws_name, '')) OR array_contains(:workspace, 'all')) AND is_serverless\n",
+        "GROUP BY 1\n"
+      ],
+      "parameters": [
+        {
+          "displayName": "Workspace",
+          "keyword": "workspace",
+          "dataType": "STRING",
+          "complexType": "MULTI",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "all"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "822953cc",
+      "displayName": "mandatory:Spend by tag value, per key",
+      "queryLines": [
+        "WITH q AS (\n",
+        "WITH keys AS (\n",
+        "  SELECT 1 AS key_num, trim(try_element_at(split(tag_keys, ','), 1)) AS raw_key FROM databricks_audit_dashboard.snapshot_info\n",
+        "  UNION ALL SELECT 2, trim(try_element_at(split(tag_keys, ','), 2)) FROM databricks_audit_dashboard.snapshot_info\n",
+        "  UNION ALL SELECT 3, trim(try_element_at(split(tag_keys, ','), 3)) FROM databricks_audit_dashboard.snapshot_info\n",
+        "),\n",
+        "nk AS (\n",
+        "  SELECT key_num, raw_key, lower(regexp_replace(raw_key, '[ _-]', '')) AS norm_key\n",
+        "  FROM keys WHERE raw_key IS NOT NULL AND raw_key <> ''\n",
+        "),\n",
+        "v AS (\n",
+        "  SELECT t.*, lower(regexp_replace(t.tag_key, '[ _-]', '')) AS norm_tag_key\n",
+        "  FROM (SELECT t.*, COALESCE(d_workspace.n, CAST(t.`workspace_id` AS STRING)) AS nm_workspace, COALESCE(concat(d_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING)) AS n_workspace, COALESCE(d_workspace.n, CAST(t.`workspace_id` AS STRING)) AS ws_name FROM databricks_audit_dashboard.cost_chargeback_by_tag_value t LEFT JOIN (SELECT CAST(workspace_id AS STRING) AS workspace_id, max(name) AS n FROM databricks_audit_dashboard.dim_workspace GROUP BY CAST(workspace_id AS STRING)) d_workspace ON d_workspace.workspace_id = CAST(t.`workspace_id` AS STRING)) t\n",
+        "  WHERE (array_contains(:workspace, COALESCE(ws_name, '')) OR array_contains(:workspace, 'all')) AND NOT t.is_untagged\n",
+        "),\n",
+        "matched AS (\n",
+        "  SELECT nk.raw_key AS tag_key, COALESCE(v.tag_value, '(other)') AS value_label, SUM(v.usd_list) AS usd\n",
+        "  FROM nk JOIN v ON v.norm_tag_key = nk.norm_key\n",
+        "  GROUP BY 1, 2\n",
+        ")\n",
+        "SELECT tag_key, value_label, ROUND(usd * (1.0 - 0.0), 0) AS usd\n",
+        "FROM matched\n",
+        "QUALIFY ROW_NUMBER() OVER (PARTITION BY tag_key ORDER BY usd DESC) <= 6\n",
+        "),\n",
+        "r AS (SELECT `tag_key` AS s, ROW_NUMBER() OVER (ORDER BY SUM(`usd`) DESC) AS rk FROM q WHERE `tag_key` IS NOT NULL GROUP BY `tag_key`),\n",
+        "n AS (SELECT COUNT(*) AS n FROM r)\n",
+        "SELECT q.`value_label`, q.`usd`,\n",
+        "       CASE WHEN q.`tag_key` IS NULL OR r.rk < 8 OR n.n <= 8 THEN CAST(q.`tag_key` AS STRING) ELSE 'Other' END AS `tag_key`\n",
+        "FROM q LEFT JOIN r ON r.s = q.`tag_key` CROSS JOIN n\n"
+      ],
+      "parameters": [
+        {
+          "displayName": "Workspace",
+          "keyword": "workspace",
+          "dataType": "STRING",
+          "complexType": "MULTI",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "all"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "aeebd2ae",
+      "displayName": "mandatory:Untagged spend by workspace, per key",
+      "queryLines": [
+        "WITH q AS (\n",
+        "WITH keys AS (\n",
+        "  SELECT 1 AS key_num, trim(try_element_at(split(tag_keys, ','), 1)) AS raw_key FROM databricks_audit_dashboard.snapshot_info\n",
+        "  UNION ALL SELECT 2, trim(try_element_at(split(tag_keys, ','), 2)) FROM databricks_audit_dashboard.snapshot_info\n",
+        "  UNION ALL SELECT 3, trim(try_element_at(split(tag_keys, ','), 3)) FROM databricks_audit_dashboard.snapshot_info\n",
+        "),\n",
+        "nk AS (\n",
+        "  SELECT key_num, raw_key, lower(regexp_replace(raw_key, '[ _-]', '')) AS norm_key\n",
+        "  FROM keys WHERE raw_key IS NOT NULL AND raw_key <> ''\n",
+        "),\n",
+        "v AS (\n",
+        "  SELECT t.*, lower(regexp_replace(t.tag_key, '[ _-]', '')) AS norm_tag_key\n",
+        "  FROM (SELECT t.*, COALESCE(d_workspace.n, CAST(t.`workspace_id` AS STRING)) AS nm_workspace, COALESCE(concat(d_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING)) AS n_workspace, COALESCE(d_workspace.n, CAST(t.`workspace_id` AS STRING)) AS ws_name FROM databricks_audit_dashboard.cost_chargeback_by_tag_value t LEFT JOIN (SELECT CAST(workspace_id AS STRING) AS workspace_id, max(name) AS n FROM databricks_audit_dashboard.dim_workspace GROUP BY CAST(workspace_id AS STRING)) d_workspace ON d_workspace.workspace_id = CAST(t.`workspace_id` AS STRING)) t\n",
+        "  WHERE (array_contains(:workspace, COALESCE(ws_name, '')) OR array_contains(:workspace, 'all')) AND t.is_untagged\n",
+        ")\n",
+        "SELECT nk.raw_key AS tag_key, COALESCE(v.nm_workspace, 'Unknown workspace') AS workspace,\n",
+        "       ROUND(SUM(v.usd_list) * (1.0 - 0.0), 0) AS usd\n",
+        "FROM nk JOIN v ON v.norm_tag_key = nk.norm_key\n",
+        "GROUP BY 1, 2\n",
+        "),\n",
+        "r AS (SELECT `tag_key` AS s, ROW_NUMBER() OVER (ORDER BY SUM(`usd`) DESC) AS rk FROM q WHERE `tag_key` IS NOT NULL GROUP BY `tag_key`),\n",
+        "n AS (SELECT COUNT(*) AS n FROM r)\n",
+        "SELECT q.`workspace`, q.`usd`,\n",
+        "       CASE WHEN q.`tag_key` IS NULL OR r.rk < 8 OR n.n <= 8 THEN CAST(q.`tag_key` AS STRING) ELSE 'Other' END AS `tag_key`\n",
+        "FROM q LEFT JOIN r ON r.s = q.`tag_key` CROSS JOIN n\n"
+      ],
+      "parameters": [
+        {
+          "displayName": "Workspace",
+          "keyword": "workspace",
+          "dataType": "STRING",
+          "complexType": "MULTI",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "all"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "96a4e1f5",
+      "displayName": "mandatory:Workspaces missing from the account's list",
+      "queryLines": [
+        "SELECT status, CAST(workspace_id AS STRING) AS workspace, date_format(first_used, 'yyyy-MM-dd') AS first_used,\n",
+        "       date_format(last_used, 'yyyy-MM-dd') AS last_used, active_days, dbus_365d,\n",
+        "       ROUND(net_list_cost_usd * (1.0 - 0.0), 0) AS usd_window, ROUND(net_list_cost_usd_365d * (1.0 - 0.0), 0) AS usd_365d\n",
+        "FROM (SELECT t.*, COALESCE(d_workspace.n, CAST(t.`workspace_id` AS STRING)) AS nm_workspace, COALESCE(concat(d_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING)) AS n_workspace, COALESCE(d_workspace.n, CAST(t.`workspace_id` AS STRING)) AS ws_name FROM databricks_audit_dashboard.cost_unnamed_workspaces t LEFT JOIN (SELECT CAST(workspace_id AS STRING) AS workspace_id, max(name) AS n FROM databricks_audit_dashboard.dim_workspace GROUP BY CAST(workspace_id AS STRING)) d_workspace ON d_workspace.workspace_id = CAST(t.`workspace_id` AS STRING))\n",
+        "WHERE (array_contains(:workspace, COALESCE(ws_name, '')) OR array_contains(:workspace, 'all'))\n",
+        "ORDER BY CASE status WHEN 'CRITICAL' THEN 0 WHEN 'WARN' THEN 1 ELSE 2 END, net_list_cost_usd DESC NULLS LAST\n",
+        "LIMIT 200\n"
+      ],
+      "parameters": [
+        {
+          "displayName": "Workspace",
+          "keyword": "workspace",
+          "dataType": "STRING",
+          "complexType": "MULTI",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "all"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4c418ba1",
+      "displayName": "mandatory:Spend with no cost-center tag, worst rows",
+      "queryLines": [
+        "SELECT status, nm_workspace AS workspace, usage_unit, ROUND(net_usage_quantity, 2) AS net_usage_quantity,\n",
+        "       ROUND(net_list_cost_usd * (1.0 - 0.0), 0) AS usd, share_of_unit_pct\n",
+        "FROM (SELECT t.*, COALESCE(d_workspace.n, CAST(t.`workspace_id` AS STRING)) AS nm_workspace, COALESCE(concat(d_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING)) AS n_workspace, COALESCE(d_workspace.n, CAST(t.`workspace_id` AS STRING)) AS ws_name FROM databricks_audit_dashboard.cost_chargeback_by_allocation_tag t LEFT JOIN (SELECT CAST(workspace_id AS STRING) AS workspace_id, max(name) AS n FROM databricks_audit_dashboard.dim_workspace GROUP BY CAST(workspace_id AS STRING)) d_workspace ON d_workspace.workspace_id = CAST(t.`workspace_id` AS STRING))\n",
+        "WHERE (array_contains(:workspace, COALESCE(ws_name, '')) OR array_contains(:workspace, 'all')) AND is_missing_allocation_key AND status IN ('CRITICAL', 'WARN')\n",
+        "ORDER BY CASE status WHEN 'CRITICAL' THEN 0 ELSE 1 END, net_list_cost_usd DESC NULLS LAST\n",
+        "LIMIT 200\n"
+      ],
+      "parameters": [
+        {
+          "displayName": "Workspace",
+          "keyword": "workspace",
+          "dataType": "STRING",
+          "complexType": "MULTI",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "all"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "b72ef127",
+      "displayName": "mandatory:status",
+      "queryLines": [
+        "SELECT c.title AS check_title,\n",
+        "       c.page AS page,\n",
+        "       CASE WHEN l.query_id IS NULL THEN 'Not run'\n",
+        "            WHEN NOT l.ok THEN 'Not assessed'\n",
+        "            WHEN l.critical > 0 THEN 'Critical'\n",
+        "            WHEN l.warn > 0 THEN 'Warn'\n",
+        "            WHEN l.has_status THEN 'OK'\n",
+        "            WHEN l.row_count = 0 THEN 'No rows'\n",
+        "            ELSE 'Listed' END AS verdict,\n",
+        "       l.row_count AS row_count,\n",
+        "       l.critical AS critical_rows,\n",
+        "       l.warn AS warn_rows,\n",
+        "       l.error AS error\n",
+        "FROM (VALUES\n",
+        "       (0, 'cost_chargeback_by_tag', 'Spend by cost center or team', 'Tags'),\n",
+        "       (1, 'cost_chargeback_by_allocation_tag', 'Spend with no cost center or team tag', 'Tags'),\n",
+        "       (2, 'cost_chargeback_by_tag_value', 'Chargeback by tag value', 'Tags'),\n",
+        "       (3, 'cost_usage_policy_coverage', 'Serverless usage without a policy', 'Tags'),\n",
+        "       (4, 'cost_unnamed_workspaces', 'Spend on workspaces with no name', 'Tags')) AS c(ord, query_id, title, page)\n",
+        "LEFT JOIN databricks_audit_dashboard.snapshot_log l ON l.query_id = c.query_id\n",
+        "ORDER BY CASE WHEN l.critical > 0 THEN 0 WHEN l.warn > 0 THEN 1 WHEN NOT l.ok THEN 2 ELSE 3 END, c.ord\n"
+      ]
+    },
+    {
+      "name": "1a1bd1a1",
+      "displayName": "check:cost_chargeback_by_tag",
+      "queryLines": [
+        "SELECT\n",
+        "  COALESCE(concat(n_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING)) AS `workspace_shown`,\n",
+        "  CAST(t.`usage_date` AS STRING) AS `usage_date`,\n",
+        "  t.`cloud` AS `cloud`,\n",
+        "  t.`billing_origin_product` AS `billing_origin_product`,\n",
+        "  t.`tag_key` AS `tag_key`,\n",
+        "  t.`tag_value` AS `tag_value`,\n",
+        "  t.`net_usage_quantity` AS `net_usage_quantity`,\n",
+        "  t.`record_count` AS `record_count`\n",
+        "FROM databricks_audit_dashboard.cost_chargeback_by_tag t\n",
+        "LEFT JOIN (SELECT CAST(workspace_id AS STRING) AS workspace_id, max(name) AS n FROM databricks_audit_dashboard.dim_workspace GROUP BY CAST(workspace_id AS STRING)) n_workspace\n",
+        "  ON n_workspace.workspace_id = CAST(t.`workspace_id` AS STRING)\n",
+        "WHERE (array_contains(:workspace, COALESCE(n_workspace.n, '')) OR array_contains(:workspace, 'all'))\n",
+        "ORDER BY `usage_date` DESC NULLS LAST, `tag_key` ASC NULLS LAST, `tag_value` ASC NULLS LAST\n",
+        "LIMIT 5000\n"
+      ],
+      "parameters": [
+        {
+          "displayName": "Workspace",
+          "keyword": "workspace",
+          "dataType": "STRING",
+          "complexType": "MULTI",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "all"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "b110cf5e",
+      "displayName": "check:cost_chargeback_by_allocation_tag",
+      "queryLines": [
+        "SELECT\n",
+        "  COALESCE(concat(n_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING)) AS `workspace_shown`,\n",
+        "  t.`status` AS `status`,\n",
+        "  t.`usage_unit` AS `usage_unit`,\n",
+        "  t.`allocation_key` AS `allocation_key`,\n",
+        "  t.`allocation_value` AS `allocation_value`,\n",
+        "  CAST(t.`is_missing_allocation_key` AS STRING) AS `is_missing_allocation_key`,\n",
+        "  t.`net_usage_quantity` AS `net_usage_quantity`,\n",
+        "  t.`net_list_cost_usd` AS `net_list_cost_usd`,\n",
+        "  t.`share_of_unit_pct` AS `share_of_unit_pct`,\n",
+        "  t.`price_basis` AS `price_basis`,\n",
+        "  t.`not_assessed_reason` AS `not_assessed_reason`\n",
+        "FROM databricks_audit_dashboard.cost_chargeback_by_allocation_tag t\n",
+        "LEFT JOIN (SELECT CAST(workspace_id AS STRING) AS workspace_id, max(name) AS n FROM databricks_audit_dashboard.dim_workspace GROUP BY CAST(workspace_id AS STRING)) n_workspace\n",
+        "  ON n_workspace.workspace_id = CAST(t.`workspace_id` AS STRING)\n",
+        "WHERE (array_contains(:workspace, COALESCE(n_workspace.n, '')) OR array_contains(:workspace, 'all'))\n",
+        "ORDER BY CASE `status` WHEN 'CRITICAL' THEN 0 WHEN 'WARN' THEN 1 WHEN 'OK' THEN 2 ELSE 3 END, `usage_unit` ASC NULLS LAST, `is_missing_allocation_key` DESC NULLS LAST, `net_list_cost_usd` DESC NULLS LAST\n",
+        "LIMIT 5000\n"
+      ],
+      "parameters": [
+        {
+          "displayName": "Workspace",
+          "keyword": "workspace",
+          "dataType": "STRING",
+          "complexType": "MULTI",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "all"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "889039a1",
+      "displayName": "check:cost_chargeback_by_tag_value",
+      "queryLines": [
+        "SELECT\n",
+        "  COALESCE(concat(n_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING)) AS `workspace_shown`,\n",
+        "  t.`status` AS `status`,\n",
+        "  t.`tag_key` AS `tag_key`,\n",
+        "  t.`tag_value` AS `tag_value`,\n",
+        "  CAST(t.`is_other` AS STRING) AS `is_other`,\n",
+        "  CAST(t.`is_untagged` AS STRING) AS `is_untagged`,\n",
+        "  t.`pooled_count` AS `pooled_count`,\n",
+        "  t.`usd_list` AS `usd_list`,\n",
+        "  t.`share_of_total_pct` AS `share_of_total_pct`,\n",
+        "  t.`prev_usd_list` AS `prev_usd_list`,\n",
+        "  t.`change_usd_list` AS `change_usd_list`,\n",
+        "  t.`change_pct` AS `change_pct`,\n",
+        "  t.`price_basis` AS `price_basis`,\n",
+        "  t.`not_assessed_reason` AS `not_assessed_reason`\n",
+        "FROM databricks_audit_dashboard.cost_chargeback_by_tag_value t\n",
+        "LEFT JOIN (SELECT CAST(workspace_id AS STRING) AS workspace_id, max(name) AS n FROM databricks_audit_dashboard.dim_workspace GROUP BY CAST(workspace_id AS STRING)) n_workspace\n",
+        "  ON n_workspace.workspace_id = CAST(t.`workspace_id` AS STRING)\n",
+        "WHERE (array_contains(:workspace, COALESCE(n_workspace.n, '')) OR array_contains(:workspace, 'all'))\n",
+        "ORDER BY CASE `status` WHEN 'CRITICAL' THEN 0 WHEN 'WARN' THEN 1 WHEN 'OK' THEN 2 ELSE 3 END, `tag_key` ASC NULLS LAST, `is_untagged` ASC NULLS LAST, `is_other` ASC NULLS LAST, `usd_list` DESC NULLS LAST\n",
+        "LIMIT 5000\n"
+      ],
+      "parameters": [
+        {
+          "displayName": "Workspace",
+          "keyword": "workspace",
+          "dataType": "STRING",
+          "complexType": "MULTI",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "all"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "ec4630ef",
+      "displayName": "check:cost_usage_policy_coverage",
+      "queryLines": [
+        "SELECT\n",
+        "  COALESCE(concat(n_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING)) AS `workspace_shown`,\n",
+        "  t.`status` AS `status`,\n",
+        "  CAST(t.`usage_date` AS STRING) AS `usage_date`,\n",
+        "  t.`cloud` AS `cloud`,\n",
+        "  t.`billing_origin_product` AS `billing_origin_product`,\n",
+        "  CAST(t.`is_serverless` AS STRING) AS `is_serverless`,\n",
+        "  t.`policy_coverage` AS `policy_coverage`,\n",
+        "  t.`tag_coverage` AS `tag_coverage`,\n",
+        "  t.`net_usage_quantity` AS `net_usage_quantity`\n",
+        "FROM databricks_audit_dashboard.cost_usage_policy_coverage t\n",
+        "LEFT JOIN (SELECT CAST(workspace_id AS STRING) AS workspace_id, max(name) AS n FROM databricks_audit_dashboard.dim_workspace GROUP BY CAST(workspace_id AS STRING)) n_workspace\n",
+        "  ON n_workspace.workspace_id = CAST(t.`workspace_id` AS STRING)\n",
+        "WHERE (array_contains(:workspace, COALESCE(n_workspace.n, '')) OR array_contains(:workspace, 'all'))\n",
+        "ORDER BY CASE `status` WHEN 'CRITICAL' THEN 0 WHEN 'WARN' THEN 1 WHEN 'OK' THEN 2 ELSE 3 END, `net_usage_quantity` DESC NULLS LAST\n",
+        "LIMIT 5000\n"
+      ],
+      "parameters": [
+        {
+          "displayName": "Workspace",
+          "keyword": "workspace",
+          "dataType": "STRING",
+          "complexType": "MULTI",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "all"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "6a710b5d",
+      "displayName": "check:cost_unnamed_workspaces",
+      "queryLines": [
+        "SELECT\n",
+        "  COALESCE(concat(n_workspace.n, ' (', CAST(t.`workspace_id` AS STRING), ')'), CAST(t.`workspace_id` AS STRING)) AS `workspace_shown`,\n",
+        "  t.`status` AS `status`,\n",
+        "  CAST(t.`first_used` AS STRING) AS `first_used`,\n",
+        "  CAST(t.`last_used` AS STRING) AS `last_used`,\n",
+        "  t.`active_days` AS `active_days`,\n",
+        "  t.`dbus_365d` AS `dbus_365d`,\n",
+        "  t.`net_list_cost_usd_365d` AS `net_list_cost_usd_365d`,\n",
+        "  t.`net_list_cost_usd` AS `net_list_cost_usd`,\n",
+        "  t.`lifetime_days` AS `lifetime_days`,\n",
+        "  CAST(t.`short_lived` AS STRING) AS `short_lived`\n",
+        "FROM databricks_audit_dashboard.cost_unnamed_workspaces t\n",
+        "LEFT JOIN (SELECT CAST(workspace_id AS STRING) AS workspace_id, max(name) AS n FROM databricks_audit_dashboard.dim_workspace GROUP BY CAST(workspace_id AS STRING)) n_workspace\n",
+        "  ON n_workspace.workspace_id = CAST(t.`workspace_id` AS STRING)\n",
+        "WHERE (array_contains(:workspace, COALESCE(n_workspace.n, '')) OR array_contains(:workspace, 'all'))\n",
+        "ORDER BY CASE `status` WHEN 'CRITICAL' THEN 0 WHEN 'WARN' THEN 1 WHEN 'OK' THEN 2 ELSE 3 END, `net_list_cost_usd` DESC NULLS LAST, `last_used` DESC NULLS LAST\n",
+        "LIMIT 5000\n"
+      ],
+      "parameters": [
+        {
+          "displayName": "Workspace",
+          "keyword": "workspace",
+          "dataType": "STRING",
+          "complexType": "MULTI",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "all"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "pages": [
+    {
+      "name": "4b8a4204",
+      "displayName": "Tags",
+      "pageType": "PAGE_TYPE_CANVAS",
+      "layoutVersion": "GRID_V1",
+      "layout": [
+        {
+          "widget": {
+            "name": "57e86354",
+            "multilineTextboxSpec": {
+              "lines": [
+                "# **Tags**\n",
+                "Lakehouse Health 12 - Tags \u00b7 Mandatory tags \u00b7 own tag, then job, compute, workspace\n"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 9,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "df63fc2c",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "3ba79ec8",
+                  "fields": [
+                    {
+                      "name": "as_of",
+                      "expression": "`as_of`"
+                    },
+                    {
+                      "name": "max(days)",
+                      "expression": "MAX(`days`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "max(days)",
+                  "displayName": "Days covered",
+                  "style": {
+                    "bold": true,
+                    "fontSize": 32,
+                    "color": "#1c1b18"
+                  }
+                },
+                "target": {
+                  "fieldName": "as_of",
+                  "displayName": "as_of",
+                  "style": {
+                    "fontSize": 14,
+                    "italic": true,
+                    "color": {
+                      "themeColorType": "fontColor"
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "title": "Days covered",
+                "showTitle": true,
+                "description": "Days in the snapshot. New numbers: run the notebook again.",
+                "showDescription": true
+              }
+            }
+          },
+          "position": {
+            "x": 9,
+            "y": 0,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "c080468a",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "f05562ff",
+                  "fields": [
+                    {
+                      "name": "target",
+                      "expression": "`target`"
+                    },
+                    {
+                      "name": "sum(value)",
+                      "expression": "SUM(`value`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(value)",
+                  "displayName": "Spend with no cost-center tag",
+                  "style": {
+                    "bold": true,
+                    "fontSize": 32,
+                    "color": "#c2610c"
+                  },
+                  "format": {
+                    "type": "number-currency",
+                    "currencyCode": "USD",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 0
+                    }
+                  }
+                },
+                "target": {
+                  "fieldName": "target",
+                  "displayName": "target",
+                  "style": {
+                    "fontSize": 14,
+                    "italic": true,
+                    "color": {
+                      "themeColorType": "fontColor"
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "title": "Spend with no cost-center tag",
+                "showTitle": true,
+                "description": "Spend matching none of the chargeback keys (cost_center, domain by default, first match wins).",
+                "showDescription": true
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 3,
+            "width": 4,
+            "height": 4
+          }
+        },
+        {
+          "widget": {
+            "name": "1fb1698c",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "de4b4225",
+                  "fields": [
+                    {
+                      "name": "target",
+                      "expression": "`target`"
+                    },
+                    {
+                      "name": "sum(value)",
+                      "expression": "SUM(`value`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(value)",
+                  "displayName": "Unnamed workspaces still billing",
+                  "style": {
+                    "bold": true,
+                    "fontSize": 32,
+                    "color": "#a8261d"
+                  }
+                },
+                "target": {
+                  "fieldName": "target",
+                  "displayName": "target",
+                  "style": {
+                    "fontSize": 14,
+                    "italic": true,
+                    "color": {
+                      "themeColorType": "fontColor"
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "title": "Unnamed workspaces still billing",
+                "showTitle": true,
+                "description": "Billed workspace ids missing from the account's own list; Critical if still billing now, Warn if stopped within 90 days.",
+                "showDescription": true
+              }
+            }
+          },
+          "position": {
+            "x": 4,
+            "y": 3,
+            "width": 4,
+            "height": 4
+          }
+        },
+        {
+          "widget": {
+            "name": "76d36d9c",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "945e2e8c",
+                  "fields": [
+                    {
+                      "name": "target",
+                      "expression": "`target`"
+                    },
+                    {
+                      "name": "max(value)",
+                      "expression": "MAX(`value`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "max(value)",
+                  "displayName": "Serverless DBUs with no policy",
+                  "style": {
+                    "bold": true,
+                    "fontSize": 32,
+                    "color": "#c2610c"
+                  }
+                },
+                "target": {
+                  "fieldName": "target",
+                  "displayName": "target",
+                  "style": {
+                    "fontSize": 14,
+                    "italic": true,
+                    "color": {
+                      "themeColorType": "fontColor"
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "title": "Serverless DBUs with no policy",
+                "showTitle": true,
+                "description": "Serverless DBUs with no usage or budget policy attached (policy_coverage = none).",
+                "showDescription": true
+              }
+            }
+          },
+          "position": {
+            "x": 8,
+            "y": 3,
+            "width": 4,
+            "height": 4
+          }
+        },
+        {
+          "widget": {
+            "name": "4670b7e5",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "69efbf7f",
+                  "fields": [
+                    {
+                      "name": "target",
+                      "expression": "`target`"
+                    },
+                    {
+                      "name": "sum(value)",
+                      "expression": "SUM(`value`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(value)",
+                  "displayName": "Tag 1",
+                  "style": {
+                    "bold": true,
+                    "fontSize": 32,
+                    "color": "#c2610c"
+                  },
+                  "format": {
+                    "type": "number-currency",
+                    "currencyCode": "USD",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 0
+                    }
+                  }
+                },
+                "target": {
+                  "fieldName": "target",
+                  "displayName": "target",
+                  "style": {
+                    "fontSize": 14,
+                    "italic": true,
+                    "color": {
+                      "themeColorType": "fontColor"
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "title": "Tag 1",
+                "showTitle": true,
+                "description": "Key 1 of the snapshot's tag_keys setting; $ and % are its untagged spend, from \"Chargeback by tag value\".",
+                "showDescription": true
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 7,
+            "width": 4,
+            "height": 4
+          }
+        },
+        {
+          "widget": {
+            "name": "8a264bae",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "d92db39e",
+                  "fields": [
+                    {
+                      "name": "target",
+                      "expression": "`target`"
+                    },
+                    {
+                      "name": "sum(value)",
+                      "expression": "SUM(`value`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(value)",
+                  "displayName": "Tag 2",
+                  "style": {
+                    "bold": true,
+                    "fontSize": 32,
+                    "color": "#c2610c"
+                  },
+                  "format": {
+                    "type": "number-currency",
+                    "currencyCode": "USD",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 0
+                    }
+                  }
+                },
+                "target": {
+                  "fieldName": "target",
+                  "displayName": "target",
+                  "style": {
+                    "fontSize": 14,
+                    "italic": true,
+                    "color": {
+                      "themeColorType": "fontColor"
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "title": "Tag 2",
+                "showTitle": true,
+                "description": "Key 2 of the snapshot's tag_keys setting; $ and % are its untagged spend, from \"Chargeback by tag value\".",
+                "showDescription": true
+              }
+            }
+          },
+          "position": {
+            "x": 4,
+            "y": 7,
+            "width": 4,
+            "height": 4
+          }
+        },
+        {
+          "widget": {
+            "name": "5d5d38dc",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "e5f0d5df",
+                  "fields": [
+                    {
+                      "name": "target",
+                      "expression": "`target`"
+                    },
+                    {
+                      "name": "sum(value)",
+                      "expression": "SUM(`value`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(value)",
+                  "displayName": "Tag 3",
+                  "style": {
+                    "bold": true,
+                    "fontSize": 32,
+                    "color": "#c2610c"
+                  },
+                  "format": {
+                    "type": "number-currency",
+                    "currencyCode": "USD",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 0
+                    }
+                  }
+                },
+                "target": {
+                  "fieldName": "target",
+                  "displayName": "target",
+                  "style": {
+                    "fontSize": 14,
+                    "italic": true,
+                    "color": {
+                      "themeColorType": "fontColor"
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "title": "Tag 3",
+                "showTitle": true,
+                "description": "Key 3 of the snapshot's tag_keys setting; $ and % are its untagged spend, from \"Chargeback by tag value\".",
+                "showDescription": true
+              }
+            }
+          },
+          "position": {
+            "x": 8,
+            "y": 7,
+            "width": 4,
+            "height": 4
+          }
+        },
+        {
+          "widget": {
+            "name": "03c42002",
+            "multilineTextboxSpec": {
+              "lines": [
+                "Missing means no tag at every level checked: the object's own tag, its job or compute, then its workspace. A workspace with no name on the account's own list can carry no workspace tag either.\n"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 11,
+            "width": 12,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "3f548019",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "5186ca16",
+                  "fields": [
+                    {
+                      "name": "workspace",
+                      "expression": "`workspace`"
+                    },
+                    {
+                      "name": "sum(usd)",
+                      "expression": "SUM(`usd`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "sum(usd)",
+                  "displayName": "Spend with no tag",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "format": {
+                    "type": "number-currency",
+                    "currencyCode": "USD",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 0
+                    }
+                  }
+                },
+                "y": {
+                  "fieldName": "workspace",
+                  "displayName": "Workspace",
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "x-reversed"
+                    }
+                  }
+                },
+                "label": {
+                  "show": false
+                }
+              },
+              "frame": {
+                "title": "Spend with no cost-center tag, by workspace",
+                "showTitle": true,
+                "description": "Same chargeback-key gap as the KPI above, broken out by workspace.",
+                "showDescription": true
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 12,
+            "width": 6,
+            "height": 7
+          }
+        },
+        {
+          "widget": {
+            "name": "f2d4082f",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "fca8004d",
+                  "fields": [
+                    {
+                      "name": "coverage",
+                      "expression": "`coverage`"
+                    },
+                    {
+                      "name": "max(dbus)",
+                      "expression": "MAX(`dbus`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "max(dbus)",
+                  "displayName": "DBUs",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "y": {
+                  "fieldName": "coverage",
+                  "displayName": "Coverage",
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "x-reversed"
+                    }
+                  }
+                },
+                "label": {
+                  "show": false
+                }
+              },
+              "frame": {
+                "title": "Serverless DBUs by usage-policy coverage",
+                "showTitle": true,
+                "description": "Serverless DBUs split by whether a usage policy, a legacy budget policy, or no policy priced them.",
+                "showDescription": true
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 12,
+            "width": 6,
+            "height": 7
+          }
+        },
+        {
+          "widget": {
+            "name": "3546b83c",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "822953cc",
+                  "fields": [
+                    {
+                      "name": "value_label",
+                      "expression": "`value_label`"
+                    },
+                    {
+                      "name": "tag_key",
+                      "expression": "`tag_key`"
+                    },
+                    {
+                      "name": "sum(usd)",
+                      "expression": "SUM(`usd`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "sum(usd)",
+                  "displayName": "Spend",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "format": {
+                    "type": "number-currency",
+                    "currencyCode": "USD",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 0
+                    }
+                  }
+                },
+                "y": {
+                  "fieldName": "value_label",
+                  "displayName": "Tag value",
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "x-reversed"
+                    }
+                  }
+                },
+                "label": {
+                  "show": false
+                },
+                "color": {
+                  "fieldName": "tag_key",
+                  "displayName": "tag_key",
+                  "legend": {
+                    "position": "bottom"
+                  },
+                  "scale": {
+                    "type": "categorical"
+                  }
+                }
+              },
+              "frame": {
+                "title": "Spend by tag value, per key",
+                "showTitle": true,
+                "description": "Top 6 values per key by $ spend; '(other)' pools the rest. Untagged rows are excluded, shown in the chart below.",
+                "showDescription": true
+              },
+              "mark": {
+                "layout": "stack"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 19,
+            "width": 6,
+            "height": 7
+          }
+        },
+        {
+          "widget": {
+            "name": "ab8ca144",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "aeebd2ae",
+                  "fields": [
+                    {
+                      "name": "workspace",
+                      "expression": "`workspace`"
+                    },
+                    {
+                      "name": "tag_key",
+                      "expression": "`tag_key`"
+                    },
+                    {
+                      "name": "sum(usd)",
+                      "expression": "SUM(`usd`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "sum(usd)",
+                  "displayName": "Untagged spend",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "format": {
+                    "type": "number-currency",
+                    "currencyCode": "USD",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 0
+                    }
+                  }
+                },
+                "y": {
+                  "fieldName": "workspace",
+                  "displayName": "Workspace",
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "x-reversed"
+                    }
+                  }
+                },
+                "label": {
+                  "show": false
+                },
+                "color": {
+                  "fieldName": "tag_key",
+                  "displayName": "tag_key",
+                  "legend": {
+                    "position": "bottom"
+                  },
+                  "scale": {
+                    "type": "categorical"
+                  }
+                }
+              },
+              "frame": {
+                "title": "Untagged spend by workspace, per key",
+                "showTitle": true,
+                "description": "Per workspace, $ spend with no value for that key at all, from \"Chargeback by tag value\"'s own untagged row.",
+                "showDescription": true
+              },
+              "mark": {
+                "layout": "stack"
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 19,
+            "width": 6,
+            "height": 7
+          }
+        },
+        {
+          "widget": {
+            "name": "9f9c0b51",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "96a4e1f5",
+                  "fields": [
+                    {
+                      "name": "status",
+                      "expression": "`status`"
+                    },
+                    {
+                      "name": "workspace",
+                      "expression": "`workspace`"
+                    },
+                    {
+                      "name": "first_used",
+                      "expression": "`first_used`"
+                    },
+                    {
+                      "name": "last_used",
+                      "expression": "`last_used`"
+                    },
+                    {
+                      "name": "active_days",
+                      "expression": "`active_days`"
+                    },
+                    {
+                      "name": "dbus_365d",
+                      "expression": "`dbus_365d`"
+                    },
+                    {
+                      "name": "usd_window",
+                      "expression": "`usd_window`"
+                    },
+                    {
+                      "name": "usd_365d",
+                      "expression": "`usd_365d`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 1,
+              "widgetType": "table",
+              "allowHTMLByDefault": false,
+              "condensed": false,
+              "withRowNumber": false,
+              "itemsPerPage": 20,
+              "paginationSize": "default",
+              "invisibleColumns": [],
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "status",
+                    "title": "Status",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 0,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "workspace",
+                    "title": "Workspace id",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 1,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "first_used",
+                    "title": "First used",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 2,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "last_used",
+                    "title": "Last used",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 3,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "active_days",
+                    "title": "Active days",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 4,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "0,0.[0]",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "allowSearch": false
+                  },
+                  {
+                    "fieldName": "dbus_365d",
+                    "title": "DBUs, 365d",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 5,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "0,0.[0]",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "allowSearch": false
+                  },
+                  {
+                    "fieldName": "usd_window",
+                    "title": "Spend in window",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 6,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "$0,0",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "allowSearch": false
+                  },
+                  {
+                    "fieldName": "usd_365d",
+                    "title": "Spend, 365d",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 7,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "$0,0",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "allowSearch": false
+                  }
+                ]
+              },
+              "frame": {
+                "title": "Workspaces missing from the account's list",
+                "showTitle": true,
+                "showDescription": true,
+                "description": "Billed workspace ids with no match in workspace names, worst (still billing) first."
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 26,
+            "width": 12,
+            "height": 8
+          }
+        },
+        {
+          "widget": {
+            "name": "72795d6d",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "4c418ba1",
+                  "fields": [
+                    {
+                      "name": "status",
+                      "expression": "`status`"
+                    },
+                    {
+                      "name": "workspace",
+                      "expression": "`workspace`"
+                    },
+                    {
+                      "name": "usage_unit",
+                      "expression": "`usage_unit`"
+                    },
+                    {
+                      "name": "net_usage_quantity",
+                      "expression": "`net_usage_quantity`"
+                    },
+                    {
+                      "name": "usd",
+                      "expression": "`usd`"
+                    },
+                    {
+                      "name": "share_of_unit_pct",
+                      "expression": "`share_of_unit_pct`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 1,
+              "widgetType": "table",
+              "allowHTMLByDefault": false,
+              "condensed": false,
+              "withRowNumber": false,
+              "itemsPerPage": 20,
+              "paginationSize": "default",
+              "invisibleColumns": [],
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "status",
+                    "title": "Status",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 0,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "workspace",
+                    "title": "Workspace",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 1,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "usage_unit",
+                    "title": "Unit",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 2,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "net_usage_quantity",
+                    "title": "Quantity",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 3,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "0,0.[0]",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "allowSearch": false
+                  },
+                  {
+                    "fieldName": "usd",
+                    "title": "Spend",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 4,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "$0,0",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "allowSearch": false
+                  },
+                  {
+                    "fieldName": "share_of_unit_pct",
+                    "title": "Share of unit %",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 5,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "0,0.[0]",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "allowSearch": false
+                  }
+                ]
+              },
+              "frame": {
+                "title": "Spend with no cost-center tag, worst rows",
+                "showTitle": true,
+                "showDescription": true,
+                "description": "Rows flagged Critical (50%+ of unit spend unmatched) or Warn (20%+), from \"Spend with no cost center or team tag\"."
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 34,
+            "width": 12,
+            "height": 8
+          }
+        },
+        {
+          "widget": {
+            "name": "e8ebf6d6",
+            "multilineTextboxSpec": {
+              "lines": [
+                "## Every check on this page\n",
+                "Each check's own rows, worst first.\n"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 42,
+            "width": 12,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "cf4035ec",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "b72ef127",
+                  "fields": [
+                    {
+                      "name": "check_title",
+                      "expression": "`check_title`"
+                    },
+                    {
+                      "name": "verdict",
+                      "expression": "`verdict`"
+                    },
+                    {
+                      "name": "critical_rows",
+                      "expression": "`critical_rows`"
+                    },
+                    {
+                      "name": "warn_rows",
+                      "expression": "`warn_rows`"
+                    },
+                    {
+                      "name": "row_count",
+                      "expression": "`row_count`"
+                    },
+                    {
+                      "name": "error",
+                      "expression": "`error`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 1,
+              "widgetType": "table",
+              "allowHTMLByDefault": false,
+              "condensed": false,
+              "withRowNumber": false,
+              "itemsPerPage": 20,
+              "paginationSize": "default",
+              "invisibleColumns": [],
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "check_title",
+                    "title": "Check",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 0,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "verdict",
+                    "title": "Verdict",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 1,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "critical_rows",
+                    "title": "Critical rows",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 2,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "0,0",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "allowSearch": false
+                  },
+                  {
+                    "fieldName": "warn_rows",
+                    "title": "Warn rows",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 3,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "0,0",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "allowSearch": false
+                  },
+                  {
+                    "fieldName": "row_count",
+                    "title": "Rows",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 4,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "0,0",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "allowSearch": false
+                  },
+                  {
+                    "fieldName": "error",
+                    "title": "Why not assessed",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 5,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  }
+                ]
+              },
+              "frame": {
+                "title": "Checks on this page",
+                "showTitle": true,
+                "showDescription": true,
+                "description": "Each check's verdict from the snapshot: Critical or Warn when any row is flagged, Not assessed when the check could not run (the reason is in the last column)."
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 44,
+            "width": 12,
+            "height": 8
+          }
+        },
+        {
+          "widget": {
+            "name": "b2826291",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "1a1bd1a1",
+                  "fields": [
+                    {
+                      "name": "workspace_shown",
+                      "expression": "`workspace_shown`"
+                    },
+                    {
+                      "name": "usage_date",
+                      "expression": "`usage_date`"
+                    },
+                    {
+                      "name": "cloud",
+                      "expression": "`cloud`"
+                    },
+                    {
+                      "name": "billing_origin_product",
+                      "expression": "`billing_origin_product`"
+                    },
+                    {
+                      "name": "tag_key",
+                      "expression": "`tag_key`"
+                    },
+                    {
+                      "name": "tag_value",
+                      "expression": "`tag_value`"
+                    },
+                    {
+                      "name": "net_usage_quantity",
+                      "expression": "`net_usage_quantity`"
+                    },
+                    {
+                      "name": "record_count",
+                      "expression": "`record_count`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 1,
+              "widgetType": "table",
+              "allowHTMLByDefault": false,
+              "condensed": false,
+              "withRowNumber": false,
+              "itemsPerPage": 20,
+              "paginationSize": "default",
+              "invisibleColumns": [],
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "workspace_shown",
+                    "title": "Workspace",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 0,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": true,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "usage_date",
+                    "title": "Day",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 1,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "cloud",
+                    "title": "Cloud",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 2,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "billing_origin_product",
+                    "title": "Product",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 3,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "tag_key",
+                    "title": "Tag Key",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 4,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "tag_value",
+                    "title": "Tag Value",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 5,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "net_usage_quantity",
+                    "title": "Usage (DBU)",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 6,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "0,0.[00]",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "allowSearch": false
+                  },
+                  {
+                    "fieldName": "record_count",
+                    "title": "Record Count",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 7,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "0,0",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "allowSearch": false
+                  }
+                ]
+              },
+              "frame": {
+                "title": "Spend by cost center or team",
+                "showTitle": true,
+                "showDescription": true,
+                "description": "The same spend split by whichever tag key a workspace actually carries."
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 52,
+            "width": 12,
+            "height": 8
+          }
+        },
+        {
+          "widget": {
+            "name": "d6699a9c",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "b110cf5e",
+                  "fields": [
+                    {
+                      "name": "workspace_shown",
+                      "expression": "`workspace_shown`"
+                    },
+                    {
+                      "name": "status",
+                      "expression": "`status`"
+                    },
+                    {
+                      "name": "usage_unit",
+                      "expression": "`usage_unit`"
+                    },
+                    {
+                      "name": "allocation_key",
+                      "expression": "`allocation_key`"
+                    },
+                    {
+                      "name": "allocation_value",
+                      "expression": "`allocation_value`"
+                    },
+                    {
+                      "name": "is_missing_allocation_key",
+                      "expression": "`is_missing_allocation_key`"
+                    },
+                    {
+                      "name": "net_usage_quantity",
+                      "expression": "`net_usage_quantity`"
+                    },
+                    {
+                      "name": "net_list_cost_usd",
+                      "expression": "`net_list_cost_usd`"
+                    },
+                    {
+                      "name": "share_of_unit_pct",
+                      "expression": "`share_of_unit_pct`"
+                    },
+                    {
+                      "name": "price_basis",
+                      "expression": "`price_basis`"
+                    },
+                    {
+                      "name": "not_assessed_reason",
+                      "expression": "`not_assessed_reason`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 1,
+              "widgetType": "table",
+              "allowHTMLByDefault": false,
+              "condensed": false,
+              "withRowNumber": false,
+              "itemsPerPage": 20,
+              "paginationSize": "default",
+              "invisibleColumns": [],
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "workspace_shown",
+                    "title": "Workspace",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 0,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": true,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "status",
+                    "title": "Status",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 1,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "usage_unit",
+                    "title": "Usage Unit",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 2,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "allocation_key",
+                    "title": "Allocation Key",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 3,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "allocation_value",
+                    "title": "Allocation Value",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 4,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "is_missing_allocation_key",
+                    "title": "Is Missing Allocation Key",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 5,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "net_usage_quantity",
+                    "title": "Usage (DBU)",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 6,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "0,0.[00]",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "allowSearch": false
+                  },
+                  {
+                    "fieldName": "net_list_cost_usd",
+                    "title": "Net List Cost $",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 7,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "$0,0.[00]",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "allowSearch": false
+                  },
+                  {
+                    "fieldName": "share_of_unit_pct",
+                    "title": "Share Of Unit %",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 8,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "0,0.[00]",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "allowSearch": false
+                  },
+                  {
+                    "fieldName": "price_basis",
+                    "title": "Price basis",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 9,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "not_assessed_reason",
+                    "title": "Why not assessed",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 10,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  }
+                ]
+              },
+              "frame": {
+                "title": "Spend with no cost center or team tag",
+                "showTitle": true,
+                "showDescription": true,
+                "description": "Share of a workspace's spend that can't be charged back; flagged from 20%. Fix: tag the resource or its serverless usage policy."
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 60,
+            "width": 12,
+            "height": 8
+          }
+        },
+        {
+          "widget": {
+            "name": "22bacd10",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "889039a1",
+                  "fields": [
+                    {
+                      "name": "workspace_shown",
+                      "expression": "`workspace_shown`"
+                    },
+                    {
+                      "name": "status",
+                      "expression": "`status`"
+                    },
+                    {
+                      "name": "tag_key",
+                      "expression": "`tag_key`"
+                    },
+                    {
+                      "name": "tag_value",
+                      "expression": "`tag_value`"
+                    },
+                    {
+                      "name": "is_other",
+                      "expression": "`is_other`"
+                    },
+                    {
+                      "name": "is_untagged",
+                      "expression": "`is_untagged`"
+                    },
+                    {
+                      "name": "pooled_count",
+                      "expression": "`pooled_count`"
+                    },
+                    {
+                      "name": "usd_list",
+                      "expression": "`usd_list`"
+                    },
+                    {
+                      "name": "share_of_total_pct",
+                      "expression": "`share_of_total_pct`"
+                    },
+                    {
+                      "name": "prev_usd_list",
+                      "expression": "`prev_usd_list`"
+                    },
+                    {
+                      "name": "change_usd_list",
+                      "expression": "`change_usd_list`"
+                    },
+                    {
+                      "name": "change_pct",
+                      "expression": "`change_pct`"
+                    },
+                    {
+                      "name": "price_basis",
+                      "expression": "`price_basis`"
+                    },
+                    {
+                      "name": "not_assessed_reason",
+                      "expression": "`not_assessed_reason`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 1,
+              "widgetType": "table",
+              "allowHTMLByDefault": false,
+              "condensed": false,
+              "withRowNumber": false,
+              "itemsPerPage": 20,
+              "paginationSize": "default",
+              "invisibleColumns": [],
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "workspace_shown",
+                    "title": "Workspace",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 0,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": true,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "status",
+                    "title": "Status",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 1,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "tag_key",
+                    "title": "Tag Key",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 2,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "tag_value",
+                    "title": "Tag Value",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 3,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "is_other",
+                    "title": "Is Other",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 4,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "is_untagged",
+                    "title": "Is Untagged",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 5,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "pooled_count",
+                    "title": "Pooled Count",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 6,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "0,0",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "allowSearch": false
+                  },
+                  {
+                    "fieldName": "usd_list",
+                    "title": "Spend in this row ($)",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 7,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "$0,0.[00]",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "allowSearch": false
+                  },
+                  {
+                    "fieldName": "share_of_total_pct",
+                    "title": "Share Of Total %",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 8,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "0,0.[00]",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "allowSearch": false
+                  },
+                  {
+                    "fieldName": "prev_usd_list",
+                    "title": "Prev $ List",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 9,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "$0,0.[00]",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "allowSearch": false
+                  },
+                  {
+                    "fieldName": "change_usd_list",
+                    "title": "Change $ List",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 10,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "$0,0.[00]",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "allowSearch": false
+                  },
+                  {
+                    "fieldName": "change_pct",
+                    "title": "Change %",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 11,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "0,0.[00]",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "allowSearch": false
+                  },
+                  {
+                    "fieldName": "price_basis",
+                    "title": "Price basis",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 12,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "not_assessed_reason",
+                    "title": "Why not assessed",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 13,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  }
+                ]
+              },
+              "frame": {
+                "title": "Chargeback by tag value",
+                "showTitle": true,
+                "showDescription": true,
+                "description": "Spend by every value of every custom tag key your account uses, plus its own (other) and (untagged) rows."
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 68,
+            "width": 12,
+            "height": 8
+          }
+        },
+        {
+          "widget": {
+            "name": "3954e67e",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ec4630ef",
+                  "fields": [
+                    {
+                      "name": "workspace_shown",
+                      "expression": "`workspace_shown`"
+                    },
+                    {
+                      "name": "status",
+                      "expression": "`status`"
+                    },
+                    {
+                      "name": "usage_date",
+                      "expression": "`usage_date`"
+                    },
+                    {
+                      "name": "cloud",
+                      "expression": "`cloud`"
+                    },
+                    {
+                      "name": "billing_origin_product",
+                      "expression": "`billing_origin_product`"
+                    },
+                    {
+                      "name": "is_serverless",
+                      "expression": "`is_serverless`"
+                    },
+                    {
+                      "name": "policy_coverage",
+                      "expression": "`policy_coverage`"
+                    },
+                    {
+                      "name": "tag_coverage",
+                      "expression": "`tag_coverage`"
+                    },
+                    {
+                      "name": "net_usage_quantity",
+                      "expression": "`net_usage_quantity`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 1,
+              "widgetType": "table",
+              "allowHTMLByDefault": false,
+              "condensed": false,
+              "withRowNumber": false,
+              "itemsPerPage": 20,
+              "paginationSize": "default",
+              "invisibleColumns": [],
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "workspace_shown",
+                    "title": "Workspace",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 0,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": true,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "status",
+                    "title": "Status",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 1,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "usage_date",
+                    "title": "Day",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 2,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "cloud",
+                    "title": "Cloud",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 3,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "billing_origin_product",
+                    "title": "Product",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 4,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "is_serverless",
+                    "title": "Is Serverless",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 5,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "policy_coverage",
+                    "title": "Policy Coverage",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 6,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "tag_coverage",
+                    "title": "Tag Coverage",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 7,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "net_usage_quantity",
+                    "title": "Usage (DBU)",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 8,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "0,0.[00]",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "allowSearch": false
+                  }
+                ]
+              },
+              "frame": {
+                "title": "Serverless usage without a policy",
+                "showTitle": true,
+                "showDescription": true,
+                "description": "Serverless usage with no budget/usage policy attached, so it carries no cost-center tag either."
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 76,
+            "width": 12,
+            "height": 8
+          }
+        },
+        {
+          "widget": {
+            "name": "e41e9804",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "6a710b5d",
+                  "fields": [
+                    {
+                      "name": "workspace_shown",
+                      "expression": "`workspace_shown`"
+                    },
+                    {
+                      "name": "status",
+                      "expression": "`status`"
+                    },
+                    {
+                      "name": "first_used",
+                      "expression": "`first_used`"
+                    },
+                    {
+                      "name": "last_used",
+                      "expression": "`last_used`"
+                    },
+                    {
+                      "name": "active_days",
+                      "expression": "`active_days`"
+                    },
+                    {
+                      "name": "dbus_365d",
+                      "expression": "`dbus_365d`"
+                    },
+                    {
+                      "name": "net_list_cost_usd_365d",
+                      "expression": "`net_list_cost_usd_365d`"
+                    },
+                    {
+                      "name": "net_list_cost_usd",
+                      "expression": "`net_list_cost_usd`"
+                    },
+                    {
+                      "name": "lifetime_days",
+                      "expression": "`lifetime_days`"
+                    },
+                    {
+                      "name": "short_lived",
+                      "expression": "`short_lived`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 1,
+              "widgetType": "table",
+              "allowHTMLByDefault": false,
+              "condensed": false,
+              "withRowNumber": false,
+              "itemsPerPage": 20,
+              "paginationSize": "default",
+              "invisibleColumns": [],
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "workspace_shown",
+                    "title": "Workspace",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 0,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": true,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "status",
+                    "title": "Status",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 1,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "first_used",
+                    "title": "First Used",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 2,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "last_used",
+                    "title": "Last Used",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 3,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "active_days",
+                    "title": "Days with any usage",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 4,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "0,0",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "allowSearch": false
+                  },
+                  {
+                    "fieldName": "dbus_365d",
+                    "title": "DBUs, last 365 days",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 5,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "0,0.[00]",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "allowSearch": false
+                  },
+                  {
+                    "fieldName": "net_list_cost_usd_365d",
+                    "title": "Spend, last 365 days ($)",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 6,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "$0,0.[00]",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "allowSearch": false
+                  },
+                  {
+                    "fieldName": "net_list_cost_usd",
+                    "title": "Net List Cost $",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 7,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "$0,0.[00]",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "allowSearch": false
+                  },
+                  {
+                    "fieldName": "lifetime_days",
+                    "title": "Days active, first use to last",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 8,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "0,0",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "allowSearch": false
+                  },
+                  {
+                    "fieldName": "short_lived",
+                    "title": "Active under 30 days",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 9,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  }
+                ]
+              },
+              "frame": {
+                "title": "Spend on workspaces with no name",
+                "showTitle": true,
+                "showDescription": true,
+                "description": "A workspace billed in the last 365 days but missing from the account's own workspace list -- deleted, or outside what this account can see."
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 84,
+            "width": 12,
+            "height": 8
+          }
+        }
+      ]
+    },
+    {
+      "name": "f17fbaff",
+      "displayName": "Global Filters",
+      "pageType": "PAGE_TYPE_GLOBAL_FILTERS",
+      "layoutVersion": "GRID_V1",
+      "layout": [
+        {
+          "widget": {
+            "name": "5d277ea5",
+            "queries": [
+              {
+                "name": "q_886f5448",
+                "query": {
+                  "datasetName": "25cd6de3",
+                  "fields": [
+                    {
+                      "name": "workspace_name",
+                      "expression": "`workspace_name`"
+                    },
+                    {
+                      "name": "workspace_name_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_214bde6c",
+                "query": {
+                  "datasetName": "f05562ff",
+                  "parameters": [
+                    {
+                      "name": "workspace",
+                      "keyword": "workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_ee9310ee",
+                "query": {
+                  "datasetName": "de4b4225",
+                  "parameters": [
+                    {
+                      "name": "workspace",
+                      "keyword": "workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_7f937f5a",
+                "query": {
+                  "datasetName": "945e2e8c",
+                  "parameters": [
+                    {
+                      "name": "workspace",
+                      "keyword": "workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_24e4d5d2",
+                "query": {
+                  "datasetName": "69efbf7f",
+                  "parameters": [
+                    {
+                      "name": "workspace",
+                      "keyword": "workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_d53e26bd",
+                "query": {
+                  "datasetName": "d92db39e",
+                  "parameters": [
+                    {
+                      "name": "workspace",
+                      "keyword": "workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_17d701c2",
+                "query": {
+                  "datasetName": "e5f0d5df",
+                  "parameters": [
+                    {
+                      "name": "workspace",
+                      "keyword": "workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_7e626984",
+                "query": {
+                  "datasetName": "5186ca16",
+                  "parameters": [
+                    {
+                      "name": "workspace",
+                      "keyword": "workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_59fbe642",
+                "query": {
+                  "datasetName": "fca8004d",
+                  "parameters": [
+                    {
+                      "name": "workspace",
+                      "keyword": "workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_4102b78a",
+                "query": {
+                  "datasetName": "822953cc",
+                  "parameters": [
+                    {
+                      "name": "workspace",
+                      "keyword": "workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_a22f9882",
+                "query": {
+                  "datasetName": "aeebd2ae",
+                  "parameters": [
+                    {
+                      "name": "workspace",
+                      "keyword": "workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_a1312a96",
+                "query": {
+                  "datasetName": "96a4e1f5",
+                  "parameters": [
+                    {
+                      "name": "workspace",
+                      "keyword": "workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_901c73a5",
+                "query": {
+                  "datasetName": "4c418ba1",
+                  "parameters": [
+                    {
+                      "name": "workspace",
+                      "keyword": "workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_08dafc3c",
+                "query": {
+                  "datasetName": "1a1bd1a1",
+                  "parameters": [
+                    {
+                      "name": "workspace",
+                      "keyword": "workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_382e91d1",
+                "query": {
+                  "datasetName": "b110cf5e",
+                  "parameters": [
+                    {
+                      "name": "workspace",
+                      "keyword": "workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_879bc44b",
+                "query": {
+                  "datasetName": "889039a1",
+                  "parameters": [
+                    {
+                      "name": "workspace",
+                      "keyword": "workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_cb29365d",
+                "query": {
+                  "datasetName": "ec4630ef",
+                  "parameters": [
+                    {
+                      "name": "workspace",
+                      "keyword": "workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_acf311ff",
+                "query": {
+                  "datasetName": "6a710b5d",
+                  "parameters": [
+                    {
+                      "name": "workspace",
+                      "keyword": "workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-multi-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "workspace_name",
+                    "displayName": "Workspace",
+                    "queryName": "q_886f5448"
+                  },
+                  {
+                    "parameterName": "workspace",
+                    "queryName": "q_214bde6c"
+                  },
+                  {
+                    "parameterName": "workspace",
+                    "queryName": "q_ee9310ee"
+                  },
+                  {
+                    "parameterName": "workspace",
+                    "queryName": "q_7f937f5a"
+                  },
+                  {
+                    "parameterName": "workspace",
+                    "queryName": "q_24e4d5d2"
+                  },
+                  {
+                    "parameterName": "workspace",
+                    "queryName": "q_d53e26bd"
+                  },
+                  {
+                    "parameterName": "workspace",
+                    "queryName": "q_17d701c2"
+                  },
+                  {
+                    "parameterName": "workspace",
+                    "queryName": "q_7e626984"
+                  },
+                  {
+                    "parameterName": "workspace",
+                    "queryName": "q_59fbe642"
+                  },
+                  {
+                    "parameterName": "workspace",
+                    "queryName": "q_4102b78a"
+                  },
+                  {
+                    "parameterName": "workspace",
+                    "queryName": "q_a22f9882"
+                  },
+                  {
+                    "parameterName": "workspace",
+                    "queryName": "q_a1312a96"
+                  },
+                  {
+                    "parameterName": "workspace",
+                    "queryName": "q_901c73a5"
+                  },
+                  {
+                    "parameterName": "workspace",
+                    "queryName": "q_08dafc3c"
+                  },
+                  {
+                    "parameterName": "workspace",
+                    "queryName": "q_382e91d1"
+                  },
+                  {
+                    "parameterName": "workspace",
+                    "queryName": "q_879bc44b"
+                  },
+                  {
+                    "parameterName": "workspace",
+                    "queryName": "q_cb29365d"
+                  },
+                  {
+                    "parameterName": "workspace",
+                    "queryName": "q_acf311ff"
+                  }
+                ]
+              },
+              "frame": {
+                "title": "Workspace",
+                "showTitle": true
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 3,
+            "height": 2
+          }
+        }
+      ]
+    }
+  ],
+  "uiSettings": {
+    "theme": {
+      "canvasBackgroundColor": {
+        "light": "#f4f1ea",
+        "dark": "#0d1015"
+      },
+      "widgetBackgroundColor": {
+        "light": "#ffffff",
+        "dark": "#151a21"
+      },
+      "widgetBorderColor": {
+        "light": "#e3ded2",
+        "dark": "#262d38"
+      },
+      "fontColor": {
+        "light": "#1c1b18",
+        "dark": "#e7eaee"
+      },
+      "selectionColor": {
+        "light": "#2356a0",
+        "dark": "#5aa9ff"
+      },
+      "visualizationColors": [
+        "#2356a0",
+        "#d9822b",
+        "#3e8e88",
+        "#7a6fb0",
+        "#9a7b4f",
+        "#b8527a",
+        "#5f7f2a",
+        "#b9b3a5",
+        "#a8261d",
+        "#2f6b4b"
+      ],
+      "widgetHeaderAlignment": "LEFT"
+    },
+    "genieSpace": {
+      "isEnabled": false,
+      "enablementMode": "ENABLEMENT_MODE_UNSPECIFIED"
+    },
+    "applyModeEnabled": false
+  }
+}

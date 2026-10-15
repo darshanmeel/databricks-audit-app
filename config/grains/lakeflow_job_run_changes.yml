@@ -1,0 +1,10 @@
+# config/grains/lakeflow_job_run_changes.yml -- grain = the query's own key columns ONLY; the
+# generator prepends window_days. One row per (workspace_id, job_id, attribute): the body's final
+# UNION ALL emits exactly one row per attribute (a fixed 9-value enum) for each job in `base`, and
+# `base` is itself one row per (workspace_id, job_id) by construction (pair -> one row per
+# candidate job with a baseline, joined 1:1 to each *_wide CTE, all of which GROUP BY
+# workspace_id, job_id).
+lakeflow_job_run_changes:
+  - workspace_id
+  - job_id
+  - attribute

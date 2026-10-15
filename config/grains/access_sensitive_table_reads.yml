@@ -1,0 +1,22 @@
+# config/grains/access_sensitive_table_reads.yml -- P3-SENSITIVE. Grain = the query's own key
+# columns ONLY; the generator prepends window_days (DEC-24). One row per workspace x sensitive
+# table x reader that had at least one read event from that workspace in the window: the body
+# GROUPs table_reads BY (workspace_id, catalog_name, schema_name, table_name, created_by) in
+# reads_agg (JOINed onto sensitive_tables, itself one row per table via its own GROUP BY), so the
+# quintuple is unique by construction. workspace_id comes straight from table_lineage's own
+# workspace_id (confirmed present) -- added to the SELECT/GROUP BY so the app's workspace filter
+# now actually narrows this finding.
+#
+# masked: reader stands in for the raw table_lineage read event's created_by (DEC-66.3); table_name
+# below is the query's own output alias for table_name (unmasked, a real object name).
+#
+# The one account-wide NOT_ASSESSED sentinel row (emitted only when the account has no sensitivity
+# tag or classification result at all) carries workspace_id/table_catalog/table_schema/table_name/
+# reader all NULL -- a second such row could never occur (sensitive_table_count is always exactly
+# one row), so this stays unique too. It has no natural workspace, so a workspace filter drops it.
+access_sensitive_table_reads:
+  - workspace_id
+  - table_catalog
+  - table_schema
+  - table_name
+  - reader

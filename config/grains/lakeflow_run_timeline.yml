@@ -1,0 +1,35 @@
+# config/grains/lakeflow_run_timeline.yml -- T-17. Grain = the query's own key columns ONLY; the
+# generator prepends window_days itself (unique_grain: {columns: [window_days] + grain}, DEC-24).
+# Do not list window_days here.
+#
+# This file covers the 7 C2 "run-timeline" ids only (all read system.lakeflow.job_run_timeline
+# alone): lakeflow_failed_runs, lakeflow_job_queue_time, lakeflow_never_started_runs,
+# lakeflow_phase_cold_start, lakeflow_termination_taxonomy, lakeflow_termination_type_probe,
+# lakeflow_workload_mix_hours. T-16's 5 C1 ids live in config/grains/lakeflow_pipelines.yml and
+# T-18's 9 C3 ids get their own file; this file's --only regeneration must leave those ids' model
+# blocks untouched (DEC-24, and this task's coordination note re: T-18 sharing
+# _findings__jobs_pipelines.yml -- T-17 and T-18 never run at the same time).
+#
+# Every entry below is taken verbatim from the query body's own GROUP BY (output column names, in
+# GROUP BY order), per app/queries/vendored/jobs_pipelines/<id>.sql:
+#   - lakeflow_failed_runs groups end_rows by workspace_id, job_id, run_type, trigger_type,
+#     result_state, termination_code. job_id was added to the SELECT/GROUP BY (it was already read
+#     from job_run_timeline but dropped before the final SELECT) and is therefore now part of the
+#     grain too.
+#   - lakeflow_job_queue_time and lakeflow_phase_cold_start both group end_rows by
+#     workspace_id, job_id (job_id is unique only within a workspace).
+#   - lakeflow_never_started_runs groups by workspace_id, job_id, termination_code.
+#   - lakeflow_termination_taxonomy groups by workspace_id, job_id, termination_code.
+#   - lakeflow_termination_type_probe groups by workspace_id, job_id, termination_type (deliberately not
+#     filtered NOT NULL -- the probe's own point is to surface every value it sees, including NULL
+#     on a pre-population-history row).
+#   - lakeflow_workload_mix_hours groups by workspace_id, job_id, run_type, trigger_type,
+#     date_trunc('DAY', period_start_time) (aliased run_day).
+
+lakeflow_failed_runs: [workspace_id, job_id, run_type, trigger_type, result_state, termination_code]
+lakeflow_job_queue_time: [workspace_id, job_id]
+lakeflow_never_started_runs: [workspace_id, job_id, termination_code]
+lakeflow_phase_cold_start: [workspace_id, job_id]
+lakeflow_termination_taxonomy: [workspace_id, job_id, termination_code]
+lakeflow_termination_type_probe: [workspace_id, job_id, termination_type]
+lakeflow_workload_mix_hours: [workspace_id, job_id, run_type, trigger_type, run_day]

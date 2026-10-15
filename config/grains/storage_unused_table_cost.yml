@@ -1,0 +1,4 @@
+# config/grains/storage_unused_table_cost.yml. Grain = the query's own key columns ONLY; the
+# generator prepends window_days (DEC-24). One row per unused table's (catalog, schema, name); the
+# single is_other=true pooled row carries all three NULL, unique since only one such row exists.
+storage_unused_table_cost: [table_catalog, table_schema, table_name]
