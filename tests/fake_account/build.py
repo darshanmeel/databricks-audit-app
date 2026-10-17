@@ -31,7 +31,9 @@ _more, _long_task, _governance and _rest add the rest, so every check has rows: 
 tasks, a 12-hour run, a pipeline, notebooks, egress, vector search, serving and the AI gateway,
 this app's own queries, spill and pruning, cluster node use, Unity Catalog tables, grants, tags,
 masks, row filters, shares, classification, lineage, audit events, network denials, an instance
-pool, Genie, default storage and predictive optimization.
+pool, Genie, default storage and predictive optimization. extra.py adds workspaces 2006-2014 (tags
+on every object kind, other clouds and regions, price changes, restated bills, job, pipeline,
+warehouse, compute, serving, storage and access cases) and the example entitlements file.
 """
 from __future__ import annotations
 
@@ -51,6 +53,7 @@ import ddl  # noqa: E402
 sys.path.insert(0, str(HERE.parents[1]))
 from tools.snapshot import PREDICATES, parse_metastore_id  # noqa: E402  (as a real export records them)
 import idle_waste as iw  # noqa: E402  (struct builders only)
+sys.path.insert(0, str(HERE))
 
 AS_OF = datetime(2026, 9, 21, 12, 0, 0)
 ACCOUNT = "acme-account"
@@ -71,7 +74,7 @@ RATES = {SKU_SERVERLESS: 0.70, SKU_PRO: 0.55, SKU_ALL_PURPOSE: 0.55, SKU_JOBS: 0
          SKU_NOTEBOOK: 0.95, SKU_SERVING: 0.07, SKU_TOKENS: 0.07, SKU_VECTOR: 0.28, SKU_EGRESS: 0.10,
          SKU_DLT_SERVERLESS: 0.35, SKU_DSU: 0.023, SKU_DSU_EAST: 0.023}
 UNITS = {SKU_EGRESS: "GB", SKU_DSU: "DSU", SKU_DSU_EAST: "DSU"}
-DBU_PER_HOUR = {"SMALL": 12, "MEDIUM": 24, "X_SMALL": 6}
+DBU_PER_HOUR = {"SMALL": 12, "MEDIUM": 24, "X_SMALL": 6, "LARGE": 40, "2X_LARGE": 144}
 
 
 def D(n: int) -> date:
@@ -110,14 +113,14 @@ def put(con, table: str, **row) -> None:
 def bill(con, rid: str, ws: str, sku: str, start: datetime, hours: float, dbu_per_hour: float, *,
          tags: dict | None = None, serverless: bool = False, product: str = "SQL", unit: str = "DBU",
          usage_type: str = "COMPUTE_TIME", features: dict | None = None, run_as: str | None = None,
-         **meta) -> float:
+         cloud: str = "aws", record_type: str = "ORIGINAL", ingested: date | None = None, **meta) -> float:
     """One billing row from `start` lasting `hours` (within one clock hour); returns its quantity."""
     dbus = round(dbu_per_hour * hours, 6)
-    put(con, "billing__usage", account_id=ACCOUNT, workspace_id=ws, record_id=rid, sku_name=sku, cloud="aws",
+    put(con, "billing__usage", account_id=ACCOUNT, workspace_id=ws, record_id=rid, sku_name=sku, cloud=cloud,
         usage_start_time=start.replace(minute=0, second=0), usage_end_time=start.replace(minute=0, second=0) + timedelta(hours=1),
         usage_date=start.date(), custom_tags=tags or {}, usage_unit=unit, usage_quantity=dbus,
         usage_metadata=iw._usage_metadata(**meta), identity_metadata=iw._identity_metadata(run_as=run_as),
-        record_type="ORIGINAL", ingestion_date=start.date(), billing_origin_product=product,
+        record_type=record_type, ingestion_date=ingested or start.date(), billing_origin_product=product,
         product_features=iw._product_features(is_serverless=serverless, **(features or {})), usage_type=usage_type)
     return dbus
 
@@ -537,6 +540,8 @@ def _governance(con, exp: dict) -> None:
     # A recent account records health_rules on every job, as an empty list when it has none;
     # ac_job_badstart keeps the older empty column.
     con.execute("UPDATE lakeflow__jobs SET health_rules = [] WHERE health_rules IS NULL AND job_id <> 'ac_job_badstart'")
+    import extra  # noqa: PLC0415  (extra imports this module)
+    extra.add_all(con, exp)
     _attributed(con)
 
 
@@ -964,6 +969,12 @@ def write(out: Path) -> dict:
         folder = out / key
         folder.mkdir(parents=True, exist_ok=True)
         con.execute(f"COPY (SELECT * FROM \"{key}\") TO '{(folder / 'part-00000.parquet').as_posix()}' (FORMAT PARQUET)")
+    # the row-level access table a real export writes next to the system tables
+    ent = out / "entitlements"
+    ent.mkdir(parents=True, exist_ok=True)
+    con.execute("CREATE TABLE ent (principal VARCHAR, workspace_id VARCHAR, warehouse_id VARCHAR, environment VARCHAR)")
+    con.executemany("INSERT INTO ent VALUES (?, ?, ?, ?)", [list(e.values()) for e in exp["entitlements"]])
+    con.execute(f"COPY ent TO '{(ent / 'entitlements.parquet').as_posix()}' (FORMAT PARQUET)")
     # the shape a real export writes: every table it read, its row count and the dates it covers
     tables = {}
     for key in ddl.DDL:

@@ -73,12 +73,12 @@ def test_warehouse_idle_time(acme):
 
 
 def test_running_time_matches_the_bill(acme):
-    con, _, _ = acme
-    rates = {"SMALL": 12, "MEDIUM": 24, "X_SMALL": 6}
+    con, exp, _ = acme
+    rates = acme_build.DBU_PER_HOUR
     rows = _rows(con, "SELECT i.warehouse_id, i.up_cluster_minutes, i.net_dbus, c.warehouse_size "
                       "FROM findings.f_compute_warehouse_idle_minutes i JOIN findings.f_sql_warehouse_config_current c "
                       "USING (warehouse_id) WHERE i.window_days = 7 AND c.window_days = 0")
-    assert len(rows) == 7
+    assert len(rows) == 7 + exp["new_active_warehouses"]  # the original seven, plus those extra.py runs in the last 7 days
     for r in rows:
         implied = float(r["net_dbus"]) / (float(r["up_cluster_minutes"]) / 60)
         assert implied == pytest.approx(rates[r["warehouse_size"]], rel=0.02), r["warehouse_id"]
@@ -132,8 +132,9 @@ def test_slices_match_the_daily_numbers_and_split_by_tag(acme, monkeypatch):
     assert runs("costcenter:bi") == exp["bi"]["queries"]       # their own query tag
     assert runs("costcenter:data") == exp["etl"]["queries"]    # their warehouse's tag
     assert runs("costcenter:analytics") > 0                    # acme-analytics' warehouse tag
-    assert (runs("costcenter:bi") + runs("costcenter:data") + runs("costcenter:analytics")
-            + runs("costcenter:__untagged__")) == sum(r["runs"] for r in sl)
+    # extra.py adds warehouses of its own (finance, treasury, lab) and one query tag (marketing)
+    assert sum(runs(f"costcenter:{v}") for v in ["bi", "data", "analytics", "__untagged__", *exp["tag_values"]]) == sum(r["runs"] for r in sl)
+    assert runs("costcenter:marketing") == 3 and runs("costcenter:lab") > 0
 
 
 def test_tags_page_follows_the_filter(acme):
@@ -148,8 +149,9 @@ def test_tags_page_counts(acme):
     con, _, _ = acme
     out = tag_compliance.compliance(con, ["cost_center", "domain", "environment"], 30, None, None)
     by = {t["kind"]: t for t in out["types"]}
-    # a deleted warehouse is left out; the serverless notebook that ran statements is counted
-    assert by["warehouses"]["deleted"] == 1 and by["notebooks"]["total"] == 1
+    # deleted warehouses (ac_wh_gone, and extra.py's ac_wh_oldonly billed 50-70 days ago) are left out;
+    # the serverless notebook that ran statements is counted
+    assert by["warehouses"]["deleted"] == 2 and by["notebooks"]["total"] == 1
     # on AWS a job's own bill tag is the job's, though the workspace tag inferred from it has the same value
     assert by["jobs"]["found"]["costcenter"]["compute"] == 1 and by["jobs"]["found"]["costcenter"]["workspace"] == 0
 
@@ -279,9 +281,9 @@ def test_storage_serving_review_cases(acme):
     assert not _rows(con, "SELECT 1 FROM findings.f_storage_small_files WHERE table_name = 'tmp_dropped'")
     assert not _rows(con, "SELECT 1 FROM findings.f_storage_po_coverage WHERE table_name = 'tmp_dropped'")
     # The external table has PO off but cannot get it: managed tables only, all on.
-    cov = _rows(con, "SELECT pct_bytes_without_po FROM findings.f_storage_po_coverage "
-                     "WHERE window_days = 30 AND section = 'catalog_summary'")
-    assert cov and cov[0]["pct_bytes_without_po"] == 0.0
+    cov = _by(_rows(con, "SELECT catalog_name, pct_bytes_without_po FROM findings.f_storage_po_coverage "
+                         "WHERE window_days = 30 AND section = 'catalog_summary'"), "catalog_name")
+    assert cov["acme"]["pct_bytes_without_po"] == 0.0 and cov["lab"]["pct_bytes_without_po"] > 0
     dorm = {r["endpoint_name"]: r for r in _rows(con, "SELECT * FROM findings.f_compute_serving_dormant_endpoints WHERE window_days = 30")}
     # Billed with no tracked request ever: tracking is off, not idle.
     assert dorm["ac-custom"]["status"] == "NOT_ASSESSED" and dorm["ac-custom"]["not_assessed_reason"] == "usage_tracking_off"
@@ -304,3 +306,67 @@ def test_workspace_tag_holds_only_from_its_first_day(acme, monkeypatch):
     by_origin = {o["origin"]: o["usd"] for o in found["keys"][0]["origins"]}
     assert by_origin["workspace"] == pytest.approx(exp["ops"]["nb_usd_30"] / 2, abs=0.01)
 
+
+
+def _statuses(con, table, where="1=1", col="status"):
+    return {r[0] for r in con.execute(f"SELECT {col} FROM findings.{table} WHERE {where}").fetchall()}
+
+
+def test_extra_scenarios_reach_their_statuses(acme):
+    """The cases extra.py adds, each reaching a status no earlier scenario did."""
+    con, _, _ = acme
+    reach = {
+        "f_lakeflow_job_duration_regression": {"WARN", "CRITICAL"}, "f_lakeflow_job_queue_time": {"CRITICAL"},
+        "f_lakeflow_tasks_near_timeout": {"WARN"}, "f_lakeflow_stale_zombie_jobs": {"WARN", "CRITICAL"},
+        "f_lakeflow_job_ownership_orphans": {"WARN"}, "f_lakeflow_retries_repairs": {"WARN"},
+        "f_lakeflow_succeeded_with_failed_tasks": {"WARN"}, "f_lakeflow_never_started_runs": {"WARN"},
+        "f_lakeflow_failed_runs": {"WARN", "CRITICAL"}, "f_lakeflow_pipeline_update_failures_retries": {"CRITICAL"},
+        "f_lakeflow_pipeline_cost": {"CRITICAL"}, "f_lakeflow_job_compute_pressure": {"OK"},
+        "f_compute_warehouse_autoscale_churn": {"WARN"}, "f_query_warehouse_pressure": {"WARN"},
+        "f_query_queuing_waits": {"WARN"}, "f_query_cache_coldstart": {"WARN", "CRITICAL"},
+        "f_instance_pools_idle_capacity": {"WARN"}, "f_node_timeline_utilization": {"WARN"},
+        "f_compute_serving_dormant_endpoints": {"WARN"}, "f_storage_small_files": {"CRITICAL"},
+        "f_storage_po_coverage": {"WARN"}, "f_storage_unused_table_cost": {"CRITICAL"}, "f_storage_growth": {"CRITICAL"},
+        "f_po_failure_reasons": {"WARN"}, "f_po_vacuum_reclaimed_bytes": {"WARN", "CRITICAL"},
+        "f_po_clustering_column_churn": {"WARN", "CRITICAL"}, "f_po_data_skipping_backfill": {"WARN", "CRITICAL"},
+        "f_access_login_concentration": {"CRITICAL"}, "f_access_sensitive_table_reads": {"WARN"},
+        "f_access_table_lineage_blast_radius": {"WARN"}, "f_access_column_lineage_sensitive_reach": {"WARN"},
+        "f_access_pii_propagation_untagged": {"WARN", "CRITICAL"}, "f_access_network_inbound_denials": {"WARN", "CRITICAL"},
+        "f_access_network_outbound_denials": {"WARN"},
+    }
+    missing = {t: want - _statuses(con, t) for t, want in reach.items() if want - _statuses(con, t)}
+    assert missing == {}
+
+
+def test_extra_workspaces_tags_and_regions(acme):
+    con, _, _ = acme
+    region = {r["workspace_id"]: r["in_snapshot_region"] for r in _rows(con, "SELECT workspace_id, in_snapshot_region FROM dims.dim_workspace")}
+    # billed in another cloud or region, or cancelled: no row in any regional table
+    assert region["2006"] and region["2014"] and region["2011"]
+    assert not any(region[w] for w in ("2007", "2008", "2012", "2013"))
+    tag = {r["workspace_id"]: r["tag_value"] for r in _rows(con, "SELECT workspace_id, tag_value FROM tags.tag_workspace WHERE tag_key = 'costcenter'")}
+    assert tag["2009"] == "__mixed__" and tag["2010"] == "__untagged__"        # 50/50 and 40 percent tagged
+    assert tag["2006"] == "finance" and tag["2007"] == "emea"                 # an Azure workspace tag on every bill row
+    prices = _rows(con, "SELECT cloud, sku_name, pricing_default, price_end_time FROM findings.f_pricing_list_prices_raw WHERE window_days = 0")
+    assert {r["cloud"] for r in prices} == {"aws", "azure", "gcp"}
+    # the Azure jobs rate changed 60 days ago: an ended row at 0.30 and an open one at 0.35
+    azure_jobs = sorted((float(r["pricing_default"]), r["price_end_time"] is None) for r in prices
+                        if r["cloud"] == "azure" and r["sku_name"] == "PREMIUM_JOBS_COMPUTE")
+    assert azure_jobs == [(0.30, False), (0.35, True)]
+
+
+def test_example_entitlements_load(acme, tmp_path):
+    """The entitlements file written next to the snapshot loads like the export's: names lower-cased
+    and trimmed, a missing column meaning 'all', and a user with no row seeing nothing."""
+    from app.core import rls
+    _, exp, _ = acme
+    snap = tmp_path / "snap"
+    acme_build.write(snap)
+    con = duckdb.connect()
+    cfg = rls.Rls(True, "a.b.c", ("workspace", "warehouse", "environment"), "query")
+    assert rls.load_entitlements(con, snap / "entitlements" / "entitlements.parquet", {"user": "finops@acme.example"}, cfg) is None
+    assert rls.grants_for(con, "bi@acme.example") == [("2001", "ac_wh_bi", "*")]
+    assert sorted(rls.grants_for(con, "de@acme.example")) == [("2001", "*", "*"), ("2005", "*", "*")]
+    assert rls.grants_for(con, "ops@acme.example") == [("*", "*", "prod")]
+    assert rls.grants_for(con, "mixed.case@acme.example") == [("2011", "*", "*")]
+    assert rls.grants_for(con, "nobody@acme.example") == [] and len(exp["entitlements"]) == 8
