@@ -159,7 +159,7 @@ python tools/deploy_app.py
 
 `config/app.yml` names the app (`lakehouse-health`) and picks who it queries as: the token in
 `.env` (`run_as: user`, the default) or the app's own service principal (`run_as: app`), which
-stores no token. Step by step, with the grants and what differs from a laptop:
+stores no token. An optional `rls:` block limits what each person sees from an entitlements table. Step by step, with the grants and what differs from a laptop:
 [docs/databricks-app.md](docs/databricks-app.md).
 
 ## AI/BI dashboards
@@ -378,7 +378,7 @@ overwrites it, and its values win over `settings.yml`.
 | `config/materiality.yml` | Size floors per check | Page refresh |
 | `config/workspace.csv` | Workspace tags, any cloud (see [Tags](#tags)) | `python tools/load_direct_results.py` |
 | `config/thresholds.yml` | Check limits | `python tools/build_direct_sql.py`, then export |
-| `config/app.yml` | The Databricks App's name and who it runs as | `python tools/deploy_app.py` |
+| `config/app.yml` | The Databricks App's name, who it runs as, and optional row-level access (`rls:`) | `python tools/deploy_app.py` |
 | `dbt/dbt_project.yml` › `env_patterns` | Words that mark prod, uat and dev | `python tools/load_direct_results.py` |
 
 Leave the other files in `config/` alone; the build writes or reads them.

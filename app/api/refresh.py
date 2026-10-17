@@ -14,7 +14,7 @@ import time
 from datetime import datetime
 from pathlib import Path
 
-from app.core import datasource
+from app.core import datasource, rls
 
 ROOT = Path(__file__).resolve().parent.parent.parent
 _lock = threading.Lock()
@@ -55,9 +55,14 @@ def _run(days: int) -> None:
         _state["step"] = "load"
         _call(["tools/load_direct_results.py", str(out), "--db", str(db)])
         previous = os.environ.get("AUDIT_DB")
+        keep = {str(db), previous or ""}
+        if rls.mode() == "export" and rls.is_app():
+            _state["step"] = "split"
+            rls.build_sets(db)
+            keep |= rls.set_files(db) | (rls.set_files(Path(previous)) if previous else set())
         datasource.set_current_db(db)
         os.environ["AUDIT_DB"] = str(db)
-        _remove_old_dbs(base, keep={str(db), previous or ""})
+        _remove_old_dbs(base, keep=keep)
         _remove_old_results(base, keep={out})
         _state.update(running=False, step="done", finished_at=time.time())
     except Exception as exc:  # noqa: BLE001 -- any failure is shown on screen as-is
@@ -68,6 +73,14 @@ def _remove_old_dbs(base: Path, keep: set[str]) -> None:
     # Files from refreshes before the previous one; the previous is still open by the server.
     for f in base.glob("audit-*.duckdb"):
         if str(f) not in keep:
+            try:
+                f.unlink()
+            except OSError:
+                pass
+    # Sidecars of a removed db: audit-<stamp>[.rls-<hash>].<name>.json
+    for f in base.glob("audit-*.json"):
+        db = f.with_name(f.name.rsplit(".", 2)[0] + ".duckdb")
+        if str(db) not in keep and not db.exists():
             try:
                 f.unlink()
             except OSError:

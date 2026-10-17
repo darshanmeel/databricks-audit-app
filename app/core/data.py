@@ -141,6 +141,7 @@ from app.core import finding_columns as app_finding_columns  # noqa: E402
 from app.core import identity as app_identity  # noqa: E402
 from app.core import materiality as app_materiality  # noqa: E402
 from app.core import registry  # noqa: E402
+from app.core import rls  # noqa: E402
 from app.core import tags as app_core_tags  # noqa: E402  -- P4-T-IDX; tags.py imports this module
 from app.core import tag_compliance as app_tag_compliance  # noqa: E402
 from app.core import tag_spend as app_tag_spend  # noqa: E402
@@ -203,6 +204,11 @@ _LEGACY_DB_PATH = ROOT / "data" / "db_audit.duckdb"
 
 
 def _db_path() -> Path:
+    """The db this request reads: the base db, or the signed-in user's own file under rls apply=export."""
+    return rls.resolve(_base_db_path())
+
+
+def _base_db_path() -> Path:
     """AUDIT_DB, else the pointer a refresh last wrote (datasource.current_db(), so a restart
     keeps serving what refresh built), else the data folder's own db once it exists, else the
     legacy dev-build db (data/db_audit.duckdb). First match wins -- no mtime comparison."""
@@ -275,8 +281,8 @@ def _dbt_manifest_path() -> Path:
 # the catalog and dropped DuckDB's block cache, about 1 s per call. Off for tools and tests, which
 # rewrite db files that an open connection would lock.
 share_connection = False
-_SHARED_CON: duckdb.DuckDBPyConnection | None = None
-_SHARED_KEY: tuple | None = None
+_SHARED_CONS: dict = {}  # _identity_key(path) -> connection, least recently used first
+_SHARED_MAX = 8
 _SHARED_LOCK = threading.Lock()
 
 
@@ -302,20 +308,28 @@ def _cap(con: duckdb.DuckDBPyConnection) -> None:
 
 
 def _connect(read_only: bool = True) -> duckdb.DuckDBPyConnection:
-    global _SHARED_CON, _SHARED_KEY
+    if read_only and rls.mode() == "query":
+        return rls.scoped_connection(_base_db_path(), rls.current_principal())
     path = str(_db_path())
     if not (share_connection and read_only):
         return duckdb.connect(path, read_only=read_only)
     key = _identity_key(path)
     with _SHARED_LOCK:
-        if _SHARED_CON is None or _SHARED_KEY != key:
-            new_con = duckdb.connect(path, read_only=True)
-            _cap(new_con)
-            old_con = _SHARED_CON
-            _SHARED_CON, _SHARED_KEY = new_con, key
-            if old_con is not None:
-                old_con.close()  # drop the old file's handle so Windows can delete it
-        return _SHARED_CON.cursor()
+        con = _SHARED_CONS.get(key)
+        if con is None:
+            con = duckdb.connect(path, read_only=True)
+            _cap(con)
+            # Handles of other db versions go, so Windows can delete those files; a user's own file stays.
+            base = _base_db_path()
+            family = {str(base), *rls.set_files(base)}
+            for old in [k for k in _SHARED_CONS if k[0] == key[0] or k[0] not in family]:
+                _SHARED_CONS.pop(old).close()
+            _SHARED_CONS[key] = con
+            while len(_SHARED_CONS) > _SHARED_MAX:  # per-user files: the least recently used goes
+                _SHARED_CONS.pop(next(iter(_SHARED_CONS))).close()
+        else:
+            _SHARED_CONS[key] = _SHARED_CONS.pop(key)
+        return con.cursor()
 
 
 def _file_cached(path_fn):
@@ -331,7 +345,7 @@ def _file_cached(path_fn):
                 st = path.stat()
             except OSError:
                 return fn(*args, **kwargs)
-            key = (str(path), st.st_mtime_ns, st.st_size,
+            key = (str(path), st.st_mtime_ns, st.st_size, rls.scope_key(),
                    repr([a for a in args if not isinstance(a, duckdb.DuckDBPyConnection)]),
                    repr(sorted(kwargs.items())))
             if key not in cache:
@@ -424,7 +438,7 @@ def is_regional(query_id: str) -> bool:
 def _table_columns(con: duckdb.DuckDBPyConnection, query_id: str) -> list[tuple[str, str]]:
     rows = con.execute(
         "SELECT column_name, data_type FROM information_schema.columns "
-        "WHERE table_schema = 'findings' AND table_name = ? ORDER BY ordinal_position",
+        "WHERE table_catalog = current_database() AND table_schema = 'findings' AND table_name = ? ORDER BY ordinal_position",
         [f"f_{query_id}"],
     ).fetchall()
     if not rows:
@@ -640,7 +654,7 @@ def _build_filters(
         if chain.kind == "entity" and con is not None:
             exists = con.execute(
                 "SELECT count(*) FROM information_schema.tables "
-                "WHERE table_schema = 'tags' AND table_name = 'tag_entity'"
+                "WHERE table_catalog = current_database() AND table_schema = 'tags' AND table_name = 'tag_entity'"
             ).fetchone()[0]
             if not exists:
                 raise app_core_tags.TagModelsNotBuiltError(
@@ -1169,7 +1183,7 @@ def finding_window_counts(
             placeholders = ", ".join("?" for _ in table_names)
             for table_name, column_name in con.execute(
                 "SELECT table_name, column_name FROM information_schema.columns "
-                f"WHERE table_schema = 'findings' AND table_name IN ({placeholders}) "
+                f"WHERE table_catalog = current_database() AND table_schema = 'findings' AND table_name IN ({placeholders}) "
                 "ORDER BY table_name, ordinal_position",
                 table_names,
             ).fetchall():
@@ -1184,7 +1198,7 @@ def finding_window_counts(
             tag_entity_exists = bool(
                 con.execute(
                     "SELECT count(*) FROM information_schema.tables "
-                    "WHERE table_schema = 'tags' AND table_name = 'tag_entity'"
+                    "WHERE table_catalog = current_database() AND table_schema = 'tags' AND table_name = 'tag_entity'"
                 ).fetchone()[0]
             )
 
@@ -1321,7 +1335,7 @@ def finding_columns_batch(query_ids: list[str]) -> dict[str, list[str]]:
         placeholders = ", ".join("?" for _ in table_names)
         for table_name, column_name in con.execute(
             "SELECT table_name, column_name FROM information_schema.columns "
-            f"WHERE table_schema = 'findings' AND table_name IN ({placeholders}) "
+            f"WHERE table_catalog = current_database() AND table_schema = 'findings' AND table_name IN ({placeholders}) "
             "ORDER BY table_name, ordinal_position",
             table_names,
         ).fetchall():
@@ -1617,7 +1631,7 @@ def read_abac_policies() -> dict:
     con = _connect()
     try:
         have = {r[0] for r in con.execute(
-            "SELECT table_name FROM information_schema.tables WHERE table_schema = 'governance'"
+            "SELECT table_name FROM information_schema.tables WHERE table_catalog = current_database() AND table_schema = 'governance'"
         ).fetchall()}
         info = None
         if "abac_policies_info" in have:
@@ -1628,7 +1642,7 @@ def read_abac_policies() -> dict:
         cols = ["policy_name", "policy_type", "catalog", "schema", "table_name", "comment", "on_type", "on_name"]
         held = {r[0] for r in con.execute(
             "SELECT column_name FROM information_schema.columns "
-            "WHERE table_schema = 'governance' AND table_name = 'abac_policies'"
+            "WHERE table_catalog = current_database() AND table_schema = 'governance' AND table_name = 'abac_policies'"
         ).fetchall()}
         picked = ", ".join(c if c in held else f"NULL AS {c}" for c in cols)
         rows = [dict(zip(cols, r)) for r in con.execute(
@@ -1648,7 +1662,7 @@ def read_workspace_tags(workspace_scope: set[str] | None, tag_filter=None) -> li
     try:
         built = con.execute(
             "SELECT 1 FROM information_schema.tables "
-            "WHERE table_schema = 'tags' AND table_name = 'tag_workspace'"
+            "WHERE table_catalog = current_database() AND table_schema = 'tags' AND table_name = 'tag_workspace'"
         ).fetchone()
         if not built:
             return None

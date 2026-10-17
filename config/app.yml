@@ -8,3 +8,14 @@ name: lakehouse-health
 #   user  the token in .env (yours, or another user's or service principal's); stored in app.yaml
 #   app   the app's own service principal; no token stored, a metastore admin grants it access once
 run_as: user
+
+# Row-level access: each person sees only the workspaces (and warehouses, environments) the
+# entitlements table grants them. Off by default; docs/databricks-app.md.
+rls:
+  enabled: false
+  # One row per grant: principal (email), workspace_id, warehouse_id, environment; '*' or empty = all.
+  table: main.governance.audit_entitlements
+  # Which columns filter: any of workspace, warehouse, environment.
+  columns: [workspace]
+  # Databricks App only: query (filter per signed-in user) or export (one data file per distinct grant set).
+  apply: query

@@ -25,7 +25,7 @@ ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from app.core import datasource  # noqa: E402
+from app.core import datasource, rls  # noqa: E402
 from tools import export_direct_results as edr  # noqa: E402
 
 SETTINGS = ROOT / "config" / "app.yml"
@@ -58,13 +58,22 @@ def read_settings(path: Path = SETTINGS, local: Path = LOCAL_SETTINGS) -> dict:
     raw = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
     if local.exists():
         raw.update(yaml.safe_load(local.read_text(encoding="utf-8")) or {})
+    raw.pop("rls", None)  # merged key by key below
     name = str(raw.get("name") or "")
     if not NAME_RE.match(name):
         raise DeployError("name in config/app.yml: 2-30 lowercase letters, numbers or dashes")
     run_as = str(raw.get("run_as") or "user")
     if run_as not in RUN_AS:
         raise DeployError("run_as in config/app.yml: user (the token in .env) or app (the app's own service principal)")
-    return {"name": name, "run_as": run_as}
+    out = {"name": name, "run_as": run_as}
+    try:
+        block = rls.merged_block(path, local)
+        if block:
+            rls.validate(block)
+            out["rls"] = block
+    except rls.RlsError as exc:
+        raise DeployError(str(exc)) from exc
+    return out
 
 
 def warehouse_resource(http_path: str) -> dict:
@@ -80,11 +89,18 @@ def has_warehouse(app: dict, resource: dict) -> bool:
     return any((r.get("sql_warehouse") or {}).get("id") == wanted for r in app.get("resources") or [])
 
 
-def grant_sql(principal: str) -> list[str]:
-    """What a metastore admin runs so the app's service principal can read the system tables."""
-    return [f"GRANT USE CATALOG ON CATALOG system TO `{principal}`;"] + [
+def grant_sql(principal: str, entitlements: str | None = None) -> list[str]:
+    """What a metastore admin runs so the app's service principal can read the system tables
+    and, with row-level access on, the entitlements table."""
+    out = [f"GRANT USE CATALOG ON CATALOG system TO `{principal}`;"] + [
         f"GRANT USE SCHEMA, SELECT ON SCHEMA system.{s} TO `{principal}`;" for s in SYSTEM_SCHEMAS
     ]
+    if entitlements:
+        cat, sch, _ = entitlements.split(".")
+        out += [f"GRANT USE CATALOG ON CATALOG {cat} TO `{principal}`;",
+                f"GRANT USE SCHEMA ON SCHEMA {cat}.{sch} TO `{principal}`;",
+                f"GRANT SELECT ON TABLE {entitlements} TO `{principal}`;"]
+    return out
 
 
 def duckdb_pin(requirements: Path = ROOT / "requirements.txt") -> str:
@@ -108,7 +124,7 @@ def fetch_wheel(folder: Path, pin: str) -> Path:
     return found[-1]
 
 
-def stage(folder: Path, env: dict, wheel: Path, run_as: str = "user") -> None:
+def stage(folder: Path, env: dict, wheel: Path, run_as: str = "user", settings: dict | None = None) -> None:
     """A fresh copy of what the app runs, with its own app.yaml and the wheel in parts. Only
     run_as user puts the token in app.yaml."""
     folder.mkdir(parents=True, exist_ok=True)
@@ -121,6 +137,8 @@ def stage(folder: Path, env: dict, wheel: Path, run_as: str = "user") -> None:
             p.unlink()
     for d in COPY_DIRS:
         shutil.copytree(ROOT / d, folder / d, ignore=SKIP)
+    if settings and "rls" in settings:  # app.local.yml is skipped above, so the app gets the merged values
+        (folder / "config" / "app.yml").write_text(yaml.safe_dump(settings, sort_keys=False), encoding="utf-8", newline="\n")
     data = wheel.read_bytes()
     (folder / "wheels").mkdir()
     for i in range(0, len(data), PART_BYTES):
@@ -167,7 +185,7 @@ def main() -> int:
 
         wheel = fetch_wheel(base / "wheels", duckdb_pin())
         local = base / name
-        stage(local, env, wheel, run_as)
+        stage(local, env, wheel, run_as, settings)
         user = json.loads(cli(["current-user", "me", "-o", "json"], cli_env, token))["userName"]
         folder = f"/Workspace/Users/{user}/{name}"
         print(f"code -> {folder}", flush=True)
@@ -191,7 +209,7 @@ def main() -> int:
             principal = app.get("service_principal_client_id") or "<the app's service principal>"
             print(f"the app queries as its service principal {app.get('service_principal_name') or principal}."
                   " Once, a metastore admin runs:")
-            for line in grant_sql(principal):
+            for line in grant_sql(principal, (settings.get("rls") or {}).get("table") if (settings.get("rls") or {}).get("enabled") else None):
                 print(f"  {line}")
         url = app.get("url") or "the app's page in Compute > Apps"
         print(f"done: open {url}, pick the days and click Get")

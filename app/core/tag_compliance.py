@@ -56,7 +56,7 @@ def key_variants(keys: list[str]) -> dict[str, str]:
 def _has_delete_time(con: duckdb.DuckDBPyConnection, table: str) -> bool:
     """Older exports carry no delete_time: every row counts, and the page says so."""
     return bool(con.execute(
-        "SELECT 1 FROM information_schema.columns WHERE table_schema = 'dims' AND table_name = ? "
+        "SELECT 1 FROM information_schema.columns WHERE table_catalog = current_database() AND table_schema = 'dims' AND table_name = ? "
         "AND column_name = 'delete_time'", [table],
     ).fetchone())
 
@@ -71,14 +71,14 @@ def _azure_workspaces(con: duckdb.DuckDBPyConnection) -> set[str] | None:
 
 def _has_column(con: duckdb.DuckDBPyConnection, schema: str, table: str, column: str) -> bool:
     return bool(con.execute(
-        "SELECT 1 FROM information_schema.columns WHERE table_schema = ? AND table_name = ? AND column_name = ?",
+        "SELECT 1 FROM information_schema.columns WHERE table_catalog = current_database() AND table_schema = ? AND table_name = ? AND column_name = ?",
         [schema, table, column],
     ).fetchone())
 
 
 def _has_table(con: duckdb.DuckDBPyConnection, schema: str, name: str) -> bool:
     return bool(con.execute(
-        "SELECT 1 FROM information_schema.tables WHERE table_schema = ? AND table_name = ?", [schema, name]
+        "SELECT 1 FROM information_schema.tables WHERE table_catalog = current_database() AND table_schema = ? AND table_name = ?", [schema, name]
     ).fetchone())
 
 

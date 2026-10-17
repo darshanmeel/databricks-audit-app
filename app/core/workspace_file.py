@@ -32,7 +32,7 @@ def read(path: Path = PATH) -> dict[str, dict[str, str]]:
 
 def _columns(con: duckdb.DuckDBPyConnection, table: str) -> list[str]:
     return [r[0] for r in con.execute(
-        "SELECT column_name FROM information_schema.columns WHERE table_schema = 'tags' AND table_name = ? "
+        "SELECT column_name FROM information_schema.columns WHERE table_catalog = current_database() AND table_schema = 'tags' AND table_name = ? "
         "ORDER BY ordinal_position", [table]).fetchall()]
 
 

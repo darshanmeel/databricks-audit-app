@@ -1128,6 +1128,9 @@ export default function App() {
       {/* Desktop shows this notice in the top bar; phones hide the bar's controls, so it shows here. */}
       <div className="c-region-mobile"><RegionScopeBanner meta={meta} regionGap={regionGap} /></div>
       <TagScopeBanner tag={activeTag} />
+      {meta && meta.rls && meta.rls.enabled && !meta.rls.granted && (
+        <div className="scope-banner">{`No access${meta.rls.user ? ` for ${meta.rls.user}` : ""}: ask your admin to add you to the entitlements table.${meta.rls.error ? ` ${meta.rls.error}` : ""}`}</div>
+      )}
 
       {loadError && (
         <div className="honest-card error" style={{ marginBottom: 16 }}>

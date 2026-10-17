@@ -160,7 +160,7 @@ def _tag_index_connect():
     con = app_core_data._connect()  # noqa: SLF001 -- this module is data.py's own sibling
     exists = con.execute(
         "SELECT count(*) FROM information_schema.tables "
-        "WHERE table_schema = 'tags' AND table_name = 'tag_index'"
+        "WHERE table_catalog = current_database() AND table_schema = 'tags' AND table_name = 'tag_index'"
     ).fetchone()[0]
     if not exists:
         con.close()

@@ -78,14 +78,15 @@ def _db_path() -> Path:
 
 
 def _connect() -> duckdb.DuckDBPyConnection:
-    return duckdb.connect(str(_db_path()), read_only=True)
+    # The shared, capped connection (not a fresh uncapped one) and the one place a row filter applies.
+    return app_core_data._connect()  # noqa: SLF001
 
 
 def _tags_models_exist(con: duckdb.DuckDBPyConnection) -> bool:
     tables = {"cost_unit", "cost_unit_tag", "cost_reconciliation", "perf_unit", "perf_unit_tag", "tag_workspace",
               "tag_workspace_history"}
     rows = con.execute(
-        "SELECT table_name FROM information_schema.tables WHERE table_schema = 'tags'"
+        "SELECT table_name FROM information_schema.tables WHERE table_catalog = current_database() AND table_schema = 'tags'"
     ).fetchall()
     have = {r[0] for r in rows}
     return tables.issubset(have)

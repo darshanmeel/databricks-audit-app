@@ -46,7 +46,7 @@ def has_variant(query_id: str) -> bool:
 def available(con) -> bool:
     n = con.execute(
         "SELECT count(*) FROM information_schema.tables "
-        "WHERE table_schema = 'tags' AND table_name IN ('cost_day', 'tag_workspace_history')"
+        "WHERE table_catalog = current_database() AND table_schema = 'tags' AND table_name IN ('cost_day', 'tag_workspace_history')"
     ).fetchone()[0]
     return n == 2
 

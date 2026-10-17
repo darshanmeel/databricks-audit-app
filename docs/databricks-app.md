@@ -10,7 +10,7 @@ lists the other two.
 **Contents:** [What you need](#what-you-need) · [1. Pick who the app runs as](#1-pick-who-the-app-runs-as) ·
 [2. Name the app](#2-name-the-app) · [3. Deploy](#3-deploy) ·
 [4. Grant the service principal access](#4-grant-the-service-principal-access) ·
-[5. Open it and load data](#5-open-it-and-load-data) · [Update](#update) ·
+[5. Open it and load data](#5-open-it-and-load-data) · [Update](#update) · [Limit what each person sees](#limit-what-each-person-sees) ·
 [What differs from a laptop](#what-differs-from-a-laptop) · [If something fails](#if-something-fails) ·
 [For production](#for-production-not-built-yet)
 
@@ -96,10 +96,36 @@ GRANT USE SCHEMA, SELECT ON SCHEMA system.compute TO `<service principal id>`;
 2. `python tools/deploy_app.py` again. A changed `run_as` applies from this deploy.
 3. Click **Get** in the app: a redeploy wipes its disk.
 
+## Limit what each person sees
+
+Off by default: everyone who opens the app sees everything its principal can read. Turn it on in
+`config/app.yml` (or `config/app.local.yml`); the deploy carries the `rls:` block into the app.
+
+- **Entitlements table:** one row per grant, columns `principal` (the person's email),
+  `workspace_id`, `warehouse_id`, `environment`. `*` or empty in a column means all.
+- **`rls.enabled`:** `false` by default.
+- **`rls.table`:** the 3-part name, default `main.governance.audit_entitlements`.
+- **`rls.columns`:** which columns filter, any of `workspace`, `warehouse`, `environment`; default `[workspace]`.
+- **`rls.apply`:** `query` (default) filters per signed-in user while they browse; `export` builds one
+  data file per distinct grant set at refresh, so people with identical grants share one file and the
+  disk holds one copy per set. A laptop run always filters at load, for the token's user.
+- **Matching:** a row is visible when one grant row passes every configured column. A row with no value
+  in a configured column (account-level billing has no workspace) needs `*` for that column. Emails
+  compare case-insensitively.
+- **Example:** `config/entitlements.example.sql` creates the table with one row per kind of grant.
+- **Grant:** `INSERT INTO main.governance.audit_entitlements VALUES ('ana@example.com', '1234567890', '*', 'prod');`
+  then click **Get**; the table is read once per refresh.
+- **Access to the table:** the app's principal (the token's user, or the service principal with
+  `run_as: app`, whose grants `deploy_app.py` prints) needs `SELECT` on it.
+- **Fail closed:** if the table cannot be read, or the signed-in person has no grant, nobody sees rows
+  and the app says why.
+- **The export folder is unfiltered:** `results/<stamp>` on the app's disk holds everyone's rows; only
+  the data file the app serves is filtered.
+
 ## What differs from a laptop
 
-- **Everyone who can open the app sees everything its principal can see.** It has no per-person
-  filter.
+- **Everyone who can open the app sees everything its principal can see,** unless you turn on
+  [row-level access](#limit-what-each-person-sees).
 - **With `run_as: user`, the token is in `app.yaml`** in your workspace folder. Anyone who can read
   that folder can read it.
 - **The disk is wiped** when the app restarts or is redeployed: click Get or Refresh again.

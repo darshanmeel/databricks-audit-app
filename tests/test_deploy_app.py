@@ -48,7 +48,8 @@ def _wheel(tmp_path: Path) -> Path:
 
 
 def test_the_committed_settings_deploy_without_a_local_file(tmp_path):
-    assert dep.read_settings(dep.SETTINGS, tmp_path / "no-local.yml") == {"name": "lakehouse-health", "run_as": "user"}
+    got = dep.read_settings(dep.SETTINGS, tmp_path / "no-local.yml")
+    assert (got["name"], got["run_as"], got["rls"]["enabled"]) == ("lakehouse-health", "user", False)
 
 
 def test_read_settings_takes_the_name_and_runs_as_the_user_by_default(tmp_path):
@@ -146,3 +147,19 @@ def test_grants_cover_every_system_schema_for_the_principal():
     assert lines[0] == "GRANT USE CATALOG ON CATALOG system TO `abc-id`;"
     assert "GRANT USE SCHEMA, SELECT ON SCHEMA system.billing TO `abc-id`;" in lines
     assert len(lines) == 1 + len(dep.SYSTEM_SCHEMAS)
+
+
+def test_the_rls_block_merges_key_by_key_and_reaches_the_staged_config(tmp_path):
+    base = _settings(tmp_path, "{name: my-audit, rls: {enabled: false, columns: [workspace]}}")
+    local = _settings(tmp_path, "{rls: {enabled: true}}", "app.local.yml")
+    got = dep.read_settings(base, local)
+    assert got["rls"] == {"enabled": True, "columns": ["workspace"]}
+    out = tmp_path / "out"
+    dep.stage(out, ENV, _wheel(tmp_path), "user", got)
+    assert yaml.safe_load((out / "config" / "app.yml").read_text())["rls"]["enabled"] is True
+    assert any("audit_entitlements" in line for line in dep.grant_sql("sp", "main.governance.audit_entitlements"))
+
+
+def test_a_bad_rls_block_stops_the_deploy(tmp_path):
+    with pytest.raises(dep.DeployError, match="apply"):
+        _read(tmp_path, "{name: my-audit, rls: {apply: live}}")

@@ -31,6 +31,7 @@ if str(ROOT) not in sys.path:
 
 from app.core import datasource  # noqa: E402
 from app.core import identity as app_identity  # noqa: E402
+from app.core import rls as app_rls  # noqa: E402
 from tools.export_direct_results import _is_windowed, apply_masking  # noqa: E402
 
 _QUERY_ID_RE = re.compile(r"[a-z][a-z0-9_]*")
@@ -435,6 +436,22 @@ def _infer_window_aliases(checks_dir: Path) -> dict[int, int]:
     return aliases
 
 
+def _keep_own_rows(db: Path, rls_info: dict) -> None:
+    """Local run with row-level access on: rebuild the db into a fresh file with only the rows the
+    token's user is entitled to (a DELETE would leave the others in the file)."""
+    cols = rls_info.get("columns") or list(app_rls.DEFAULTS["columns"])
+    user = (rls_info.get("user") or "").strip().lower()
+    con = duckdb.connect(str(db), read_only=True)
+    try:
+        grants = app_rls.grants_for(con, user)
+    finally:
+        con.close()
+    side = db.with_name(db.name + ".rls")
+    kept = app_rls.filter_into(db, side, grants, user, cols)
+    os.replace(side, db)
+    print(f"rls: {sum(kept.values())} rows kept for {user or 'an unknown user'}")
+
+
 def _load_root(root: Path, db_path: Path, *, zip_as_of: str | None = None) -> dict:
     manifest_path = root / "manifest.json"
     has_manifest = manifest_path.exists()
@@ -483,6 +500,12 @@ def _load_root(root: Path, db_path: Path, *, zip_as_of: str | None = None) -> di
     db_path.parent.mkdir(parents=True, exist_ok=True)
     tmp_path = db_path.with_name(db_path.name + ".tmp")
     tmp_wal = tmp_path.with_name(tmp_path.name + ".wal")
+    rls_info = manifest.get("rls")
+    rls_cfg = app_rls.load()
+    if rls_cfg.enabled and not (rls_info and rls_info.get("enabled")):
+        # No entitlements in this export (partial, older or imported): load closed rather than unfiltered.
+        rls_info = {"enabled": True, "columns": list(rls_cfg.columns), "user": None,
+                    "error": "entitlements not exported"}
     for stray in (tmp_path, tmp_wal):
         if stray.exists():
             stray.unlink()
@@ -691,6 +714,12 @@ def _load_root(root: Path, db_path: Path, *, zip_as_of: str | None = None) -> di
                 except Exception as exc:  # noqa: BLE001 -- a bad policies file must not crash the load
                     print(f"warning: could not read {pol_path} ({exc}) -- governance.abac_policies not built", file=sys.stderr)
 
+            if rls_info and rls_info.get("enabled"):
+                ent = root / "entitlements"
+                app_rls.load_entitlements(con, _find_data_file(ent, "entitlements") if ent.is_dir() else None, rls_info,
+                                          rls_cfg)
+                app_rls.add_columns(con)
+
             as_of = manifest.get("as_of") or zip_as_of or _newest_mtime_iso(checks_dir, names_dir, tags_root)
 
             con.execute(
@@ -732,6 +761,8 @@ def _load_root(root: Path, db_path: Path, *, zip_as_of: str | None = None) -> di
             con.close()
         if tmp_wal.exists():  # DuckDB checkpoints on a clean close; a survivor would be replayed
             tmp_wal.unlink()
+        if rls_info and rls_info.get("enabled") and not app_rls.is_app():
+            _keep_own_rows(tmp_path, rls_info)
         os.replace(tmp_path, db_path)
     except Exception:
         for stray in (tmp_path, tmp_wal):

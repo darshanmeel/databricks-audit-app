@@ -56,14 +56,13 @@ def test_refresh_switches_the_shared_connection_and_closes_the_old_one(monkeypat
     monkeypatch.setattr(refresh.datasource, "data_dir", lambda: tmp_path)
     monkeypatch.delenv("AUDIT_DB", raising=False)
     monkeypatch.setattr(app_core_data, "share_connection", True)
-    monkeypatch.setattr(app_core_data, "_SHARED_CON", None)
-    monkeypatch.setattr(app_core_data, "_SHARED_KEY", None)
+    monkeypatch.setattr(app_core_data, "_SHARED_CONS", {})
 
     old_db = tmp_path / "audit-old.duckdb"
     duckdb.connect(str(old_db)).close()
     refresh.datasource.set_current_db(old_db)
     app_core_data._connect()  # populates the shared connection on the old db
-    old_base = app_core_data._SHARED_CON
+    old_base = next(iter(app_core_data._SHARED_CONS.values()))
 
     def fake_call(args):
         if args[0] == "tools/load_direct_results.py":
@@ -79,8 +78,7 @@ def test_refresh_switches_the_shared_connection_and_closes_the_old_one(monkeypat
     assert refresh.datasource.current_db() == new_db
 
     app_core_data._connect()
-    assert app_core_data._SHARED_KEY[0] == str(new_db)
-    assert app_core_data._SHARED_CON is not old_base
+    assert [k[0] for k in app_core_data._SHARED_CONS] == [str(new_db)]
     with pytest.raises(duckdb.Error):
         old_base.execute("SELECT 1")
 
@@ -98,3 +96,37 @@ def test_refresh_failure_is_reported_and_keeps_the_db(monkeypatch, tmp_path):
 
     assert s["step"] == "failed" and s["error"] == "no credentials"
     assert refresh.os.environ["AUDIT_DB"] == "keep.duckdb"
+
+
+@pytest.mark.parametrize("mode,in_app,expect_split", [("export", True, True), ("query", True, False), ("export", False, False)])
+def test_refresh_builds_per_user_files_only_for_the_app_with_apply_export(monkeypatch, tmp_path, mode, in_app, expect_split):
+    from app.core import rls
+
+    built = []
+
+    def fake_call(args):
+        if args[0] == "tools/load_direct_results.py":
+            Path(args[args.index("--db") + 1]).touch()
+
+    def fake_sets(db):
+        built.append(db)
+        other = db.with_name(db.stem + ".rls-abc.duckdb")
+        other.touch()
+        (db.with_name(db.stem + ".rls-abc.run_results.json")).write_text("{}")
+        (db.with_name(db.stem + ".rls_sets.json")).write_text('{"__none__": "%s"}' % other.name)
+        return {}
+
+    monkeypatch.setattr(refresh.datasource, "data_dir", lambda: tmp_path)
+    monkeypatch.setattr(refresh, "_call", fake_call)
+    monkeypatch.setattr(rls, "mode", lambda: mode if in_app else "export")
+    monkeypatch.setattr(rls, "is_app", lambda: in_app)
+    monkeypatch.setattr(rls, "build_sets", fake_sets)
+    monkeypatch.delenv("AUDIT_DB", raising=False)
+    (tmp_path / "results").mkdir()
+
+    refresh.start(15)
+    assert _wait()["step"] == "done"
+    assert bool(built) is expect_split
+    if expect_split:
+        names = {p.name for p in tmp_path.glob("audit-*")}
+        assert any("rls-abc.duckdb" in n for n in names) and any("rls-abc.run_results.json" in n for n in names)

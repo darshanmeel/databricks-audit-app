@@ -34,6 +34,7 @@ from app.core import config as app_config  # noqa: E402
 from app.core import data as app_core_data  # noqa: E402
 from app.core import datasource  # noqa: E402
 from app.core import registry as app_registry  # noqa: E402
+from app.core import rls as app_rls  # noqa: E402
 from app.core import tag_compliance as app_tag_compliance  # noqa: E402
 from app.core.identity import format_identity, masking_enabled  # noqa: E402
 from tools import dbt_run  # noqa: E402
@@ -554,6 +555,26 @@ def _export_policies(cur, out_dir: Path) -> dict:
             "catalogs": len(catalogs), "schemas": min(len(schemas), POLICY_SCHEMAS_MAX),
             "schemas_not_asked": max(0, len(schemas) - POLICY_SCHEMAS_MAX),
             "not_readable": errors, "first_error": first_error}
+
+
+def _export_entitlements(cur, rls_cfg, out_dir: Path) -> dict:
+    """The row-level access table -> entitlements/entitlements.parquet, and who the token is. A
+    table it cannot read is returned as `error`, so the load leaves everyone without rows."""
+    info = {"enabled": True, "table": rls_cfg.table, "columns": list(rls_cfg.columns),
+            "apply": rls_cfg.apply, "user": None, "error": None}
+    try:
+        table = _fetch_rows_arrow(cur, "SELECT * FROM " + ".".join(_quote_ident(p) for p in rls_cfg.table.split(".")))
+        ent_dir = out_dir / "entitlements"
+        ent_dir.mkdir(exist_ok=True)
+        pq.write_table(table, str(ent_dir / "entitlements.parquet"), compression="snappy")
+    except Exception as exc:  # noqa: BLE001 -- recorded, the load fails closed
+        info["error"] = _redact(str(exc))
+    try:
+        who = _fetch_rows_arrow(cur, "SELECT current_user() AS u")
+        info["user"] = who.to_pylist()[0]["u"] if who is not None else None
+    except Exception:  # noqa: BLE001 -- an unknown user sees no rows; query mode never needs it
+        pass
+    return info
 
 
 def tag_key_filter_sql() -> str:
@@ -1135,12 +1156,18 @@ def run_export(
     # Names and tags run on the probe connection alongside the checks, not before them: done one
     # by one first, they held every check back for minutes.
     side: dict = {}
+    try:
+        rls_cfg = app_rls.load()
+    except app_rls.RlsError as exc:
+        raise ExportConfigError(str(exc)) from exc
 
     def names_and_tags() -> None:
         try:
             side["dims"] = _export_names(probe.conn.cursor(), names_sql, work_dir, mask_users)
             side["tags"] = _export_tags(probe.conn.cursor(), tags_sql, work_dir, mask_users, sources)
             side["policies"] = None if partial else _export_policies(probe.conn.cursor(), work_dir)
+            if rls_cfg.enabled and not partial:
+                side["rls"] = _export_entitlements(probe.conn.cursor(), rls_cfg, work_dir)
         except BaseException as exc:  # noqa: BLE001 -- re-raised on the main thread below
             side["error"] = exc
 
@@ -1248,6 +1275,7 @@ def run_export(
         "dims": dims_info,
         "tags": tags_info,
         "policies": policies_info,
+        "rls": side.get("rls"),
     }
     (work_dir / "manifest.json").write_text(
         json.dumps(manifest_out, indent=2, sort_keys=False) + "\n", encoding="utf-8"

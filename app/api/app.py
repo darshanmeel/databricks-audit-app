@@ -180,12 +180,34 @@ from app.core import library_corrections  # noqa: E402
 from app.core import materiality as app_materiality  # noqa: E402
 from app.core import pricing as app_pricing  # noqa: E402
 from app.core import registry  # noqa: E402
+from app.core import rls  # noqa: E402
 from app.core import rollup as app_rollup  # noqa: E402
 from app.core import tags as app_core_tags  # noqa: E402  -- P4-T-IDX: GET /api/tags, tag_key/tag_value
 
 WEB_DIR = _ROOT / "app" / "web" / "dist"
 
 app = FastAPI(title="Crosshire API", version="0.1.0")
+
+
+class _PrincipalMiddleware:
+    """Binds the signed-in user (X-Forwarded-Email, set by Databricks Apps) for the request. Pure ASGI so
+    the value is also seen by the sync endpoints, which run in a copy of this context."""
+
+    def __init__(self, inner):
+        self.inner = inner
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            return await self.inner(scope, receive, send)
+        email = next((v.decode("latin-1") for k, v in scope["headers"] if k == b"x-forwarded-email"), None)
+        token = rls.set_principal(email)
+        try:
+            await self.inner(scope, receive, send)
+        finally:
+            rls.reset_principal(token)
+
+
+app.add_middleware(_PrincipalMiddleware)
 
 # T-75A: fail loudly at import time, not lazily on the first request that happens to touch a
 # finding with a correction -- a broken config/library_corrections.yml (an unknown query_id, a
@@ -456,6 +478,7 @@ def get_meta() -> dict:
         "cost_cutoff": app_core_data.cost_cutoff(),
         "direct_export": direct,
         "db_path": str(app_core_data._db_path()),
+        "rls": rls.meta(),
         "models": {
             "registry_total": registry_total,
             "run_results_total": total,
@@ -565,7 +588,8 @@ def _dim_or_empty(loader, con: duckdb.DuckDBPyConnection | None, id_cols: tuple[
 # db path (str) + mtime + masking flag -> the last get_dims() response computed for that
 # combination. A single entry (not one per key ever seen) -- an old db/setting is never coming
 # back, so nothing is gained by keeping more than the most recent.
-_DIMS_CACHE: dict[tuple[str, float | None, bool], dict] = {}
+_DIMS_CACHE: dict[tuple, dict] = {}
+_DIMS_CACHE_MAX = 8
 
 
 @app.get("/api/dims")
@@ -575,7 +599,7 @@ def get_dims() -> dict:
         mtime = db_path.stat().st_mtime
     except OSError:
         mtime = None
-    key = (str(db_path), mtime, app_identity.masking_enabled())
+    key = (str(db_path), mtime, app_identity.masking_enabled(), rls.scope_key())
     cached = _DIMS_CACHE.get(key)
     if cached is not None:
         return cached
@@ -606,7 +630,8 @@ def get_dims() -> dict:
         # Only a working connection is worth remembering -- a total connect failure (db mid-build,
         # briefly locked) should retry on the very next call, not get stuck returning empty dims
         # until the file's mtime happens to change.
-        _DIMS_CACHE.clear()
+        while len(_DIMS_CACHE) >= _DIMS_CACHE_MAX:
+            _DIMS_CACHE.pop(next(iter(_DIMS_CACHE)))
         _DIMS_CACHE[key] = result
     return result
 
@@ -882,7 +907,7 @@ def _data_version() -> tuple:
     mtimes = tuple((cfg / n).stat().st_mtime_ns if (cfg / n).exists() else None for n in _CONFIG_FILES)
     # The summary also reads the export manifest and run results, which can change without the db.
     sides = tuple(app_core_data._identity_key(str(f())) for f in (app_core_data._snapshot_manifest_path, app_core_data._run_results_path))
-    return (app_core_data._identity_key(str(app_core_data._db_path())), mtimes, sides)
+    return (app_core_data._identity_key(str(app_core_data._db_path())), mtimes, sides, rls.scope_key())
 
 
 @app.get("/api/findings")
@@ -985,6 +1010,8 @@ def warm_findings() -> None:
     """Works out the unfiltered summary for the default window once at start-up, so the first
     page does not wait for it."""
     try:
+        if rls.mode() == "query":
+            return  # no signed-in user at start-up, and each user's answer is their own
         _findings_answer(_resolve_window(None, app_config.load_settings()), [], [], None, None)
     except Exception:  # noqa: BLE001 -- the first request computes it again and reports the error
         pass

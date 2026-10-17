@@ -287,6 +287,7 @@ export interface Meta {
   brand: Brand;
   mask_user_identities: boolean;
   mandatory_tag_keys: string[];
+  rls?: { enabled: boolean; apply: string | null; user: string | null; granted: boolean; error: string | null };
   attribute_keys_populated: string[];
   top_tags: { key: string; label: string }[];
   max_chart_categories: number;
