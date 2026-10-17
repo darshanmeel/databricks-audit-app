@@ -154,27 +154,38 @@ export function mandatoryFilterKeys(mandatory: string[] | null | undefined, topT
   });
 }
 
+// Workspace attribute filters minus keys that now have a mandatory tag picker (old links carry them).
+export function dropMandatoryAttrs<T>(attr: Record<string, T>, mandatoryKeys: string[]): Record<string, T> {
+  const reserved = new Set(mandatoryKeys.map(normKey));
+  const out: Record<string, T> = {};
+  Object.keys(attr).forEach((k) => { if (!reserved.has(normKey(k))) out[k] = attr[k]; });
+  return out;
+}
+
 // One mandatory tag as its own filter: tick values, applied at once; nothing ticked means all.
 export function MandatoryTagPicker({ tagKey, label, value, onChange }: {
   tagKey: string; label: string; value: TagFilter | null; onChange: (tag: TagFilter | null) => void;
 }) {
   const [open, setOpen] = React.useState(false);
   const [q, setQ] = React.useState("");
-  const [state, setState] = React.useState<{ loading: boolean; values: NonNullable<TagKeyEntry["values"]>; error: boolean }>(
-    { loading: true, values: [], error: false });
+  const [state, setState] = React.useState<{ loading: boolean; values: NonNullable<TagKeyEntry["values"]>; error: boolean; truncated: boolean }>(
+    { loading: true, values: [], error: false, truncated: false });
   const boxRef = React.useRef<HTMLDivElement>(null);
   usePopoverClose(open, setOpen, boxRef);
   React.useEffect(() => {
     if (!open) return undefined;
     let cancelled = false;
-    Api.tags("", tagKey, 1, 500)
-      .then((d) => { const row = (d.keys || [])[0]; if (!cancelled) setState({ loading: false, values: (row && row.values) || [], error: false }); })
-      .catch(() => { if (!cancelled) setState({ loading: false, values: [], error: true }); });
-    return () => { cancelled = true; };
-  }, [open, tagKey]);
+    const t = setTimeout(() => {
+      Api.tags(q.trim(), tagKey, 1, 500)
+        .then((d) => { const row = (d.keys || [])[0]; if (!cancelled) setState({ loading: false, values: (row && row.values) || [], error: false, truncated: !!(row && row.values_truncated) }); })
+        .catch(() => { if (!cancelled) setState({ loading: false, values: [], error: true, truncated: false }); });
+    }, TAG_SEARCH_DEBOUNCE_MS);
+    return () => { cancelled = true; clearTimeout(t); };
+  }, [open, tagKey, q]);
   const groups = (value && value.groups) || [];
   const mine = groups.find((g) => normKey(g.key) === tagKey);
   const picked = (mine && !mine.all && mine.values) || [];
+  const taggedOnly = !!mine && !mine.all && !mine.none && mine.values.length === 0;
   const setPicked = (next: string[]) => {
     const others = groups.filter((g) => normKey(g.key) !== tagKey);
     const all = next.length ? [...others, { key: tagKey, display_key: label, values: next }] : others;
@@ -183,7 +194,7 @@ export function MandatoryTagPicker({ tagKey, label, value, onChange }: {
   const toggle = (v: string) => setPicked(picked.includes(v) ? picked.filter((x) => x !== v) : [...picked, v]);
   const needle = q.trim().toLowerCase();
   const shown = state.values.filter((v) => !needle || tagValueLabel(v.tag_value).toLowerCase().includes(needle));
-  const buttonLabel = picked.length === 0 ? "All" : picked.length === 1 ? tagValueLabel(picked[0]) : `${picked.length} selected`;
+  const buttonLabel = taggedOnly ? "Tagged only" : picked.length === 0 ? "All" : picked.length === 1 ? tagValueLabel(picked[0]) : `${picked.length} selected`;
   return (
     <div className="filter-group ws-picker" ref={boxRef}>
       <span className="filter-label">{label}</span>
@@ -207,6 +218,7 @@ export function MandatoryTagPicker({ tagKey, label, value, onChange }: {
                 <span className="muted">{fmtInt(v.object_count)}</span>
               </label>
             ))}
+            {!state.loading && state.truncated && <div className="ws-empty">First 500 values: search to find more</div>}
             {!state.loading && !state.error && !needle && (
               <label className="ws-row">
                 <input type="checkbox" checked={picked.includes(TAG_UNTAGGED)} onChange={() => toggle(TAG_UNTAGGED)} />
@@ -214,7 +226,7 @@ export function MandatoryTagPicker({ tagKey, label, value, onChange }: {
               </label>
             )}
           </div>
-          <div className="ws-foot">{picked.length ? `${picked.length} of ${state.values.length + 1} picked` : "All values"}</div>
+          <div className="ws-foot">{picked.length ? `${picked.length} of ${state.values.length + 1} picked` : taggedOnly ? "Tagged only" : "All values"}</div>
         </div>
       )}
     </div>

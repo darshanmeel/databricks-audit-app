@@ -28,6 +28,22 @@ APPLY = ("query", "export")
 FILTERED_SCHEMAS = ("findings", "dims", "tags")
 ADDED_COLUMNS = ("workspace_id", "warehouse_id", "env")
 ALL = "*"
+# Reference tables with no workspace dimension: every user sees all rows.
+REFERENCE = {("dims", "dim_list_prices"), ("findings", "f_cost_account_prices_raw"),
+             ("findings", "f_overview_list_prices_raw"), ("findings", "f_pricing_list_prices_raw"),
+             ("findings", "f_node_types_reference")}
+# Chargeback tables whose share is built over the account: (spend column, extra partition columns).
+SHARE_COLUMN = "share_of_total_pct"
+SHARE_TABLES = {
+    "f_cost_chargeback_by_cluster": ("est_current_usd_list", ()),
+    "f_cost_chargeback_by_job": ("est_current_usd_list", ()),
+    "f_cost_chargeback_by_service": ("usd_list", ()),
+    "f_cost_chargeback_by_sku": ("usd_list", ()),
+    "f_cost_chargeback_by_tag_value": ("usd_list", ("tag_key",)),
+    "f_cost_chargeback_by_warehouse": ("usd_list", ()),
+    "f_cost_chargeback_by_workspace": ("usd_list", ()),
+    "f_cost_chargeback_identity_by_source": ("usd_list", ()),
+}
 TABLE_RE = re.compile(r"^[^.\s]+\.[^.\s]+\.[^.\s]+$")
 DEFAULTS = {"enabled": False, "table": "main.governance.audit_entitlements", "columns": ["workspace"], "apply": "query"}
 _GRANT_INDEX = {"workspace": 0, "warehouse": 1, "environment": 2}
@@ -153,6 +169,7 @@ def add_columns(con) -> int:
     dims = set(_tables(con, "dims"))
     ws_env = "dim_workspace" in dims and "env" in _cols(con, "dims", "dim_workspace")
     done = 0
+    new_cols: dict[tuple, set] = {}
     for schema in FILTERED_SCHEMAS:
         for table in _tables(con, schema):
             have = set(_cols(con, schema, table))
@@ -170,11 +187,36 @@ def add_columns(con) -> int:
                         con.execute(
                             f"UPDATE {ref} SET workspace_id = d.ws FROM (SELECT {key}, min(workspace_id) AS ws "
                             f"FROM dims.{dim} GROUP BY 1) d WHERE {ref}.{key} = d.{key} AND {ref}.workspace_id IS NULL")
-            if "env" in added and ws_env:
+            if "warehouse_id" in added and {"compute_kind", "compute_id"} <= have:
+                con.execute(f"UPDATE {ref} SET warehouse_id = compute_id WHERE compute_kind = 'warehouse'")
+            if "env" in added and ws_env and "workspace_id" in have | added:
                 con.execute(
                     f"UPDATE {ref} SET env = d.env FROM (SELECT workspace_id, min(env) AS env FROM dims.dim_workspace "
                     f"GROUP BY 1) d WHERE {ref}.workspace_id = d.workspace_id AND {ref}.env IS NULL")
+            if added:
+                new_cols[(schema, table)] = added
+    _fill_unit_keyed(con, new_cols)
     return done
+
+
+def _fill_unit_keyed(con, new_cols: dict) -> None:
+    """Tables keyed by (window_days, unit_id) take workspace, warehouse and env from the unit's
+    row in tags.cost_unit / tags.perf_unit, one row per unit so nothing is duplicated."""
+    tags = set(_tables(con, "tags"))
+    sources = [t for t in ("cost_unit", "perf_unit") if t in tags]
+    if not sources:
+        return
+    union = " UNION ALL ".join(
+        f"SELECT window_days, unit_id, workspace_id, warehouse_id, env FROM tags.{t}" for t in sources)
+    for (schema, table), added in new_cols.items():
+        if schema != "tags" or table in sources or not {"window_days", "unit_id"} <= set(_cols(con, schema, table)):
+            continue
+        sets = ", ".join(f"{_q(c)} = u.{_q(c)}" for c in ADDED_COLUMNS if c in added)
+        con.execute(
+            f"UPDATE {_q(schema)}.{_q(table)} SET {sets} FROM (SELECT window_days, unit_id, "
+            "min(workspace_id) AS workspace_id, min(warehouse_id) AS warehouse_id, min(env) AS env "
+            f"FROM ({union}) GROUP BY 1, 2) u "
+            f"WHERE {_q(table)}.window_days = u.window_days AND {_q(table)}.unit_id = u.unit_id")
 
 
 # ---- the entitlements table inside the db ----
@@ -256,7 +298,19 @@ def _select_sql(schema: str, table: str, cols: list[str], added: set, where: str
     everyone with the same grants) the entitlements show those grants without the principal."""
     ref = f"{src}.{_q(schema)}.{_q(table)}"
     if schema in FILTERED_SCHEMAS:
-        keep = ", ".join(_q(c) for c in cols if c not in added)
+        kept_cols = [c for c in cols if c not in added]
+        if (schema, table) in REFERENCE:
+            where = "TRUE"
+        if (schema, table) == ("tags", "tag_index") and where != "TRUE":
+            return _tag_index_sql(src, kept_cols, where)
+        if table in SHARE_TABLES and SHARE_COLUMN in kept_cols and where != "TRUE":
+            usd, extra = SHARE_TABLES[table]
+            part = ", ".join(_q(c) for c in ("window_days", *extra))
+            share = (f"ROUND({_q(usd)} * 100.0 / NULLIF(SUM({_q(usd)}) OVER (PARTITION BY {part}), 0), 1) "
+                     f"AS {_q(SHARE_COLUMN)}")
+            keep = ", ".join(share if c == SHARE_COLUMN else _q(c) for c in kept_cols)
+        else:
+            keep = ", ".join(_q(c) for c in kept_cols)
         return f"SELECT {keep} FROM {ref} t WHERE {where}"
     if (schema, table) == ("rls", "entitlements"):
         if me is None:
@@ -266,10 +320,37 @@ def _select_sql(schema: str, table: str, cols: list[str], added: set, where: str
         return f"SELECT * FROM {ref} WHERE principal = {_lit(me)}"
     if (schema, table) == ("rls", "added"):
         return None
-    if (schema, table) == ("governance", "abac_policies"):
+    if (schema, table) in (("governance", "abac_policies"), ("governance", "abac_policies_info")):
         # Account-level with no workspace: only a user with all workspaces sees it.
         return f"SELECT * FROM {ref} WHERE {'TRUE' if full else 'FALSE'}"
     return f"SELECT * FROM {ref}"
+
+
+def _tag_index_sql(src: str, cols: list[str], where: str) -> str:
+    """tags.tag_index as one user sees it, rebuilt from their own tag_entity and cost_unit_tag rows so
+    keys, values and counts cover only what they may see."""
+    te, cut, ti = (f"{src}.tags.{_q(n)}" for n in ("tag_entity", "cost_unit_tag", "tag_index"))
+    body = (
+        f"WITH e AS (SELECT * FROM {te} t WHERE {where}), c AS (SELECT * FROM {cut} t WHERE {where}), "
+        "ent AS (SELECT tag_key, tag_value, source, "
+        "count(DISTINCT entity_id || '~' || coalesce(workspace_id, '~')) AS object_count, "
+        "CASE WHEN starts_with(source, 'uc_') THEN CAST(NULL AS BIGINT) ELSE count(DISTINCT workspace_id) END AS workspace_count "
+        "FROM e WHERE source IN ('warehouse_tags', 'cluster_tags', 'pool_tags', 'job_tags', 'pipeline_tags', 'query_tags') "
+        "OR entity_type IN ('uc_table', 'uc_schema', 'uc_column', 'uc_volume') GROUP BY tag_key, tag_value, source), "
+        "bil AS (SELECT tag_key, tag_value, CASE WHEN source LIKE 'billing:%' THEN 'billing_custom_tags' ELSE source END AS source, "
+        "count(DISTINCT unit_id) AS object_count, count(DISTINCT workspace_id) AS workspace_count "
+        "FROM c WHERE source LIKE 'billing:%' OR source IN ('workspace_inferred', 'attributed_query_tags') "
+        "GROUP BY 1, 2, 3), "
+        "rk AS (SELECT tag_key, raw_key, count(*) AS n FROM e WHERE raw_key IS NOT NULL GROUP BY 1, 2), "
+        "k AS (SELECT tag_key, arg_max(raw_key, n) AS display_key, "
+        "string_agg(raw_key, ',' ORDER BY raw_key) FILTER (WHERE rn <= 10) AS raw_keys "
+        "FROM (SELECT *, row_number() OVER (PARTITION BY tag_key ORDER BY raw_key) AS rn FROM rk) GROUP BY 1), "
+        "u AS (SELECT * FROM ent UNION ALL SELECT * FROM bil) "
+        "SELECT u.tag_key, coalesce(k.display_key, u.tag_key) AS display_key, coalesce(k.raw_keys, u.tag_key) AS raw_keys, u.tag_value, u.source, u.object_count, u.workspace_count, "
+        "CAST(NULL AS DOUBLE) AS dbus, CAST(NULL AS DATE) AS first_seen, CAST(NULL AS DATE) AS last_seen "
+        "FROM u LEFT JOIN k ON k.tag_key = u.tag_key")
+    keep = ", ".join(_q(c) for c in cols)
+    return f"SELECT {keep} FROM ({body}) q"
 
 
 def _catalog(con, with_views: bool = False, src: str = "src"):
@@ -294,6 +375,11 @@ def _catalog(con, with_views: bool = False, src: str = "src"):
 
 # ---- a db holding one user's rows ----
 
+def _cap_connection(con) -> None:
+    from app.core import data
+    data._cap(con)
+
+
 def filter_into(src_path, dst_path, grants, user: str | None, columns=None) -> dict[str, int]:
     """Copy src into a fresh dst with only the rows `grants` let through. A fresh file, not a
     DELETE, so nothing of the other rows stays in the bytes. Returns the rows kept per
@@ -308,6 +394,7 @@ def filter_into(src_path, dst_path, grants, user: str | None, columns=None) -> d
     me = (user or "").strip().lower()
     kept: dict[str, int] = {}
     con = duckdb.connect(str(dst))
+    _cap_connection(con)
     try:
         con.execute(f"ATTACH {_lit(src_path)} AS src (READ_ONLY)")
         objects, cols, added = _catalog(con)
@@ -428,6 +515,7 @@ def build_sets(full_db) -> dict:
     cols = load().columns
     full = Path(full_db)
     con = duckdb.connect(str(full), read_only=True)
+    _cap_connection(con)
     try:
         try:
             users = [r[0] for r in con.execute("SELECT DISTINCT principal FROM rls.entitlements").fetchall()]

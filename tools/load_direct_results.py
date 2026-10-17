@@ -436,10 +436,10 @@ def _infer_window_aliases(checks_dir: Path) -> dict[int, int]:
     return aliases
 
 
-def _keep_own_rows(db: Path, rls_info: dict) -> None:
+def _keep_own_rows(db: Path, rls_info: dict, cols) -> None:
     """Local run with row-level access on: rebuild the db into a fresh file with only the rows the
-    token's user is entitled to (a DELETE would leave the others in the file)."""
-    cols = rls_info.get("columns") or list(app_rls.DEFAULTS["columns"])
+    token's user is entitled to (a DELETE would leave the others in the file). `cols` are the
+    columns load_entitlements recorded."""
     user = (rls_info.get("user") or "").strip().lower()
     con = duckdb.connect(str(db), read_only=True)
     try:
@@ -447,7 +447,13 @@ def _keep_own_rows(db: Path, rls_info: dict) -> None:
     finally:
         con.close()
     side = db.with_name(db.name + ".rls")
-    kept = app_rls.filter_into(db, side, grants, user, cols)
+    try:
+        kept = app_rls.filter_into(db, side, grants, user, cols)
+    except Exception:
+        for stray in (side, side.with_name(side.name + ".wal")):
+            if stray.exists():
+                stray.unlink()
+        raise
     os.replace(side, db)
     print(f"rls: {sum(kept.values())} rows kept for {user or 'an unknown user'}")
 
@@ -762,7 +768,7 @@ def _load_root(root: Path, db_path: Path, *, zip_as_of: str | None = None) -> di
         if tmp_wal.exists():  # DuckDB checkpoints on a clean close; a survivor would be replayed
             tmp_wal.unlink()
         if rls_info and rls_info.get("enabled") and not app_rls.is_app():
-            _keep_own_rows(tmp_path, rls_info)
+            _keep_own_rows(tmp_path, rls_info, rls_cfg.columns)
         os.replace(tmp_path, db_path)
     except Exception:
         for stray in (tmp_path, tmp_wal):

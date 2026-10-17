@@ -19,7 +19,7 @@ import { setCanDrill } from "./components/names";
 import { useDims } from "./components/hooks";
 import { FirstRunScreen, useRefresh } from "./components/first_run";
 import { AttributeFilters, AttributePicker, NO_WORKSPACE_MATCH } from "./components/filters";
-import { MandatoryTagPicker, TagPicker, TagScopeBanner, mandatoryFilterKeys, narrowingTag } from "./components/tag_picker";
+import { MandatoryTagPicker, TagPicker, dropMandatoryAttrs, TagScopeBanner, mandatoryFilterKeys, narrowingTag } from "./components/tag_picker";
 import { AREA_ORDER, AREA_REGISTRY, OLD_TAB_REDIRECTS, bandOf, homeForQuery } from "./components/tab_registry";
 import { ROLES, ROLE_LABEL, homeForRole, roleAreasFor, sidebarKeysForRole } from "./components/roles";
 import { AreaPage, ErrorBoundary, assessedCounts } from "./components/primitives";
@@ -869,6 +869,14 @@ export default function App() {
     }).catch((e) => setLoadError(String(e)));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready]);
+
+  // A link may carry an attribute filter for a key that now has its own tag picker; drop it.
+  React.useEffect(() => {
+    if (!meta) return;
+    const keys = mandatoryFilterKeys(meta.mandatory_tag_keys, meta.top_tags).map((k) => k.key);
+    const kept = dropMandatoryAttrs(attrFilters, keys);
+    if (Object.keys(kept).length !== Object.keys(attrFilters).length) setAttrFilters(kept);
+  }, [meta, attrFilters]);
 
   const attrMatchedIds = React.useMemo(() => {
     const activeKeys = Object.keys(attrFilters).filter((k) => attrFilters[k] && attrFilters[k].size > 0);

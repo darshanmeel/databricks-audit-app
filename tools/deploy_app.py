@@ -96,10 +96,10 @@ def grant_sql(principal: str, entitlements: str | None = None) -> list[str]:
         f"GRANT USE SCHEMA, SELECT ON SCHEMA system.{s} TO `{principal}`;" for s in SYSTEM_SCHEMAS
     ]
     if entitlements:
-        cat, sch, _ = entitlements.split(".")
+        cat, sch, tbl = (f"`{part.replace('`', '``')}`" for part in entitlements.split("."))
         out += [f"GRANT USE CATALOG ON CATALOG {cat} TO `{principal}`;",
                 f"GRANT USE SCHEMA ON SCHEMA {cat}.{sch} TO `{principal}`;",
-                f"GRANT SELECT ON TABLE {entitlements} TO `{principal}`;"]
+                f"GRANT SELECT ON TABLE {cat}.{sch}.{tbl} TO `{principal}`;"]
     return out
 
 

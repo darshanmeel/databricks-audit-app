@@ -163,3 +163,9 @@ def test_the_rls_block_merges_key_by_key_and_reaches_the_staged_config(tmp_path)
 def test_a_bad_rls_block_stops_the_deploy(tmp_path):
     with pytest.raises(dep.DeployError, match="apply"):
         _read(tmp_path, "{name: my-audit, rls: {apply: live}}")
+
+
+def test_grant_sql_quotes_each_part_of_the_entitlements_table():
+    lines = dep.grant_sql("sp", "fin-ops.gov`x.audit_entitlements")
+    assert "GRANT USE CATALOG ON CATALOG `fin-ops` TO `sp`;" in lines
+    assert "GRANT SELECT ON TABLE `fin-ops`.`gov``x`.`audit_entitlements` TO `sp`;" in lines

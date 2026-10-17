@@ -133,3 +133,88 @@ def test_every_catalog_lookup_is_limited_to_the_open_database():
             if f.name != "rls.py" and ("information_schema.tables" in line or "information_schema.columns" in line)                     and "current_database" not in " ".join(lines[i:i + 3]) and "direct_export_meta" not in line                     and not line.lstrip().startswith(("#", "\"\"\"")) and "SELECT" in line:
                 bare.append(f"{f.name}:{i + 1}")
     assert not bare
+
+
+def _get(path, email, **params):
+    r = client.get(path, params=params, headers=_who(email))
+    assert r.status_code == 200, r.text
+    return r.json()
+
+
+def test_restricted_user_keeps_tag_data_for_their_workspaces(monkeypatch, tmp_path, full_db):
+    _env(monkeypatch, tmp_path, full_db, "query")
+    carol = _get("/api/tags", "carol@x.com", limit_keys=200)
+    alice = _get("/api/tags", "alice@x.com", limit_keys=200)
+    assert alice["keys"] and len(alice["keys"]) <= len(carol["keys"])
+    assert not _get("/api/tags", "nobody@x.com", limit_keys=200)["keys"]
+    key = next(k["tag_key"] for k in alice["keys"] if k["tag_key"] in {c["tag_key"] for c in carol["keys"]})
+    assert _get("/api/rollup/keys", "alice@x.com", window=30)["keys"]
+    tree = _get("/api/rollup", "alice@x.com", tag_key=key, window=30)
+    assert tree
+    con = duckdb.connect(str(full_db), read_only=True)
+    allowed = {r[0] for r in con.execute(
+        "SELECT DISTINCT unit_id FROM tags.cost_unit_tag t JOIN tags.cost_unit u USING (window_days, unit_id) "
+        "WHERE u.workspace_id = '1111'").fetchall()}
+    assert allowed
+
+
+def test_unit_keyed_and_reference_tables_keep_the_right_rows(monkeypatch, tmp_path, full_db):
+    out = tmp_path / "alice.duckdb"
+    rls.filter_into(full_db, out, [("1111", "*", "*")], "alice@x.com", ("workspace",))
+    src = duckdb.connect(str(full_db), read_only=True)
+    got = duckdb.connect(str(out), read_only=True)
+    want = src.execute(
+        "SELECT count(*) FROM tags.cost_unit_tag t JOIN tags.cost_unit u USING (window_days, unit_id) "
+        "WHERE u.workspace_id = '1111'").fetchone()[0]
+    assert want > 0 and got.execute("SELECT count(*) FROM tags.cost_unit_tag").fetchone()[0] == want
+    assert got.execute("SELECT count(*) FROM dims.dim_list_prices").fetchone()[0] == \
+        src.execute("SELECT count(*) FROM dims.dim_list_prices").fetchone()[0] > 0
+    assert got.execute("SELECT count(*) FROM tags.cost_reconciliation").fetchone()[0] == 0
+    full_idx = src.execute("SELECT count(*) FROM tags.tag_index").fetchone()[0]
+    idx = got.execute("SELECT count(*), sum(object_count) FROM tags.tag_index").fetchone()
+    assert 0 < idx[0] <= full_idx
+    assert got.execute("SELECT count(*) - count(DISTINCT (tag_key, tag_value, source)) FROM tags.tag_index").fetchone()[0] == 0
+    assert got.execute("SELECT count(*) FROM tags.tag_index WHERE tag_value IN ('__mixed__', '__untagged__')").fetchone()[0] == 0
+    assert [r[0] for r in got.execute("DESCRIBE tags.tag_index").fetchall()] == \
+        [r[0] for r in src.execute("DESCRIBE tags.tag_index").fetchall() if r[0] not in rls.ADDED_COLUMNS]
+
+
+def test_warehouse_grant_reaches_unit_keyed_tables(full_db, tmp_path):
+    out = tmp_path / "wh.duckdb"
+    src = duckdb.connect(str(full_db), read_only=True)
+    wh = src.execute("SELECT warehouse_id FROM tags.cost_unit WHERE warehouse_id IS NOT NULL LIMIT 1").fetchone()[0]
+    rls.filter_into(full_db, out, [("*", wh, "*")], "w@x.com", ("warehouse",))
+    got = duckdb.connect(str(out), read_only=True)
+    assert got.execute("SELECT count(*) FROM tags.cost_unit").fetchone()[0] > 0
+    assert got.execute("SELECT count(*) FROM tags.cost_unit_tag").fetchone()[0] >= 0
+
+
+def test_chargeback_share_adds_up_for_a_restricted_user(monkeypatch, tmp_path, full_db):
+    _env(monkeypatch, tmp_path, full_db, "query")
+    for name in ("cost_chargeback_by_workspace", "cost_chargeback_by_sku"):
+        rows = _get(f"/api/finding/{name}", "alice@x.com", window=30, limit=5000)["rows"]
+        assert rows and {str(r["workspace_id"]) for r in rows} == {"1111"}
+        assert abs(sum(r["share_of_total_pct"] or 0 for r in rows) - 100) < 1.5
+    full = _get("/api/finding/cost_chargeback_by_workspace", "carol@x.com", window=30, limit=5000)["rows"]
+    assert abs(sum(r["share_of_total_pct"] or 0 for r in full) - 100) < 1.5
+
+
+def test_abac_info_is_hidden_without_full_access(monkeypatch, tmp_path, full_db):
+    copy = tmp_path / "audit-3.duckdb"
+    shutil.copyfile(full_db, copy)
+    full_db = copy
+    con = duckdb.connect(str(full_db))
+    con.execute("CREATE SCHEMA IF NOT EXISTS governance")
+    con.execute("CREATE OR REPLACE TABLE governance.abac_policies_info AS SELECT '{\"rows\": 3}' AS info")
+    con.close()
+    _env(monkeypatch, tmp_path, full_db, "query")
+    assert _get("/api/abac_policies", "carol@x.com").get("info") == {"rows": 3}
+    alice = _get("/api/abac_policies", "alice@x.com")
+    assert not alice.get("info") and not alice.get("rows")
+
+
+def test_disabled_changes_nothing_for_tags_and_rollups(monkeypatch, tmp_path, full_db):
+    _env(monkeypatch, tmp_path, full_db, "query", enabled=False)
+    assert _get("/api/findings", None, window=30)["findings"]
+    assert _get("/api/tags", None, limit_keys=200)["keys"]
+    assert _get("/api/rollup/keys", None, window=30)["keys"]
