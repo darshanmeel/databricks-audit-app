@@ -159,8 +159,22 @@ python tools/deploy_app.py
 
 `config/app.yml` names the app (`lakehouse-health`) and picks who it queries as: the token in
 `.env` (`run_as: user`, the default) or the app's own service principal (`run_as: app`), which
-stores no token. An optional `rls:` block limits what each person sees from an entitlements table. Step by step, with the grants and what differs from a laptop:
+stores no token. Step by step, with the grants and what differs from a laptop:
 [docs/databricks-app.md](docs/databricks-app.md).
+
+**Who sees what (optional).** The `rls:` block in `config/app.yml` limits each person to their rows,
+from an entitlements table you keep in Databricks. Off by default.
+
+- **Table:** one row per grant: `principal` (email), `workspace_id`, `warehouse_id`, `environment`;
+  `*` or empty means all. `config/entitlements.example.sql` creates one with sample rows.
+- **`table`:** any `catalog.schema.table`. **`columns`:** one to three of `workspace`, `warehouse`,
+  `environment` (default `[workspace]`); the table needs only those columns plus `principal`.
+- **Matching:** a row shows when one grant row passes every configured column. Rows without a value
+  in a configured column (account-level data) need `*` for it.
+- **Laptop:** the load keeps only the token user's rows. **Databricks App:** `apply: query` (default)
+  filters per signed-in user while they browse; `apply: export` builds one data file per grant set.
+- The table is read once per refresh, so a grant change shows after the next refresh. No grant, or a
+  table that can't be read, means no rows and a "No access" line.
 
 ## AI/BI dashboards
 
@@ -228,9 +242,10 @@ Every lens also has How it works. The CTO's Overview is the CFO's, plus performa
 |---|---|
 | Window | Last 7, 30 or 90 days. Only windows the export holds show; a shorter one reads "partial". |
 | Env | prod, uat, dev or unknown (see [Environment](#environment)). |
-| Top tags | One filter per top tag that has values, at most 4 (see [Tags](#tags)). |
-| Tag | Any tag and value. Values of one tag are OR'ed, different tags AND'ed. "untagged" picks what lacks the tag. |
-| Workspaces | By name. Lists only the workspaces of the picked Env. |
+| Mandatory tags | One filter per `mandatory_tag_keys` tag (env/environment is the Env filter), e.g. Cost center and Domain. Filters queries, jobs, compute and workspaces by their own tag; "untagged" picks what lacks it. |
+| Filters › Top tags | One workspace filter per other top tag that has values (see [Tags](#tags)). |
+| Filters › Tag | Any other tag and value. Values of one tag are OR'ed, different tags AND'ed. "untagged" picks what lacks the tag. |
+| Filters › Workspaces | By name. Lists only the workspaces of the picked Env. |
 
 Grants, masks, lineage and table checks cover the whole metastore, so the workspace filter does not
 narrow them. Each page's scope line says what it covers.
@@ -256,7 +271,7 @@ a pasted link opens the same view. A check's details have a Copy link button.
 | `w` | Window in days |
 | `ws` | Workspace ids, comma-separated |
 | `env` | Env values |
-| `attr_<key>` | A top-tag filter, e.g. `attr_cost_center=finance` |
+| `attr_<key>` | A top-tag workspace filter, e.g. `attr_team=platform` |
 | `tags` | Tag filter |
 
 Example: `http://127.0.0.1:8000/#tab=cost&subtab=allocation&w=30&env=prod`
@@ -466,8 +481,8 @@ warehouse, all-purpose cluster, job and pipeline:
 
 | Setting | Where | What it does | After a change |
 |---|---|---|---|
-| `top_tags` | `config/tag_aliases.yml` | Tag filters in the top bar, and "Spend by" on the CFO and CTO Overview and Cost › Allocation, with the name shown. | Name only: page refresh. New key: `python tools/load_direct_results.py` |
-| `mandatory_tag_keys` | settings | Up to 5 tags every query, job, pipeline, cluster, warehouse and workspace should carry. The Tags page lists what misses each one. | Page refresh |
+| `top_tags` | `config/tag_aliases.yml` | Workspace filters under Filters (except mandatory tags, which have their own), and "Spend by" on the CFO and CTO Overview and Cost › Allocation, with the name shown. | Name only: page refresh. New key: `python tools/load_direct_results.py` |
+| `mandatory_tag_keys` | settings | Up to 5 tags every query, job, pipeline, cluster, warehouse and workspace should carry. Each gets its own top-bar filter; the Tags page lists what misses each one. | Page refresh |
 | `export_tag_keys` | settings | Keep only these tags in the export, to make it smaller. Not set = every tag. The top and mandatory tags are always kept. See below for what you miss. | Next export |
 
 **What you miss with `export_tag_keys` set,** for each tag you did not keep:
@@ -492,12 +507,13 @@ top_tags:
 - On the left, the tag key as in Databricks: lower case, letters, digits and `_`, starting with a
   letter. Names the app uses itself, such as `env`, `name` or `tag`, are refused.
 - On the right, the name shown; leave it empty to show the key.
-- Each one with values becomes a filter in the top bar, at most 4, in this order.
+- Each one with values becomes a workspace filter under Filters, at most 4, in this order; a
+  mandatory tag shows as its own top-bar filter instead.
 - The CFO and CTO Overview and Cost › Allocation show spend by each of them; the first one is the headline.
 - One key per line; two keys are never merged into one filter.
 - A mistake in the file hides every top-tag filter; the other filters still work.
 
-**How a workspace gets a top-tag value** (for the top-bar filter):
+**How a workspace gets a top-tag value** (for the workspace filter under Filters):
 
 - At least `tag_coverage_floor` (half) of its billed DBUs without a usage policy must carry the tag.
 - At least `tag_share_floor` (60%) of those must carry one value.
@@ -539,7 +555,14 @@ One wrapping folder around these is fine. Parquet wins over CSV.
 account as a snapshot folder, with rows for every check: warehouses, clusters, jobs, a pipeline,
 serving endpoints, Unity Catalog tables, grants, tags, lineage and audit events, each set up for
 one finding with the answer worked out by hand (for example a warehouse idle 98% of its running
-time). Build and open it:
+time). More workspaces (`tests/fake_account/extra.py`) add edge cases:
+
+- tags on every object type, a tag changed mid-window, mixed and mostly untagged workspaces;
+- Azure and GCP prices, a part-day today, a refund and restatement, a 5x spend day;
+- job and pipeline failure modes, flapping and idle warehouses, serving, Genie, storage and access events;
+- a sample entitlements table (`snapshot/entitlements/`) for trying row-level access.
+
+Build and open it:
 
 ```
 python tests/fake_account/build.py
@@ -588,7 +611,8 @@ The app's data comes from a local HTTP API under `/api`. Every route only reads,
 | The app shows "No data yet" | Pick the days and click Get, or run `python tools/first_run.py`. |
 | The app shows "config/settings.yml needs a fix" | Fix the setting and line it names. |
 | The app shows old or unexpected data | The first line `python -m app.api` prints names the database it opened. Set `AUDIT_DB` to pick one. |
-| Top-tag filters are missing | Check `config/tag_aliases.yml` for a bad key, and that the tag has values. |
+| Top-tag filters are missing | Check `config/tag_aliases.yml` for a bad key, and that the tag has values. Mandatory tags sit in the top bar, the others under Filters. |
+| A page reads "No access" | Row-level access is on and your email has no grant in the entitlements table, or the table could not be read. Add a row and refresh. |
 | Port 8000 is busy | Set `AUDIT_API_PORT`, e.g. `$env:AUDIT_API_PORT=8010` in PowerShell. |
 | Git Bash turns `/sql/1.0/...` into a file path | Use PowerShell, or unset the `DATABRICKS_*` variables so `.env` is used. |
 
