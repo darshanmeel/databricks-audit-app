@@ -19,7 +19,7 @@ import { setCanDrill } from "./components/names";
 import { useDims } from "./components/hooks";
 import { FirstRunScreen, useRefresh } from "./components/first_run";
 import { AttributeFilters, AttributePicker, NO_WORKSPACE_MATCH } from "./components/filters";
-import { TagPicker, TagScopeBanner, narrowingTag } from "./components/tag_picker";
+import { MandatoryTagPicker, TagPicker, TagScopeBanner, mandatoryFilterKeys, narrowingTag } from "./components/tag_picker";
 import { AREA_ORDER, AREA_REGISTRY, OLD_TAB_REDIRECTS, bandOf, homeForQuery } from "./components/tab_registry";
 import { ROLES, ROLE_LABEL, homeForRole, roleAreasFor, sidebarKeysForRole } from "./components/roles";
 import { AreaPage, ErrorBoundary, assessedCounts } from "./components/primitives";
@@ -401,11 +401,29 @@ function WorkspacesControl({ workspaces, selected, onToggle, onAll, onNone, onSe
 // active, opens the existing filter controls. Reuses those same controls verbatim inside its own
 // popover, so filtering itself never changes, only how many always-visible controls the top bar
 // shows at once. ───────────
-function activeFilterCount(envFilter: any, attrFilters: any, tagFilter: any): number {
-  let n = envFilter && envFilter.size ? 1 : 0;
-  n += Object.values(attrFilters || {}).filter((s: any) => s && s.size).length;
-  if (tagFilter && tagFilter.groups && tagFilter.groups.length) n += 1;
+function activeFilterCount(attrFilters: any, tagFilter: any, reserved: string[]): number {
+  let n = Object.values(attrFilters || {}).filter((s: any) => s && s.size).length;
+  const norm = (k: string) => String(k).toLowerCase().replace(/[ _-]+/g, "");
+  if (((tagFilter && tagFilter.groups) || []).some((g: any) => !reserved.includes(norm(g.key)))) n += 1;
   return n;
+}
+
+// Env and the mandatory tags (settings mandatory_tag_keys) sit in the bar as their own filters.
+function MainFilters({ workspaces, envFilter, onEnvChange, tagFilter, onTagChange, meta }: LooseProps) {
+  const keys = mandatoryFilterKeys(meta && meta.mandatory_tag_keys, meta && meta.top_tags);
+  return (
+    <React.Fragment>
+      <AttributePicker attrKey="env" workspaces={workspaces} selectedValues={envFilter} onChange={onEnvChange} />
+      {keys.map((k) => <MandatoryTagPicker key={k.key} tagKey={k.key} label={k.label} value={tagFilter} onChange={onTagChange} />)}
+    </React.Fragment>
+  );
+}
+
+// Workspace pickers for top tags that already have their own mandatory-tag picker are left out.
+function otherAttributeKeys(meta: any): string[] {
+  const norm = (k: string) => String(k).toLowerCase().replace(/[ _-]+/g, "");
+  const mandatory = mandatoryFilterKeys(meta && meta.mandatory_tag_keys, meta && meta.top_tags).map((k) => k.key);
+  return ((meta && meta.attribute_keys_populated) || []).filter((k: string) => !mandatory.includes(norm(k)));
 }
 function FiltersButton({
   workspaces, pickerSelected, toggleWorkspace, selectAll, selectNone, setManyWorkspaces,
@@ -427,23 +445,23 @@ function FiltersButton({
   const total = workspaces.length;
   const n = pickerSelected ? pickerSelected.size : 0;
   const wsText = total === 0 ? "no workspaces" : n === total ? `all ${fmtInt(total)} workspaces` : n === 0 ? "no workspaces" : `${fmtInt(n)} of ${fmtInt(total)} workspaces`;
-  const active = activeFilterCount(envFilter, attrFilters, tagFilter);
+  const reserved = mandatoryFilterKeys(meta && meta.mandatory_tag_keys, meta && meta.top_tags).map((k) => k.key);
+  const active = activeFilterCount(attrFilters, tagFilter, reserved);
   return (
     <div className="filter-group ws-picker filters-picker" ref={boxRef}>
-      <button type="button" ref={triggerRef} className="ws-trigger filters-trigger" aria-expanded={open} onClick={() => setOpen(!open)} title="Filter by environment, tag or workspace">
+      <button type="button" ref={triggerRef} className="ws-trigger filters-trigger" aria-expanded={open} onClick={() => setOpen(!open)} title="Filter by other tags or workspaces">
         Filters <span className="filters-trigger-sum">{`${active ? `${fmtInt(active)} active` : "none"} · ${wsText}`}</span> <span className="caret">{open ? "▴" : "▾"}</span>
       </button>
       {open && (
         <div className="ws-pop filters-pop">
-          <AttributePicker attrKey="env" workspaces={workspaces} selectedValues={envFilter} onChange={onEnvChange} />
           <AttributeFilters
             workspaces={workspaces}
-            populatedKeys={(meta && meta.attribute_keys_populated) || []}
+            populatedKeys={otherAttributeKeys(meta)}
             topTags={(meta && meta.top_tags) || []}
             selected={attrFilters}
             onChange={onAttrChange}
           />
-          <TagPicker value={tagFilter} onChange={onTagChange} />
+          <TagPicker value={tagFilter} onChange={onTagChange} reservedKeys={reserved} />
           <div className="filters-pop-divider" />
           <WorkspacesControl
             workspaces={inEnvs(workspaces, envFilter)} selected={pickerSelected} onToggle={toggleWorkspace}
@@ -484,6 +502,7 @@ function TopBar({
       <div className="topbar-controls">
         {solo && <LensSelect role={role} onChange={onRoleChange} />}
         <WindowControl windows={windows} value={filtersWindow} onChange={onSetWindow} />
+        <MainFilters workspaces={workspaces} envFilter={envFilter} onEnvChange={onEnvChange} tagFilter={tagFilter} onTagChange={onTagChange} meta={meta} />
         <FiltersButton
           workspaces={workspaces} pickerSelected={pickerSelected} toggleWorkspace={toggleWorkspace}
           selectAll={selectAll} selectNone={selectNone} setManyWorkspaces={setManyWorkspaces}
@@ -631,15 +650,16 @@ function SideNavDrawer({
         <button type="button" className="mobile-nav-close" onClick={onClose} aria-label="Close">✕</button>
         <WindowControl windows={windows} value={filtersWindow} onChange={onSetWindow} />
         <div className="mobile-nav-filters">
-          <AttributePicker attrKey="env" workspaces={workspaces} selectedValues={envFilter} onChange={onEnvChange} />
+          <MainFilters workspaces={workspaces} envFilter={envFilter} onEnvChange={onEnvChange} tagFilter={tagFilter} onTagChange={onTagChange} meta={meta} />
           <AttributeFilters
             workspaces={workspaces}
-            populatedKeys={(meta && meta.attribute_keys_populated) || []}
+            populatedKeys={otherAttributeKeys(meta)}
             topTags={(meta && meta.top_tags) || []}
             selected={attrFilters}
             onChange={onAttrChange}
           />
-          <TagPicker value={tagFilter} onChange={onTagChange} />
+          <TagPicker value={tagFilter} onChange={onTagChange}
+            reservedKeys={mandatoryFilterKeys(meta && meta.mandatory_tag_keys, meta && meta.top_tags).map((k) => k.key)} />
           <WorkspacesControl
             workspaces={inEnvs(workspaces, envFilter)} selected={pickerSelected} onToggle={toggleWorkspace}
             onAll={selectAll} onNone={selectNone} onSetMany={setManyWorkspaces}

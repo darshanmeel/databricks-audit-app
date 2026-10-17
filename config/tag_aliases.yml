@@ -1,4 +1,5 @@
-# Tags shown as top-bar filters and as "Spend by" on Money and Cost > Allocation, in this order.
+# Tags shown as "Spend by" on Money and Cost > Allocation and as workspace filters under Filters,
+# in this order. Mandatory tags (settings.yml mandatory_tag_keys) get their own top-bar filter.
 # Key: the tag key as it is in Databricks, written in lower case with underscores. Case, spaces,
 # hyphens and underscores are ignored, so cost_center also matches "Cost Center" and "costcenter".
 # Value: the name shown on screen; leave it empty to show the key.

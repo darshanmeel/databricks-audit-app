@@ -15,6 +15,7 @@ import type { TagFilter, TagGroup, TagKeyEntry } from "../types";
 
 const TAG_SEARCH_DEBOUNCE_MS = 250;
 const TAG_UNTAGGED = "__untagged__";
+const normKey = (raw: string) => String(raw || "").toLowerCase().replace(/[ _-]+/g, "");
 
 export function tagValueLabel(v: string | null | undefined): string {
   if (v === TAG_UNTAGGED) return "untagged";
@@ -37,7 +38,7 @@ function usePopoverClose(open: boolean, setOpen: (open: boolean) => void, ref: R
   }, [open]);
 }
 
-function TagNameList({ draft, onToggle }: { draft: TagGroup[]; onToggle: (k: TagKeyEntry) => void }) {
+function TagNameList({ draft, onToggle, hidden }: { draft: TagGroup[]; onToggle: (k: TagKeyEntry) => void; hidden: Set<string> }) {
   const [q, setQ] = React.useState("");
   const [state, setState] = React.useState<{ loading: boolean; keys: TagKeyEntry[]; truncated: boolean; error: string | null }>(
     { loading: true, keys: [], truncated: false, error: null });
@@ -60,7 +61,7 @@ function TagNameList({ draft, onToggle }: { draft: TagGroup[]; onToggle: (k: Tag
           ? "Tags aren't in this export; the next export loads them. Filter by Workspaces meanwhile."
           : `Could not load tags: ${state.error}`}</div>}
         {!state.loading && !state.error && state.keys.length === 0 && <div className="ws-empty">{q ? `No tag names match "${q}".` : "No tags in this export."}</div>}
-        {!state.loading && state.keys.map((k) => (
+        {!state.loading && state.keys.filter((k) => !hidden.has(normKey(k.tag_key))).map((k) => (
           <label key={k.tag_key} className="ws-row">
             <input type="checkbox" checked={draft.some((g) => g.key === k.tag_key)} onChange={() => onToggle(k)} />
             <span className="ws-name">{k.display_key || k.tag_key}</span>
@@ -144,14 +145,94 @@ function TagValueSection({ group, q, onToggleValue, onSetAll }: {
   );
 }
 
-export function TagPicker({ value, onChange }: { value: TagFilter | null; onChange: (tag: TagFilter | null) => void }) {
-  const applied = (value && value.groups) || [];
+// Mandatory tags with their own picker: env/environment is left to the Env picker.
+export function mandatoryFilterKeys(mandatory: string[] | null | undefined, topTags: { key: string; label: string }[] | null | undefined): { key: string; label: string }[] {
+  return (mandatory || []).filter((k) => !["env", "environment"].includes(normKey(k))).map((k) => {
+    const top = (topTags || []).find((t) => normKey(t.key) === normKey(k));
+    const spaced = String(k).replace(/_/g, " ");
+    return { key: normKey(k), label: (top && top.label) || spaced.charAt(0).toUpperCase() + spaced.slice(1) };
+  });
+}
+
+// One mandatory tag as its own filter: tick values, applied at once; nothing ticked means all.
+export function MandatoryTagPicker({ tagKey, label, value, onChange }: {
+  tagKey: string; label: string; value: TagFilter | null; onChange: (tag: TagFilter | null) => void;
+}) {
+  const [open, setOpen] = React.useState(false);
+  const [q, setQ] = React.useState("");
+  const [state, setState] = React.useState<{ loading: boolean; values: NonNullable<TagKeyEntry["values"]>; error: boolean }>(
+    { loading: true, values: [], error: false });
+  const boxRef = React.useRef<HTMLDivElement>(null);
+  usePopoverClose(open, setOpen, boxRef);
+  React.useEffect(() => {
+    if (!open) return undefined;
+    let cancelled = false;
+    Api.tags("", tagKey, 1, 500)
+      .then((d) => { const row = (d.keys || [])[0]; if (!cancelled) setState({ loading: false, values: (row && row.values) || [], error: false }); })
+      .catch(() => { if (!cancelled) setState({ loading: false, values: [], error: true }); });
+    return () => { cancelled = true; };
+  }, [open, tagKey]);
+  const groups = (value && value.groups) || [];
+  const mine = groups.find((g) => normKey(g.key) === tagKey);
+  const picked = (mine && !mine.all && mine.values) || [];
+  const setPicked = (next: string[]) => {
+    const others = groups.filter((g) => normKey(g.key) !== tagKey);
+    const all = next.length ? [...others, { key: tagKey, display_key: label, values: next }] : others;
+    onChange(all.length ? { groups: all } : null);
+  };
+  const toggle = (v: string) => setPicked(picked.includes(v) ? picked.filter((x) => x !== v) : [...picked, v]);
+  const needle = q.trim().toLowerCase();
+  const shown = state.values.filter((v) => !needle || tagValueLabel(v.tag_value).toLowerCase().includes(needle));
+  const buttonLabel = picked.length === 0 ? "All" : picked.length === 1 ? tagValueLabel(picked[0]) : `${picked.length} selected`;
+  return (
+    <div className="filter-group ws-picker" ref={boxRef}>
+      <span className="filter-label">{label}</span>
+      <button className="ws-trigger" onClick={() => setOpen(!open)} title={`Filter by the ${label} tag on queries, jobs, compute and workspaces`}>
+        {buttonLabel} <span className="caret">{open ? "▴" : "▾"}</span>
+      </button>
+      {open && (
+        <div className="ws-pop">
+          <input className="ws-search" autoFocus placeholder="Search values..." value={q} onChange={(e) => setQ(e.target.value)} />
+          <div className="ws-actions">
+            <button onClick={() => setPicked([])}>All</button>
+          </div>
+          <div className="ws-list">
+            {state.loading && <div className="ws-empty">Loading values...</div>}
+            {state.error && <div className="ws-empty">Tags aren't in this export; the next export loads them.</div>}
+            {!state.loading && !state.error && state.values.length === 0 && <div className="ws-empty">{`No ${label.toLowerCase()} values in this export.`}</div>}
+            {!state.loading && shown.map((v) => (
+              <label key={v.tag_value} className="ws-row">
+                <input type="checkbox" checked={picked.includes(v.tag_value)} onChange={() => toggle(v.tag_value)} />
+                <span className="ws-name" title={tagValueLabel(v.tag_value)}>{tagValueLabel(v.tag_value)}</span>
+                <span className="muted">{fmtInt(v.object_count)}</span>
+              </label>
+            ))}
+            {!state.loading && !state.error && !needle && (
+              <label className="ws-row">
+                <input type="checkbox" checked={picked.includes(TAG_UNTAGGED)} onChange={() => toggle(TAG_UNTAGGED)} />
+                <span className="ws-name">untagged (no such tag)</span>
+              </label>
+            )}
+          </div>
+          <div className="ws-foot">{picked.length ? `${picked.length} of ${state.values.length + 1} picked` : "All values"}</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// `reservedKeys` have their own MandatoryTagPicker: this picker neither lists nor edits them.
+export function TagPicker({ value, onChange, reservedKeys }: { value: TagFilter | null; onChange: (tag: TagFilter | null) => void; reservedKeys?: string[] }) {
+  const reserved = new Set((reservedKeys || []).map(normKey));
+  const isReserved = (g: TagGroup) => reserved.has(normKey(g.key));
+  const applied = ((value && value.groups) || []).filter((g) => !isReserved(g));
+  const kept = ((value && value.groups) || []).filter(isReserved);
   const [draft, setDraft] = React.useState<TagGroup[]>(applied);
   const [open, setOpen] = React.useState<"name" | "value" | null>(null);
   const [valueQ, setValueQ] = React.useState("");
   const boxRef = React.useRef<HTMLDivElement>(null);
   usePopoverClose(!!open, () => setOpen(null), boxRef);
-  React.useEffect(() => { setDraft((value && value.groups) || []); }, [JSON.stringify(value)]);
+  React.useEffect(() => { setDraft(applied); }, [JSON.stringify(value)]);
 
   const toggleName = (k: TagKeyEntry) => setDraft((d) => (d.some((g) => g.key === k.tag_key)
     ? d.filter((g) => g.key !== k.tag_key)
@@ -164,10 +245,10 @@ export function TagPicker({ value, onChange }: { value: TagFilter | null; onChan
         : { key: g.key, display_key: g.display_key, values: [], none: true })));
   // A name left with nothing ticked narrows nothing, so it is dropped.
   const apply = () => {
-    const groups = draft.filter((g) => !g.none);
+    const groups = [...kept, ...draft.filter((g) => !g.none)];
     onChange(groups.length ? { groups } : null); setOpen(null);
   };
-  const clear = () => { setDraft([]); onChange(null); setOpen(null); };
+  const clear = () => { setDraft([]); onChange(kept.length ? { groups: kept } : null); setOpen(null); };
   const toggleOpen = (which: "name" | "value") => setOpen(open === which ? null : which);
 
   const nameLabel = applied.length === 0 ? "any"
@@ -195,7 +276,7 @@ export function TagPicker({ value, onChange }: { value: TagFilter | null; onChan
       </button>
       {open === "name" && (
         <div className="ws-pop tag-pop">
-          <TagNameList draft={draft} onToggle={toggleName} />
+          <TagNameList draft={draft} onToggle={toggleName} hidden={reserved} />
           {actions}
         </div>
       )}
