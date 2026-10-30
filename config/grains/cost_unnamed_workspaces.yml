@@ -1,0 +1,4 @@
+# config/grains/cost_unnamed_workspaces.yml -- one row per workspace_id (the generator prepends
+# window_days itself, unique_grain: {columns: [window_days] + grain}, DEC-24). Do not list
+# window_days here.
+cost_unnamed_workspaces: [workspace_id]

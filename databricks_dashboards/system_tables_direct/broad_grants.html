@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Broad grants queries</title><style>
+:root { --bg:#fbfbfa; --fg:#1d1d1b; --muted:#5f5f5a; --line:#e2e1dc; --card:#ffffff; --code:#f4f3ef; --accent:#1f5f8b; }
+@media (prefers-color-scheme: dark) { :root { --bg:#161615; --fg:#ecebe6; --muted:#a3a29b; --line:#33332f;
+  --card:#1e1e1c; --code:#232321; --accent:#7fb4dc; } }
+* { box-sizing: border-box; }
+body { margin:0; background:var(--bg); color:var(--fg); font:15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+main { max-width: 1040px; margin: 0 auto; padding: 24px 16px 64px; }
+h1 { font-size: 24px; margin: 0 0 4px; } h2 { font-size: 19px; margin: 32px 0 8px; padding-top: 8px;
+  border-top: 1px solid var(--line); } h3 { font-size: 16px; margin: 0 0 6px; }
+p, li { color: var(--fg); } .muted { color: var(--muted); }
+nav a, a { color: var(--accent); } nav { margin: 12px 0 0; display:flex; flex-wrap:wrap; gap: 6px 14px; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; margin: 12px 0; }
+dl { display: grid; grid-template-columns: 110px 1fr; gap: 4px 12px; margin: 0 0 8px; }
+dt { color: var(--muted); } dd { margin: 0; }
+code { font: 13px/1.45 ui-monospace, Consolas, monospace; }
+pre { background: var(--code); border: 1px solid var(--line); border-radius: 6px; padding: 12px; overflow-x: auto;
+  font: 12.5px/1.45 ui-monospace, Consolas, monospace; white-space: pre; }
+.c { color: #2e7d32; } @media (prefers-color-scheme: dark) { .c { color: #8fcf8f; } }
+summary { cursor: pointer; color: var(--accent); }
+h4 { font-size: 14px; margin: 12px 0 4px; color: var(--muted); } ol, ul { margin: 4px 0; padding-left: 22px; }
+.table-wrap { overflow-x: auto; } table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th, td { text-align: left; vertical-align: top; padding: 6px 8px; border-bottom: 1px solid var(--line); }
+th { color: var(--muted); font-weight: 600; } td:first-child { white-space: nowrap; }
+
+.flow-wrap { overflow-x: auto; margin: 6px 0 4px; }
+.flow .edge { fill: none; stroke: var(--muted); stroke-width: 1.2; opacity: .55; }
+.flow rect { fill: var(--card); stroke: var(--line); stroke-width: 1.2; }
+.flow text { font: 11.5px ui-monospace, Consolas, monospace; fill: var(--fg); }
+.flow .table rect { fill: var(--code); }
+.flow .check rect { stroke: var(--accent); stroke-width: 1.6; }
+.flow .final rect { stroke: #2e7d32; stroke-width: 1.6; }
+.er .ent rect { fill: var(--card); stroke: var(--line); stroke-width: 1.2; }
+.er .ent .hd { fill: var(--code); }
+.er .table .hd { fill: #d9d6cc; } .er .check rect { stroke: var(--accent); stroke-width: 1.6; } .er .result rect { stroke: #2e7d32; stroke-width: 1.6; }
+.er .result .hd { fill: #cfe8cf; }
+.er .t { font: 600 11.5px system-ui, sans-serif; fill: #1d1d1b; }
+.er .c, .er .k { font: 11px ui-monospace, Consolas, monospace; fill: var(--fg); }
+.er .k { fill: var(--accent); font-weight: 600; }
+.er .n { font: 11px system-ui, sans-serif; fill: var(--muted); }
+.er .mark circle { fill: var(--accent); } .er .mark text { font: 600 10px system-ui, sans-serif; fill: #fff; }
+.er-notes { font-size: 14px; } .er-notes li { margin: 2px 0; }
+.timeline text { font: 12px system-ui, sans-serif; }
+.timeline .axis { fill: var(--muted); font-size: 11px; }
+.timeline .tick { stroke: var(--line); stroke-dasharray: 3 3; }
+.timeline .bar rect { stroke: none; }
+.timeline .bar text { font-size: 11px; fill: #1d1d1b; }
+.timeline .queue rect { fill: #d9d6cc; } .timeline .setup rect { fill: #f2c46d; }
+.timeline .run rect { fill: #9cc3e0; } .timeline .ok rect { fill: #8fcf8f; }
+.timeline .failed rect { fill: #ec8c84; } .timeline .idle rect { fill: #e8e6df; }
+.legend .key { display: inline-block; width: 12px; height: 12px; border-radius: 2px; margin: 0 4px 0 10px;
+  vertical-align: -1px; }
+.key.queue { background: #d9d6cc; } .key.setup { background: #f2c46d; } .key.run { background: #9cc3e0; }
+.key.ok { background: #8fcf8f; } .key.failed { background: #ec8c84; } .key.idle { background: #e8e6df; }
+.caption { margin: 14px 0 4px; font-size: 13px; color: var(--muted); }
+table.example td { font: 12.5px ui-monospace, Consolas, monospace; }
+</style></head>
+<body><main>
+<h1>Broad grants (system tables, direct): the queries</h1>
+<p class="muted">1 query, each reading the Databricks system tables live. Generated from the
+dashboard's own SQL; regenerate rather than edit.</p>
+<nav><a href="#purpose">Purpose</a> <a href="#joins">Joins</a> <a href="#example">Example</a> <a href="#map">Map</a> <a href="#basics">Basics</a> <a href="#rules">Rules</a> <a href="#limits">Limits</a> <a href="#checks">Checks</a> <a href="#how">How to read</a> <a href="#tables">System tables</a> <a href="#widgets">Widgets</a> <a href="#37e55536">Grants: every privilege granted in Unity Catalog, broad ones flagged</a></nav>
+
+<h2 id="purpose">What this dashboard is for</h2><p>Lists every privilege granted in Unity Catalog, with who granted it and when, and flags the broad ones: ALL PRIVILEGES on a catalog, schema or table, and anything granted to account users.</p>
+<h2 id="joins">How the tables join</h2>
+<div class='flow-wrap'><svg class="flow er" viewBox="-2 -2 972 188" width="972" height="188" role="img"><path class="edge" d="M200,30.0 C228.0,30.0 228.0,30.0 256,30.0"/><g class="mark"><circle cx="228.0" cy="30.0" r="8"/><text x="228.0" y="34.0" text-anchor="middle">1</text></g><path class="edge" d="M456,30.0 C484.0,30.0 484.0,30.0 512,30.0"/><g class="mark"><circle cx="484.0" cy="30.0" r="8"/><text x="484.0" y="34.0" text-anchor="middle">2</text></g><path class="edge" d="M712,30.0 C740.0,30.0 740.0,30.0 768,30.0"/><g class="mark"><circle cx="740.0" cy="30.0" r="8"/><text x="740.0" y="34.0" text-anchor="middle">3</text></g><path class="edge" d="M712,150.0 C740.0,150.0 740.0,30.0 768,30.0"/><g class="mark"><circle cx="740.0" cy="90.0" r="8"/><text x="740.0" y="94.0" text-anchor="middle">4</text></g><g class="ent table"><title>system.access.audit</title><rect x="0" y="0" width="200" height="115" rx="5"/><rect class="hd" x="0" y="0" width="200" height="24" rx="5"/><text class="t" x="8" y="16">access.audit</text><text class="k" x="8" y="37">◆ workspace_id</text><text class="c" x="8" y="54">event_time</text><text class="c" x="8" y="71">action_name</text><text class="c" x="8" y="88">user_identity.email</text><text class="c" x="8" y="105">request_params</text></g><g class="ent step"><title>ev: one row per GRANT event</title><rect x="256" y="0" width="200" height="98" rx="5"/><rect class="hd" x="256" y="0" width="200" height="24" rx="5"/><text class="t" x="264" y="16">ev: one row per GRANT event</text><text class="k" x="264" y="37">◆ workspace_id</text><text class="c" x="264" y="54">actor</text><text class="c" x="264" y="71">object</text><text class="c" x="264" y="88">changes (JSON)</text></g><g class="ent step"><title>granted: one row per privilege</title><rect x="512" y="0" width="200" height="98" rx="5"/><rect class="hd" x="512" y="0" width="200" height="24" rx="5"/><text class="t" x="520" y="16">granted: one row per privilege</text><text class="k" x="520" y="37">◆ workspace_id</text><text class="c" x="520" y="54">object</text><text class="c" x="520" y="71">grantee</text><text class="c" x="520" y="88">privilege</text></g><g class="ent table"><title>system.access.workspaces_latest</title><rect x="512" y="120" width="200" height="64" rx="5"/><rect class="hd" x="512" y="120" width="200" height="24" rx="5"/><text class="t" x="520" y="136">access.workspaces_latest</text><text class="k" x="520" y="157">◆ workspace_id</text><text class="c" x="520" y="174">workspace_name</text></g><g class="ent result"><title>dashboard rows</title><rect x="768" y="0" width="200" height="132" rx="5"/><rect class="hd" x="768" y="0" width="200" height="24" rx="5"/><text class="t" x="776" y="16">dashboard rows</text><text class="c" x="776" y="37">object</text><text class="c" x="776" y="54">privilege</text><text class="c" x="776" y="71">grantee</text><text class="c" x="776" y="88">actor</text><text class="c" x="776" y="105">actor_type</text><text class="c" x="776" y="122">critical</text></g></svg></div><p class='muted'>Grey: system tables. Blue border: a shared check (its steps are listed under Steps). White: steps of the query. Green: the rows the dashboard shows. ◆ marks the columns the joins use.</p><ol class='er-notes'><li><b>access.audit</b> → <b>ev</b>: updatePermissions, status 200</li><li><b>ev</b> → <b>granted</b>: explode changes, then add</li><li><b>granted</b> → <b>dashboard rows</b>: flag broad</li><li><b>access.workspaces_latest</b> → <b>dashboard rows</b>: JOIN ON workspace_id</li></ol>
+<h2 id="example">How it works, with an example</h2>
+<p class="muted">What happens in Databricks, what the system tables record, and how the dashboard's queries read it.
+Names and ids are made up; table rows are simplified.</p>
+<h3>1. A GRANT becomes an audit row</h3><p>alice@example.com runs this in a SQL editor:</p><pre><code>GRANT ALL PRIVILEGES ON SCHEMA main.sales TO `account users`;
+GRANT SELECT, MODIFY ON TABLE main.sales.orders TO `data-engineers`;</code></pre><div class='flow-wrap'><svg class="flow" viewBox="-2 -2 776 30" width="776" height="30" role="img"><path class="edge" d="M172,13.0 C186.0,13.0 186.0,13.0 200,13.0"/><path class="edge" d="M372,13.0 C386.0,13.0 386.0,13.0 400,13.0"/><path class="edge" d="M572,13.0 C586.0,13.0 586.0,13.0 600,13.0"/><g class="node step"><title>GRANT in SQL, UI or API</title><rect x="0" y="0" width="172" height="26" rx="5"/><text x="8" y="17">GRANT in SQL, UI or API</text></g><g class="node table"><title>audit: updatePermissions</title><rect x="200" y="0" width="172" height="26" rx="5"/><text x="208" y="17">audit: updatePermissions</text></g><g class="node step"><title>one row per privilege</title><rect x="400" y="0" width="172" height="26" rx="5"/><text x="408" y="17">one row per privilege</text></g><g class="node final"><title>critical if broad</title><rect x="600" y="0" width="172" height="26" rx="5"/><text x="608" y="17">critical if broad</text></g></svg></div><p class='caption'>system.access.audit: each GRANT is an updatePermissions event (request_params simplified)</p><div class='table-wrap'><table class='example'><tr><th><code>event_time</code></th><th><code>action_name</code></th><th><code>user_identity.email</code></th><th><code>securable_type</code></th><th><code>securable_full_name</code></th><th><code>changes</code></th></tr><tr><td>09:14</td><td>updatePermissions</td><td>alice@example.com</td><td>schema</td><td>main.sales</td><td>[{&quot;principal&quot;:&quot;account users&quot;,&quot;add&quot;:[&quot;ALL_PRIVILEGES&quot;]}]</td></tr><tr><td>09:15</td><td>updatePermissions</td><td>alice@example.com</td><td>table</td><td>main.sales.orders</td><td>[{&quot;principal&quot;:&quot;data-engineers&quot;,&quot;add&quot;:[&quot;SELECT&quot;,&quot;MODIFY&quot;]}]</td></tr></table></div><p class='caption'>What the dashboard shows</p><div class='table-wrap'><table class='example'><tr><th><code>object</code></th><th><code>privilege</code></th><th><code>grantee</code></th><th><code>granted by</code></th><th><code>actor type</code></th><th><code>why critical</code></th></tr><tr><td>main.sales</td><td>ALL_PRIVILEGES</td><td>account users</td><td>alice@example.com</td><td>User</td><td>All privileges to account users</td></tr><tr><td>main.sales.orders</td><td>SELECT</td><td>data-engineers</td><td>alice@example.com</td><td>User</td><td>Not broad</td></tr><tr><td>main.sales.orders</td><td>MODIFY</td><td>data-engineers</td><td>alice@example.com</td><td>User</td><td>Not broad</td></tr></table></div><ul><li>The second GRANT gave two privileges, so it becomes two rows.</li><li>ALL PRIVILEGES on a schema reaches every table in it, now and later; to account users it reaches everyone in the account.</li></ul>
+<h2 id="map">How it fits together</h2>
+<p class="muted">Left: the system tables it reads. Middle: its queries. Right: the pages whose widgets read them.</p>
+<div class='flow-wrap'><svg class="flow" viewBox="-2 -2 576 66" width="576" height="66" role="img"><path class="edge" d="M172,13.0 C186.0,13.0 186.0,13.0 200,13.0"/><path class="edge" d="M172,49.0 C186.0,49.0 186.0,13.0 200,13.0"/><path class="edge" d="M372,13.0 C386.0,13.0 386.0,13.0 400,13.0"/><g class="node table"><title>system.access.audit</title><rect x="0" y="0" width="172" height="26" rx="5"/><text x="8" y="17">access.audit</text></g><g class="node table"><title>system.access.workspaces_latest</title><rect x="0" y="36" width="172" height="26" rx="5"/><text x="8" y="53">access.workspaces_latest</text></g><g class="node step"><title>grant_events</title><rect x="200" y="0" width="172" height="26" rx="5"/><text x="208" y="17">grant_events</text></g><g class="node final"><title>Broad grants</title><rect x="400" y="0" width="172" height="26" rx="5"/><text x="408" y="17">Broad grants</text></g></svg></div>
+<h2 id="basics">Databricks basics</h2>
+<div class="table-wrap"><table><tr><th>Term</th><th>What it means</th></tr><tr><td><b>System tables</b></td><td>Read-only tables Databricks fills for the whole account under the catalog system (system.billing, system.lakeflow, system.compute, system.access). The dashboards read them live; there are no tables of our own.</td></tr><tr><td><b>Audit log</b></td><td>system.access.audit: one row per action someone took (log in, grant, change a group, ...), with who did it, when, in which workspace, the request and whether it succeeded. Databricks keeps it for 365 days.</td></tr><tr><td><b>Unity Catalog, grant</b></td><td>Unity Catalog governs data: catalogs hold schemas, schemas hold tables. A grant gives a principal a privilege on one of them (SELECT, MODIFY, ALL PRIVILEGES, ...); a grant on a catalog or schema reaches everything inside it.</td></tr><tr><td><b>User, group, service principal</b></td><td>A user is a person (an email). A group bundles users. A service principal is a non-human identity for automation (CI/CD, Terraform); in the audit log it appears as its application id, a UUID like 1b2c3d4e-....</td></tr><tr><td><b>account users</b></td><td>A built-in group holding every user of the account. Granting it something gives that to everyone.</td></tr><tr><td><b>Query, CTE</b></td><td>A query is SQL. Each one here is a chain of named steps written WITH name AS (...), called CTEs; each step reads the ones before it, and one last SELECT gives the rows.</td></tr></table></div>
+<h2 id="rules">Rules and thresholds</h2>
+<div class="table-wrap"><table><tr><th>Rule</th><th>Definition</th><th>Why</th></tr><tr><td><b>Grant</b></td><td>A successful updatePermissions event in Unity Catalog; one row per object, grantee and privilege added.</td><td>One GRANT statement can give several privileges to several principals.</td></tr><tr><td><b>Critical</b></td><td>ALL_PRIVILEGES on a CATALOG, SCHEMA or TABLE, or any privilege to account users.</td><td>Both break least privilege: everything to someone, or something to everyone.</td></tr><tr><td><b>Actor type</b></td><td>Service principal when the actor is a UUID (application id), User when it is an email, else Other (system).</td><td>Automation uses service principals; people use emails.</td></tr></table></div>
+<h2 id="limits">What it can miss</h2><ul><li>Only grants still in the audit log (365 days).</li><li>Revokes are left out; Admin changes shows them.</li><li>The object and grantee come from the event&#x27;s request_params (securable_type, securable_full_name, changes); if Databricks changes that layout the table goes empty. Check with the query below.</li><li>Some system tables only hold workspaces in the same cloud region as the metastore; if a workspace is missing, check its region.</li></ul>
+<h2 id="checks">Check it against your data</h2>
+<p class="muted">Run these in a SQL editor to see the raw rows the dashboard starts from.</p><h4>What a grant event looks like</h4><pre><code>SELECT event_time, user_identity.email, request_params
+FROM system.access.audit
+WHERE service_name = &#x27;unityCatalog&#x27; AND action_name = &#x27;updatePermissions&#x27;
+  AND event_date &gt;= current_date() - 30
+LIMIT 20;</code></pre>
+<h2 id="how">How to read a query</h2>
+<ul>
+  <li><b>No snapshot.</b> Each query reads the Databricks <b>system tables</b> directly, every time the dashboard
+    opens or a filter changes.</li>
+  <li><b>Widgets share queries.</b> Each widget reads one query and adds up its rows its own way (the Widgets
+    table says how); widgets that read the same query always agree.</li>
+  <li><b>Each query reads like a recipe:</b> named steps (<code>WITH step AS (...)</code>, called CTEs), each building
+    on the one before, then one final <code>SELECT</code>. A step named after a check (for example
+    <code>lakeflow_job_reliability</code>) is a shared, tested check reused unchanged except for the dates; its own
+    steps are listed under it.</li>
+  <li><b>Time Window:</b> <code>:time_range.min</code> and <code>:time_range.max</code> are the dates picked in the
+    Time Window filter (on Global Filters, or on the page). The end day counts in full.</li>
+  <li><b>Workspace</b> and the other field filters need no SQL: Databricks keeps the rows whose column
+    matches the pick.</li>
+  <li><b>$</b> is list price (usage x the SKU's list price), not the invoice.</li>
+  <li><b>Comments in the SQL</b> (green, starting <code>--</code>) are added on this page only.</li>
+</ul>
+
+<h2 id="tables">System tables</h2>
+<p class="muted">Databricks fills them for the whole account.</p>
+<div class="table-wrap"><table><tr><th>System table</th><th>What it holds</th></tr><tr id="t-system-access-audit"><td><code>system.access.audit</code></td><td>One row per action in the account: who, when, which workspace, the service and action, the request and its response. Kept for 365 days.</td></tr><tr id="t-system-access-workspaces-latest"><td><code>system.access.workspaces_latest</code></td><td>Each workspace&#x27;s id and name.</td></tr></table></div>
+<h2 id="widgets">Widgets and the query each reads</h2><div class='table-wrap'><table><tr><th>Page</th><th>Widget</th><th>Type</th><th>Query</th><th>What it takes from the query</th></tr><tr><td>Broad grants</td><td>Time Window</td><td>filter-date-range-picker</td><td><a href='#37e55536'>Grants: every privilege granted in Unity Catalog, broad ones flagged</a></td><td>sets <code>:time_range</code></td></tr><tr><td>Broad grants</td><td>Workspace</td><td>filter-multi-select</td><td><a href='#37e55536'>Grants: every privilege granted in Unity Catalog, broad ones flagged</a></td><td><code>`workspace`</code></td></tr><tr><td>Broad grants</td><td>Privilege</td><td>filter-multi-select</td><td><a href='#37e55536'>Grants: every privilege granted in Unity Catalog, broad ones flagged</a></td><td><code>`privilege`</code></td></tr><tr><td>Broad grants</td><td>Actor type</td><td>filter-multi-select</td><td><a href='#37e55536'>Grants: every privilege granted in Unity Catalog, broad ones flagged</a></td><td><code>`actor_type`</code></td></tr><tr><td>Broad grants</td><td>Critical grants</td><td>counter</td><td><a href='#37e55536'>Grants: every privilege granted in Unity Catalog, broad ones flagged</a></td><td><code>SUM(`critical`)</code></td></tr><tr><td>Broad grants</td><td>Grants</td><td>counter</td><td><a href='#37e55536'>Grants: every privilege granted in Unity Catalog, broad ones flagged</a></td><td><code>SUM(`grants`)</code></td></tr><tr><td>Broad grants</td><td>Who granted</td><td>counter</td><td><a href='#37e55536'>Grants: every privilege granted in Unity Catalog, broad ones flagged</a></td><td><code>COUNT(DISTINCT `actor`)</code></td></tr><tr><td>Broad grants</td><td>Objects</td><td>counter</td><td><a href='#37e55536'>Grants: every privilege granted in Unity Catalog, broad ones flagged</a></td><td><code>COUNT(DISTINCT `object`)</code></td></tr><tr><td>Broad grants</td><td>Critical grants per day</td><td>bar</td><td><a href='#37e55536'>Grants: every privilege granted in Unity Catalog, broad ones flagged</a></td><td><code>`day`</code>, <code>`why`</code>, <code>SUM(`critical`)</code></td></tr><tr><td>Broad grants</td><td>Grants by privilege</td><td>bar</td><td><a href='#37e55536'>Grants: every privilege granted in Unity Catalog, broad ones flagged</a></td><td><code>`privilege`</code>, <code>`actor_type`</code>, <code>SUM(`grants`)</code></td></tr><tr><td>Broad grants</td><td>Grants, critical first, newest first</td><td>table</td><td><a href='#37e55536'>Grants: every privilege granted in Unity Catalog, broad ones flagged</a></td><td><code>`granted_at`</code>, <code>`workspace`</code>, <code>`object_type`</code>, <code>`object`</code>, <code>`privilege`</code>, <code>`grantee`</code>, <code>`actor`</code>, <code>`actor_type`</code>, <code>`why`</code></td></tr></table></div>
+<h2>The queries</h2>
+<div class="card" id="37e55536">
+  <h3>Grants: every privilege granted in Unity Catalog, broad ones flagged</h3>
+  <p><b>Shows:</b> Every privilege granted in Unity Catalog in the window, one row per object, grantee and privilege; ALL PRIVILEGES on a catalog, schema or table, or anything to account users, is critical. <b>Used by:</b> The Broad grants page.</p>
+  <p><b>Why it is built this way:</b> information_schema shows today&#x27;s grants but not when they were made or by whom. The audit log records each GRANT as it happens, with the actor, so a broad grant can be caught and traced.</p>
+  <h4>How its tables join</h4><div class='flow-wrap'><svg class="flow er" viewBox="-2 -2 972 308" width="972" height="308" role="img"><path class="edge" d="M200,30.0 C228.0,30.0 228.0,30.0 256,30.0"/><g class="mark"><circle cx="228.0" cy="30.0" r="8"/><text x="228.0" y="34.0" text-anchor="middle">1</text></g><path class="edge" d="M356.0,132 L356.0,154"/><g class="mark"><circle cx="356.0" cy="143.0" r="8"/><text x="356.0" y="147.0" text-anchor="middle">2</text></g><path class="edge" d="M456,184.0 C484.0,184.0 484.0,30.0 512,30.0"/><g class="mark"><circle cx="484.0" cy="107.0" r="8"/><text x="484.0" y="111.0" text-anchor="middle">3</text></g><path class="edge" d="M612.0,132 L612.0,154"/><g class="mark"><circle cx="612.0" cy="143.0" r="8"/><text x="612.0" y="147.0" text-anchor="middle">4</text></g><path class="edge" d="M712,184.0 C740.0,184.0 740.0,30.0 768,30.0"/><g class="mark"><circle cx="740.0" cy="107.0" r="8"/><text x="740.0" y="111.0" text-anchor="middle">5</text></g><path class="edge" d="M712,270.0 C740.0,270.0 740.0,30.0 768,30.0"/><g class="mark"><circle cx="740.0" cy="150.0" r="8"/><text x="740.0" y="154.0" text-anchor="middle">6</text></g><g class="ent table"><title>system.access.audit</title><rect x="0" y="0" width="200" height="166" rx="5"/><rect class="hd" x="0" y="0" width="200" height="24" rx="5"/><text class="t" x="8" y="16">access.audit</text><text class="k" x="8" y="37">◆ event_id</text><text class="k" x="8" y="54">◆ workspace_id</text><text class="c" x="8" y="71">event_time</text><text class="c" x="8" y="88">service_name</text><text class="c" x="8" y="105">action_name</text><text class="c" x="8" y="122">user_identity.email</text><text class="c" x="8" y="139">request_params</text><text class="c" x="8" y="156">response.status_code</text></g><g class="ent step"><title>ev: one row per GRANT event</title><rect x="256" y="0" width="200" height="132" rx="5"/><rect class="hd" x="256" y="0" width="200" height="24" rx="5"/><text class="t" x="264" y="16">ev: one row per GRANT event</text><text class="k" x="264" y="37">◆ workspace_id</text><text class="c" x="264" y="54">event_time</text><text class="c" x="264" y="71">actor</text><text class="c" x="264" y="88">object_type</text><text class="c" x="264" y="105">object</text><text class="c" x="264" y="122">changes (JSON)</text></g><g class="ent step"><title>per_grantee</title><rect x="256" y="154" width="200" height="98" rx="5"/><rect class="hd" x="256" y="154" width="200" height="24" rx="5"/><text class="t" x="264" y="170">per_grantee</text><text class="k" x="264" y="191">◆ workspace_id</text><text class="c" x="264" y="208">object</text><text class="c" x="264" y="225">c.principal</text><text class="c" x="264" y="242">c.add</text></g><g class="ent step"><title>granted: one per privilege</title><rect x="512" y="0" width="200" height="132" rx="5"/><rect class="hd" x="512" y="0" width="200" height="24" rx="5"/><text class="t" x="520" y="16">granted: one per privilege</text><text class="k" x="520" y="37">◆ workspace_id</text><text class="c" x="520" y="54">object_type</text><text class="c" x="520" y="71">object</text><text class="c" x="520" y="88">grantee</text><text class="c" x="520" y="105">privilege</text><text class="c" x="520" y="122">actor</text></g><g class="ent step"><title>judged</title><rect x="512" y="154" width="200" height="64" rx="5"/><rect class="hd" x="512" y="154" width="200" height="24" rx="5"/><text class="t" x="520" y="170">judged</text><text class="c" x="520" y="191">all_privileges</text><text class="c" x="520" y="208">to_account_users</text></g><g class="ent table"><title>ws: system.access.workspaces_latest</title><rect x="512" y="240" width="200" height="64" rx="5"/><rect class="hd" x="512" y="240" width="200" height="24" rx="5"/><text class="t" x="520" y="256">ws: system.access.workspaces_…</text><text class="k" x="520" y="277">◆ workspace_id</text><text class="c" x="520" y="294">workspace_name</text></g><g class="ent result"><title>dashboard rows</title><rect x="768" y="0" width="200" height="200" rx="5"/><rect class="hd" x="768" y="0" width="200" height="24" rx="5"/><text class="t" x="776" y="16">dashboard rows</text><text class="c" x="776" y="37">granted_at</text><text class="c" x="776" y="54">workspace</text><text class="c" x="776" y="71">object_type</text><text class="c" x="776" y="88">object</text><text class="c" x="776" y="105">privilege</text><text class="c" x="776" y="122">grantee</text><text class="c" x="776" y="139">actor</text><text class="c" x="776" y="156">actor_type</text><text class="c" x="776" y="173">why</text><text class="c" x="776" y="190">critical</text></g></svg></div><p class='muted'>Grey: system tables. Blue border: a shared check (its steps are listed under Steps). White: steps of the query. Green: the rows the dashboard shows. ◆ marks the columns the joins use.</p><ol class='er-notes'><li><b>access.audit</b> → <b>ev</b>: unityCatalog updatePermissions, 200, window; one per event_id</li><li><b>ev</b> → <b>per_grantee</b>: from_json(changes); explode</li><li><b>per_grantee</b> → <b>granted</b>: explode(c.add); ALL PRIVILEGES = ALL_PRIVILEGES</li><li><b>granted</b> → <b>judged</b>: ALL_PRIVILEGES on catalog/schema/table; account users</li><li><b>judged</b> → <b>dashboard rows</b>: actor type from the actor</li><li><b>ws</b> → <b>dashboard rows</b>: LEFT JOIN ON workspace_id</li></ol>
+  <h4>1. System tables it reads</h4><ul><li><a href='#t-system-access-audit'><code>system.access.audit</code></a></li><li><a href='#t-system-access-workspaces-latest'><code>system.access.workspaces_latest</code></a></li></ul>
+  <h4>2. Steps (CTEs), in order</h4><ol><li><code>ws</code>: Workspace id to name.<details><summary>Its SQL (6 lines)</summary><pre><code><span class="c">-- Grants: every privilege granted in Unity Catalog, broad ones flagged. Dates from the Time Window.</span>
+<span class="c">-- Workspace id to name.</span>
+ws AS (
+  SELECT CAST(workspace_id AS STRING) AS workspace_id, workspace_name
+  FROM system.access.workspaces_latest
+)</code></pre></details></li><li><code>ev</code>: Successful Unity Catalog permission changes (GRANT and REVOKE) in the window, each event once.<p class='caption'>What it brings, on the example:</p><div class='table-wrap'><table class='example'><tr><th><code>event_time</code></th><th><code>actor</code></th><th><code>object_type</code></th><th><code>object</code></th><th><code>changes</code></th></tr><tr><td>09:14</td><td>alice@example.com</td><td>SCHEMA</td><td>main.sales</td><td>[{&quot;principal&quot;:&quot;account users&quot;,&quot;add&quot;:[&quot;ALL_PRIVILEGES&quot;]}]</td></tr><tr><td>09:15</td><td>alice@example.com</td><td>TABLE</td><td>main.sales.orders</td><td>[{&quot;principal&quot;:&quot;data-engineers&quot;,&quot;add&quot;:[&quot;SELECT&quot;,&quot;MODIFY&quot;]}]</td></tr></table></div><details><summary>Its SQL (13 lines)</summary><pre><code><span class="c">-- Successful Unity Catalog permission changes (GRANT and REVOKE) in the window, each event once.</span>
+ev AS (
+  SELECT event_id, event_time, CAST(workspace_id AS STRING) AS workspace_id,
+         COALESCE(user_identity.email, user_identity.subject_name) AS actor,
+         upper(request_params[&#x27;securable_type&#x27;]) AS object_type,
+         request_params[&#x27;securable_full_name&#x27;] AS object,
+         request_params[&#x27;changes&#x27;] AS changes
+  FROM system.access.audit
+  WHERE service_name = &#x27;unityCatalog&#x27; AND action_name = &#x27;updatePermissions&#x27;
+    AND response.status_code = 200
+    AND event_date &gt;= CAST(:time_range.min AS DATE) AND event_date &lt; date_add(:time_range.max, 1)
+  QUALIFY ROW_NUMBER() OVER (PARTITION BY event_id ORDER BY event_time DESC) = 1
+)</code></pre></details></li><li><code>per_grantee</code>: One row per grantee in the change.<p class='caption'>What it brings, on the example:</p><div class='table-wrap'><table class='example'><tr><th><code>object</code></th><th><code>c.principal</code></th><th><code>c.add</code></th></tr><tr><td>main.sales</td><td>account users</td><td>[ALL_PRIVILEGES]</td></tr><tr><td>main.sales.orders</td><td>data-engineers</td><td>[SELECT, MODIFY]</td></tr></table></div><details><summary>Its SQL (5 lines)</summary><pre><code><span class="c">-- One row per grantee in the change.</span>
+per_grantee AS (
+  SELECT ev.*, explode(from_json(changes, &#x27;ARRAY&lt;STRUCT&lt;principal: STRING, add: ARRAY&lt;STRING&gt;, remove: ARRAY&lt;STRING&gt;&gt;&gt;&#x27;)) AS c
+  FROM ev
+)</code></pre></details></li><li><code>granted</code>: One row per privilege added (revokes left out); ALL PRIVILEGES and ALL_PRIVILEGES read the same.<p class='caption'>What it brings, on the example:</p><div class='table-wrap'><table class='example'><tr><th><code>object</code></th><th><code>grantee</code></th><th><code>privilege</code></th></tr><tr><td>main.sales</td><td>account users</td><td>ALL_PRIVILEGES</td></tr><tr><td>main.sales.orders</td><td>data-engineers</td><td>SELECT</td></tr><tr><td>main.sales.orders</td><td>data-engineers</td><td>MODIFY</td></tr></table></div><details><summary>Its SQL (7 lines)</summary><pre><code><span class="c">-- One row per privilege added (revokes left out); ALL PRIVILEGES and ALL_PRIVILEGES read the same.</span>
+granted AS (
+  SELECT event_time, workspace_id, actor, object_type, object, c.principal AS grantee,
+         upper(replace(p, &#x27; &#x27;, &#x27;_&#x27;)) AS privilege
+  FROM per_grantee
+  LATERAL VIEW explode(c.add) x AS p
+)</code></pre></details></li><li><code>judged</code>: Critical: ALL PRIVILEGES on a catalog, schema or table, or a grant to account users.<p class='caption'>What it brings, on the example:</p><div class='table-wrap'><table class='example'><tr><th><code>object</code></th><th><code>privilege</code></th><th><code>grantee</code></th><th><code>all_privileges</code></th><th><code>to_account_users</code></th></tr><tr><td>main.sales</td><td>ALL_PRIVILEGES</td><td>account users</td><td>true</td><td>true</td></tr><tr><td>main.sales.orders</td><td>SELECT</td><td>data-engineers</td><td>false</td><td>false</td></tr></table></div><details><summary>Its SQL (7 lines)</summary><pre><code><span class="c">-- Critical: ALL PRIVILEGES on a catalog, schema or table, or a grant to account users.</span>
+judged AS (
+  SELECT g.*,
+         g.privilege = &#x27;ALL_PRIVILEGES&#x27; AND g.object_type IN (&#x27;CATALOG&#x27;, &#x27;SCHEMA&#x27;, &#x27;TABLE&#x27;) AS all_privileges,
+         lower(g.grantee) = &#x27;account users&#x27; AS to_account_users
+  FROM granted g
+)</code></pre></details></li></ol>
+  <h4>3. Final query</h4><p>One row per privilege granted, critical first, newest first.</p>
+  <h4>4. Columns it returns</h4><div class='table-wrap'><table><tr><th>Column</th><th>Meaning</th></tr><tr><td><code>granted_at</code></td><td>When the grant happened (UTC).</td></tr><tr><td><code>day</code></td><td>The day of it, for the chart.</td></tr><tr><td><code>workspace</code></td><td>The workspace&#x27;s name (its id when the name is unknown).</td></tr><tr><td><code>object_type</code></td><td>CATALOG, SCHEMA, TABLE, ...</td></tr><tr><td><code>object</code></td><td>The full name, for example main.sales.orders.</td></tr><tr><td><code>privilege</code></td><td>The privilege granted, for example SELECT or ALL_PRIVILEGES.</td></tr><tr><td><code>grantee</code></td><td>Who received it: a user, group (account users included) or service principal.</td></tr><tr><td><code>actor</code></td><td>Who made the grant.</td></tr><tr><td><code>actor_type</code></td><td>Service principal (an application id), User (an email), or Other (system).</td></tr><tr><td><code>grants</code></td><td>Always 1: tiles add it up to count grants.</td></tr><tr><td><code>why</code></td><td>All privileges, To account users, both, or Not broad.</td></tr><tr><td><code>critical</code></td><td>1 when the grant is broad (see Rules).</td></tr></table></div>
+  <details><summary>SQL with comments (43 lines)</summary><pre><code><span class="c">-- Grants: every privilege granted in Unity Catalog, broad ones flagged. Dates from the Time Window.</span>
+<span class="c">-- Workspace id to name.</span>
+WITH ws AS (
+  SELECT CAST(workspace_id AS STRING) AS workspace_id, workspace_name
+  FROM system.access.workspaces_latest
+),
+<span class="c">-- Successful Unity Catalog permission changes (GRANT and REVOKE) in the window, each event once.</span>
+ev AS (
+  SELECT event_id, event_time, CAST(workspace_id AS STRING) AS workspace_id,
+         COALESCE(user_identity.email, user_identity.subject_name) AS actor,
+         upper(request_params[&#x27;securable_type&#x27;]) AS object_type,
+         request_params[&#x27;securable_full_name&#x27;] AS object,
+         request_params[&#x27;changes&#x27;] AS changes
+  FROM system.access.audit
+  WHERE service_name = &#x27;unityCatalog&#x27; AND action_name = &#x27;updatePermissions&#x27;
+    AND response.status_code = 200
+    AND event_date &gt;= CAST(:time_range.min AS DATE) AND event_date &lt; date_add(:time_range.max, 1)
+  QUALIFY ROW_NUMBER() OVER (PARTITION BY event_id ORDER BY event_time DESC) = 1
+),
+<span class="c">-- One row per grantee in the change.</span>
+per_grantee AS (
+  SELECT ev.*, explode(from_json(changes, &#x27;ARRAY&lt;STRUCT&lt;principal: STRING, add: ARRAY&lt;STRING&gt;, remove: ARRAY&lt;STRING&gt;&gt;&gt;&#x27;)) AS c
+  FROM ev
+),
+<span class="c">-- One row per privilege added (revokes left out); ALL PRIVILEGES and ALL_PRIVILEGES read the same.</span>
+granted AS (
+  SELECT event_time, workspace_id, actor, object_type, object, c.principal AS grantee,
+         upper(replace(p, &#x27; &#x27;, &#x27;_&#x27;)) AS privilege
+  FROM per_grantee
+  LATERAL VIEW explode(c.add) x AS p
+),
+<span class="c">-- Critical: ALL PRIVILEGES on a catalog, schema or table, or a grant to account users.</span>
+judged AS (
+  SELECT g.*,
+         g.privilege = &#x27;ALL_PRIVILEGES&#x27; AND g.object_type IN (&#x27;CATALOG&#x27;, &#x27;SCHEMA&#x27;, &#x27;TABLE&#x27;) AS all_privileges,
+         lower(g.grantee) = &#x27;account users&#x27; AS to_account_users
+  FROM granted g
+)
+<span class="c">-- Final SELECT: the rows the widgets read.</span>
+SELECT CAST(event_time AS STRING) AS granted_at, CAST(event_time AS DATE) AS day,
+       CASE WHEN j.workspace_id = &#x27;0&#x27; THEN &#x27;Account&#x27; ELSE COALESCE(ws.workspace_name, j.workspace_id) END AS workspace, object_type, object, privilege, grantee, actor,
+       CASE WHEN actor RLIKE &#x27;^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$&#x27; THEN &#x27;Service principal&#x27; WHEN actor LIKE &#x27;%@%&#x27; THEN &#x27;User&#x27; WHEN actor IS NULL THEN &#x27;Unknown&#x27; ELSE &#x27;Other (system)&#x27; END AS actor_type, 1 AS grants,
+       CASE WHEN all_privileges AND to_account_users THEN &#x27;All privileges to account users&#x27;
+            WHEN all_privileges THEN &#x27;All privileges&#x27;
+            WHEN to_account_users THEN &#x27;To account users&#x27; ELSE &#x27;Not broad&#x27; END AS why,
+       CASE WHEN all_privileges OR to_account_users THEN 1 ELSE 0 END AS critical
+FROM judged j
+LEFT JOIN ws ON ws.workspace_id = j.workspace_id
+ORDER BY critical DESC, event_time DESC</code></pre></details>
+</div>
+</main></body></html>

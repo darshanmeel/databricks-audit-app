@@ -1,0 +1,2 @@
+# query_slices: one row per day, warehouse, origin, job, pipeline, notebook and query-tag set.
+query_slices: [usage_date, workspace_id, warehouse_id, origin, job_id, pipeline_id, notebook_id, query_tags]

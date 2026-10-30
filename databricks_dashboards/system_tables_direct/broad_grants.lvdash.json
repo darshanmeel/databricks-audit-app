@@ -1,0 +1,1004 @@
+{
+  "datasets": [
+    {
+      "name": "37e55536",
+      "displayName": "Grants: every privilege granted in Unity Catalog, broad ones flagged",
+      "queryLines": [
+        "SET QUERY_TAGS['cost_center'] = 'lakehouse_health';\n",
+        "SET QUERY_TAGS['domain'] = 'lakehouse_health';\n",
+        "SET QUERY_TAGS['dashboard'] = 'broad_grants';\n",
+        "SET QUERY_TAGS['tab'] = 'broad_grants';\n",
+        "-- Grants: every privilege granted in Unity Catalog, broad ones flagged. Dates from the Time Window.\n",
+        "WITH ws AS (\n",
+        "  SELECT CAST(workspace_id AS STRING) AS workspace_id, workspace_name\n",
+        "  FROM system.access.workspaces_latest\n",
+        "),\n",
+        "ev AS (\n",
+        "  SELECT event_id, event_time, CAST(workspace_id AS STRING) AS workspace_id,\n",
+        "         COALESCE(user_identity.email, user_identity.subject_name) AS actor,\n",
+        "         upper(request_params['securable_type']) AS object_type,\n",
+        "         request_params['securable_full_name'] AS object,\n",
+        "         request_params['changes'] AS changes\n",
+        "  FROM system.access.audit\n",
+        "  WHERE service_name = 'unityCatalog' AND action_name = 'updatePermissions'\n",
+        "    AND response.status_code = 200\n",
+        "    AND event_date >= CAST(:time_range.min AS DATE) AND event_date < date_add(:time_range.max, 1)\n",
+        "  QUALIFY ROW_NUMBER() OVER (PARTITION BY event_id ORDER BY event_time DESC) = 1\n",
+        "),\n",
+        "per_grantee AS (\n",
+        "  SELECT ev.*, explode(from_json(changes, 'ARRAY<STRUCT<principal: STRING, add: ARRAY<STRING>, remove: ARRAY<STRING>>>')) AS c\n",
+        "  FROM ev\n",
+        "),\n",
+        "granted AS (\n",
+        "  SELECT event_time, workspace_id, actor, object_type, object, c.principal AS grantee,\n",
+        "         upper(replace(p, ' ', '_')) AS privilege\n",
+        "  FROM per_grantee\n",
+        "  LATERAL VIEW explode(c.add) x AS p\n",
+        "),\n",
+        "judged AS (\n",
+        "  SELECT g.*,\n",
+        "         g.privilege = 'ALL_PRIVILEGES' AND g.object_type IN ('CATALOG', 'SCHEMA', 'TABLE') AS all_privileges,\n",
+        "         lower(g.grantee) = 'account users' AS to_account_users\n",
+        "  FROM granted g\n",
+        ")\n",
+        "SELECT CAST(event_time AS STRING) AS granted_at, CAST(event_time AS DATE) AS day,\n",
+        "       CASE WHEN j.workspace_id = '0' THEN 'Account' ELSE COALESCE(ws.workspace_name, j.workspace_id) END AS workspace, object_type, object, privilege, grantee, actor,\n",
+        "       CASE WHEN actor RLIKE '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$' THEN 'Service principal' WHEN actor LIKE '%@%' THEN 'User' WHEN actor IS NULL THEN 'Unknown' ELSE 'Other (system)' END AS actor_type, 1 AS grants,\n",
+        "       CASE WHEN all_privileges AND to_account_users THEN 'All privileges to account users'\n",
+        "            WHEN all_privileges THEN 'All privileges'\n",
+        "            WHEN to_account_users THEN 'To account users' ELSE 'Not broad' END AS why,\n",
+        "       CASE WHEN all_privileges OR to_account_users THEN 1 ELSE 0 END AS critical\n",
+        "FROM judged j\n",
+        "LEFT JOIN ws ON ws.workspace_id = j.workspace_id\n",
+        "ORDER BY critical DESC, event_time DESC\n"
+      ],
+      "parameters": [
+        {
+          "displayName": "time_range",
+          "keyword": "time_range",
+          "dataType": "DATE",
+          "complexType": "RANGE",
+          "defaultSelection": {
+            "range": {
+              "dataType": "DATE",
+              "min": {
+                "value": "now-30d/d"
+              },
+              "max": {
+                "value": "now-1d/d"
+              }
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "pages": [
+    {
+      "name": "97791d01",
+      "displayName": "Broad grants",
+      "pageType": "PAGE_TYPE_CANVAS",
+      "layoutVersion": "GRID_V1",
+      "layout": [
+        {
+          "widget": {
+            "name": "cb802bc4",
+            "multilineTextboxSpec": {
+              "lines": [
+                "# **Broad grants**\n",
+                "---\n",
+                "\n",
+                "**Every privilege granted in Unity Catalog, from the audit log. Critical: ALL PRIVILEGES on a catalog, schema or table, or anything granted to account users.**\n"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 12,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "661f2c15",
+            "queries": [
+              {
+                "name": "q_3ea5dc49",
+                "query": {
+                  "datasetName": "37e55536",
+                  "parameters": [
+                    {
+                      "name": "time_range",
+                      "keyword": "time_range"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-date-range-picker",
+              "encodings": {
+                "fields": [
+                  {
+                    "parameterName": "time_range",
+                    "queryName": "q_3ea5dc49"
+                  }
+                ]
+              },
+              "selection": {
+                "defaultSelection": {
+                  "range": {
+                    "dataType": "DATE",
+                    "min": {
+                      "value": "now-30d/d"
+                    },
+                    "max": {
+                      "value": "now-1d/d"
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Time Window"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 2,
+            "width": 3,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "a57fabbb",
+            "queries": [
+              {
+                "name": "q_2db5ebcd",
+                "query": {
+                  "datasetName": "37e55536",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "name": "workspace",
+                      "expression": "`workspace`"
+                    },
+                    {
+                      "name": "workspace_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-multi-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "workspace",
+                    "displayName": "Workspace",
+                    "queryName": "q_2db5ebcd"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Workspace"
+              }
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 2,
+            "width": 3,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "d7b090ff",
+            "queries": [
+              {
+                "name": "q_e3b78cfe",
+                "query": {
+                  "datasetName": "37e55536",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "name": "privilege",
+                      "expression": "`privilege`"
+                    },
+                    {
+                      "name": "privilege_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-multi-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "privilege",
+                    "displayName": "Privilege",
+                    "queryName": "q_e3b78cfe"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Privilege"
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 2,
+            "width": 3,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "92abe5ca",
+            "queries": [
+              {
+                "name": "q_ef468afe",
+                "query": {
+                  "datasetName": "37e55536",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "name": "actor_type",
+                      "expression": "`actor_type`"
+                    },
+                    {
+                      "name": "actor_type_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-multi-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "actor_type",
+                    "displayName": "Actor type",
+                    "queryName": "q_ef468afe"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Actor type"
+              }
+            }
+          },
+          "position": {
+            "x": 9,
+            "y": 2,
+            "width": 3,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "afe03d4d",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "37e55536",
+                  "fields": [
+                    {
+                      "name": "sum(critical)",
+                      "expression": "SUM(`critical`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(critical)",
+                  "displayName": "Critical grants",
+                  "style": {
+                    "bold": true,
+                    "fontSize": 32,
+                    "color": "#1c1b18"
+                  },
+                  "format": {
+                    "type": "number-plain",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 0
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "title": "Critical grants",
+                "showTitle": true,
+                "description": "In the Time Window",
+                "showDescription": true
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 3,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "3c75abe4",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "37e55536",
+                  "fields": [
+                    {
+                      "name": "sum(grants)",
+                      "expression": "SUM(`grants`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(grants)",
+                  "displayName": "Grants",
+                  "style": {
+                    "bold": true,
+                    "fontSize": 32,
+                    "color": "#1c1b18"
+                  },
+                  "format": {
+                    "type": "number-plain",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 0
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "title": "Grants",
+                "showTitle": true,
+                "description": "Privileges granted",
+                "showDescription": true
+              }
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 3,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "d38a3764",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "37e55536",
+                  "fields": [
+                    {
+                      "name": "countdistinct(actor)",
+                      "expression": "COUNT(DISTINCT `actor`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "countdistinct(actor)",
+                  "displayName": "Who granted",
+                  "style": {
+                    "bold": true,
+                    "fontSize": 32,
+                    "color": "#1c1b18"
+                  },
+                  "format": {
+                    "type": "number-plain",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 0
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "title": "Who granted",
+                "showTitle": true,
+                "description": "Distinct actors",
+                "showDescription": true
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 3,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "46d05d0a",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "37e55536",
+                  "fields": [
+                    {
+                      "name": "countdistinct(object)",
+                      "expression": "COUNT(DISTINCT `object`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "countdistinct(object)",
+                  "displayName": "Objects",
+                  "style": {
+                    "bold": true,
+                    "fontSize": 32,
+                    "color": "#1c1b18"
+                  },
+                  "format": {
+                    "type": "number-plain",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 0
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "title": "Objects",
+                "showTitle": true,
+                "description": "With a grant",
+                "showDescription": true
+              }
+            }
+          },
+          "position": {
+            "x": 9,
+            "y": 3,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "b787f6d0",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "37e55536",
+                  "fields": [
+                    {
+                      "name": "day",
+                      "expression": "`day`"
+                    },
+                    {
+                      "name": "why",
+                      "expression": "`why`"
+                    },
+                    {
+                      "name": "sum(critical)",
+                      "expression": "SUM(`critical`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "day",
+                  "displayName": "Day",
+                  "scale": {
+                    "type": "temporal"
+                  }
+                },
+                "y": {
+                  "fieldName": "sum(critical)",
+                  "displayName": "Critical grants",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "label": {
+                  "show": false
+                },
+                "color": {
+                  "fieldName": "why",
+                  "displayName": "why",
+                  "legend": {
+                    "position": "bottom"
+                  },
+                  "scale": {
+                    "type": "categorical"
+                  }
+                }
+              },
+              "frame": {
+                "title": "Critical grants per day",
+                "showTitle": true,
+                "description": "By reason",
+                "showDescription": true
+              },
+              "mark": {
+                "layout": "stack"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 6,
+            "width": 6,
+            "height": 7
+          }
+        },
+        {
+          "widget": {
+            "name": "44586a29",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "37e55536",
+                  "fields": [
+                    {
+                      "name": "privilege",
+                      "expression": "`privilege`"
+                    },
+                    {
+                      "name": "actor_type",
+                      "expression": "`actor_type`"
+                    },
+                    {
+                      "name": "sum(grants)",
+                      "expression": "SUM(`grants`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "sum(grants)",
+                  "displayName": "Grants",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "format": {
+                    "type": "number-plain",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 0
+                    }
+                  }
+                },
+                "y": {
+                  "fieldName": "privilege",
+                  "displayName": "Privilege",
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "x-reversed"
+                    }
+                  }
+                },
+                "label": {
+                  "show": false
+                },
+                "color": {
+                  "fieldName": "actor_type",
+                  "displayName": "actor_type",
+                  "legend": {
+                    "position": "bottom"
+                  },
+                  "scale": {
+                    "type": "categorical"
+                  }
+                }
+              },
+              "frame": {
+                "title": "Grants by privilege",
+                "showTitle": true,
+                "description": "By who granted them",
+                "showDescription": true
+              },
+              "mark": {
+                "layout": "stack"
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 6,
+            "width": 6,
+            "height": 7
+          }
+        },
+        {
+          "widget": {
+            "name": "3e8c6faf",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "37e55536",
+                  "fields": [
+                    {
+                      "name": "granted_at",
+                      "expression": "`granted_at`"
+                    },
+                    {
+                      "name": "workspace",
+                      "expression": "`workspace`"
+                    },
+                    {
+                      "name": "object_type",
+                      "expression": "`object_type`"
+                    },
+                    {
+                      "name": "object",
+                      "expression": "`object`"
+                    },
+                    {
+                      "name": "privilege",
+                      "expression": "`privilege`"
+                    },
+                    {
+                      "name": "grantee",
+                      "expression": "`grantee`"
+                    },
+                    {
+                      "name": "actor",
+                      "expression": "`actor`"
+                    },
+                    {
+                      "name": "actor_type",
+                      "expression": "`actor_type`"
+                    },
+                    {
+                      "name": "why",
+                      "expression": "`why`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 1,
+              "widgetType": "table",
+              "allowHTMLByDefault": false,
+              "condensed": false,
+              "withRowNumber": false,
+              "itemsPerPage": 20,
+              "paginationSize": "default",
+              "invisibleColumns": [],
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "granted_at",
+                    "title": "When",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 0,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": true,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "workspace",
+                    "title": "Workspace",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 1,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": true,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "object_type",
+                    "title": "Type",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 2,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": true,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "object",
+                    "title": "Object",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 3,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": true,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "privilege",
+                    "title": "Privilege",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 4,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": true,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "grantee",
+                    "title": "Grantee",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 5,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": true,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "actor",
+                    "title": "Granted by",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 6,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": true,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "actor_type",
+                    "title": "Actor type",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 7,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": true,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "why",
+                    "title": "Why critical",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 8,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": true,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  }
+                ]
+              },
+              "frame": {
+                "title": "Grants, critical first, newest first",
+                "showTitle": true,
+                "showDescription": false
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 13,
+            "width": 12,
+            "height": 10
+          }
+        }
+      ]
+    }
+  ]
+}

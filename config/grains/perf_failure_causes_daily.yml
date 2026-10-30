@@ -1,0 +1,2 @@
+# perf_failure_causes_daily: one row per day, resource and failure cause.
+perf_failure_causes_daily: [usage_date, resource_type, resource_key, cause]

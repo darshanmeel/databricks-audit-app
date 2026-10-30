@@ -1,0 +1,18 @@
+version: 2
+
+# T-23 fix round (reviewer-caught, allowed extra path): dbt seed infers a CSV column's type from
+# its own content (agate). workspace_env_overrides.csv has one data row with a numeric-looking
+# workspace_id ("2222") and blank name/url cells, so without this override agate loaded
+# workspace_id/name/url as INTEGER (all-NULL for name/url) instead of VARCHAR -- every source
+# table's workspace_id is VARCHAR (tests/fixtures/ddl.py), which forced dim_workspace.sql to CAST
+# the seed's columns explicitly. This column_types override is a durable fix at the source; the
+# CAST in dim_workspace.sql is kept as a belt-and-braces guard (harmless either way).
+seeds:
+  - name: workspace_env_overrides
+    config:
+      column_types:
+        workspace_id: varchar
+        env: varchar
+        name: varchar
+        url: varchar
+        note: varchar

@@ -1,0 +1,1 @@
+cost_daily_spikes: [workspace_id, billing_origin_product, usage_date]

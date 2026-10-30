@@ -1,0 +1,11 @@
+# config/grains/lakeflow_job_run_cost.yml -- P3-JOBCOST. Grain = the query's own key columns ONLY;
+# the generator prepends window_days (DEC-24). One row per job run with at least one billed DBU row
+# attributed to it in the window: the body GROUPs system.billing.usage BY
+# (workspace_id, usage_metadata.job_id, usage_metadata.job_run_id) in run_usage, and every other CTE
+# (run_span, run_last_end, run_state, latest_jobs) is one row per (workspace_id, job_id) or
+# (workspace_id, job_id, run_id) by construction (GROUP BY or a QUALIFY ROW_NUMBER() = 1), LEFT
+# JOINed onto run_usage's own key, so the triple is unique by construction.
+lakeflow_job_run_cost:
+  - workspace_id
+  - job_id
+  - job_run_id

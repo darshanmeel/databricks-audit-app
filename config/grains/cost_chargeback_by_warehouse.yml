@@ -1,0 +1,4 @@
+# Pooled is_other rows have workspace_id/warehouse_id NULL and up to two coexist (OK and
+# NOT_ASSESSED), so status tells them apart; is_other separates them from the account-level
+# not-on-a-warehouse row (also both NULL).
+cost_chargeback_by_warehouse: [workspace_id, warehouse_id, is_other, status]

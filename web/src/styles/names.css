@@ -1,0 +1,103 @@
+/* names-with-links (<Ref>, names.tsx). Reuses styles.css's own theme tokens;
+   selectors are namespaced (.ref-*) so nothing here can shadow a rule in styles.css. The job focus
+   panel this file once also styled now lives in p_compute_jobs.css (job_panel.tsx's .jrp-* classes). */
+
+/* ---------------------------------------------------------------------------------------------
+   <Ref> -- a name-with-link-and-copy-affordance cell (finding_detail.tsx's DataTable).
+--------------------------------------------------------------------------------------------- */
+.ref {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+}
+.ref-empty { color: var(--text-faint); }
+.ref-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 320px;
+}
+span.ref-name { color: var(--text); }
+a.ref-name.ref-link {
+  color: var(--accent);
+  text-decoration: none;
+  border-bottom: 1px dotted var(--accent);
+}
+a.ref-name.ref-link:hover { border-bottom-style: solid; }
+
+/* kind="job" -- the name itself is a button that opens the job focus panel, not an outbound
+   link (the single most useful click on a job, per this task's brief); it is styled to still
+   read as clickable the way a link does. */
+button.ref-name.ref-job-open {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  cursor: pointer;
+  color: var(--accent);
+  text-decoration: none;
+  border-bottom: 1px dashed var(--accent);
+}
+button.ref-name.ref-job-open:hover { border-bottom-style: solid; }
+
+/* P3 (DESIGN-DIRECTION.md section 6, "Ref 'name (id)'"): the id rides beside a resolved name, in
+   Plex Mono, muted -- "name (id)" everywhere (section 1 rule 4), never the name alone. */
+.ref-id {
+  font-family: var(--f-mono);
+  font-size: 12.5px;
+  color: var(--text-3);
+  flex: none;
+  white-space: nowrap;
+}
+/* No resolved name at all: the bare id is shown on its own (never doubled as "id (id)"), muted
+   rather than full ink, so a reader can tell "this is just an id" from "this is a name" on sight. */
+span.ref-name.ref-noname { color: var(--text-3); }
+a.ref-name.ref-link.ref-noname { color: var(--text-3); }
+button.ref-name.ref-job-open.ref-noname { color: var(--text-3); }
+/* A caller-supplied `label` that did not go through Names' own system-tables lookup: a dotted
+   --text-faint underline (instead of each kind's own solid/dashed accent one) plus a tooltip, so
+   an unverified name never reads as confirmed the way a resolved one does. */
+span.ref-name.ref-unverified,
+a.ref-name.ref-link.ref-unverified,
+button.ref-name.ref-job-open.ref-unverified {
+  /* Review round 1: style+colour with no explicit width fell back to the browser's own
+     `border-bottom-width: medium` (~3px) on a plain span, which has no other border rule --
+     the shorthand fixes the width for all three cases at once, no caller passes `label` yet. */
+  border-bottom: 1px dotted var(--text-faint);
+}
+
+/* the small "open in Databricks" arrow that rides alongside a job name -- kept separate from the
+   focus-opening click above so both actions stay reachable without one hijacking the other. */
+.ref-ext {
+  flex: none;
+  color: var(--text-dim);
+  text-decoration: none;
+  font-size: 12px;
+  line-height: 1;
+  padding: 1px 2px;
+  border-radius: var(--radius-sm);
+}
+.ref-ext:hover { color: var(--accent); background: var(--panel-2); }
+
+.ref-copy {
+  flex: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-faint);
+  font-size: 12px;
+  line-height: 1;
+  padding: 1px 3px;
+  border-radius: var(--radius-sm);
+}
+.ref-copy:hover { color: var(--text); background: var(--panel-2); }
+
+/* Section 6: "copy and '↗' on hover or focus" -- both affordances stay dim until the Ref is
+   touched, so a table of names does not carry two extra icons per row all the time (DEC-57,
+   "volume is the enemy"); a keyboard user gets the same reveal via :focus-within/:focus. */
+.ref-ext, .ref-copy { opacity: .35; transition: opacity .1s ease; }
+.ref:hover .ref-ext, .ref:hover .ref-copy,
+.ref:focus-within .ref-ext, .ref:focus-within .ref-copy,
+.ref-ext:focus, .ref-copy:focus { opacity: 1; }

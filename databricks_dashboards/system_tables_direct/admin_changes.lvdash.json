@@ -1,0 +1,1027 @@
+{
+  "datasets": [
+    {
+      "name": "dbdffde7",
+      "displayName": "Admin changes: who changed groups, roles, grants and settings",
+      "queryLines": [
+        "SET QUERY_TAGS['cost_center'] = 'lakehouse_health';\n",
+        "SET QUERY_TAGS['domain'] = 'lakehouse_health';\n",
+        "SET QUERY_TAGS['dashboard'] = 'admin_changes';\n",
+        "SET QUERY_TAGS['tab'] = 'admin_changes';\n",
+        "-- Admin changes: who changed groups, roles, grants and settings. Dates from the Time Window.\n",
+        "WITH ws AS (\n",
+        "  SELECT CAST(workspace_id AS STRING) AS workspace_id, workspace_name\n",
+        "  FROM system.access.workspaces_latest\n",
+        "),\n",
+        "actions AS (\n",
+        "  SELECT * FROM VALUES ('accounts', 'addPrincipalToGroup', 'Group membership'),\n",
+        "         ('accounts', 'addPrincipalsToGroup', 'Group membership'),\n",
+        "         ('accounts', 'removePrincipalFromGroup', 'Group membership'),\n",
+        "         ('accounts', 'removePrincipalsFromGroup', 'Group membership'),\n",
+        "         ('accounts', 'createGroup', 'Groups'),\n",
+        "         ('accounts', 'removeGroup', 'Groups'),\n",
+        "         ('accounts', 'updateGroup', 'Groups'),\n",
+        "         ('accounts', 'setAdmin', 'Admin role'),\n",
+        "         ('accounts', 'removeAdmin', 'Admin role'),\n",
+        "         ('accounts', 'setAccountAdmin', 'Admin role'),\n",
+        "         ('accounts', 'removeAccountAdmin', 'Admin role'),\n",
+        "         ('accountsManager', 'changeAccountOwner', 'Admin role'),\n",
+        "         ('workspace', 'updateRoleAssignment', 'Workspace access'),\n",
+        "         ('workspace', 'addPermissionAssignment', 'Workspace access'),\n",
+        "         ('workspace', 'updatePermissionAssignment', 'Workspace access'),\n",
+        "         ('workspace', 'deletePermissionAssignment', 'Workspace access'),\n",
+        "         ('unityCatalog', 'updatePermissions', 'Grants (Unity Catalog)'),\n",
+        "         ('unityCatalog', 'updateSharePermissions', 'Grants (Unity Catalog)'),\n",
+        "         ('accounts', 'changeDatabricksSqlAcl', 'Permissions (ACL)'),\n",
+        "         ('accounts', 'changeDatabricksWorkspaceAcl', 'Permissions (ACL)'),\n",
+        "         ('accounts', 'changeDatabricksWorkspaceDirectoryAcl', 'Permissions (ACL)'),\n",
+        "         ('accounts', 'changeServicePrincipalAcls', 'Permissions (ACL)'),\n",
+        "         ('workspace', 'changeWorkspaceAcl', 'Permissions (ACL)'),\n",
+        "         ('accountsAccessControl', 'updateRuleSet', 'Permissions (ACL)'),\n",
+        "         ('clusterPolicies', 'create', 'Cluster policies'),\n",
+        "         ('clusterPolicies', 'edit', 'Cluster policies'),\n",
+        "         ('clusterPolicies', 'delete', 'Cluster policies'),\n",
+        "         ('clusterPolicies', 'changeClusterPolicyAcl', 'Cluster policies'),\n",
+        "         ('workspace', 'workspaceConfEdit', 'Settings'),\n",
+        "         ('workspace', 'setSetting', 'Settings'),\n",
+        "         ('workspace', 'deleteSetting', 'Settings'),\n",
+        "         ('accounts', 'setSetting', 'Settings'),\n",
+        "         ('accounts', 'deleteSetting', 'Settings')\n",
+        "    AS a(service_name, action_name, category)\n",
+        "),\n",
+        "ev AS (\n",
+        "  SELECT e.event_time, CAST(e.workspace_id AS STRING) AS workspace_id, e.service_name, e.action_name, a.category,\n",
+        "         COALESCE(e.user_identity.email, e.user_identity.subject_name) AS actor,\n",
+        "         e.response.status_code AS status_code,\n",
+        "         -- what was changed: the object, or user -> group; the keys differ by action\n",
+        "         COALESCE(e.request_params['securable_full_name'],\n",
+        "                  CASE WHEN e.request_params['targetGroupName'] IS NOT NULL\n",
+        "                       THEN concat(COALESCE(e.request_params['targetUserName'], e.request_params['targetUserId'], '?'), ' -> ',\n",
+        "                                   e.request_params['targetGroupName']) END,\n",
+        "                  e.request_params['targetUserName'], e.request_params['targetUserId'], e.request_params['groupName'], e.request_params['name'],\n",
+        "                  e.request_params['principal'], e.request_params['resourceId'], e.request_params['policy_id'], e.request_params['workspaceConfKeys'], '-') AS target,\n",
+        "         e.request_params['changes'] AS changes\n",
+        "  FROM system.access.audit e\n",
+        "  JOIN actions a ON a.service_name = e.service_name AND a.action_name = e.action_name\n",
+        "  WHERE e.event_date >= CAST(:time_range.min AS DATE) AND e.event_date < date_add(:time_range.max, 1)\n",
+        "  QUALIFY ROW_NUMBER() OVER (PARTITION BY e.event_id ORDER BY e.event_time DESC) = 1\n",
+        ")\n",
+        "SELECT CAST(event_time AS STRING) AS changed_at, CAST(event_time AS DATE) AS day,\n",
+        "       CASE WHEN e.workspace_id = '0' THEN 'Account' ELSE COALESCE(ws.workspace_name, e.workspace_id) END AS workspace, category, action_name AS action, target,\n",
+        "       left(changes, 300) AS change, actor, CASE WHEN actor RLIKE '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$' THEN 'Service principal' WHEN actor LIKE '%@%' THEN 'User' WHEN actor IS NULL THEN 'Unknown' ELSE 'Other (system)' END AS actor_type, 1 AS changes_count,\n",
+        "       CASE WHEN status_code = 200 THEN 'Done' WHEN status_code IS NULL THEN 'Unknown' ELSE 'Failed' END AS outcome,\n",
+        "       CASE WHEN actor LIKE '%@%' THEN 1 ELSE 0 END AS by_user\n",
+        "FROM ev e\n",
+        "LEFT JOIN ws ON ws.workspace_id = e.workspace_id\n",
+        "ORDER BY event_time DESC\n"
+      ],
+      "parameters": [
+        {
+          "displayName": "time_range",
+          "keyword": "time_range",
+          "dataType": "DATE",
+          "complexType": "RANGE",
+          "defaultSelection": {
+            "range": {
+              "dataType": "DATE",
+              "min": {
+                "value": "now-30d/d"
+              },
+              "max": {
+                "value": "now-1d/d"
+              }
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "pages": [
+    {
+      "name": "044e4205",
+      "displayName": "Admin changes",
+      "pageType": "PAGE_TYPE_CANVAS",
+      "layoutVersion": "GRID_V1",
+      "layout": [
+        {
+          "widget": {
+            "name": "f3148bbf",
+            "multilineTextboxSpec": {
+              "lines": [
+                "# **Admin changes**\n",
+                "---\n",
+                "\n",
+                "**Who changed groups, admin roles, workspace access, grants, permissions, cluster policies and settings. In an IaC platform these come from service principals; a person is a manual change.**\n"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 12,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "30a38841",
+            "queries": [
+              {
+                "name": "q_3ed2242c",
+                "query": {
+                  "datasetName": "dbdffde7",
+                  "parameters": [
+                    {
+                      "name": "time_range",
+                      "keyword": "time_range"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-date-range-picker",
+              "encodings": {
+                "fields": [
+                  {
+                    "parameterName": "time_range",
+                    "queryName": "q_3ed2242c"
+                  }
+                ]
+              },
+              "selection": {
+                "defaultSelection": {
+                  "range": {
+                    "dataType": "DATE",
+                    "min": {
+                      "value": "now-30d/d"
+                    },
+                    "max": {
+                      "value": "now-1d/d"
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Time Window"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 2,
+            "width": 3,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "140ac9f3",
+            "queries": [
+              {
+                "name": "q_9c633ea6",
+                "query": {
+                  "datasetName": "dbdffde7",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "name": "workspace",
+                      "expression": "`workspace`"
+                    },
+                    {
+                      "name": "workspace_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-multi-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "workspace",
+                    "displayName": "Workspace",
+                    "queryName": "q_9c633ea6"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Workspace"
+              }
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 2,
+            "width": 3,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "2ffb463e",
+            "queries": [
+              {
+                "name": "q_8c0d2b38",
+                "query": {
+                  "datasetName": "dbdffde7",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "name": "actor_type",
+                      "expression": "`actor_type`"
+                    },
+                    {
+                      "name": "actor_type_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-multi-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "actor_type",
+                    "displayName": "Actor type",
+                    "queryName": "q_8c0d2b38"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Actor type"
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 2,
+            "width": 3,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "d083c3a2",
+            "queries": [
+              {
+                "name": "q_ca44a17f",
+                "query": {
+                  "datasetName": "dbdffde7",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "name": "actor",
+                      "expression": "`actor`"
+                    },
+                    {
+                      "name": "actor_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-multi-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "actor",
+                    "displayName": "Actor",
+                    "queryName": "q_ca44a17f"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Actor"
+              }
+            }
+          },
+          "position": {
+            "x": 9,
+            "y": 2,
+            "width": 3,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "42a8cfa9",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "dbdffde7",
+                  "fields": [
+                    {
+                      "name": "sum(changes_count)",
+                      "expression": "SUM(`changes_count`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(changes_count)",
+                  "displayName": "Admin changes",
+                  "style": {
+                    "bold": true,
+                    "fontSize": 32,
+                    "color": "#1c1b18"
+                  },
+                  "format": {
+                    "type": "number-plain",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 0
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "title": "Admin changes",
+                "showTitle": true,
+                "description": "In the Time Window",
+                "showDescription": true
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 3,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "174b1ec2",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "dbdffde7",
+                  "fields": [
+                    {
+                      "name": "sum(by_user)",
+                      "expression": "SUM(`by_user`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(by_user)",
+                  "displayName": "By people",
+                  "style": {
+                    "bold": true,
+                    "fontSize": 32,
+                    "color": "#1c1b18"
+                  },
+                  "format": {
+                    "type": "number-plain",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 0
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "title": "By people",
+                "showTitle": true,
+                "description": "Not a service principal",
+                "showDescription": true
+              }
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 3,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "7b2fd46e",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "dbdffde7",
+                  "fields": [
+                    {
+                      "name": "countdistinct(actor)",
+                      "expression": "COUNT(DISTINCT `actor`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "countdistinct(actor)",
+                  "displayName": "Actors",
+                  "style": {
+                    "bold": true,
+                    "fontSize": 32,
+                    "color": "#1c1b18"
+                  },
+                  "format": {
+                    "type": "number-plain",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 0
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "title": "Actors",
+                "showTitle": true,
+                "description": "Distinct",
+                "showDescription": true
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 3,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "feb5ee7b",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "dbdffde7",
+                  "fields": [
+                    {
+                      "name": "countdistinct(category)",
+                      "expression": "COUNT(DISTINCT `category`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "countdistinct(category)",
+                  "displayName": "Kinds of change",
+                  "style": {
+                    "bold": true,
+                    "fontSize": 32,
+                    "color": "#1c1b18"
+                  },
+                  "format": {
+                    "type": "number-plain",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 0
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "title": "Kinds of change",
+                "showTitle": true,
+                "description": "Distinct",
+                "showDescription": true
+              }
+            }
+          },
+          "position": {
+            "x": 9,
+            "y": 3,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "22697a08",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "dbdffde7",
+                  "fields": [
+                    {
+                      "name": "day",
+                      "expression": "`day`"
+                    },
+                    {
+                      "name": "actor_type",
+                      "expression": "`actor_type`"
+                    },
+                    {
+                      "name": "sum(changes_count)",
+                      "expression": "SUM(`changes_count`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "day",
+                  "displayName": "Day",
+                  "scale": {
+                    "type": "temporal"
+                  }
+                },
+                "y": {
+                  "fieldName": "sum(changes_count)",
+                  "displayName": "Changes",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "label": {
+                  "show": false
+                },
+                "color": {
+                  "fieldName": "actor_type",
+                  "displayName": "actor_type",
+                  "legend": {
+                    "position": "bottom"
+                  },
+                  "scale": {
+                    "type": "categorical"
+                  }
+                }
+              },
+              "frame": {
+                "title": "Admin changes per day",
+                "showTitle": true,
+                "description": "By actor type",
+                "showDescription": true
+              },
+              "mark": {
+                "layout": "stack"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 6,
+            "width": 6,
+            "height": 7
+          }
+        },
+        {
+          "widget": {
+            "name": "73abdab4",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "dbdffde7",
+                  "fields": [
+                    {
+                      "name": "category",
+                      "expression": "`category`"
+                    },
+                    {
+                      "name": "actor_type",
+                      "expression": "`actor_type`"
+                    },
+                    {
+                      "name": "sum(changes_count)",
+                      "expression": "SUM(`changes_count`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "sum(changes_count)",
+                  "displayName": "Changes",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "format": {
+                    "type": "number-plain",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 0
+                    }
+                  }
+                },
+                "y": {
+                  "fieldName": "category",
+                  "displayName": "Kind",
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "x-reversed"
+                    }
+                  }
+                },
+                "label": {
+                  "show": false
+                },
+                "color": {
+                  "fieldName": "actor_type",
+                  "displayName": "actor_type",
+                  "legend": {
+                    "position": "bottom"
+                  },
+                  "scale": {
+                    "type": "categorical"
+                  }
+                }
+              },
+              "frame": {
+                "title": "Admin changes by kind",
+                "showTitle": true,
+                "description": "By actor type",
+                "showDescription": true
+              },
+              "mark": {
+                "layout": "stack"
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 6,
+            "width": 6,
+            "height": 7
+          }
+        },
+        {
+          "widget": {
+            "name": "a766a31e",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "dbdffde7",
+                  "fields": [
+                    {
+                      "name": "changed_at",
+                      "expression": "`changed_at`"
+                    },
+                    {
+                      "name": "workspace",
+                      "expression": "`workspace`"
+                    },
+                    {
+                      "name": "category",
+                      "expression": "`category`"
+                    },
+                    {
+                      "name": "action",
+                      "expression": "`action`"
+                    },
+                    {
+                      "name": "target",
+                      "expression": "`target`"
+                    },
+                    {
+                      "name": "change",
+                      "expression": "`change`"
+                    },
+                    {
+                      "name": "actor",
+                      "expression": "`actor`"
+                    },
+                    {
+                      "name": "actor_type",
+                      "expression": "`actor_type`"
+                    },
+                    {
+                      "name": "outcome",
+                      "expression": "`outcome`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 1,
+              "widgetType": "table",
+              "allowHTMLByDefault": false,
+              "condensed": false,
+              "withRowNumber": false,
+              "itemsPerPage": 20,
+              "paginationSize": "default",
+              "invisibleColumns": [],
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "changed_at",
+                    "title": "When",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 0,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": true,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "workspace",
+                    "title": "Workspace",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 1,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": true,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "category",
+                    "title": "Kind",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 2,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": true,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "action",
+                    "title": "Action",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 3,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": true,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "target",
+                    "title": "Object or principal",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 4,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": true,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "change",
+                    "title": "Change",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 5,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": true,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "actor",
+                    "title": "Done by",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 6,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": true,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "actor_type",
+                    "title": "Actor type",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 7,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": true,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "outcome",
+                    "title": "Outcome",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 8,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": true,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  }
+                ]
+              },
+              "frame": {
+                "title": "Admin changes, newest first",
+                "showTitle": true,
+                "showDescription": false
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 13,
+            "width": 12,
+            "height": 10
+          }
+        }
+      ]
+    }
+  ]
+}

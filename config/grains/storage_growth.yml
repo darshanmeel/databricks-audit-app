@@ -1,0 +1,4 @@
+# config/grains/storage_growth.yml. Grain = the query's own key columns ONLY; the generator
+# prepends window_days (DEC-24). One row per table_id with at least one snapshot in the window
+# (first_snap/last_snap both keyed on table_id, joined 1:1).
+storage_growth: [table_id]

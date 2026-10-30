@@ -1,0 +1,35 @@
+# config/grains/lakeflow_pipelines.yml -- T-16. Grain = the query's own key columns ONLY; the
+# generator prepends window_days itself (unique_grain: {columns: [window_days] + grain}, DEC-24).
+# Do not list window_days here.
+#
+# This file covers the 5 C1 ids only (the "pipeline" batch: lakeflow_pipeline_cost,
+# lakeflow_pipeline_idle_tail_duration, lakeflow_pipeline_update_failures_retries,
+# lakeflow_pipelines_inventory_tier, lakeflow_succeeded_with_failed_tasks). T-17's 7 C2 ids and
+# T-18's 9 C3 ids get their own grain files (config/grains/lakeflow_run_timeline.yml and
+# config/grains/lakeflow_dims.yml); this file's --only regeneration must leave those ids' model
+# blocks untouched.
+#
+# Every entry below is taken verbatim from the query body's own GROUP BY (output column names, in
+# GROUP BY order), or the natural unique key a JOIN guarantees one row per, per
+# app/queries/vendored/jobs_pipelines/<id>.sql:
+#   - lakeflow_pipeline_cost groups the pipe_dbus CTE by workspace_id, usage_metadata.dlt_pipeline_id
+#     (aliased pipeline_id); the outer SELECT then LEFT JOINs pipe_list/pipe_meta/pipe_updates 1:1
+#     on (workspace_id, pipeline_id), so the outer grain is unchanged.
+#   - lakeflow_pipeline_idle_tail_duration groups by workspace_id, pipeline_id, pipeline_type,
+#     setting_continuous, setting_development -- the latter three are functionally determined by
+#     (workspace_id, pipeline_id) via the pipelines SCD2 latest-row subquery, so
+#     (workspace_id, pipeline_id) alone is still a unique key on this fixture.
+#   - lakeflow_pipeline_update_failures_retries groups the end_rows CTE by workspace_id,
+#     pipeline_id, update_type, trigger_type, result_state.
+#   - lakeflow_pipelines_inventory_tier is now one row per (workspace_id, pipeline_id) -- a tag
+#     filter narrows it by the pipeline's own tag, not just its workspace's (snapshot-type;
+#     window_days is always 0 for this id, per the generator's single "0 AS window_days" block,
+#     plan 5.3).
+#   - lakeflow_succeeded_with_failed_tasks has no GROUP BY at the outer level beyond
+#     workspace_id, job_id (one row per job with at least one SUCCEEDED run in the window).
+
+lakeflow_pipeline_cost: [workspace_id, pipeline_id]
+lakeflow_pipeline_idle_tail_duration: [workspace_id, pipeline_id]
+lakeflow_pipeline_update_failures_retries: [workspace_id, pipeline_id, update_type, trigger_type, result_state]
+lakeflow_pipelines_inventory_tier: [workspace_id, pipeline_id]
+lakeflow_succeeded_with_failed_tasks: [workspace_id, job_id]

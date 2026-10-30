@@ -1,0 +1,754 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Workspace data and usage queries</title><style>
+:root { --bg:#fbfbfa; --fg:#1d1d1b; --muted:#5f5f5a; --line:#e2e1dc; --card:#ffffff; --code:#f4f3ef; --accent:#1f5f8b; }
+@media (prefers-color-scheme: dark) { :root { --bg:#161615; --fg:#ecebe6; --muted:#a3a29b; --line:#33332f;
+  --card:#1e1e1c; --code:#232321; --accent:#7fb4dc; } }
+* { box-sizing: border-box; }
+body { margin:0; background:var(--bg); color:var(--fg); font:15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+main { max-width: 1040px; margin: 0 auto; padding: 24px 16px 64px; }
+h1 { font-size: 24px; margin: 0 0 4px; } h2 { font-size: 19px; margin: 32px 0 8px; padding-top: 8px;
+  border-top: 1px solid var(--line); } h3 { font-size: 16px; margin: 0 0 6px; }
+p, li { color: var(--fg); } .muted { color: var(--muted); }
+nav a, a { color: var(--accent); } nav { margin: 12px 0 0; display:flex; flex-wrap:wrap; gap: 6px 14px; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; margin: 12px 0; }
+dl { display: grid; grid-template-columns: 110px 1fr; gap: 4px 12px; margin: 0 0 8px; }
+dt { color: var(--muted); } dd { margin: 0; }
+code { font: 13px/1.45 ui-monospace, Consolas, monospace; }
+pre { background: var(--code); border: 1px solid var(--line); border-radius: 6px; padding: 12px; overflow-x: auto;
+  font: 12.5px/1.45 ui-monospace, Consolas, monospace; white-space: pre; }
+.c { color: #2e7d32; } @media (prefers-color-scheme: dark) { .c { color: #8fcf8f; } }
+summary { cursor: pointer; color: var(--accent); }
+h4 { font-size: 14px; margin: 12px 0 4px; color: var(--muted); } ol, ul { margin: 4px 0; padding-left: 22px; }
+.table-wrap { overflow-x: auto; } table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th, td { text-align: left; vertical-align: top; padding: 6px 8px; border-bottom: 1px solid var(--line); }
+th { color: var(--muted); font-weight: 600; } td:first-child { white-space: nowrap; }
+
+.flow-wrap { overflow-x: auto; margin: 6px 0 4px; }
+.flow .edge { fill: none; stroke: var(--muted); stroke-width: 1.2; opacity: .55; }
+.flow rect { fill: var(--card); stroke: var(--line); stroke-width: 1.2; }
+.flow text { font: 11.5px ui-monospace, Consolas, monospace; fill: var(--fg); }
+.flow .table rect { fill: var(--code); }
+.flow .check rect { stroke: var(--accent); stroke-width: 1.6; }
+.flow .final rect { stroke: #2e7d32; stroke-width: 1.6; }
+.er .ent rect { fill: var(--card); stroke: var(--line); stroke-width: 1.2; }
+.er .ent .hd { fill: var(--code); }
+.er .table .hd { fill: #d9d6cc; } .er .check rect { stroke: var(--accent); stroke-width: 1.6; } .er .result rect { stroke: #2e7d32; stroke-width: 1.6; }
+.er .result .hd { fill: #cfe8cf; }
+.er .t { font: 600 11.5px system-ui, sans-serif; fill: #1d1d1b; }
+.er .c, .er .k { font: 11px ui-monospace, Consolas, monospace; fill: var(--fg); }
+.er .k { fill: var(--accent); font-weight: 600; }
+.er .n { font: 11px system-ui, sans-serif; fill: var(--muted); }
+.er .mark circle { fill: var(--accent); } .er .mark text { font: 600 10px system-ui, sans-serif; fill: #fff; }
+.er-notes { font-size: 14px; } .er-notes li { margin: 2px 0; }
+.timeline text { font: 12px system-ui, sans-serif; }
+.timeline .axis { fill: var(--muted); font-size: 11px; }
+.timeline .tick { stroke: var(--line); stroke-dasharray: 3 3; }
+.timeline .bar rect { stroke: none; }
+.timeline .bar text { font-size: 11px; fill: #1d1d1b; }
+.timeline .queue rect { fill: #d9d6cc; } .timeline .setup rect { fill: #f2c46d; }
+.timeline .run rect { fill: #9cc3e0; } .timeline .ok rect { fill: #8fcf8f; }
+.timeline .failed rect { fill: #ec8c84; } .timeline .idle rect { fill: #e8e6df; }
+.legend .key { display: inline-block; width: 12px; height: 12px; border-radius: 2px; margin: 0 4px 0 10px;
+  vertical-align: -1px; }
+.key.queue { background: #d9d6cc; } .key.setup { background: #f2c46d; } .key.run { background: #9cc3e0; }
+.key.ok { background: #8fcf8f; } .key.failed { background: #ec8c84; } .key.idle { background: #e8e6df; }
+.caption { margin: 14px 0 4px; font-size: 13px; color: var(--muted); }
+table.example td { font: 12.5px ui-monospace, Consolas, monospace; }
+</style></head>
+<body><main>
+<h1>Workspace data and usage (system tables, direct): the queries</h1>
+<p class="muted">4 queries, each reading the Databricks system tables live. Generated from the
+dashboard's own SQL; regenerate rather than edit.</p>
+<nav><a href="#purpose">Purpose</a> <a href="#joins">Joins</a> <a href="#example">Example</a> <a href="#map">Map</a> <a href="#basics">Basics</a> <a href="#rules">Rules</a> <a href="#limits">Limits</a> <a href="#checks">Checks</a> <a href="#how">How to read</a> <a href="#tables">System tables</a> <a href="#widgets">Widgets</a> <a href="#6d64102f">Workspaces: what each holds and how much it is used</a> <a href="#1159f3be">Tables and views: size, last read and write</a> <a href="#d11eacba">Volumes: files, size and use</a> <a href="#e28abc6a">People and service principals: activity and last seen</a></nav>
+
+<h2 id="purpose">What this dashboard is for</h2><p>Shows each workspace: what the catalogs it is home to hold, who uses it, which tables and volumes are used, and who has not been seen for a long time. The app&#x27;s Workspaces tab as a dashboard.</p>
+<h2 id="joins">How the tables join</h2>
+<div class='flow-wrap'><svg class="flow er" viewBox="-2 -2 716 531" width="716" height="531" role="img"><path class="edge" d="M200,30.0 C228.0,30.0 228.0,30.0 256,30.0"/><g class="mark"><circle cx="228.0" cy="30.0" r="8"/><text x="228.0" y="34.0" text-anchor="middle">1</text></g><path class="edge" d="M356.0,64 L356.0,86"/><g class="mark"><circle cx="356.0" cy="75.0" r="8"/><text x="356.0" y="79.0" text-anchor="middle">2</text></g><path class="edge" d="M200,133.0 C228.0,133.0 228.0,116.0 256,116.0"/><g class="mark"><circle cx="228.0" cy="124.5" r="8"/><text x="228.0" y="128.5" text-anchor="middle">3</text></g><path class="edge" d="M200,253.0 C228.0,253.0 228.0,116.0 256,116.0"/><g class="mark"><circle cx="228.0" cy="184.5" r="8"/><text x="228.0" y="188.5" text-anchor="middle">4</text></g><path class="edge" d="M200,373.0 C228.0,373.0 228.0,253.0 256,253.0"/><g class="mark"><circle cx="228.0" cy="313.0" r="8"/><text x="228.0" y="317.0" text-anchor="middle">5</text></g><path class="edge" d="M200,476.0 C228.0,476.0 228.0,253.0 256,253.0"/><g class="mark"><circle cx="228.0" cy="364.5" r="8"/><text x="228.0" y="368.5" text-anchor="middle">6</text></g><path class="edge" d="M456,116.0 C484.0,116.0 484.0,30.0 512,30.0"/><g class="mark"><circle cx="484.0" cy="73.0" r="8"/><text x="484.0" y="77.0" text-anchor="middle">7</text></g><path class="edge" d="M456,253.0 C484.0,253.0 484.0,30.0 512,30.0"/><g class="mark"><circle cx="484.0" cy="141.5" r="8"/><text x="484.0" y="145.5" text-anchor="middle">8</text></g><path class="edge" d="M200,30.0 C356.0,30.0 356.0,30.0 512,30.0"/><g class="mark"><circle cx="356.0" cy="30.0" r="8"/><text x="356.0" y="34.0" text-anchor="middle">9</text></g><g class="ent table"><title>system.access.table_lineage</title><rect x="0" y="0" width="200" height="81" rx="5"/><rect class="hd" x="0" y="0" width="200" height="24" rx="5"/><text class="t" x="8" y="16">access.table_lineage</text><text class="k" x="8" y="37">◆ workspace_id</text><text class="c" x="8" y="54">source / target catalog</text><text class="c" x="8" y="71">event_time</text></g><g class="ent table"><title>system.information_schema</title><rect x="0" y="103" width="200" height="98" rx="5"/><rect class="hd" x="0" y="103" width="200" height="24" rx="5"/><text class="t" x="8" y="119">information_schema</text><text class="k" x="8" y="140">◆ table_catalog</text><text class="c" x="8" y="157">table_schema</text><text class="c" x="8" y="174">table_name</text><text class="c" x="8" y="191">columns</text></g><g class="ent table"><title>table_sizes / volume_sizes (job)</title><rect x="0" y="223" width="200" height="98" rx="5"/><rect class="hd" x="0" y="223" width="200" height="24" rx="5"/><text class="t" x="8" y="239">table_sizes / volume_sizes (j…</text><text class="k" x="8" y="260">◆ catalog</text><text class="c" x="8" y="277">schema</text><text class="c" x="8" y="294">size_in_bytes</text><text class="c" x="8" y="311">files</text></g><g class="ent table"><title>system.access.audit</title><rect x="0" y="343" width="200" height="81" rx="5"/><rect class="hd" x="0" y="343" width="200" height="24" rx="5"/><text class="t" x="8" y="359">access.audit</text><text class="k" x="8" y="380">◆ workspace_id</text><text class="c" x="8" y="397">user_identity</text><text class="c" x="8" y="414">event_time</text></g><g class="ent table"><title>system.query.history</title><rect x="0" y="446" width="200" height="81" rx="5"/><rect class="hd" x="0" y="446" width="200" height="24" rx="5"/><text class="t" x="8" y="462">query.history</text><text class="k" x="8" y="483">◆ workspace_id</text><text class="c" x="8" y="500">executed_by</text><text class="c" x="8" y="517">start_time</text></g><g class="ent step"><title>home: catalog to workspace</title><rect x="256" y="0" width="200" height="64" rx="5"/><rect class="hd" x="256" y="0" width="200" height="24" rx="5"/><text class="t" x="264" y="16">home: catalog to workspace</text><text class="k" x="264" y="37">◆ catalog</text><text class="c" x="264" y="54">workspace_id</text></g><g class="ent step"><title>held: per workspace</title><rect x="256" y="86" width="200" height="115" rx="5"/><rect class="hd" x="256" y="86" width="200" height="24" rx="5"/><text class="t" x="264" y="102">held: per workspace</text><text class="k" x="264" y="123">◆ workspace_id</text><text class="c" x="264" y="140">tables</text><text class="c" x="264" y="157">views</text><text class="c" x="264" y="174">columns</text><text class="c" x="264" y="191">bytes</text></g><g class="ent step"><title>who: per workspace and identity</title><rect x="256" y="223" width="200" height="98" rx="5"/><rect class="hd" x="256" y="223" width="200" height="24" rx="5"/><text class="t" x="264" y="239">who: per workspace and identi…</text><text class="k" x="264" y="260">◆ workspace_id</text><text class="c" x="264" y="277">who</text><text class="c" x="264" y="294">kind</text><text class="c" x="264" y="311">last_seen</text></g><g class="ent result"><title>workspaces, tables, volumes, people</title><rect x="512" y="0" width="200" height="132" rx="5"/><rect class="hd" x="512" y="0" width="200" height="24" rx="5"/><text class="t" x="520" y="16">workspaces, tables, volumes, …</text><text class="c" x="520" y="37">workspace</text><text class="c" x="520" y="54">tables</text><text class="c" x="520" y="71">data_gb</text><text class="c" x="520" y="88">active_people</text><text class="c" x="520" y="105">complexity_index</text><text class="c" x="520" y="122">usage_index</text></g></svg></div><p class='muted'>Grey: system tables. Blue border: a shared check (its steps are listed under Steps). White: steps of the query. Green: the rows the dashboard shows. ◆ marks the columns the joins use.</p><ol class='er-notes'><li><b>access.table_lineage</b> → <b>home</b>: most reads and writes</li><li><b>home</b> → <b>held</b>: ON catalog</li><li><b>information_schema</b> → <b>held</b>: COUNT per catalog</li><li><b>table_sizes / volume_sizes (job)</b> → <b>held</b>: SUM bytes, files</li><li><b>access.audit</b> → <b>who</b>: events</li><li><b>query.history</b> → <b>who</b>: queries</li><li><b>held</b> → <b>workspaces, tables, volumes, people</b>: LEFT JOIN ON workspace_id</li><li><b>who</b> → <b>workspaces, tables, volumes, people</b>: LEFT JOIN ON workspace_id</li><li><b>access.table_lineage</b> → <b>workspaces, tables, volumes, people</b>: reads, writes per table</li></ol>
+<h2 id="example">How it works, with an example</h2>
+<p class="muted">What happens in Databricks, what the system tables record, and how the dashboard's queries read it.
+Names and ids are made up; table rows are simplified.</p>
+<h3>1. One workspace, from lineage to the dashboard</h3><p>Lineage shows workspace analytics-lab reads and writes catalog sales_lab most, so the 40 tables and 12 views of sales_lab count for analytics-lab.</p><div class='flow-wrap'><svg class="flow" viewBox="-2 -2 776 66" width="776" height="66" role="img"><path class="edge" d="M172,13.0 C186.0,13.0 186.0,13.0 200,13.0"/><path class="edge" d="M172,13.0 C186.0,13.0 186.0,49.0 200,49.0"/><path class="edge" d="M372,13.0 C486.0,13.0 486.0,13.0 600,13.0"/><path class="edge" d="M372,49.0 C486.0,49.0 486.0,13.0 600,13.0"/><path class="edge" d="M572,13.0 C586.0,13.0 586.0,13.0 600,13.0"/><g class="node table"><title>lineage</title><rect x="0" y="0" width="172" height="26" rx="5"/><text x="8" y="17">lineage</text></g><g class="node step"><title>information_schema</title><rect x="200" y="0" width="172" height="26" rx="5"/><text x="208" y="17">information_schema</text></g><g class="node step"><title>sizes job</title><rect x="200" y="36" width="172" height="26" rx="5"/><text x="208" y="53">sizes job</text></g><g class="node step"><title>audit + query history</title><rect x="400" y="0" width="172" height="26" rx="5"/><text x="408" y="17">audit + query history</text></g><g class="node final"><title>one row: analytics-lab</title><rect x="600" y="0" width="172" height="26" rx="5"/><text x="608" y="17">one row: analytics-lab</text></g></svg></div><p class='caption'>What the dashboard shows</p><div class='table-wrap'><table class='example'><tr><th><code>workspace</code></th><th><code>tables</code></th><th><code>views</code></th><th><code>GB</code></th><th><code>active people</code></th><th><code>queries</code></th><th><code>complexity</code></th><th><code>usage</code></th></tr><tr><td>analytics-lab</td><td>40</td><td>12</td><td>85.2</td><td>6</td><td>1,240</td><td>71.0</td><td>64.5</td></tr><tr><td>hr-sandbox</td><td>2</td><td>0</td><td>0.1</td><td>0</td><td>0</td><td>8.4</td><td>0.0</td></tr></table></div><ul><li>hr-sandbox: almost empty and nobody used it in the window; a candidate to retire.</li><li>In analytics-lab, a 30 GB table with no read in 30 days shows as Written, never read.</li></ul>
+<h2 id="map">How it fits together</h2>
+<p class="muted">Left: the system tables it reads. Middle: its queries. Right: the pages whose widgets read them.</p>
+<div class='flow-wrap'><svg class="flow" viewBox="-2 -2 576 318" width="576" height="318" role="img"><path class="edge" d="M172,13.0 C186.0,13.0 186.0,13.0 200,13.0"/><path class="edge" d="M172,49.0 C186.0,49.0 186.0,13.0 200,13.0"/><path class="edge" d="M172,85.0 C186.0,85.0 186.0,13.0 200,13.0"/><path class="edge" d="M172,121.0 C186.0,121.0 186.0,13.0 200,13.0"/><path class="edge" d="M172,157.0 C186.0,157.0 186.0,13.0 200,13.0"/><path class="edge" d="M172,193.0 C186.0,193.0 186.0,13.0 200,13.0"/><path class="edge" d="M172,229.0 C186.0,229.0 186.0,13.0 200,13.0"/><path class="edge" d="M172,265.0 C186.0,265.0 186.0,13.0 200,13.0"/><path class="edge" d="M172,49.0 C186.0,49.0 186.0,49.0 200,49.0"/><path class="edge" d="M172,85.0 C186.0,85.0 186.0,49.0 200,49.0"/><path class="edge" d="M172,121.0 C186.0,121.0 186.0,49.0 200,49.0"/><path class="edge" d="M172,193.0 C186.0,193.0 186.0,49.0 200,49.0"/><path class="edge" d="M172,301.0 C186.0,301.0 186.0,49.0 200,49.0"/><path class="edge" d="M172,13.0 C186.0,13.0 186.0,85.0 200,85.0"/><path class="edge" d="M172,49.0 C186.0,49.0 186.0,85.0 200,85.0"/><path class="edge" d="M172,85.0 C186.0,85.0 186.0,85.0 200,85.0"/><path class="edge" d="M172,121.0 C186.0,121.0 186.0,85.0 200,85.0"/><path class="edge" d="M172,229.0 C186.0,229.0 186.0,85.0 200,85.0"/><path class="edge" d="M172,13.0 C186.0,13.0 186.0,121.0 200,121.0"/><path class="edge" d="M172,85.0 C186.0,85.0 186.0,121.0 200,121.0"/><path class="edge" d="M172,265.0 C186.0,265.0 186.0,121.0 200,121.0"/><path class="edge" d="M372,49.0 C386.0,49.0 386.0,13.0 400,13.0"/><path class="edge" d="M372,13.0 C386.0,13.0 386.0,13.0 400,13.0"/><path class="edge" d="M372,85.0 C386.0,85.0 386.0,49.0 400,49.0"/><path class="edge" d="M372,121.0 C386.0,121.0 386.0,85.0 400,85.0"/><g class="node table"><title>system.access.audit</title><rect x="0" y="0" width="172" height="26" rx="5"/><text x="8" y="17">access.audit</text></g><g class="node table"><title>system.access.table_lineage</title><rect x="0" y="36" width="172" height="26" rx="5"/><text x="8" y="53">access.table_lineage</text></g><g class="node table"><title>system.access.workspaces_latest</title><rect x="0" y="72" width="172" height="26" rx="5"/><text x="8" y="89">access.workspaces_latest</text></g><g class="node table"><title>system.information_schema.catalogs</title><rect x="0" y="108" width="172" height="26" rx="5"/><text x="8" y="125">information_schema.cata…</text></g><g class="node table"><title>system.information_schema.columns</title><rect x="0" y="144" width="172" height="26" rx="5"/><text x="8" y="161">information_schema.colu…</text></g><g class="node table"><title>system.information_schema.tables</title><rect x="0" y="180" width="172" height="26" rx="5"/><text x="8" y="197">information_schema.tabl…</text></g><g class="node table"><title>system.information_schema.volumes</title><rect x="0" y="216" width="172" height="26" rx="5"/><text x="8" y="233">information_schema.volu…</text></g><g class="node table"><title>system.query.history</title><rect x="0" y="252" width="172" height="26" rx="5"/><text x="8" y="269">query.history</text></g><g class="node table"><title>system.storage.predictive_optimization_operations_history</title><rect x="0" y="288" width="172" height="26" rx="5"/><text x="8" y="305">storage.predictive_opti…</text></g><g class="node step"><title>wd_workspaces</title><rect x="200" y="0" width="172" height="26" rx="5"/><text x="208" y="17">wd_workspaces</text></g><g class="node step"><title>wd_tables</title><rect x="200" y="36" width="172" height="26" rx="5"/><text x="208" y="53">wd_tables</text></g><g class="node step"><title>wd_volumes</title><rect x="200" y="72" width="172" height="26" rx="5"/><text x="208" y="89">wd_volumes</text></g><g class="node step"><title>wd_people</title><rect x="200" y="108" width="172" height="26" rx="5"/><text x="208" y="125">wd_people</text></g><g class="node final"><title>Table usage</title><rect x="400" y="0" width="172" height="26" rx="5"/><text x="408" y="17">Table usage</text></g><g class="node final"><title>Volume usage</title><rect x="400" y="36" width="172" height="26" rx="5"/><text x="408" y="53">Volume usage</text></g><g class="node final"><title>User activity</title><rect x="400" y="72" width="172" height="26" rx="5"/><text x="408" y="89">User activity</text></g></svg></div>
+<h2 id="basics">Databricks basics</h2>
+<div class="table-wrap"><table><tr><th>Term</th><th>What it means</th></tr><tr><td><b>Workspace</b></td><td>One Databricks environment (its own URL, users, jobs, clusters). An account holds many workspaces; the dashboards read all of them at once.</td></tr><tr><td><b>Home workspace</b></td><td>The workspace that reads and writes a catalog most in lineage over 90 days. A catalog&#x27;s tables and volumes count for that workspace.</td></tr><tr><td><b>Unity Catalog, grant</b></td><td>Unity Catalog governs data: catalogs hold schemas, schemas hold tables. A grant gives a principal a privilege on one of them (SELECT, MODIFY, ALL PRIVILEGES, ...); a grant on a catalog or schema reaches everything inside it.</td></tr><tr><td><b>Volume</b></td><td>A Unity Catalog folder for files (CSV, images, exports) inside a schema, under /Volumes/&lt;catalog&gt;/&lt;schema&gt;/&lt;volume&gt;. Its files are not tables, so no system table counts them.</td></tr><tr><td><b>System tables</b></td><td>Read-only tables Databricks fills for the whole account under the catalog system (system.billing, system.lakeflow, system.compute, system.access). The dashboards read them live; there are no tables of our own.</td></tr><tr><td><b>Audit log</b></td><td>system.access.audit: one row per action someone took (log in, grant, change a group, ...), with who did it, when, in which workspace, the request and whether it succeeded. Databricks keeps it for 365 days.</td></tr><tr><td><b>User, group, service principal</b></td><td>A user is a person (an email). A group bundles users. A service principal is a non-human identity for automation (CI/CD, Terraform); in the audit log it appears as its application id, a UUID like 1b2c3d4e-....</td></tr><tr><td><b>Query, CTE</b></td><td>A query is SQL. Each one here is a chain of named steps written WITH name AS (...), called CTEs; each step reads the ones before it, and one last SELECT gives the rows.</td></tr></table></div>
+<h2 id="rules">Rules and thresholds</h2>
+<div class="table-wrap"><table><tr><th>Rule</th><th>Definition</th><th>Why</th></tr><tr><td><b>Home workspace</b></td><td>The workspace with the most lineage reads and writes of a catalog over 90 days.</td><td>A catalog shared by many workspaces counts once.</td></tr><tr><td><b>Active</b></td><td>A person or service principal with an audit event or a query in the workspace in the window.</td><td>Logins alone miss token users; queries alone miss people browsing.</td></tr><tr><td><b>Inactive</b></td><td>Not seen in the workspace for 90+ days within the last year.</td><td>Candidates for an access review.</td></tr><tr><td><b>Not used</b></td><td>A table or volume with no read or write in the window.</td><td>Big and unused is the clean-up list.</td></tr><tr><td><b>Complexity index</b></td><td>Tables, views, columns, table bytes and volume files, each 0-1 on a log scale against the largest workspace, weighted 25/15/20/25/15, times 100.</td><td>A rough size of what is held, not a quality score.</td></tr><tr><td><b>Usage index</b></td><td>Active people, service principals and queries the same way, weighted 40/20/40.</td><td>Bottom right on the scatter: holds a lot, used little.</td></tr></table></div>
+<h2 id="limits">What it can miss</h2><ul><li>Sizes and volume files come from the sizes job (DESCRIBE DETAIL, a file listing); tables it can&#x27;t read show no size, with the error in table_sizes.detail.</li><li>A catalog with no lineage in 90 days has no home workspace: its tables show under No home workspace and count for no workspace.</li><li>Volume reads and writes depend on the audit log&#x27;s request_params path; check the keys below.</li><li>Some system tables only hold workspaces in the same cloud region as the metastore; if a workspace is missing, check its region.</li></ul>
+<h2 id="checks">Check it against your data</h2>
+<p class="muted">Run these in a SQL editor to see the raw rows the dashboard starts from.</p><h4>Which file-system actions and path keys your audit log has</h4><pre><code>SELECT action_name, map_keys(request_params) AS keys, COUNT(*)
+FROM system.access.audit
+WHERE service_name = &#x27;filesystem&#x27; AND event_date &gt;= current_date() - 7
+GROUP BY 1, 2 ORDER BY 3 DESC;</code></pre><h4>Tables with the most rows changed in the last 30 days</h4><pre><code>SELECT catalog, schema, table_name, SUM(rows_changed) AS rows_changed
+FROM main.workspace_data.table_history
+WHERE timestamp &gt;= current_date() - 30
+GROUP BY ALL ORDER BY rows_changed DESC LIMIT 20;</code></pre><h4>Tables the sizes job could not read</h4><pre><code>SELECT catalog, schema, table_name, detail
+FROM main.workspace_data.table_sizes
+WHERE detail &lt;&gt; &#x27;described&#x27;;</code></pre>
+<h2 id="how">How to read a query</h2>
+<ul>
+  <li><b>No snapshot.</b> Each query reads the Databricks <b>system tables</b> directly, every time the dashboard
+    opens or a filter changes.</li>
+  <li><b>Widgets share queries.</b> Each widget reads one query and adds up its rows its own way (the Widgets
+    table says how); widgets that read the same query always agree.</li>
+  <li><b>Each query reads like a recipe:</b> named steps (<code>WITH step AS (...)</code>, called CTEs), each building
+    on the one before, then one final <code>SELECT</code>. A step named after a check (for example
+    <code>lakeflow_job_reliability</code>) is a shared, tested check reused unchanged except for the dates; its own
+    steps are listed under it.</li>
+  <li><b>Time Window:</b> <code>:time_range.min</code> and <code>:time_range.max</code> are the dates picked in the
+    Time Window filter (on Global Filters, or on the page). The end day counts in full.</li>
+  <li><b>Workspace</b> and the other field filters need no SQL: Databricks keeps the rows whose column
+    matches the pick.</li>
+  <li><b>$</b> is list price (usage x the SKU's list price), not the invoice.</li>
+  <li><b>Comments in the SQL</b> (green, starting <code>--</code>) are added on this page only.</li>
+</ul>
+
+<h2 id="tables">System tables</h2>
+<p class="muted">Databricks fills them for the whole account.</p>
+<div class="table-wrap"><table><tr><th>System table</th><th>What it holds</th></tr><tr id="t-system-access-audit"><td><code>system.access.audit</code></td><td>One row per action in the account: who, when, which workspace, the service and action, the request and its response. Kept for 365 days.</td></tr><tr id="t-system-access-table-lineage"><td><code>system.access.table_lineage</code></td><td></td></tr><tr id="t-system-access-workspaces-latest"><td><code>system.access.workspaces_latest</code></td><td>Each workspace&#x27;s id and name.</td></tr><tr id="t-system-information-schema-catalogs"><td><code>system.information_schema.catalogs</code></td><td></td></tr><tr id="t-system-information-schema-columns"><td><code>system.information_schema.columns</code></td><td></td></tr><tr id="t-system-information-schema-tables"><td><code>system.information_schema.tables</code></td><td></td></tr><tr id="t-system-information-schema-volumes"><td><code>system.information_schema.volumes</code></td><td></td></tr><tr id="t-system-query-history"><td><code>system.query.history</code></td><td>Every SQL statement: who ran it, on which warehouse, start, end, status, bytes read.</td></tr><tr id="t-system-storage-predictive-optimization-operations-history"><td><code>system.storage.predictive_optimization_operations_history</code></td><td></td></tr></table></div>
+<h2 id="widgets">Widgets and the query each reads</h2><div class='table-wrap'><table><tr><th>Page</th><th>Widget</th><th>Type</th><th>Query</th><th>What it takes from the query</th></tr><tr><td>Table usage</td><td>Time Window</td><td>filter-date-range-picker</td><td><a href='#6d64102f'>Workspaces: what each holds and how much it is used</a></td><td>sets <code>:time_range</code></td></tr><tr><td>Table usage</td><td>Time Window</td><td>filter-date-range-picker</td><td><a href='#1159f3be'>Tables and views: size, last read and write</a></td><td>sets <code>:time_range</code></td></tr><tr><td>Table usage</td><td>Workspace</td><td>filter-multi-select</td><td><a href='#6d64102f'>Workspaces: what each holds and how much it is used</a></td><td><code>`workspace`</code></td></tr><tr><td>Table usage</td><td>Workspace</td><td>filter-multi-select</td><td><a href='#1159f3be'>Tables and views: size, last read and write</a></td><td><code>`workspace`</code></td></tr><tr><td>Table usage</td><td>Workspaces</td><td>counter</td><td><a href='#6d64102f'>Workspaces: what each holds and how much it is used</a></td><td><code>SUM(`workspaces`)</code></td></tr><tr><td>Table usage</td><td>Data, GB</td><td>counter</td><td><a href='#6d64102f'>Workspaces: what each holds and how much it is used</a></td><td><code>SUM(`data_gb`)</code></td></tr><tr><td>Table usage</td><td>Tables</td><td>counter</td><td><a href='#6d64102f'>Workspaces: what each holds and how much it is used</a></td><td><code>SUM(`tables`)</code></td></tr><tr><td>Table usage</td><td>Views</td><td>counter</td><td><a href='#6d64102f'>Workspaces: what each holds and how much it is used</a></td><td><code>SUM(`views`)</code></td></tr><tr><td>Table usage</td><td>Complexity against usage</td><td>scatter</td><td><a href='#6d64102f'>Workspaces: what each holds and how much it is used</a></td><td><code>`complexity_index`</code>, <code>`usage_index`</code>, <code>`data_gb`</code>, <code>`workspace`</code></td></tr><tr><td>Table usage</td><td>Data by workspace</td><td>bar</td><td><a href='#6d64102f'>Workspaces: what each holds and how much it is used</a></td><td><code>`workspace`</code>, <code>SUM(`data_gb`)</code></td></tr><tr><td>Table usage</td><td>Tables by last read, by workspace</td><td>bar</td><td><a href='#1159f3be'>Tables and views: size, last read and write</a></td><td><code>`workspace`</code>, <code>`read_band`</code>, <code>SUM(`objects`)</code></td></tr><tr><td>Table usage</td><td>Tables by last read, per schema</td><td>bar</td><td><a href='#1159f3be'>Tables and views: size, last read and write</a></td><td><code>`schema_full`</code>, <code>`read_band`</code>, <code>SUM(`objects`)</code></td></tr><tr><td>Table usage</td><td>GB by last read, per schema</td><td>bar</td><td><a href='#1159f3be'>Tables and views: size, last read and write</a></td><td><code>`schema_full`</code>, <code>`read_band`</code>, <code>SUM(`size_gb`)</code></td></tr><tr><td>Table usage</td><td>Every workspace, most used first</td><td>table</td><td><a href='#6d64102f'>Workspaces: what each holds and how much it is used</a></td><td><code>`workspace`</code>, <code>`workspace_link`</code>, <code>`catalogs`</code>, <code>`tables`</code>, <code>`views`</code>, <code>`columns`</code>, <code>`volumes`</code>, <code>`volume_files`</code>, <code>`data_gb`</code>, <code>`complexity_index`</code>, <code>`active_people`</code>, <code>`active_service_principals`</code>, <code>`queries`</code>, <code>`usage_index`</code></td></tr><tr><td>Table usage</td><td>Every table and view, biggest first</td><td>table</td><td><a href='#1159f3be'>Tables and views: size, last read and write</a></td><td><code>`workspace`</code>, <code>`table_name`</code>, <code>`kind`</code>, <code>`size_gb`</code>, <code>`num_files`</code>, <code>`last_read`</code>, <code>`days_since_read`</code>, <code>`last_write`</code>, <code>`last_change_op`</code>, <code>`last_maintenance`</code>, <code>`rows_changed`</code>, <code>`gb_written`</code>, <code>`readers`</code></td></tr><tr><td>Volume usage</td><td>Time Window</td><td>filter-date-range-picker</td><td><a href='#d11eacba'>Volumes: files, size and use</a></td><td>sets <code>:time_range</code></td></tr><tr><td>Volume usage</td><td>Workspace</td><td>filter-multi-select</td><td><a href='#d11eacba'>Volumes: files, size and use</a></td><td><code>`workspace`</code></td></tr><tr><td>Volume usage</td><td>Volumes</td><td>counter</td><td><a href='#d11eacba'>Volumes: files, size and use</a></td><td><code>SUM(`volumes`)</code></td></tr><tr><td>Volume usage</td><td>Files</td><td>counter</td><td><a href='#d11eacba'>Volumes: files, size and use</a></td><td><code>SUM(`files`)</code></td></tr><tr><td>Volume usage</td><td>Size, GB</td><td>counter</td><td><a href='#d11eacba'>Volumes: files, size and use</a></td><td><code>SUM(`size_gb`)</code></td></tr><tr><td>Volume usage</td><td>File writes</td><td>counter</td><td><a href='#d11eacba'>Volumes: files, size and use</a></td><td><code>SUM(`writes`)</code></td></tr><tr><td>Volume usage</td><td>Volume size by workspace</td><td>bar</td><td><a href='#d11eacba'>Volumes: files, size and use</a></td><td><code>`workspace`</code>, <code>SUM(`size_gb`)</code></td></tr><tr><td>Volume usage</td><td>Volumes used and not used, by workspace</td><td>bar</td><td><a href='#d11eacba'>Volumes: files, size and use</a></td><td><code>`workspace`</code>, <code>`use`</code>, <code>SUM(`volumes`)</code></td></tr><tr><td>Volume usage</td><td>Every volume, biggest first</td><td>table</td><td><a href='#d11eacba'>Volumes: files, size and use</a></td><td><code>`workspace`</code>, <code>`volume`</code>, <code>`volume_type`</code>, <code>`files`</code>, <code>`size_gb`</code>, <code>`reads`</code>, <code>`writes`</code>, <code>`users`</code>, <code>`last_access`</code>, <code>`use`</code></td></tr><tr><td>User activity</td><td>Time Window</td><td>filter-date-range-picker</td><td><a href='#e28abc6a'>People and service principals: activity and last seen</a></td><td>sets <code>:time_range</code></td></tr><tr><td>User activity</td><td>Workspace</td><td>filter-multi-select</td><td><a href='#e28abc6a'>People and service principals: activity and last seen</a></td><td><code>`workspace`</code></td></tr><tr><td>User activity</td><td>Active</td><td>counter</td><td><a href='#e28abc6a'>People and service principals: activity and last seen</a></td><td><code>SUM(`active`)</code></td></tr><tr><td>User activity</td><td>Inactive</td><td>counter</td><td><a href='#e28abc6a'>People and service principals: activity and last seen</a></td><td><code>SUM(`inactive`)</code></td></tr><tr><td>User activity</td><td>Queries</td><td>counter</td><td><a href='#e28abc6a'>People and service principals: activity and last seen</a></td><td><code>SUM(`queries`)</code></td></tr><tr><td>User activity</td><td>Logins</td><td>counter</td><td><a href='#e28abc6a'>People and service principals: activity and last seen</a></td><td><code>SUM(`logins`)</code></td></tr><tr><td>User activity</td><td>Active people and SPs by workspace</td><td>bar</td><td><a href='#e28abc6a'>People and service principals: activity and last seen</a></td><td><code>`workspace`</code>, <code>`kind`</code>, <code>SUM(`active`)</code></td></tr><tr><td>User activity</td><td>Last seen, by workspace</td><td>bar</td><td><a href='#e28abc6a'>People and service principals: activity and last seen</a></td><td><code>`workspace`</code>, <code>`last_seen_band`</code>, <code>SUM(`identities`)</code></td></tr><tr><td>User activity</td><td>Everyone, longest away first</td><td>table</td><td><a href='#e28abc6a'>People and service principals: activity and last seen</a></td><td><code>`workspace`</code>, <code>`identity`</code>, <code>`kind`</code>, <code>`logins`</code>, <code>`queries`</code>, <code>`last_seen`</code>, <code>`days_since`</code></td></tr></table></div>
+<h2>The queries</h2>
+<div class="card" id="6d64102f">
+  <h3>Workspaces: what each holds and how much it is used</h3>
+  <p><b>Shows:</b> One row per workspace: tables, views, columns, volumes, files and size of the catalogs it is home to; people, service principals and queries in the window; and the two indexes. <b>Used by:</b> The Table usage page and the scatter.</p>
+  <p><b>Why it is built this way:</b> One row per workspace with what it holds and how much it is used, plus the scatter. Each catalog counts once, for its home workspace; logs keep one large workspace from flattening the others.</p>
+  <h4>How its tables join</h4><div class='flow-wrap'><svg class="flow er" viewBox="-2 -2 972 1288" width="972" height="1288" role="img"><path class="edge" d="M612.0,150 L612.0,172"/><path class="edge" d="M612.0,236 L612.0,258"/><path class="edge" d="M612.0,47 L612.0,258"/><path class="edge" d="M612.0,391 L612.0,413"/><path class="edge" d="M612.0,322 L612.0,413"/><path class="edge" d="M612.0,322 L612.0,516"/><path class="edge" d="M612.0,322 L612.0,619"/><path class="edge" d="M712,941.0 C612.0,941.0 612.0,752.0 512,752.0"/><path class="edge" d="M712,941.0 C612.0,941.0 612.0,855.0 512,855.0"/><path class="edge" d="M612.0,803 L612.0,911"/><path class="edge" d="M612.0,889 L612.0,911"/><path class="edge" d="M612.0,1009 L612.0,1031"/><path class="edge" d="M612.0,1112 L612.0,1134"/><path class="edge" d="M612.0,494 L612.0,1134"/><path class="edge" d="M612.0,1112 L612.0,1220"/><path class="edge" d="M612.0,494 L612.0,1220"/><path class="edge" d="M612.0,1198 L612.0,1220"/><path class="edge" d="M612.0,700 L612.0,1220"/><path class="edge" d="M612.0,597 L612.0,1220"/><path class="edge" d="M612.0,47 L612.0,1220"/><path class="edge" d="M712,1250.0 C740.0,1250.0 740.0,30.0 768,30.0"/><g class="ent step"><title>wsl</title><rect x="512" y="0" width="200" height="47" rx="5"/><rect class="hd" x="512" y="0" width="200" height="24" rx="5"/><text class="t" x="520" y="16">wsl</text><text class="n" x="520" y="37">Workspace id to name and URL.</text></g><g class="ent step"><title>seen</title><rect x="512" y="69" width="200" height="81" rx="5"/><rect class="hd" x="512" y="69" width="200" height="24" rx="5"/><text class="t" x="520" y="85">seen</text><text class="n" x="520" y="106">Lineage reads and writes per</text><text class="n" x="520" y="123">catalog and workspace over 90</text><text class="n" x="520" y="140">days.</text></g><g class="ent step"><title>home</title><rect x="512" y="172" width="200" height="64" rx="5"/><rect class="hd" x="512" y="172" width="200" height="24" rx="5"/><text class="t" x="520" y="188">home</text><text class="n" x="520" y="209">Each catalog&#x27;s home workspace:</text><text class="n" x="520" y="226">the one with the most of them.</text></g><g class="ent step"><title>place</title><rect x="512" y="258" width="200" height="64" rx="5"/><rect class="hd" x="512" y="258" width="200" height="24" rx="5"/><text class="t" x="520" y="274">place</text><text class="n" x="520" y="295">Each catalog with its home</text><text class="n" x="520" y="312">workspace&#x27;s name.</text></g><g class="ent step"><title>cols</title><rect x="512" y="344" width="200" height="47" rx="5"/><rect class="hd" x="512" y="344" width="200" height="24" rx="5"/><text class="t" x="520" y="360">cols</text><text class="n" x="520" y="381">Columns per table and view.</text></g><g class="ent step"><title>held</title><rect x="512" y="413" width="200" height="81" rx="5"/><rect class="hd" x="512" y="413" width="200" height="24" rx="5"/><text class="t" x="520" y="429">held</text><text class="n" x="520" y="450">Per workspace: catalogs,</text><text class="n" x="520" y="467">tables, views and columns of</text><text class="n" x="520" y="484">the catalogs it is home to.</text></g><g class="ent step"><title>vols</title><rect x="512" y="516" width="200" height="81" rx="5"/><rect class="hd" x="512" y="516" width="200" height="24" rx="5"/><text class="t" x="520" y="532">vols</text><text class="n" x="520" y="553">Per workspace: volumes, and</text><text class="n" x="520" y="570">their files and bytes from the</text><text class="n" x="520" y="587">job&#x27;s volume_sizes.</text></g><g class="ent step"><title>sizes</title><rect x="512" y="619" width="200" height="81" rx="5"/><rect class="hd" x="512" y="619" width="200" height="24" rx="5"/><text class="t" x="520" y="635">sizes</text><text class="n" x="520" y="656">Per workspace: bytes of its</text><text class="n" x="520" y="673">tables, from the job&#x27;s</text><text class="n" x="520" y="690">table_sizes (DESCRIBE DETAIL).</text></g><g class="ent step"><title>aud</title><rect x="512" y="722" width="200" height="81" rx="5"/><rect class="hd" x="512" y="722" width="200" height="24" rx="5"/><text class="t" x="520" y="738">aud</text><text class="n" x="520" y="759">Audit events per workspace and</text><text class="n" x="520" y="776">identity in the window: last</text><text class="n" x="520" y="793">event and successful logins.</text></g><g class="ent step"><title>qh</title><rect x="512" y="825" width="200" height="64" rx="5"/><rect class="hd" x="512" y="825" width="200" height="24" rx="5"/><text class="t" x="520" y="841">qh</text><text class="n" x="520" y="862">Queries per workspace and</text><text class="n" x="520" y="879">identity in the window.</text></g><g class="ent step"><title>who</title><rect x="512" y="911" width="200" height="98" rx="5"/><rect class="hd" x="512" y="911" width="200" height="24" rx="5"/><text class="t" x="520" y="927">who</text><text class="n" x="520" y="948">Both together: one row per</text><text class="n" x="520" y="965">workspace and identity, a</text><text class="n" x="520" y="982">person (email) or a service</text><text class="n" x="520" y="999">principal (UUID).</text></g><g class="ent step"><title>act</title><rect x="512" y="1031" width="200" height="81" rx="5"/><rect class="hd" x="512" y="1031" width="200" height="24" rx="5"/><text class="t" x="520" y="1047">act</text><text class="n" x="520" y="1068">Per workspace: active people,</text><text class="n" x="520" y="1085">service principals, queries</text><text class="n" x="520" y="1102">and the last activity.</text></g><g class="ent step"><title>ids</title><rect x="512" y="1134" width="200" height="64" rx="5"/><rect class="hd" x="512" y="1134" width="200" height="24" rx="5"/><text class="t" x="520" y="1150">ids</text><text class="n" x="520" y="1171">Every workspace with activity</text><text class="n" x="520" y="1188">or a catalog.</text></g><g class="ent step"><title>base</title><rect x="512" y="1220" width="200" height="64" rx="5"/><rect class="hd" x="512" y="1220" width="200" height="24" rx="5"/><text class="t" x="520" y="1236">base</text><text class="n" x="520" y="1257">Everything per workspace; a</text><text class="n" x="520" y="1274">missing count reads 0.</text></g><g class="ent result"><title>dashboard rows</title><rect x="768" y="0" width="200" height="353" rx="5"/><rect class="hd" x="768" y="0" width="200" height="24" rx="5"/><text class="t" x="776" y="16">dashboard rows</text><text class="c" x="776" y="37">workspace</text><text class="c" x="776" y="54">workspace_id</text><text class="c" x="776" y="71">workspace_link</text><text class="c" x="776" y="88">catalogs</text><text class="c" x="776" y="105">tables</text><text class="c" x="776" y="122">views</text><text class="c" x="776" y="139">columns</text><text class="c" x="776" y="156">volumes</text><text class="c" x="776" y="173">volume_files</text><text class="c" x="776" y="190">table_bytes</text><text class="c" x="776" y="207">data_bytes</text><text class="c" x="776" y="224">data_gb</text><text class="c" x="776" y="241">active_people</text><text class="c" x="776" y="258">active_service_principals</text><text class="c" x="776" y="275">queries</text><text class="c" x="776" y="292">last_activity</text><text class="c" x="776" y="309">complexity_index</text><text class="c" x="776" y="326">usage_index</text><text class="c" x="776" y="343">workspaces</text></g></svg></div><p class='muted'>Grey: system tables. Blue border: a shared check (its steps are listed under Steps). White: steps of the query. Green: the rows the dashboard shows. ◆ marks the columns the joins use.</p><ol class='er-notes'></ol>
+  <h4>1. System tables it reads</h4><ul><li><a href='#t-system-access-audit'><code>system.access.audit</code></a></li><li><a href='#t-system-access-table-lineage'><code>system.access.table_lineage</code></a></li><li><a href='#t-system-access-workspaces-latest'><code>system.access.workspaces_latest</code></a></li><li><a href='#t-system-information-schema-catalogs'><code>system.information_schema.catalogs</code></a></li><li><a href='#t-system-information-schema-columns'><code>system.information_schema.columns</code></a></li><li><a href='#t-system-information-schema-tables'><code>system.information_schema.tables</code></a></li><li><a href='#t-system-information-schema-volumes'><code>system.information_schema.volumes</code></a></li><li><a href='#t-system-query-history'><code>system.query.history</code></a></li></ul>
+  <h4>2. Steps (CTEs), in order</h4><ol><li><code>wsl</code>: Workspace id to name and URL.<details><summary>Its SQL (6 lines)</summary><pre><code><span class="c">-- Workspaces: what each holds and how much it is used. Dates from the Time Window.</span>
+<span class="c">-- Workspace id to name and URL.</span>
+wsl AS (
+  SELECT CAST(workspace_id AS STRING) AS workspace_id, workspace_name, workspace_url
+  FROM system.access.workspaces_latest
+)</code></pre></details></li><li><code>seen</code>: Lineage reads and writes per catalog and workspace over 90 days.<details><summary>Its SQL (10 lines)</summary><pre><code><span class="c">-- Lineage reads and writes per catalog and workspace over 90 days.</span>
+seen AS (
+  SELECT catalog, CAST(workspace_id AS STRING) AS workspace_id, COUNT(*) AS events FROM (
+    SELECT workspace_id, source_table_catalog AS catalog FROM system.access.table_lineage
+    WHERE event_date &gt;= date_sub(date_add(:time_range.max, 1), 90) AND event_date &lt; date_add(:time_range.max, 1)
+    UNION ALL
+    SELECT workspace_id, target_table_catalog FROM system.access.table_lineage
+    WHERE event_date &gt;= date_sub(date_add(:time_range.max, 1), 90) AND event_date &lt; date_add(:time_range.max, 1)
+  ) WHERE catalog IS NOT NULL GROUP BY 1, 2
+)</code></pre></details></li><li><code>home</code>: Each catalog&#x27;s home workspace: the one with the most of them.<details><summary>Its SQL (7 lines)</summary><pre><code><span class="c">-- Each catalog&#x27;s home workspace: the one with the most of them.</span>
+home AS (
+  SELECT c.catalog_name AS catalog, max_by(s.workspace_id, s.events) AS workspace_id
+  FROM system.information_schema.catalogs c LEFT JOIN seen s ON s.catalog = c.catalog_name
+  WHERE c.catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  GROUP BY c.catalog_name
+)</code></pre></details></li><li><code>place</code>: Each catalog with its home workspace&#x27;s name.<details><summary>Its SQL (7 lines)</summary><pre><code><span class="c">-- Each catalog with its home workspace&#x27;s name.</span>
+place AS (
+<span class="c">  -- a catalog without lineage in 90 days keeps its rows, under No home workspace</span>
+  SELECT h.catalog, h.workspace_id,
+         COALESCE(w.workspace_name, h.workspace_id, &#x27;No home workspace&#x27;) AS workspace
+  FROM home h LEFT JOIN wsl w ON w.workspace_id = h.workspace_id
+)</code></pre></details></li><li><code>cols</code>: Columns per table and view.<details><summary>Its SQL (5 lines)</summary><pre><code><span class="c">-- Columns per table and view.</span>
+cols AS (
+  SELECT table_catalog, table_schema, table_name, COUNT(*) AS n FROM system.information_schema.columns
+  WHERE table_schema &lt;&gt; &#x27;information_schema&#x27; GROUP BY 1, 2, 3
+)</code></pre></details></li><li><code>held</code>: Per workspace: catalogs, tables, views and columns of the catalogs it is home to.<details><summary>Its SQL (11 lines)</summary><pre><code><span class="c">-- Per workspace: catalogs, tables, views and columns of the catalogs it is home to.</span>
+held AS (
+  SELECT p.workspace_id, COUNT(DISTINCT p.catalog) AS catalogs,
+         COUNT_IF(t.table_type &lt;&gt; &#x27;VIEW&#x27;) AS tables, COUNT_IF(t.table_type = &#x27;VIEW&#x27;) AS views,
+         COALESCE(SUM(c.n), 0) AS columns
+  FROM place p
+  LEFT JOIN system.information_schema.tables t ON t.table_catalog = p.catalog AND t.table_schema &lt;&gt; &#x27;information_schema&#x27;
+  LEFT JOIN cols c ON c.table_catalog = t.table_catalog AND c.table_schema = t.table_schema AND c.table_name = t.table_name
+  WHERE p.workspace_id IS NOT NULL
+  GROUP BY 1
+)</code></pre></details></li><li><code>vols</code>: Per workspace: volumes, and their files and bytes from the job&#x27;s volume_sizes.<details><summary>Its SQL (11 lines)</summary><pre><code><span class="c">-- Per workspace: volumes, and their files and bytes from the job&#x27;s volume_sizes.</span>
+vols AS (
+  SELECT p.workspace_id, COUNT(*) AS volumes, COALESCE(SUM(vs.files), 0) AS volume_files,
+         COALESCE(SUM(vs.size_in_bytes), 0) AS volume_bytes
+  FROM system.information_schema.volumes v
+  JOIN place p ON p.catalog = v.volume_catalog
+  LEFT JOIN main.workspace_data.volume_sizes vs
+    ON vs.catalog = v.volume_catalog AND vs.schema = v.volume_schema AND vs.volume_name = v.volume_name
+  WHERE p.workspace_id IS NOT NULL
+  GROUP BY 1
+)</code></pre></details></li><li><code>sizes</code>: Per workspace: bytes of its tables, from the job&#x27;s table_sizes (DESCRIBE DETAIL).<details><summary>Its SQL (7 lines)</summary><pre><code><span class="c">-- Per workspace: bytes of its tables, from the job&#x27;s table_sizes (DESCRIBE DETAIL).</span>
+sizes AS (
+  SELECT p.workspace_id, SUM(s.size_in_bytes) AS table_bytes
+  FROM main.workspace_data.table_sizes s JOIN place p ON p.catalog = s.catalog
+  WHERE p.workspace_id IS NOT NULL
+  GROUP BY 1
+)</code></pre></details></li><li><code>aud</code>: Audit events per workspace and identity in the window: last event and successful logins.<details><summary>Its SQL (10 lines)</summary><pre><code><span class="c">-- Audit events per workspace and identity in the window: last event and successful logins.</span>
+aud AS (
+  SELECT CAST(workspace_id AS STRING) AS workspace_id,
+         lower(COALESCE(user_identity.email, user_identity.subject_name)) AS who,
+         MAX(event_time) AS last_event,
+         COUNT_IF(service_name = &#x27;accounts&#x27; AND action_name RLIKE &#x27;(?i)login&#x27; AND response.status_code = 200) AS logins
+  FROM system.access.audit
+  WHERE event_date &gt;= CAST(:time_range.min AS DATE) AND event_date &lt; date_add(:time_range.max, 1)
+  GROUP BY 1, 2
+)</code></pre></details></li><li><code>qh</code>: Queries per workspace and identity in the window.<details><summary>Its SQL (8 lines)</summary><pre><code><span class="c">-- Queries per workspace and identity in the window.</span>
+qh AS (
+  SELECT CAST(workspace_id AS STRING) AS workspace_id, lower(executed_by) AS who,
+         COUNT(*) AS queries, MAX(start_time) AS last_query
+  FROM system.query.history
+  WHERE start_time &gt;= CAST(:time_range.min AS DATE) AND start_time &lt; date_add(:time_range.max, 1)
+  GROUP BY 1, 2
+)</code></pre></details></li><li><code>who</code>: Both together: one row per workspace and identity, a person (email) or a service principal (UUID).<details><summary>Its SQL (9 lines)</summary><pre><code><span class="c">-- Both together: one row per workspace and identity, a person (email) or a service principal (UUID).</span>
+who AS (
+  SELECT COALESCE(a.workspace_id, q.workspace_id) AS workspace_id, COALESCE(a.who, q.who) AS who,
+         COALESCE(a.logins, 0) AS logins, COALESCE(q.queries, 0) AS queries,
+         GREATEST(a.last_event, q.last_query) AS last_seen,
+         CASE WHEN COALESCE(a.who, q.who) RLIKE &#x27;^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$&#x27; THEN &#x27;Service principal&#x27;
+              WHEN COALESCE(a.who, q.who) LIKE &#x27;%@%&#x27; THEN &#x27;Person&#x27; ELSE &#x27;Other&#x27; END AS kind
+  FROM aud a FULL OUTER JOIN qh q ON q.workspace_id = a.workspace_id AND q.who = a.who
+)</code></pre></details></li><li><code>act</code>: Per workspace: active people, service principals, queries and the last activity.<details><summary>Its SQL (7 lines)</summary><pre><code><span class="c">-- Per workspace: active people, service principals, queries and the last activity.</span>
+act AS (
+  SELECT workspace_id, COUNT(DISTINCT CASE WHEN kind = &#x27;Person&#x27; THEN who END) AS active_people,
+         COUNT(DISTINCT CASE WHEN kind = &#x27;Service principal&#x27; THEN who END) AS active_service_principals,
+         SUM(queries) AS queries, MAX(last_seen) AS last_activity
+  FROM who GROUP BY 1
+)</code></pre></details></li><li><code>ids</code>: Every workspace with activity or a catalog.<details><summary>Its SQL (4 lines)</summary><pre><code><span class="c">-- Every workspace with activity or a catalog.</span>
+ids AS (
+  SELECT workspace_id FROM act UNION SELECT workspace_id FROM held
+)</code></pre></details></li><li><code>base</code>: Everything per workspace; a missing count reads 0.<details><summary>Its SQL (17 lines)</summary><pre><code><span class="c">-- Everything per workspace; a missing count reads 0.</span>
+base AS (
+  SELECT i.workspace_id, COALESCE(w.workspace_name, i.workspace_id) AS workspace, w.workspace_url,
+         COALESCE(h.catalogs, 0) AS catalogs, COALESCE(h.tables, 0) AS tables, COALESCE(h.views, 0) AS views,
+         COALESCE(h.columns, 0) AS columns, COALESCE(v.volumes, 0) AS volumes,
+         COALESCE(v.volume_files, 0) AS volume_files, COALESCE(s.table_bytes, 0) AS table_bytes,
+         COALESCE(s.table_bytes, 0) + COALESCE(v.volume_bytes, 0) AS data_bytes,
+         COALESCE(a.active_people, 0) AS active_people, COALESCE(a.active_service_principals, 0) AS active_service_principals,
+         COALESCE(a.queries, 0) AS queries, a.last_activity
+  FROM ids i
+  LEFT JOIN held h ON h.workspace_id = i.workspace_id
+  LEFT JOIN vols v ON v.workspace_id = i.workspace_id
+  LEFT JOIN sizes s ON s.workspace_id = i.workspace_id
+  LEFT JOIN act a ON a.workspace_id = i.workspace_id
+  LEFT JOIN wsl w ON w.workspace_id = i.workspace_id
+  WHERE i.workspace_id IS NOT NULL AND i.workspace_id &lt;&gt; &#x27;0&#x27;
+)</code></pre></details></li></ol>
+  <h4>3. Final query</h4><p>One row per workspace, most used first.</p>
+  <h4>4. Columns it returns</h4><div class='table-wrap'><table><tr><th>Column</th><th>Meaning</th></tr><tr><td><code>workspace</code></td><td>The workspace, by name.</td></tr><tr><td><code>workspace_id</code></td><td>Its id.</td></tr><tr><td><code>workspace_link</code></td><td>The workspace URL, to open it.</td></tr><tr><td><code>catalogs</code></td><td>Catalogs it is home to.</td></tr><tr><td><code>tables</code></td><td>Tables in those catalogs.</td></tr><tr><td><code>views</code></td><td>Views in those catalogs.</td></tr><tr><td><code>columns</code></td><td>Columns of those tables and views.</td></tr><tr><td><code>volumes</code></td><td>Volumes in those catalogs.</td></tr><tr><td><code>volume_files</code></td><td>Files in those volumes, from the sizes job.</td></tr><tr><td><code>table_bytes</code></td><td>Bytes of those tables (DESCRIBE DETAIL in the sizes job).</td></tr><tr><td><code>data_bytes</code></td><td>table_bytes plus the volume files&#x27; bytes.</td></tr><tr><td><code>data_gb</code></td><td>data_bytes in GB.</td></tr><tr><td><code>active_people</code></td><td>People (emails) with an audit event or a query in the workspace in the window.</td></tr><tr><td><code>active_service_principals</code></td><td>Service principals (UUIDs) the same way.</td></tr><tr><td><code>queries</code></td><td>Queries run in the workspace in the window.</td></tr><tr><td><code>last_activity</code></td><td>The latest audit event or query in the window.</td></tr><tr><td><code>complexity_index</code></td><td>0-100: tables, views, columns, table bytes and volume files, each on a log scale against the largest workspace, weighted 25/15/20/25/15.</td></tr><tr><td><code>usage_index</code></td><td>0-100: active people, service principals and queries the same way, weighted 40/20/40.</td></tr><tr><td><code>workspaces</code></td><td>Always 1: tiles add it up to count workspaces.</td></tr></table></div>
+  <details><summary>SQL with comments (114 lines)</summary><pre><code><span class="c">-- Workspaces: what each holds and how much it is used. Dates from the Time Window.</span>
+<span class="c">-- Workspace id to name and URL.</span>
+WITH wsl AS (
+  SELECT CAST(workspace_id AS STRING) AS workspace_id, workspace_name, workspace_url
+  FROM system.access.workspaces_latest
+),
+<span class="c">-- Lineage reads and writes per catalog and workspace over 90 days.</span>
+seen AS (
+  SELECT catalog, CAST(workspace_id AS STRING) AS workspace_id, COUNT(*) AS events FROM (
+    SELECT workspace_id, source_table_catalog AS catalog FROM system.access.table_lineage
+    WHERE event_date &gt;= date_sub(date_add(:time_range.max, 1), 90) AND event_date &lt; date_add(:time_range.max, 1)
+    UNION ALL
+    SELECT workspace_id, target_table_catalog FROM system.access.table_lineage
+    WHERE event_date &gt;= date_sub(date_add(:time_range.max, 1), 90) AND event_date &lt; date_add(:time_range.max, 1)
+  ) WHERE catalog IS NOT NULL GROUP BY 1, 2
+),
+<span class="c">-- Each catalog&#x27;s home workspace: the one with the most of them.</span>
+home AS (
+  SELECT c.catalog_name AS catalog, max_by(s.workspace_id, s.events) AS workspace_id
+  FROM system.information_schema.catalogs c LEFT JOIN seen s ON s.catalog = c.catalog_name
+  WHERE c.catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  GROUP BY c.catalog_name
+),
+<span class="c">-- Each catalog with its home workspace&#x27;s name.</span>
+place AS (
+<span class="c">  -- a catalog without lineage in 90 days keeps its rows, under No home workspace</span>
+  SELECT h.catalog, h.workspace_id,
+         COALESCE(w.workspace_name, h.workspace_id, &#x27;No home workspace&#x27;) AS workspace
+  FROM home h LEFT JOIN wsl w ON w.workspace_id = h.workspace_id
+),
+<span class="c">-- Columns per table and view.</span>
+cols AS (
+  SELECT table_catalog, table_schema, table_name, COUNT(*) AS n FROM system.information_schema.columns
+  WHERE table_schema &lt;&gt; &#x27;information_schema&#x27; GROUP BY 1, 2, 3
+),
+<span class="c">-- Per workspace: catalogs, tables, views and columns of the catalogs it is home to.</span>
+held AS (
+  SELECT p.workspace_id, COUNT(DISTINCT p.catalog) AS catalogs,
+         COUNT_IF(t.table_type &lt;&gt; &#x27;VIEW&#x27;) AS tables, COUNT_IF(t.table_type = &#x27;VIEW&#x27;) AS views,
+         COALESCE(SUM(c.n), 0) AS columns
+  FROM place p
+  LEFT JOIN system.information_schema.tables t ON t.table_catalog = p.catalog AND t.table_schema &lt;&gt; &#x27;information_schema&#x27;
+  LEFT JOIN cols c ON c.table_catalog = t.table_catalog AND c.table_schema = t.table_schema AND c.table_name = t.table_name
+  WHERE p.workspace_id IS NOT NULL
+  GROUP BY 1
+),
+<span class="c">-- Per workspace: volumes, and their files and bytes from the job&#x27;s volume_sizes.</span>
+vols AS (
+  SELECT p.workspace_id, COUNT(*) AS volumes, COALESCE(SUM(vs.files), 0) AS volume_files,
+         COALESCE(SUM(vs.size_in_bytes), 0) AS volume_bytes
+  FROM system.information_schema.volumes v
+  JOIN place p ON p.catalog = v.volume_catalog
+  LEFT JOIN main.workspace_data.volume_sizes vs
+    ON vs.catalog = v.volume_catalog AND vs.schema = v.volume_schema AND vs.volume_name = v.volume_name
+  WHERE p.workspace_id IS NOT NULL
+  GROUP BY 1
+),
+<span class="c">-- Per workspace: bytes of its tables, from the job&#x27;s table_sizes (DESCRIBE DETAIL).</span>
+sizes AS (
+  SELECT p.workspace_id, SUM(s.size_in_bytes) AS table_bytes
+  FROM main.workspace_data.table_sizes s JOIN place p ON p.catalog = s.catalog
+  WHERE p.workspace_id IS NOT NULL
+  GROUP BY 1
+),
+<span class="c">-- Audit events per workspace and identity in the window: last event and successful logins.</span>
+aud AS (
+  SELECT CAST(workspace_id AS STRING) AS workspace_id,
+         lower(COALESCE(user_identity.email, user_identity.subject_name)) AS who,
+         MAX(event_time) AS last_event,
+         COUNT_IF(service_name = &#x27;accounts&#x27; AND action_name RLIKE &#x27;(?i)login&#x27; AND response.status_code = 200) AS logins
+  FROM system.access.audit
+  WHERE event_date &gt;= CAST(:time_range.min AS DATE) AND event_date &lt; date_add(:time_range.max, 1)
+  GROUP BY 1, 2
+),
+<span class="c">-- Queries per workspace and identity in the window.</span>
+qh AS (
+  SELECT CAST(workspace_id AS STRING) AS workspace_id, lower(executed_by) AS who,
+         COUNT(*) AS queries, MAX(start_time) AS last_query
+  FROM system.query.history
+  WHERE start_time &gt;= CAST(:time_range.min AS DATE) AND start_time &lt; date_add(:time_range.max, 1)
+  GROUP BY 1, 2
+),
+<span class="c">-- Both together: one row per workspace and identity, a person (email) or a service principal (UUID).</span>
+who AS (
+  SELECT COALESCE(a.workspace_id, q.workspace_id) AS workspace_id, COALESCE(a.who, q.who) AS who,
+         COALESCE(a.logins, 0) AS logins, COALESCE(q.queries, 0) AS queries,
+         GREATEST(a.last_event, q.last_query) AS last_seen,
+         CASE WHEN COALESCE(a.who, q.who) RLIKE &#x27;^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$&#x27; THEN &#x27;Service principal&#x27;
+              WHEN COALESCE(a.who, q.who) LIKE &#x27;%@%&#x27; THEN &#x27;Person&#x27; ELSE &#x27;Other&#x27; END AS kind
+  FROM aud a FULL OUTER JOIN qh q ON q.workspace_id = a.workspace_id AND q.who = a.who
+),
+<span class="c">-- Per workspace: active people, service principals, queries and the last activity.</span>
+act AS (
+  SELECT workspace_id, COUNT(DISTINCT CASE WHEN kind = &#x27;Person&#x27; THEN who END) AS active_people,
+         COUNT(DISTINCT CASE WHEN kind = &#x27;Service principal&#x27; THEN who END) AS active_service_principals,
+         SUM(queries) AS queries, MAX(last_seen) AS last_activity
+  FROM who GROUP BY 1
+),
+<span class="c">-- Every workspace with activity or a catalog.</span>
+ids AS (
+  SELECT workspace_id FROM act UNION SELECT workspace_id FROM held
+),
+<span class="c">-- Everything per workspace; a missing count reads 0.</span>
+base AS (
+  SELECT i.workspace_id, COALESCE(w.workspace_name, i.workspace_id) AS workspace, w.workspace_url,
+         COALESCE(h.catalogs, 0) AS catalogs, COALESCE(h.tables, 0) AS tables, COALESCE(h.views, 0) AS views,
+         COALESCE(h.columns, 0) AS columns, COALESCE(v.volumes, 0) AS volumes,
+         COALESCE(v.volume_files, 0) AS volume_files, COALESCE(s.table_bytes, 0) AS table_bytes,
+         COALESCE(s.table_bytes, 0) + COALESCE(v.volume_bytes, 0) AS data_bytes,
+         COALESCE(a.active_people, 0) AS active_people, COALESCE(a.active_service_principals, 0) AS active_service_principals,
+         COALESCE(a.queries, 0) AS queries, a.last_activity
+  FROM ids i
+  LEFT JOIN held h ON h.workspace_id = i.workspace_id
+  LEFT JOIN vols v ON v.workspace_id = i.workspace_id
+  LEFT JOIN sizes s ON s.workspace_id = i.workspace_id
+  LEFT JOIN act a ON a.workspace_id = i.workspace_id
+  LEFT JOIN wsl w ON w.workspace_id = i.workspace_id
+  WHERE i.workspace_id IS NOT NULL AND i.workspace_id &lt;&gt; &#x27;0&#x27;
+)
+<span class="c">-- Final SELECT: the rows the widgets read.</span>
+SELECT workspace, workspace_id,
+       concat(&#x27;https://&#x27;, regexp_replace(regexp_replace(COALESCE(workspace_url, &#x27;&#x27;), &#x27;^https?://&#x27;, &#x27;&#x27;), &#x27;/.*$&#x27;, &#x27;&#x27;)) AS workspace_link,
+       catalogs, tables, views, columns, volumes, volume_files, table_bytes, data_bytes,
+       ROUND(data_bytes / 1073741824.0, 2) AS data_gb,
+       active_people, active_service_principals, queries, CAST(last_activity AS STRING) AS last_activity,
+       COALESCE(ROUND(100 * (0.25 * COALESCE(ln(1 + tables) / NULLIF(MAX(ln(1 + tables)) OVER (), 0), 0) + 0.15 * COALESCE(ln(1 + views) / NULLIF(MAX(ln(1 + views)) OVER (), 0), 0) + 0.2 * COALESCE(ln(1 + columns) / NULLIF(MAX(ln(1 + columns)) OVER (), 0), 0) + 0.25 * COALESCE(ln(1 + table_bytes) / NULLIF(MAX(ln(1 + table_bytes)) OVER (), 0), 0) + 0.15 * COALESCE(ln(1 + volume_files) / NULLIF(MAX(ln(1 + volume_files)) OVER (), 0), 0)) / NULLIF(CASE WHEN MAX(tables) OVER () &gt; 0 THEN 0.25 ELSE 0 END + CASE WHEN MAX(views) OVER () &gt; 0 THEN 0.15 ELSE 0 END + CASE WHEN MAX(columns) OVER () &gt; 0 THEN 0.2 ELSE 0 END + CASE WHEN MAX(table_bytes) OVER () &gt; 0 THEN 0.25 ELSE 0 END + CASE WHEN MAX(volume_files) OVER () &gt; 0 THEN 0.15 ELSE 0 END, 0), 1), 0) AS complexity_index,
+       COALESCE(ROUND(100 * (0.4 * COALESCE(ln(1 + active_people) / NULLIF(MAX(ln(1 + active_people)) OVER (), 0), 0) + 0.2 * COALESCE(ln(1 + active_service_principals) / NULLIF(MAX(ln(1 + active_service_principals)) OVER (), 0), 0) + 0.4 * COALESCE(ln(1 + queries) / NULLIF(MAX(ln(1 + queries)) OVER (), 0), 0)) / NULLIF(CASE WHEN MAX(active_people) OVER () &gt; 0 THEN 0.4 ELSE 0 END + CASE WHEN MAX(active_service_principals) OVER () &gt; 0 THEN 0.2 ELSE 0 END + CASE WHEN MAX(queries) OVER () &gt; 0 THEN 0.4 ELSE 0 END, 0), 1), 0) AS usage_index, 1 AS workspaces
+FROM base
+ORDER BY usage_index DESC, workspace</code></pre></details>
+</div>
+<div class="card" id="1159f3be">
+  <h3>Tables and views: size, last read and write</h3>
+  <p><b>Shows:</b> Every table and view: its home workspace; size and files (job); last read and write over 365 days and reads, writes and readers in the window (lineage); last change, last maintenance and rows changed (the job&#x27;s DESCRIBE HISTORY, predictive optimization). <b>Used by:</b> The tables charts and table on Table usage.</p>
+  <p><b>Why it is built this way:</b> Size alone doesn&#x27;t say if a table matters; reads do. Lineage records every read and write, so a big table nobody read stands out as a clean-up candidate.</p>
+  <h4>How its tables join</h4><div class='flow-wrap'><svg class="flow er" viewBox="-2 -2 972 875" width="972" height="875" role="img"><path class="edge" d="M612.0,150 L612.0,172"/><path class="edge" d="M612.0,236 L612.0,258"/><path class="edge" d="M612.0,47 L612.0,258"/><path class="edge" d="M612.0,511 L612.0,533"/><path class="edge" d="M712,666.0 C740.0,666.0 740.0,30.0 768,30.0"/><path class="edge" d="M712,288.0 C740.0,288.0 740.0,30.0 768,30.0"/><path class="edge" d="M712,820.0 C740.0,820.0 740.0,30.0 768,30.0"/><path class="edge" d="M712,374.0 C740.0,374.0 740.0,30.0 768,30.0"/><path class="edge" d="M712,563.0 C740.0,563.0 740.0,30.0 768,30.0"/><g class="ent step"><title>wsl</title><rect x="512" y="0" width="200" height="47" rx="5"/><rect class="hd" x="512" y="0" width="200" height="24" rx="5"/><text class="t" x="520" y="16">wsl</text><text class="n" x="520" y="37">Workspace id to name and URL.</text></g><g class="ent step"><title>seen</title><rect x="512" y="69" width="200" height="81" rx="5"/><rect class="hd" x="512" y="69" width="200" height="24" rx="5"/><text class="t" x="520" y="85">seen</text><text class="n" x="520" y="106">Lineage reads and writes per</text><text class="n" x="520" y="123">catalog and workspace over 90</text><text class="n" x="520" y="140">days.</text></g><g class="ent step"><title>home</title><rect x="512" y="172" width="200" height="64" rx="5"/><rect class="hd" x="512" y="172" width="200" height="24" rx="5"/><text class="t" x="520" y="188">home</text><text class="n" x="520" y="209">Each catalog&#x27;s home workspace:</text><text class="n" x="520" y="226">the one with the most of them.</text></g><g class="ent step"><title>place</title><rect x="512" y="258" width="200" height="64" rx="5"/><rect class="hd" x="512" y="258" width="200" height="24" rx="5"/><text class="t" x="520" y="274">place</text><text class="n" x="520" y="295">Each catalog with its home</text><text class="n" x="520" y="312">workspace&#x27;s name.</text></g><g class="ent step"><title>t</title><rect x="512" y="344" width="200" height="64" rx="5"/><rect class="hd" x="512" y="344" width="200" height="24" rx="5"/><text class="t" x="520" y="360">t</text><text class="n" x="520" y="381">Every table and view, without</text><text class="n" x="520" y="398">the system catalogs.</text></g><g class="ent step"><title>lin</title><rect x="512" y="430" width="200" height="81" rx="5"/><rect class="hd" x="512" y="430" width="200" height="24" rx="5"/><text class="t" x="520" y="446">lin</text><text class="n" x="520" y="467">Every read (source) and write</text><text class="n" x="520" y="484">(target) of a table over 365</text><text class="n" x="520" y="501">days, from lineage.</text></g><g class="ent step"><title>used</title><rect x="512" y="533" width="200" height="81" rx="5"/><rect class="hd" x="512" y="533" width="200" height="24" rx="5"/><text class="t" x="520" y="549">used</text><text class="n" x="520" y="570">Per table: last read and write</text><text class="n" x="520" y="587">over 365 days; reads, writes,</text><text class="n" x="520" y="604">readers in the window.</text></g><g class="ent step"><title>hist</title><rect x="512" y="636" width="200" height="132" rx="5"/><rect class="hd" x="512" y="636" width="200" height="24" rx="5"/><text class="t" x="520" y="652">hist</text><text class="n" x="520" y="673">Per table, from the job&#x27;s</text><text class="n" x="520" y="690">DESCRIBE HISTORY: last data</text><text class="n" x="520" y="707">change and its operation, last</text><text class="n" x="520" y="724">OPTIMIZE or VACUUM, rows</text><text class="n" x="520" y="741">changed and bytes written in</text><text class="n" x="520" y="758">the window.</text></g><g class="ent step"><title>po</title><rect x="512" y="790" width="200" height="81" rx="5"/><rect class="hd" x="512" y="790" width="200" height="24" rx="5"/><text class="t" x="520" y="806">po</text><text class="n" x="520" y="827">Per table: the last predictive</text><text class="n" x="520" y="844">optimization run (compaction,</text><text class="n" x="520" y="861">vacuum, clustering).</text></g><g class="ent result"><title>dashboard rows</title><rect x="768" y="0" width="200" height="421" rx="5"/><rect class="hd" x="768" y="0" width="200" height="24" rx="5"/><text class="t" x="776" y="16">dashboard rows</text><text class="c" x="776" y="37">workspace</text><text class="c" x="776" y="54">catalog</text><text class="c" x="776" y="71">schema_name</text><text class="c" x="776" y="88">schema_full</text><text class="c" x="776" y="105">table_name</text><text class="c" x="776" y="122">kind</text><text class="c" x="776" y="139">size_in_bytes</text><text class="c" x="776" y="156">size_gb</text><text class="c" x="776" y="173">num_files</text><text class="c" x="776" y="190">reads</text><text class="c" x="776" y="207">writes</text><text class="c" x="776" y="224">readers</text><text class="c" x="776" y="241">last_read</text><text class="c" x="776" y="258">days_since_read</text><text class="c" x="776" y="275">read_band</text><text class="c" x="776" y="292">last_write</text><text class="c" x="776" y="309">last_change_op</text><text class="c" x="776" y="326">last_maintenance</text><text class="c" x="776" y="343">rows_changed</text><text class="c" x="776" y="360">gb_written</text><text class="c" x="776" y="377">last_altered</text><text class="c" x="776" y="394">use</text><text class="c" x="776" y="411">objects</text></g></svg></div><p class='muted'>Grey: system tables. Blue border: a shared check (its steps are listed under Steps). White: steps of the query. Green: the rows the dashboard shows. ◆ marks the columns the joins use.</p><ol class='er-notes'></ol>
+  <h4>1. System tables it reads</h4><ul><li><a href='#t-system-access-table-lineage'><code>system.access.table_lineage</code></a></li><li><a href='#t-system-access-workspaces-latest'><code>system.access.workspaces_latest</code></a></li><li><a href='#t-system-information-schema-catalogs'><code>system.information_schema.catalogs</code></a></li><li><a href='#t-system-information-schema-tables'><code>system.information_schema.tables</code></a></li><li><a href='#t-system-storage-predictive-optimization-operations-history'><code>system.storage.predictive_optimization_operations_history</code></a></li></ul>
+  <h4>2. Steps (CTEs), in order</h4><ol><li><code>wsl</code>: Workspace id to name and URL.<details><summary>Its SQL (6 lines)</summary><pre><code><span class="c">-- Tables and views: size, last read and write. Dates from the Time Window.</span>
+<span class="c">-- Workspace id to name and URL.</span>
+wsl AS (
+  SELECT CAST(workspace_id AS STRING) AS workspace_id, workspace_name, workspace_url
+  FROM system.access.workspaces_latest
+)</code></pre></details></li><li><code>seen</code>: Lineage reads and writes per catalog and workspace over 90 days.<details><summary>Its SQL (10 lines)</summary><pre><code><span class="c">-- Lineage reads and writes per catalog and workspace over 90 days.</span>
+seen AS (
+  SELECT catalog, CAST(workspace_id AS STRING) AS workspace_id, COUNT(*) AS events FROM (
+    SELECT workspace_id, source_table_catalog AS catalog FROM system.access.table_lineage
+    WHERE event_date &gt;= date_sub(date_add(:time_range.max, 1), 90) AND event_date &lt; date_add(:time_range.max, 1)
+    UNION ALL
+    SELECT workspace_id, target_table_catalog FROM system.access.table_lineage
+    WHERE event_date &gt;= date_sub(date_add(:time_range.max, 1), 90) AND event_date &lt; date_add(:time_range.max, 1)
+  ) WHERE catalog IS NOT NULL GROUP BY 1, 2
+)</code></pre></details></li><li><code>home</code>: Each catalog&#x27;s home workspace: the one with the most of them.<details><summary>Its SQL (7 lines)</summary><pre><code><span class="c">-- Each catalog&#x27;s home workspace: the one with the most of them.</span>
+home AS (
+  SELECT c.catalog_name AS catalog, max_by(s.workspace_id, s.events) AS workspace_id
+  FROM system.information_schema.catalogs c LEFT JOIN seen s ON s.catalog = c.catalog_name
+  WHERE c.catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  GROUP BY c.catalog_name
+)</code></pre></details></li><li><code>place</code>: Each catalog with its home workspace&#x27;s name.<details><summary>Its SQL (7 lines)</summary><pre><code><span class="c">-- Each catalog with its home workspace&#x27;s name.</span>
+place AS (
+<span class="c">  -- a catalog without lineage in 90 days keeps its rows, under No home workspace</span>
+  SELECT h.catalog, h.workspace_id,
+         COALESCE(w.workspace_name, h.workspace_id, &#x27;No home workspace&#x27;) AS workspace
+  FROM home h LEFT JOIN wsl w ON w.workspace_id = h.workspace_id
+)</code></pre></details></li><li><code>t</code>: Every table and view, without the system catalogs.<details><summary>Its SQL (7 lines)</summary><pre><code><span class="c">-- Every table and view, without the system catalogs.</span>
+t AS (
+  SELECT t.table_catalog AS catalog, t.table_schema AS sch, t.table_name, t.table_type,
+         t.table_catalog || &#x27;.&#x27; || t.table_schema || &#x27;.&#x27; || t.table_name AS full_name, CAST(t.last_altered AS STRING) AS last_altered
+  FROM system.information_schema.tables t
+  WHERE t.table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND t.table_schema &lt;&gt; &#x27;information_schema&#x27;
+)</code></pre></details></li><li><code>lin</code>: Every read (source) and write (target) of a table over 365 days, from lineage.<details><summary>Its SQL (9 lines)</summary><pre><code><span class="c">-- Every read (source) and write (target) of a table over 365 days, from lineage.</span>
+lin AS (
+  SELECT source_table_full_name AS full_name, 1 AS is_read, 0 AS is_write, event_time, created_by AS who
+  FROM system.access.table_lineage
+  WHERE event_date &gt;= date_sub(date_add(:time_range.max, 1), 365) AND event_date &lt; date_add(:time_range.max, 1) AND source_table_full_name IS NOT NULL
+  UNION ALL
+  SELECT target_table_full_name, 0, 1, event_time, created_by FROM system.access.table_lineage
+  WHERE event_date &gt;= date_sub(date_add(:time_range.max, 1), 365) AND event_date &lt; date_add(:time_range.max, 1) AND target_table_full_name IS NOT NULL
+)</code></pre></details></li><li><code>used</code>: Per table: last read and write over 365 days; reads, writes, readers in the window.<details><summary>Its SQL (10 lines)</summary><pre><code><span class="c">-- Per table: last read and write over 365 days; reads, writes, readers in the window.</span>
+used AS (
+<span class="c">  -- last read and write over the lineage&#x27;s year; counts in the Time Window</span>
+  SELECT full_name,
+         SUM(CASE WHEN event_time &gt;= CAST(:time_range.min AS DATE) THEN is_read ELSE 0 END) AS reads,
+         SUM(CASE WHEN event_time &gt;= CAST(:time_range.min AS DATE) THEN is_write ELSE 0 END) AS writes,
+         MAX(CASE WHEN is_read = 1 THEN event_time END) AS last_read, MAX(CASE WHEN is_write = 1 THEN event_time END) AS last_write,
+         COUNT(DISTINCT CASE WHEN is_read = 1 AND event_time &gt;= CAST(:time_range.min AS DATE) THEN who END) AS readers
+  FROM lin GROUP BY 1
+)</code></pre></details></li><li><code>hist</code>: Per table, from the job&#x27;s DESCRIBE HISTORY: last data change and its operation, last OPTIMIZE or VACUUM, rows changed and bytes written in the window.<details><summary>Its SQL (10 lines)</summary><pre><code><span class="c">-- Per table, from the job&#x27;s DESCRIBE HISTORY: last data change and its operation, last OPTIMIZE or VACUUM, rows changed and bytes written in the window.</span>
+hist AS (
+  SELECT catalog, schema, table_name,
+         MAX(CASE WHEN operation RLIKE &#x27;WRITE|MERGE|UPDATE|DELETE|STREAMING UPDATE|CREATE OR REPLACE|COPY INTO|TRUNCATE|RESTORE&#x27; THEN timestamp END) AS last_change,
+         max_by(operation, CASE WHEN operation RLIKE &#x27;WRITE|MERGE|UPDATE|DELETE|STREAMING UPDATE|CREATE OR REPLACE|COPY INTO|TRUNCATE|RESTORE&#x27; THEN timestamp END) AS last_change_op,
+         MAX(CASE WHEN operation RLIKE &#x27;OPTIMIZE|VACUUM|ANALYZE|REORG&#x27; THEN timestamp END) AS last_maintenance,
+         SUM(CASE WHEN timestamp &gt;= CAST(:time_range.min AS DATE) THEN rows_changed ELSE 0 END) AS rows_changed,
+         SUM(CASE WHEN timestamp &gt;= CAST(:time_range.min AS DATE) THEN bytes_written ELSE 0 END) AS bytes_written
+  FROM main.workspace_data.table_history GROUP BY 1, 2, 3
+)</code></pre></details></li><li><code>po</code>: Per table: the last predictive optimization run (compaction, vacuum, clustering).<details><summary>Its SQL (7 lines)</summary><pre><code><span class="c">-- Per table: the last predictive optimization run (compaction, vacuum, clustering).</span>
+po AS (
+  SELECT catalog_name AS catalog, schema_name AS schema, table_name, MAX(start_time) AS last_po
+  FROM system.storage.predictive_optimization_operations_history
+  WHERE start_time &gt;= date_sub(date_add(:time_range.max, 1), 365)
+  GROUP BY 1, 2, 3
+)</code></pre></details></li></ol>
+  <h4>3. Final query</h4><p>One row per table or view, biggest first.</p>
+  <h4>4. Columns it returns</h4><div class='table-wrap'><table><tr><th>Column</th><th>Meaning</th></tr><tr><td><code>workspace</code></td><td>The home workspace of the catalog, by name; No home workspace when lineage has none.</td></tr><tr><td><code>catalog</code></td><td>The table&#x27;s catalog.</td></tr><tr><td><code>schema_name</code></td><td>The table&#x27;s schema.</td></tr><tr><td><code>schema_full</code></td><td>catalog.schema.</td></tr><tr><td><code>table_name</code></td><td>catalog.schema.table.</td></tr><tr><td><code>kind</code></td><td>Table or View.</td></tr><tr><td><code>size_in_bytes</code></td><td>From DESCRIBE DETAIL in the sizes job; empty for views and tables it could not read.</td></tr><tr><td><code>size_gb</code></td><td>size_in_bytes in GB.</td></tr><tr><td><code>num_files</code></td><td>Data files, from DESCRIBE DETAIL.</td></tr><tr><td><code>reads</code></td><td>Lineage events reading the table in the window.</td></tr><tr><td><code>writes</code></td><td>Lineage events writing it in the window.</td></tr><tr><td><code>readers</code></td><td>Distinct identities reading it.</td></tr><tr><td><code>last_read</code></td><td>The latest read over the lookback; empty when none.</td></tr><tr><td><code>days_since_read</code></td><td>Days from the end of the window to the last read; empty when not read in the lookback.</td></tr><tr><td><code>read_band</code></td><td>Read in 30 days, 30-90 days ago, 90+ days ago, or not read in 365 days of lineage.</td></tr><tr><td><code>last_write</code></td><td>The latest write, from lineage or DESCRIBE HISTORY.</td></tr><tr><td><code>last_change_op</code></td><td>The operation of the last data change (write, merge, delete, ...), from DESCRIBE HISTORY.</td></tr><tr><td><code>last_maintenance</code></td><td>The last OPTIMIZE, VACUUM or predictive optimization run.</td></tr><tr><td><code>rows_changed</code></td><td>Rows inserted, updated and deleted (or written) in the window, from DESCRIBE HISTORY.</td></tr><tr><td><code>gb_written</code></td><td>Bytes written in the window, in GB.</td></tr><tr><td><code>last_altered</code></td><td>When its definition or data last changed, from information_schema.</td></tr><tr><td><code>use</code></td><td>Read, Written never read, or Not used in the window.</td></tr><tr><td><code>objects</code></td><td>Always 1: charts add it up to count tables and views.</td></tr></table></div>
+  <details><summary>SQL with comments (86 lines)</summary><pre><code><span class="c">-- Tables and views: size, last read and write. Dates from the Time Window.</span>
+<span class="c">-- Workspace id to name and URL.</span>
+WITH wsl AS (
+  SELECT CAST(workspace_id AS STRING) AS workspace_id, workspace_name, workspace_url
+  FROM system.access.workspaces_latest
+),
+<span class="c">-- Lineage reads and writes per catalog and workspace over 90 days.</span>
+seen AS (
+  SELECT catalog, CAST(workspace_id AS STRING) AS workspace_id, COUNT(*) AS events FROM (
+    SELECT workspace_id, source_table_catalog AS catalog FROM system.access.table_lineage
+    WHERE event_date &gt;= date_sub(date_add(:time_range.max, 1), 90) AND event_date &lt; date_add(:time_range.max, 1)
+    UNION ALL
+    SELECT workspace_id, target_table_catalog FROM system.access.table_lineage
+    WHERE event_date &gt;= date_sub(date_add(:time_range.max, 1), 90) AND event_date &lt; date_add(:time_range.max, 1)
+  ) WHERE catalog IS NOT NULL GROUP BY 1, 2
+),
+<span class="c">-- Each catalog&#x27;s home workspace: the one with the most of them.</span>
+home AS (
+  SELECT c.catalog_name AS catalog, max_by(s.workspace_id, s.events) AS workspace_id
+  FROM system.information_schema.catalogs c LEFT JOIN seen s ON s.catalog = c.catalog_name
+  WHERE c.catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  GROUP BY c.catalog_name
+),
+<span class="c">-- Each catalog with its home workspace&#x27;s name.</span>
+place AS (
+<span class="c">  -- a catalog without lineage in 90 days keeps its rows, under No home workspace</span>
+  SELECT h.catalog, h.workspace_id,
+         COALESCE(w.workspace_name, h.workspace_id, &#x27;No home workspace&#x27;) AS workspace
+  FROM home h LEFT JOIN wsl w ON w.workspace_id = h.workspace_id
+),
+<span class="c">-- Every table and view, without the system catalogs.</span>
+t AS (
+  SELECT t.table_catalog AS catalog, t.table_schema AS sch, t.table_name, t.table_type,
+         t.table_catalog || &#x27;.&#x27; || t.table_schema || &#x27;.&#x27; || t.table_name AS full_name, CAST(t.last_altered AS STRING) AS last_altered
+  FROM system.information_schema.tables t
+  WHERE t.table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND t.table_schema &lt;&gt; &#x27;information_schema&#x27;
+),
+<span class="c">-- Every read (source) and write (target) of a table over 365 days, from lineage.</span>
+lin AS (
+  SELECT source_table_full_name AS full_name, 1 AS is_read, 0 AS is_write, event_time, created_by AS who
+  FROM system.access.table_lineage
+  WHERE event_date &gt;= date_sub(date_add(:time_range.max, 1), 365) AND event_date &lt; date_add(:time_range.max, 1) AND source_table_full_name IS NOT NULL
+  UNION ALL
+  SELECT target_table_full_name, 0, 1, event_time, created_by FROM system.access.table_lineage
+  WHERE event_date &gt;= date_sub(date_add(:time_range.max, 1), 365) AND event_date &lt; date_add(:time_range.max, 1) AND target_table_full_name IS NOT NULL
+),
+<span class="c">-- Per table: last read and write over 365 days; reads, writes, readers in the window.</span>
+used AS (
+<span class="c">  -- last read and write over the lineage&#x27;s year; counts in the Time Window</span>
+  SELECT full_name,
+         SUM(CASE WHEN event_time &gt;= CAST(:time_range.min AS DATE) THEN is_read ELSE 0 END) AS reads,
+         SUM(CASE WHEN event_time &gt;= CAST(:time_range.min AS DATE) THEN is_write ELSE 0 END) AS writes,
+         MAX(CASE WHEN is_read = 1 THEN event_time END) AS last_read, MAX(CASE WHEN is_write = 1 THEN event_time END) AS last_write,
+         COUNT(DISTINCT CASE WHEN is_read = 1 AND event_time &gt;= CAST(:time_range.min AS DATE) THEN who END) AS readers
+  FROM lin GROUP BY 1
+),
+<span class="c">-- Per table, from the job&#x27;s DESCRIBE HISTORY: last data change and its operation, last OPTIMIZE or VACUUM, rows changed and bytes written in the window.</span>
+hist AS (
+  SELECT catalog, schema, table_name,
+         MAX(CASE WHEN operation RLIKE &#x27;WRITE|MERGE|UPDATE|DELETE|STREAMING UPDATE|CREATE OR REPLACE|COPY INTO|TRUNCATE|RESTORE&#x27; THEN timestamp END) AS last_change,
+         max_by(operation, CASE WHEN operation RLIKE &#x27;WRITE|MERGE|UPDATE|DELETE|STREAMING UPDATE|CREATE OR REPLACE|COPY INTO|TRUNCATE|RESTORE&#x27; THEN timestamp END) AS last_change_op,
+         MAX(CASE WHEN operation RLIKE &#x27;OPTIMIZE|VACUUM|ANALYZE|REORG&#x27; THEN timestamp END) AS last_maintenance,
+         SUM(CASE WHEN timestamp &gt;= CAST(:time_range.min AS DATE) THEN rows_changed ELSE 0 END) AS rows_changed,
+         SUM(CASE WHEN timestamp &gt;= CAST(:time_range.min AS DATE) THEN bytes_written ELSE 0 END) AS bytes_written
+  FROM main.workspace_data.table_history GROUP BY 1, 2, 3
+),
+<span class="c">-- Per table: the last predictive optimization run (compaction, vacuum, clustering).</span>
+po AS (
+  SELECT catalog_name AS catalog, schema_name AS schema, table_name, MAX(start_time) AS last_po
+  FROM system.storage.predictive_optimization_operations_history
+  WHERE start_time &gt;= date_sub(date_add(:time_range.max, 1), 365)
+  GROUP BY 1, 2, 3
+)
+<span class="c">-- Final SELECT: the rows the widgets read.</span>
+SELECT p.workspace, t.catalog, t.sch AS schema_name, t.catalog || &#x27;.&#x27; || t.sch AS schema_full, t.full_name AS table_name,
+       CASE WHEN t.table_type = &#x27;VIEW&#x27; THEN &#x27;View&#x27; ELSE &#x27;Table&#x27; END AS kind,
+       s.size_in_bytes, ROUND(s.size_in_bytes / 1073741824.0, 2) AS size_gb, s.num_files,
+       COALESCE(u.reads, 0) AS reads, COALESCE(u.writes, 0) AS writes, COALESCE(u.readers, 0) AS readers,
+       CAST(u.last_read AS STRING) AS last_read, datediff(date_add(:time_range.max, 1), CAST(u.last_read AS DATE)) AS days_since_read,
+       CASE WHEN u.last_read IS NULL THEN &#x27;4 not read in 365 days&#x27;
+            WHEN datediff(date_add(:time_range.max, 1), CAST(u.last_read AS DATE)) &lt; 30 THEN &#x27;1 read in 30 days&#x27;
+            WHEN datediff(date_add(:time_range.max, 1), CAST(u.last_read AS DATE)) &lt; 90 THEN &#x27;2 read 30-90 days ago&#x27;
+            ELSE &#x27;3 read 90+ days ago&#x27; END AS read_band,
+       CAST(GREATEST(u.last_write, h.last_change) AS STRING) AS last_write, lower(h.last_change_op) AS last_change_op,
+       CAST(GREATEST(h.last_maintenance, po.last_po) AS STRING) AS last_maintenance,
+       COALESCE(h.rows_changed, 0) AS rows_changed, ROUND(COALESCE(h.bytes_written, 0) / 1073741824.0, 2) AS gb_written,
+       t.last_altered,
+       CASE WHEN COALESCE(u.reads, 0) &gt; 0 THEN &#x27;Read&#x27; WHEN COALESCE(u.writes, 0) &gt; 0 THEN &#x27;Written, never read&#x27;
+            ELSE &#x27;Not used&#x27; END AS use, 1 AS objects
+FROM t
+LEFT JOIN place p ON p.catalog = t.catalog
+LEFT JOIN main.workspace_data.table_sizes s ON s.catalog = t.catalog AND s.schema = t.sch AND s.table_name = t.table_name
+LEFT JOIN used u ON u.full_name = t.full_name
+LEFT JOIN hist h ON h.catalog = t.catalog AND h.schema = t.sch AND h.table_name = t.table_name
+LEFT JOIN po ON po.catalog = t.catalog AND po.schema = t.sch AND po.table_name = t.table_name
+ORDER BY s.size_in_bytes DESC NULLS LAST, t.full_name</code></pre></details>
+</div>
+<div class="card" id="d11eacba">
+  <h3>Volumes: files, size and use</h3>
+  <p><b>Shows:</b> Every volume: its home workspace, files and size (job), file reads and writes and their users in the window (the audit log&#x27;s file-system events). <b>Used by:</b> The Volume usage page.</p>
+  <p><b>Why it is built this way:</b> Volume files are invisible to SQL, so the job lists them; the audit log&#x27;s file events show whether anyone touches them.</p>
+  <h4>How its tables join</h4><div class='flow-wrap'><svg class="flow er" viewBox="-2 -2 972 601" width="972" height="601" role="img"><path class="edge" d="M612.0,150 L612.0,172"/><path class="edge" d="M612.0,236 L612.0,258"/><path class="edge" d="M612.0,47 L612.0,258"/><path class="edge" d="M612.0,511 L612.0,533"/><path class="edge" d="M712,288.0 C740.0,288.0 740.0,30.0 768,30.0"/><path class="edge" d="M712,563.0 C740.0,563.0 740.0,30.0 768,30.0"/><path class="edge" d="M712,374.0 C740.0,374.0 740.0,30.0 768,30.0"/><g class="ent step"><title>wsl</title><rect x="512" y="0" width="200" height="47" rx="5"/><rect class="hd" x="512" y="0" width="200" height="24" rx="5"/><text class="t" x="520" y="16">wsl</text><text class="n" x="520" y="37">Workspace id to name and URL.</text></g><g class="ent step"><title>seen</title><rect x="512" y="69" width="200" height="81" rx="5"/><rect class="hd" x="512" y="69" width="200" height="24" rx="5"/><text class="t" x="520" y="85">seen</text><text class="n" x="520" y="106">Lineage reads and writes per</text><text class="n" x="520" y="123">catalog and workspace over 90</text><text class="n" x="520" y="140">days.</text></g><g class="ent step"><title>home</title><rect x="512" y="172" width="200" height="64" rx="5"/><rect class="hd" x="512" y="172" width="200" height="24" rx="5"/><text class="t" x="520" y="188">home</text><text class="n" x="520" y="209">Each catalog&#x27;s home workspace:</text><text class="n" x="520" y="226">the one with the most of them.</text></g><g class="ent step"><title>place</title><rect x="512" y="258" width="200" height="64" rx="5"/><rect class="hd" x="512" y="258" width="200" height="24" rx="5"/><text class="t" x="520" y="274">place</text><text class="n" x="520" y="295">Each catalog with its home</text><text class="n" x="520" y="312">workspace&#x27;s name.</text></g><g class="ent step"><title>v</title><rect x="512" y="344" width="200" height="64" rx="5"/><rect class="hd" x="512" y="344" width="200" height="24" rx="5"/><text class="t" x="520" y="360">v</text><text class="n" x="520" y="381">Every volume, without the</text><text class="n" x="520" y="398">system catalogs.</text></g><g class="ent step"><title>ev</title><rect x="512" y="430" width="200" height="81" rx="5"/><rect class="hd" x="512" y="430" width="200" height="24" rx="5"/><text class="t" x="520" y="446">ev</text><text class="n" x="520" y="467">File-system events under</text><text class="n" x="520" y="484">/Volumes in the window: who,</text><text class="n" x="520" y="501">when, read or write.</text></g><g class="ent step"><title>used</title><rect x="512" y="533" width="200" height="64" rx="5"/><rect class="hd" x="512" y="533" width="200" height="24" rx="5"/><text class="t" x="520" y="549">used</text><text class="n" x="520" y="570">Per volume: reads, writes,</text><text class="n" x="520" y="587">users and the last access.</text></g><g class="ent result"><title>dashboard rows</title><rect x="768" y="0" width="200" height="268" rx="5"/><rect class="hd" x="768" y="0" width="200" height="24" rx="5"/><text class="t" x="776" y="16">dashboard rows</text><text class="c" x="776" y="37">workspace</text><text class="c" x="776" y="54">catalog</text><text class="c" x="776" y="71">schema_name</text><text class="c" x="776" y="88">volume</text><text class="c" x="776" y="105">volume_type</text><text class="c" x="776" y="122">files</text><text class="c" x="776" y="139">size_in_bytes</text><text class="c" x="776" y="156">size_gb</text><text class="c" x="776" y="173">reads</text><text class="c" x="776" y="190">writes</text><text class="c" x="776" y="207">users</text><text class="c" x="776" y="224">last_access</text><text class="c" x="776" y="241">use</text><text class="c" x="776" y="258">volumes</text></g></svg></div><p class='muted'>Grey: system tables. Blue border: a shared check (its steps are listed under Steps). White: steps of the query. Green: the rows the dashboard shows. ◆ marks the columns the joins use.</p><ol class='er-notes'></ol>
+  <h4>1. System tables it reads</h4><ul><li><a href='#t-system-access-audit'><code>system.access.audit</code></a></li><li><a href='#t-system-access-table-lineage'><code>system.access.table_lineage</code></a></li><li><a href='#t-system-access-workspaces-latest'><code>system.access.workspaces_latest</code></a></li><li><a href='#t-system-information-schema-catalogs'><code>system.information_schema.catalogs</code></a></li><li><a href='#t-system-information-schema-volumes'><code>system.information_schema.volumes</code></a></li></ul>
+  <h4>2. Steps (CTEs), in order</h4><ol><li><code>wsl</code>: Workspace id to name and URL.<details><summary>Its SQL (6 lines)</summary><pre><code><span class="c">-- Volumes: files, size and use. Dates from the Time Window.</span>
+<span class="c">-- Workspace id to name and URL.</span>
+wsl AS (
+  SELECT CAST(workspace_id AS STRING) AS workspace_id, workspace_name, workspace_url
+  FROM system.access.workspaces_latest
+)</code></pre></details></li><li><code>seen</code>: Lineage reads and writes per catalog and workspace over 90 days.<details><summary>Its SQL (10 lines)</summary><pre><code><span class="c">-- Lineage reads and writes per catalog and workspace over 90 days.</span>
+seen AS (
+  SELECT catalog, CAST(workspace_id AS STRING) AS workspace_id, COUNT(*) AS events FROM (
+    SELECT workspace_id, source_table_catalog AS catalog FROM system.access.table_lineage
+    WHERE event_date &gt;= date_sub(date_add(:time_range.max, 1), 90) AND event_date &lt; date_add(:time_range.max, 1)
+    UNION ALL
+    SELECT workspace_id, target_table_catalog FROM system.access.table_lineage
+    WHERE event_date &gt;= date_sub(date_add(:time_range.max, 1), 90) AND event_date &lt; date_add(:time_range.max, 1)
+  ) WHERE catalog IS NOT NULL GROUP BY 1, 2
+)</code></pre></details></li><li><code>home</code>: Each catalog&#x27;s home workspace: the one with the most of them.<details><summary>Its SQL (7 lines)</summary><pre><code><span class="c">-- Each catalog&#x27;s home workspace: the one with the most of them.</span>
+home AS (
+  SELECT c.catalog_name AS catalog, max_by(s.workspace_id, s.events) AS workspace_id
+  FROM system.information_schema.catalogs c LEFT JOIN seen s ON s.catalog = c.catalog_name
+  WHERE c.catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  GROUP BY c.catalog_name
+)</code></pre></details></li><li><code>place</code>: Each catalog with its home workspace&#x27;s name.<details><summary>Its SQL (7 lines)</summary><pre><code><span class="c">-- Each catalog with its home workspace&#x27;s name.</span>
+place AS (
+<span class="c">  -- a catalog without lineage in 90 days keeps its rows, under No home workspace</span>
+  SELECT h.catalog, h.workspace_id,
+         COALESCE(w.workspace_name, h.workspace_id, &#x27;No home workspace&#x27;) AS workspace
+  FROM home h LEFT JOIN wsl w ON w.workspace_id = h.workspace_id
+)</code></pre></details></li><li><code>v</code>: Every volume, without the system catalogs.<details><summary>Its SQL (6 lines)</summary><pre><code><span class="c">-- Every volume, without the system catalogs.</span>
+v AS (
+  SELECT volume_catalog AS catalog, volume_schema AS sch, volume_name, volume_type,
+         volume_catalog || &#x27;.&#x27; || volume_schema || &#x27;.&#x27; || volume_name AS full_name
+  FROM system.information_schema.volumes WHERE volume_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+)</code></pre></details></li><li><code>ev</code>: File-system events under /Volumes in the window: who, when, read or write.<details><summary>Its SQL (9 lines)</summary><pre><code><span class="c">-- File-system events under /Volumes in the window: who, when, read or write.</span>
+ev AS (
+  SELECT regexp_extract(COALESCE(request_params[&#x27;path&#x27;], request_params[&#x27;file_path&#x27;], request_params[&#x27;directory_path&#x27;]),
+                        &#x27;^/Volumes/([^/]+)/([^/]+)/([^/]+)&#x27;, 0) AS path_root,
+         lower(COALESCE(user_identity.email, user_identity.subject_name)) AS who, event_time,
+         action_name RLIKE &#x27;(?i)put|upload|create|delete|write|mkdir&#x27; AS is_write
+  FROM system.access.audit
+  WHERE event_date &gt;= CAST(:time_range.min AS DATE) AND event_date &lt; date_add(:time_range.max, 1) AND service_name = &#x27;filesystem&#x27; AND response.status_code = 200
+)</code></pre></details></li><li><code>used</code>: Per volume: reads, writes, users and the last access.<details><summary>Its SQL (6 lines)</summary><pre><code><span class="c">-- Per volume: reads, writes, users and the last access.</span>
+used AS (
+  SELECT replace(substr(path_root, 10), &#x27;/&#x27;, &#x27;.&#x27;) AS full_name, COUNT_IF(NOT is_write) AS reads, COUNT_IF(is_write) AS writes,
+         COUNT(DISTINCT who) AS users, MAX(event_time) AS last_access
+  FROM ev WHERE path_root &lt;&gt; &#x27;&#x27; GROUP BY 1
+)</code></pre></details></li></ol>
+  <h4>3. Final query</h4><p>One row per volume, biggest first.</p>
+  <h4>4. Columns it returns</h4><div class='table-wrap'><table><tr><th>Column</th><th>Meaning</th></tr><tr><td><code>workspace</code></td><td>The home workspace of the catalog, by name; No home workspace when lineage has none.</td></tr><tr><td><code>catalog</code></td><td>The volume&#x27;s catalog.</td></tr><tr><td><code>schema_name</code></td><td>The schema holding the volume.</td></tr><tr><td><code>volume</code></td><td>catalog.schema.volume.</td></tr><tr><td><code>volume_type</code></td><td>managed or external.</td></tr><tr><td><code>files</code></td><td>Files listed by the sizes job (capped per volume).</td></tr><tr><td><code>size_in_bytes</code></td><td>Bytes of the listed files.</td></tr><tr><td><code>size_gb</code></td><td>Their size in GB.</td></tr><tr><td><code>reads</code></td><td>File reads and listings under the volume in the window (audit).</td></tr><tr><td><code>writes</code></td><td>File uploads, deletes and new folders.</td></tr><tr><td><code>users</code></td><td>Distinct identities doing either.</td></tr><tr><td><code>last_access</code></td><td>The latest of them.</td></tr><tr><td><code>use</code></td><td>Used or Not used in the window.</td></tr><tr><td><code>volumes</code></td><td>Always 1: counts volumes.</td></tr></table></div>
+  <details><summary>SQL with comments (54 lines)</summary><pre><code><span class="c">-- Volumes: files, size and use. Dates from the Time Window.</span>
+<span class="c">-- Workspace id to name and URL.</span>
+WITH wsl AS (
+  SELECT CAST(workspace_id AS STRING) AS workspace_id, workspace_name, workspace_url
+  FROM system.access.workspaces_latest
+),
+<span class="c">-- Lineage reads and writes per catalog and workspace over 90 days.</span>
+seen AS (
+  SELECT catalog, CAST(workspace_id AS STRING) AS workspace_id, COUNT(*) AS events FROM (
+    SELECT workspace_id, source_table_catalog AS catalog FROM system.access.table_lineage
+    WHERE event_date &gt;= date_sub(date_add(:time_range.max, 1), 90) AND event_date &lt; date_add(:time_range.max, 1)
+    UNION ALL
+    SELECT workspace_id, target_table_catalog FROM system.access.table_lineage
+    WHERE event_date &gt;= date_sub(date_add(:time_range.max, 1), 90) AND event_date &lt; date_add(:time_range.max, 1)
+  ) WHERE catalog IS NOT NULL GROUP BY 1, 2
+),
+<span class="c">-- Each catalog&#x27;s home workspace: the one with the most of them.</span>
+home AS (
+  SELECT c.catalog_name AS catalog, max_by(s.workspace_id, s.events) AS workspace_id
+  FROM system.information_schema.catalogs c LEFT JOIN seen s ON s.catalog = c.catalog_name
+  WHERE c.catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  GROUP BY c.catalog_name
+),
+<span class="c">-- Each catalog with its home workspace&#x27;s name.</span>
+place AS (
+<span class="c">  -- a catalog without lineage in 90 days keeps its rows, under No home workspace</span>
+  SELECT h.catalog, h.workspace_id,
+         COALESCE(w.workspace_name, h.workspace_id, &#x27;No home workspace&#x27;) AS workspace
+  FROM home h LEFT JOIN wsl w ON w.workspace_id = h.workspace_id
+),
+<span class="c">-- Every volume, without the system catalogs.</span>
+v AS (
+  SELECT volume_catalog AS catalog, volume_schema AS sch, volume_name, volume_type,
+         volume_catalog || &#x27;.&#x27; || volume_schema || &#x27;.&#x27; || volume_name AS full_name
+  FROM system.information_schema.volumes WHERE volume_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+),
+<span class="c">-- File-system events under /Volumes in the window: who, when, read or write.</span>
+ev AS (
+  SELECT regexp_extract(COALESCE(request_params[&#x27;path&#x27;], request_params[&#x27;file_path&#x27;], request_params[&#x27;directory_path&#x27;]),
+                        &#x27;^/Volumes/([^/]+)/([^/]+)/([^/]+)&#x27;, 0) AS path_root,
+         lower(COALESCE(user_identity.email, user_identity.subject_name)) AS who, event_time,
+         action_name RLIKE &#x27;(?i)put|upload|create|delete|write|mkdir&#x27; AS is_write
+  FROM system.access.audit
+  WHERE event_date &gt;= CAST(:time_range.min AS DATE) AND event_date &lt; date_add(:time_range.max, 1) AND service_name = &#x27;filesystem&#x27; AND response.status_code = 200
+),
+<span class="c">-- Per volume: reads, writes, users and the last access.</span>
+used AS (
+  SELECT replace(substr(path_root, 10), &#x27;/&#x27;, &#x27;.&#x27;) AS full_name, COUNT_IF(NOT is_write) AS reads, COUNT_IF(is_write) AS writes,
+         COUNT(DISTINCT who) AS users, MAX(event_time) AS last_access
+  FROM ev WHERE path_root &lt;&gt; &#x27;&#x27; GROUP BY 1
+)
+<span class="c">-- Final SELECT: the rows the widgets read.</span>
+SELECT p.workspace, v.catalog, v.sch AS schema_name, v.full_name AS volume, lower(v.volume_type) AS volume_type,
+       vs.files, vs.size_in_bytes, ROUND(vs.size_in_bytes / 1073741824.0, 2) AS size_gb,
+       COALESCE(u.reads, 0) AS reads, COALESCE(u.writes, 0) AS writes, COALESCE(u.users, 0) AS users,
+       CAST(u.last_access AS STRING) AS last_access,
+       CASE WHEN COALESCE(u.reads, 0) + COALESCE(u.writes, 0) &gt; 0 THEN &#x27;Used&#x27; ELSE &#x27;Not used&#x27; END AS use, 1 AS volumes
+FROM v
+LEFT JOIN place p ON p.catalog = v.catalog
+LEFT JOIN main.workspace_data.volume_sizes vs ON vs.catalog = v.catalog AND vs.schema = v.sch AND vs.volume_name = v.volume_name
+LEFT JOIN used u ON u.full_name = v.full_name
+ORDER BY vs.size_in_bytes DESC NULLS LAST, v.full_name</code></pre></details>
+</div>
+<div class="card" id="e28abc6a">
+  <h3>People and service principals: activity and last seen</h3>
+  <p><b>Shows:</b> Everyone with an audit event in a workspace over the last year: activity in the window, last seen, and inactive when not seen for 90+ days. <b>Used by:</b> The User activity page.</p>
+  <p><b>Why it is built this way:</b> Active users answer who works there; a year of audit answers who stopped, for access reviews.</p>
+  <h4>How its tables join</h4><div class='flow-wrap'><svg class="flow er" viewBox="-2 -2 972 532" width="972" height="532" role="img"><path class="edge" d="M712,288.0 C612.0,288.0 612.0,99.0 512,99.0"/><path class="edge" d="M712,288.0 C612.0,288.0 612.0,202.0 512,202.0"/><path class="edge" d="M612.0,150 L612.0,258"/><path class="edge" d="M612.0,236 L612.0,258"/><path class="edge" d="M612.0,339 L612.0,361"/><path class="edge" d="M612.0,339 L612.0,464"/><path class="edge" d="M612.0,442 L612.0,464"/><path class="edge" d="M712,494.0 C740.0,494.0 740.0,30.0 768,30.0"/><path class="edge" d="M712,288.0 C740.0,288.0 740.0,30.0 768,30.0"/><path class="edge" d="M712,23.5 C740.0,23.5 740.0,30.0 768,30.0"/><g class="ent step"><title>wsl</title><rect x="512" y="0" width="200" height="47" rx="5"/><rect class="hd" x="512" y="0" width="200" height="24" rx="5"/><text class="t" x="520" y="16">wsl</text><text class="n" x="520" y="37">Workspace id to name.</text></g><g class="ent step"><title>aud</title><rect x="512" y="69" width="200" height="81" rx="5"/><rect class="hd" x="512" y="69" width="200" height="24" rx="5"/><text class="t" x="520" y="85">aud</text><text class="n" x="520" y="106">Audit events per workspace and</text><text class="n" x="520" y="123">identity in the window: last</text><text class="n" x="520" y="140">event and successful logins.</text></g><g class="ent step"><title>qh</title><rect x="512" y="172" width="200" height="64" rx="5"/><rect class="hd" x="512" y="172" width="200" height="24" rx="5"/><text class="t" x="520" y="188">qh</text><text class="n" x="520" y="209">Queries per workspace and</text><text class="n" x="520" y="226">identity in the window.</text></g><g class="ent step"><title>who</title><rect x="512" y="258" width="200" height="81" rx="5"/><rect class="hd" x="512" y="258" width="200" height="24" rx="5"/><text class="t" x="520" y="274">who</text><text class="n" x="520" y="295">Both together, with the kind:</text><text class="n" x="520" y="312">a person (email) or a service</text><text class="n" x="520" y="329">principal (UUID).</text></g><g class="ent step"><title>year</title><rect x="512" y="361" width="200" height="81" rx="5"/><rect class="hd" x="512" y="361" width="200" height="24" rx="5"/><text class="t" x="520" y="377">year</text><text class="n" x="520" y="398">Each identity&#x27;s last audit</text><text class="n" x="520" y="415">event per workspace over the</text><text class="n" x="520" y="432">last year.</text></g><g class="ent step"><title>k</title><rect x="512" y="464" width="200" height="64" rx="5"/><rect class="hd" x="512" y="464" width="200" height="24" rx="5"/><text class="t" x="520" y="480">k</text><text class="n" x="520" y="501">Last seen in the year joined</text><text class="n" x="520" y="518">to the window&#x27;s activity.</text></g><g class="ent result"><title>dashboard rows</title><rect x="768" y="0" width="200" height="217" rx="5"/><rect class="hd" x="768" y="0" width="200" height="24" rx="5"/><text class="t" x="776" y="16">dashboard rows</text><text class="c" x="776" y="37">workspace</text><text class="c" x="776" y="54">identity</text><text class="c" x="776" y="71">kind</text><text class="c" x="776" y="88">logins</text><text class="c" x="776" y="105">queries</text><text class="c" x="776" y="122">last_seen</text><text class="c" x="776" y="139">days_since</text><text class="c" x="776" y="156">last_seen_band</text><text class="c" x="776" y="173">inactive</text><text class="c" x="776" y="190">active</text><text class="c" x="776" y="207">identities</text></g></svg></div><p class='muted'>Grey: system tables. Blue border: a shared check (its steps are listed under Steps). White: steps of the query. Green: the rows the dashboard shows. ◆ marks the columns the joins use.</p><ol class='er-notes'></ol>
+  <h4>1. System tables it reads</h4><ul><li><a href='#t-system-access-audit'><code>system.access.audit</code></a></li><li><a href='#t-system-access-workspaces-latest'><code>system.access.workspaces_latest</code></a></li><li><a href='#t-system-query-history'><code>system.query.history</code></a></li></ul>
+  <h4>2. Steps (CTEs), in order</h4><ol><li><code>wsl</code>: Workspace id to name.<details><summary>Its SQL (5 lines)</summary><pre><code><span class="c">-- People and service principals: activity and last seen. Dates from the Time Window; last seen over a year.</span>
+<span class="c">-- Workspace id to name.</span>
+wsl AS (
+  SELECT CAST(workspace_id AS STRING) AS workspace_id, workspace_name FROM system.access.workspaces_latest
+)</code></pre></details></li><li><code>aud</code>: Audit events per workspace and identity in the window: last event and successful logins.<details><summary>Its SQL (10 lines)</summary><pre><code><span class="c">-- Audit events per workspace and identity in the window: last event and successful logins.</span>
+aud AS (
+  SELECT CAST(workspace_id AS STRING) AS workspace_id,
+         lower(COALESCE(user_identity.email, user_identity.subject_name)) AS who,
+         MAX(event_time) AS last_event,
+         COUNT_IF(service_name = &#x27;accounts&#x27; AND action_name RLIKE &#x27;(?i)login&#x27; AND response.status_code = 200) AS logins
+  FROM system.access.audit
+  WHERE event_date &gt;= CAST(:time_range.min AS DATE) AND event_date &lt; date_add(:time_range.max, 1)
+  GROUP BY 1, 2
+)</code></pre></details></li><li><code>qh</code>: Queries per workspace and identity in the window.<details><summary>Its SQL (8 lines)</summary><pre><code><span class="c">-- Queries per workspace and identity in the window.</span>
+qh AS (
+  SELECT CAST(workspace_id AS STRING) AS workspace_id, lower(executed_by) AS who,
+         COUNT(*) AS queries, MAX(start_time) AS last_query
+  FROM system.query.history
+  WHERE start_time &gt;= CAST(:time_range.min AS DATE) AND start_time &lt; date_add(:time_range.max, 1)
+  GROUP BY 1, 2
+)</code></pre></details></li><li><code>who</code>: Both together, with the kind: a person (email) or a service principal (UUID).<details><summary>Its SQL (9 lines)</summary><pre><code><span class="c">-- Both together, with the kind: a person (email) or a service principal (UUID).</span>
+who AS (
+  SELECT COALESCE(a.workspace_id, q.workspace_id) AS workspace_id, COALESCE(a.who, q.who) AS who,
+         COALESCE(a.logins, 0) AS logins, COALESCE(q.queries, 0) AS queries,
+         GREATEST(a.last_event, q.last_query) AS last_seen,
+         CASE WHEN COALESCE(a.who, q.who) RLIKE &#x27;^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$&#x27; THEN &#x27;Service principal&#x27;
+              WHEN COALESCE(a.who, q.who) LIKE &#x27;%@%&#x27; THEN &#x27;Person&#x27; ELSE &#x27;Other&#x27; END AS kind
+  FROM aud a FULL OUTER JOIN qh q ON q.workspace_id = a.workspace_id AND q.who = a.who
+)</code></pre></details></li><li><code>year</code>: Each identity&#x27;s last audit event per workspace over the last year.<details><summary>Its SQL (8 lines)</summary><pre><code><span class="c">-- Each identity&#x27;s last audit event per workspace over the last year.</span>
+year AS (
+  SELECT CAST(workspace_id AS STRING) AS workspace_id, lower(COALESCE(user_identity.email, user_identity.subject_name)) AS who,
+         MAX(event_date) AS last_seen_year
+  FROM system.access.audit
+  WHERE event_date &gt;= date_sub(date_add(:time_range.max, 1), 365) AND event_date &lt; date_add(:time_range.max, 1)
+  GROUP BY 1, 2
+)</code></pre></details></li><li><code>k</code>: Last seen in the year joined to the window&#x27;s activity.<details><summary>Its SQL (6 lines)</summary><pre><code><span class="c">-- Last seen in the year joined to the window&#x27;s activity.</span>
+k AS (
+  SELECT y.workspace_id, y.who, y.last_seen_year, w.logins, w.queries, w.last_seen,
+         CASE WHEN y.who RLIKE &#x27;^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$&#x27; THEN &#x27;Service principal&#x27; WHEN y.who LIKE &#x27;%@%&#x27; THEN &#x27;Person&#x27; ELSE &#x27;Other&#x27; END AS kind
+  FROM year y LEFT JOIN who w ON w.workspace_id = y.workspace_id AND w.who = y.who
+)</code></pre></details></li></ol>
+  <h4>3. Final query</h4><p>One row per workspace and identity, longest away first.</p>
+  <h4>4. Columns it returns</h4><div class='table-wrap'><table><tr><th>Column</th><th>Meaning</th></tr><tr><td><code>workspace</code></td><td>The workspace, by name.</td></tr><tr><td><code>identity</code></td><td>The email, or a service principal&#x27;s application id.</td></tr><tr><td><code>kind</code></td><td>Person or Service principal.</td></tr><tr><td><code>logins</code></td><td>Successful logins in the window.</td></tr><tr><td><code>queries</code></td><td>Queries in the window.</td></tr><tr><td><code>last_seen</code></td><td>The latest audit event or query.</td></tr><tr><td><code>days_since</code></td><td>Days from the end of the window to the last audit event in the past year.</td></tr><tr><td><code>last_seen_band</code></td><td>under 30, 30-90, 90-180 or 180+ days.</td></tr><tr><td><code>inactive</code></td><td>1 when not seen for 90+ days.</td></tr><tr><td><code>active</code></td><td>1 when it logged in or ran a query in the window.</td></tr><tr><td><code>identities</code></td><td>Always 1: counts people and service principals.</td></tr></table></div>
+  <details><summary>SQL with comments (54 lines)</summary><pre><code><span class="c">-- People and service principals: activity and last seen. Dates from the Time Window; last seen over a year.</span>
+<span class="c">-- Workspace id to name.</span>
+WITH wsl AS (
+  SELECT CAST(workspace_id AS STRING) AS workspace_id, workspace_name FROM system.access.workspaces_latest
+),
+<span class="c">-- Audit events per workspace and identity in the window: last event and successful logins.</span>
+aud AS (
+  SELECT CAST(workspace_id AS STRING) AS workspace_id,
+         lower(COALESCE(user_identity.email, user_identity.subject_name)) AS who,
+         MAX(event_time) AS last_event,
+         COUNT_IF(service_name = &#x27;accounts&#x27; AND action_name RLIKE &#x27;(?i)login&#x27; AND response.status_code = 200) AS logins
+  FROM system.access.audit
+  WHERE event_date &gt;= CAST(:time_range.min AS DATE) AND event_date &lt; date_add(:time_range.max, 1)
+  GROUP BY 1, 2
+),
+<span class="c">-- Queries per workspace and identity in the window.</span>
+qh AS (
+  SELECT CAST(workspace_id AS STRING) AS workspace_id, lower(executed_by) AS who,
+         COUNT(*) AS queries, MAX(start_time) AS last_query
+  FROM system.query.history
+  WHERE start_time &gt;= CAST(:time_range.min AS DATE) AND start_time &lt; date_add(:time_range.max, 1)
+  GROUP BY 1, 2
+),
+<span class="c">-- Both together, with the kind: a person (email) or a service principal (UUID).</span>
+who AS (
+  SELECT COALESCE(a.workspace_id, q.workspace_id) AS workspace_id, COALESCE(a.who, q.who) AS who,
+         COALESCE(a.logins, 0) AS logins, COALESCE(q.queries, 0) AS queries,
+         GREATEST(a.last_event, q.last_query) AS last_seen,
+         CASE WHEN COALESCE(a.who, q.who) RLIKE &#x27;^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$&#x27; THEN &#x27;Service principal&#x27;
+              WHEN COALESCE(a.who, q.who) LIKE &#x27;%@%&#x27; THEN &#x27;Person&#x27; ELSE &#x27;Other&#x27; END AS kind
+  FROM aud a FULL OUTER JOIN qh q ON q.workspace_id = a.workspace_id AND q.who = a.who
+),
+<span class="c">-- Each identity&#x27;s last audit event per workspace over the last year.</span>
+year AS (
+  SELECT CAST(workspace_id AS STRING) AS workspace_id, lower(COALESCE(user_identity.email, user_identity.subject_name)) AS who,
+         MAX(event_date) AS last_seen_year
+  FROM system.access.audit
+  WHERE event_date &gt;= date_sub(date_add(:time_range.max, 1), 365) AND event_date &lt; date_add(:time_range.max, 1)
+  GROUP BY 1, 2
+),
+<span class="c">-- Last seen in the year joined to the window&#x27;s activity.</span>
+k AS (
+  SELECT y.workspace_id, y.who, y.last_seen_year, w.logins, w.queries, w.last_seen,
+         CASE WHEN y.who RLIKE &#x27;^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$&#x27; THEN &#x27;Service principal&#x27; WHEN y.who LIKE &#x27;%@%&#x27; THEN &#x27;Person&#x27; ELSE &#x27;Other&#x27; END AS kind
+  FROM year y LEFT JOIN who w ON w.workspace_id = y.workspace_id AND w.who = y.who
+)
+<span class="c">-- Final SELECT: the rows the widgets read.</span>
+SELECT COALESCE(n.workspace_name, k.workspace_id) AS workspace, k.who AS identity, k.kind,
+       COALESCE(k.logins, 0) AS logins, COALESCE(k.queries, 0) AS queries,
+       CAST(COALESCE(k.last_seen, k.last_seen_year) AS STRING) AS last_seen,
+       datediff(date_add(:time_range.max, 1), CAST(k.last_seen_year AS DATE)) AS days_since,
+       CASE WHEN datediff(date_add(:time_range.max, 1), CAST(k.last_seen_year AS DATE)) &lt; 30 THEN &#x27;1 under 30 days&#x27;
+            WHEN datediff(date_add(:time_range.max, 1), CAST(k.last_seen_year AS DATE)) &lt; 90 THEN &#x27;2 30-90 days&#x27;
+            WHEN datediff(date_add(:time_range.max, 1), CAST(k.last_seen_year AS DATE)) &lt; 180 THEN &#x27;3 90-180 days&#x27;
+            ELSE &#x27;4 180+ days&#x27; END AS last_seen_band,
+       CASE WHEN datediff(date_add(:time_range.max, 1), CAST(k.last_seen_year AS DATE)) &gt;= 90 THEN 1 ELSE 0 END AS inactive,
+       CASE WHEN COALESCE(k.logins, 0) + COALESCE(k.queries, 0) &gt; 0 THEN 1 ELSE 0 END AS active, 1 AS identities
+FROM k
+LEFT JOIN wsl n ON n.workspace_id = k.workspace_id
+WHERE k.kind &lt;&gt; &#x27;Other&#x27; AND k.workspace_id IS NOT NULL AND k.workspace_id &lt;&gt; &#x27;0&#x27;
+ORDER BY days_since DESC, identity</code></pre></details>
+</div>
+</main></body></html>

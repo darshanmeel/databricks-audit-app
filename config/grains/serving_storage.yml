@@ -1,0 +1,89 @@
+# config/grains/serving_storage.yml -- T-22. Grain = the query's own key columns ONLY; the
+# generator prepends window_days itself (unique_grain: {columns: [window_days] + grain}, DEC-24).
+# Do not list window_days here.
+#
+# Every entry below is taken verbatim from the query body's own GROUP BY (output column names, in
+# GROUP BY order) -- see app/queries/vendored/serving_ai/<id>.sql / app/queries/vendored/storage/
+# po_*.sql -- with one exception noted individually below (compute_serving_endpoint_cost_status has
+# no GROUP BY of its own). Per DEC-48 rule (1), 3 of the 4 serving_ai ids carry a `# masked:`
+# comment (compute_ai_gateway_usage, compute_serving_endpoint_usage,
+# serving_endpoint_traffic_by_endpoint -- every one of them masks endpoint_name and/or
+# served_entity_name/requester in its output). Of the three, only compute_serving_endpoint_usage is
+# genuinely SAFE from a real collision (its grain always carries the raw, unmasked served_entity_id
+# too); compute_ai_gateway_usage AND serving_endpoint_traffic_by_endpoint each have a real, if
+# narrow, collision path on a live snapshot (see each entry below for the specific mechanism) --
+# DEC-48 rule (1) requires the comment either way (review round 2, item 5).
+#
+# compute_serving_dormant_endpoints (tests/fixtures/ports.py, T-11) and storage_target_table_
+# discovery (ports.py, T-11) are NOT listed here -- they already have entries in
+# config/grains/compute_serving_dormant_endpoints.yml and config/grains/storage_target_table_
+# discovery.yml, committed by T-11; this file's --only regeneration (Step 6) must leave those
+# models' blocks in the generated _findings__serving_ai.yml / _findings__storage.yml untouched.
+#
+# --- serving_ai (4 ids) ------------------------------------------------------------------------
+# masked: endpoint_name stands in for the raw g.endpoint_name, requester for the raw g.requester
+# (DEC-48) -- compute_ai_gateway_usage's GROUP BY is on the RAW system.ai_gateway.usage columns
+# g.endpoint_name / g.requester, but the SELECT list only ever emits their 2-character mask
+# (`concat(substr(..., 1, 2), '****')` / the 4-branch requester mask). Uniqueness on this fixture
+# holds only by construction (every raw endpoint_name / requester used in the same (usage_date,
+# workspace_id) group was deliberately given a distinct first-2-char prefix, per DEC-48 rule (3) --
+# see tests/fixtures/serving_storage.py's SEC G comments for the exact values and a caught-in-
+# review collision this rule prevented), not a guarantee the real vendored query provides on a
+# live snapshot: two real endpoint names or requesters that happen to share their first two
+# characters within the same (day, workspace) group will emit duplicate-looking rows here, because
+# the query's own SELECT never exposes the raw values the GROUP BY actually used.
+compute_ai_gateway_usage: [usage_date, workspace_id, endpoint_name, requester]
+
+# compute_serving_endpoint_cost_status: entity_agg now rolls every served entity up to one row per
+# (workspace_id, endpoint_id) before the join (it used to fan out one row per served_entity_id,
+# the bug this fixed) -- cost_ep is already unique per (workspace_id, endpoint_key) and the LEFT
+# JOIN to entity_agg adds nothing to that. served_entity_id is no longer part of the grain; the
+# query still emits it (as served_entity_id / primary_served_entity_id) but only for the entity
+# whose change_time is most recent, MAX'd per group like every other primary_* column. Not a
+# DEC-48 case: neither grain column is masked (endpoint_name/served_entity_name are masked in the
+# output, but neither is part of this grain).
+compute_serving_endpoint_cost_status: [workspace_id, endpoint_id]
+
+# masked: endpoint_name stands in for the raw ent.endpoint_name, served_entity_name for the raw
+# ent.served_entity_name (DEC-48 rule (1) -- the comment is required whenever a grain entry stands
+# in for a raw identity/endpoint column, independent of whether this fixture's own construction
+# happens to make the collision unreachable; review round 2, item 5, caught the missing comment).
+# compute_serving_endpoint_usage GROUP BY (verbatim): CAST(request_time AS DATE), eu.workspace_id,
+# ent.endpoint_id, ent.endpoint_name, eu.served_entity_id, ent.served_entity_name, ent.entity_type,
+# ent.entity_name. endpoint_name and served_entity_name ARE masked in the output, but this id IS
+# safe: eu.served_entity_id (raw, unmasked, already the query's own real dimension) is already
+# part of this same GROUP BY, so it alone disambiguates every row regardless of whether
+# endpoint_name/served_entity_name happen to mask-collide -- unlike compute_ai_gateway_usage above,
+# uniqueness here never depends on a masked column.
+compute_serving_endpoint_usage: [usage_date, workspace_id, endpoint_id, endpoint_name, served_entity_id, served_entity_name, entity_type, entity_name]
+
+# masked: endpoint_name stands in for the raw ent.endpoint_name (DEC-48).
+# serving_endpoint_traffic_by_endpoint GROUP BY (verbatim): ent.endpoint_id, ent.endpoint_name.
+# endpoint_id is a globally-unique GUID (confirmed by this id's own header caveat), but that does
+# NOT make this grain masking-safe on a real snapshot (review round 2, item 5 -- an earlier draft
+# of this comment claimed endpoint_name is "functionally 1:1 with endpoint_id after the SCD2
+# dedup", which is wrong): the `entities` CTE dedupes served_entities to the LATEST row per
+# (workspace_id, endpoint_id, served_entity_id) -- note served_entity_id, not endpoint_id alone --
+# so an endpoint with two served entities keeps TWO rows in `entities`, each independently deduped
+# to its OWN latest change_time. If the endpoint was renamed between those two served entities' own
+# last-touched times, the two rows can carry DIFFERENT endpoint_name snapshots for the SAME
+# endpoint_id, and GROUP BY (endpoint_id, endpoint_name) then emits two separate rows for that one
+# endpoint_id -- which collide in the OUTPUT if the two raw names happen to mask to the same 2-char
+# prefix. This fixture avoids the case by construction (one served_entity_id per endpoint_id
+# throughout serving_storage.py, so `entities` never carries two divergent endpoint_name snapshots
+# for the same endpoint_id here), not because the underlying risk does not exist.
+serving_endpoint_traffic_by_endpoint: [endpoint_id, endpoint_name]
+
+# --- storage (5 po_* ids) -----------------------------------------------------------------------
+# None of these 5 mask an identity/endpoint column (DEC-48 does not apply to any of them -- every
+# grain column below is a raw, unmasked value straight off system.storage.predictive_optimization_
+# operations_history). Every scenario table in tests/fixtures/serving_storage.py uses a distinct
+# table_id, so grain uniqueness across scenarios never depends on the operation_metrics-derived
+# string columns' actual content (added/removed/new_data_skipping_columns,
+# has_column_selection_changed, etc.) -- those are listed here only because they are genuinely
+# part of each query's own GROUP BY, verified against the vendored body.
+po_clustering_activity: [workspace_id, catalog_name, schema_name, table_id, table_name, operation_type]
+po_clustering_column_churn: [workspace_id, catalog_name, schema_name, table_id, table_name, has_column_selection_changed, old_clustering_columns, new_clustering_columns, additional_reason]
+po_data_skipping_backfill: [workspace_id, catalog_name, schema_name, table_id, table_name, added_data_skipping_columns, removed_data_skipping_columns, new_data_skipping_columns]
+po_maintenance_cost_by_table: [account_id, workspace_id, metastore_name, catalog_name, schema_name, table_id, table_name, operation_type, operation_status, usage_unit]
+po_vacuum_reclaimed_bytes: [workspace_id, catalog_name, schema_name, table_id, table_name]

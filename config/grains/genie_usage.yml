@@ -1,0 +1,3 @@
+# genie_usage (tests/fixtures/genie.py): one row per day, workspace, Genie surface, channel, agent,
+# run-as identity and free/paid split; NULL is its own value in every key.
+genie_usage: [usage_date, workspace_id, surface, channel, agent_id, run_as, is_free]

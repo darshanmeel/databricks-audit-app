@@ -1,0 +1,44 @@
+# config/grains/lakeflow_dims.yml -- T-18. Grain = the query's own key columns ONLY; the
+# generator prepends window_days itself (unique_grain: {columns: [window_days] + grain}, DEC-24).
+# Do not list window_days here.
+#
+# Covers the 9 C3 "dims + usage-joined" ids (PLAN.md 7.2 "C lakeflow" batch, C3 row):
+# lakeflow_health_rule_coverage, lakeflow_job_ownership_orphans, lakeflow_jobs_no_timeout,
+# lakeflow_job_tasks_no_timeout, lakeflow_tasks_near_timeout, lakeflow_jobs_on_all_purpose,
+# lakeflow_stale_zombie_jobs, lakeflow_retries_repairs, lakeflow_failed_jobs_wasted_dbus.
+# T-16 owns config/grains/lakeflow_pipelines.yml (C1, 5 ids) and T-17 owns its own C2 grain file
+# (7 ids); this file's own regeneration (not run by this task -- see tasks/T-18-lakeflow-dimension-
+# tests.md's Out of scope / the orchestrator's timing note) must leave those ids' model blocks
+# untouched.
+#
+# Every entry below is taken verbatim from the query body's own GROUP BY / natural unique key, per
+# app/queries/vendored/jobs_pipelines/<id>.sql:
+#   - lakeflow_health_rule_coverage and lakeflow_job_ownership_orphans are now one row per
+#     (workspace_id, job_id) -- a tag filter narrows them by the job's own tag, not just its
+#     workspace's; both are still point-in-time snapshots with no :period_days param -- window_days
+#     is always 0, never 7/30/90, for these two ids.
+#   - lakeflow_jobs_no_timeout is now one row per (workspace_id, job_id); lakeflow_job_tasks_no_timeout
+#     is now one row per (workspace_id, job_id, task_key) -- same reason (windowed at 7/30/90, but
+#     only for the cost rollup columns -- the flag itself has no window).
+#   - lakeflow_tasks_near_timeout's outer SELECT groups by workspace_id, job_id, task_key,
+#     lt.timeout_seconds -- timeout_seconds is functionally determined by (workspace_id, job_id,
+#     task_key) via the job_tasks SCD2 latest-row LEFT JOIN, so the first three columns alone are a
+#     unique key.
+#   - lakeflow_jobs_on_all_purpose's `finding` CTE groups by workspace_id, job_id, compute_id,
+#     c.cluster_source (cluster_source is functionally determined by (workspace_id, compute_id) via
+#     the clusters SCD2 latest-row LEFT JOIN); the trailing UNION ALL NOT_ASSESSED "dropped"
+#     summary row carries job_id/compute_id = NULL and is one row per workspace_id, still covered
+#     by the same three-column key.
+#   - lakeflow_stale_zombie_jobs, lakeflow_retries_repairs and lakeflow_failed_jobs_wasted_dbus are
+#     each exactly one row per (workspace_id, job_id) (a LEFT JOIN chain onto a base CTE already
+#     grouped/deduped to that grain).
+
+lakeflow_health_rule_coverage: [workspace_id, job_id]
+lakeflow_job_ownership_orphans: [workspace_id, job_id]
+lakeflow_jobs_no_timeout: [workspace_id, job_id]
+lakeflow_job_tasks_no_timeout: [workspace_id, job_id, task_key]
+lakeflow_tasks_near_timeout: [workspace_id, job_id, task_key]
+lakeflow_jobs_on_all_purpose: [workspace_id, job_id, compute_id]
+lakeflow_stale_zombie_jobs: [workspace_id, job_id]
+lakeflow_retries_repairs: [workspace_id, job_id]
+lakeflow_failed_jobs_wasted_dbus: [workspace_id, job_id]

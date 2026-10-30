@@ -1,0 +1,885 @@
+{
+  "datasets": [
+    {
+      "name": "d7657478",
+      "displayName": "Monthly active users: who logged in, per workspace",
+      "queryLines": [
+        "SET QUERY_TAGS['cost_center'] = 'lakehouse_health';\n",
+        "SET QUERY_TAGS['domain'] = 'lakehouse_health';\n",
+        "SET QUERY_TAGS['dashboard'] = 'workspace_usage';\n",
+        "SET QUERY_TAGS['tab'] = 'workspace_usage';\n",
+        "-- Monthly active users: who logged in, per workspace. Dates from the Month filter.\n",
+        "WITH ws AS (\n",
+        "  SELECT CAST(workspace_id AS STRING) AS workspace_id, workspace_name\n",
+        "  FROM system.access.workspaces_latest\n",
+        "),\n",
+        "classes AS (\n",
+        "  -- no classes set: every workspace reads Not classified\n",
+        "  SELECT CAST(NULL AS STRING) AS workspace_class, CAST(NULL AS STRING) AS name_pattern, 0 AS priority\n",
+        "  WHERE FALSE\n",
+        "),\n",
+        "ws_class AS (\n",
+        "  SELECT w.workspace_id, w.workspace_name,\n",
+        "         COALESCE(MIN_BY(c.workspace_class, c.priority), 'Not classified') AS workspace_class\n",
+        "  FROM ws w LEFT JOIN classes c ON lower(w.workspace_name) LIKE c.name_pattern\n",
+        "  GROUP BY w.workspace_id, w.workspace_name\n",
+        "),\n",
+        "logins AS (\n",
+        "  SELECT DISTINCT CAST(workspace_id AS STRING) AS workspace_id,\n",
+        "         lower(COALESCE(user_identity.email, user_identity.subject_name)) AS user_name\n",
+        "  FROM system.access.audit\n",
+        "  WHERE service_name = 'accounts' AND action_name RLIKE '(?i)login'\n",
+        "    AND response.status_code = 200\n",
+        "    AND event_date >= CAST(date_trunc('MONTH', :month) AS DATE)\n",
+        "    AND event_date < add_months(CAST(date_trunc('MONTH', :month) AS DATE), 1)\n",
+        "    AND workspace_id IS NOT NULL AND workspace_id <> 0\n",
+        ")\n",
+        "SELECT COALESCE(ws.workspace_name, CAST(l.workspace_id AS STRING), 'Account-level') AS workspace, COALESCE(c.workspace_class, 'Not classified') AS workspace_class,\n",
+        "       l.user_name\n",
+        "FROM logins l\n",
+        "LEFT JOIN ws ON ws.workspace_id = l.workspace_id\n",
+        "LEFT JOIN ws_class c ON c.workspace_id = l.workspace_id\n",
+        "-- people only: a service principal logs in under its application id, not an email\n",
+        "WHERE l.user_name LIKE '%@%'\n"
+      ],
+      "parameters": [
+        {
+          "displayName": "month",
+          "keyword": "month",
+          "dataType": "DATE",
+          "defaultSelection": {
+            "values": {
+              "dataType": "DATE",
+              "values": [
+                {
+                  "value": "now/M"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "b4873c4a",
+      "displayName": "Workspace activity: last audit event, inactive after 90 days",
+      "queryLines": [
+        "SET QUERY_TAGS['cost_center'] = 'lakehouse_health';\n",
+        "SET QUERY_TAGS['domain'] = 'lakehouse_health';\n",
+        "SET QUERY_TAGS['dashboard'] = 'workspace_usage';\n",
+        "SET QUERY_TAGS['tab'] = 'workspace_usage';\n",
+        "-- Workspace activity: last audit event, inactive after 90 days. Today's view; no dates.\n",
+        "WITH ws AS (\n",
+        "  SELECT CAST(workspace_id AS STRING) AS workspace_id, workspace_name\n",
+        "  FROM system.access.workspaces_latest\n",
+        "),\n",
+        "classes AS (\n",
+        "  -- no classes set: every workspace reads Not classified\n",
+        "  SELECT CAST(NULL AS STRING) AS workspace_class, CAST(NULL AS STRING) AS name_pattern, 0 AS priority\n",
+        "  WHERE FALSE\n",
+        "),\n",
+        "ws_class AS (\n",
+        "  SELECT w.workspace_id, w.workspace_name,\n",
+        "         COALESCE(MIN_BY(c.workspace_class, c.priority), 'Not classified') AS workspace_class\n",
+        "  FROM ws w LEFT JOIN classes c ON lower(w.workspace_name) LIKE c.name_pattern\n",
+        "  GROUP BY w.workspace_id, w.workspace_name\n",
+        "),\n",
+        "seen AS (\n",
+        "  SELECT CAST(workspace_id AS STRING) AS workspace_id, MAX(event_date) AS last_activity\n",
+        "  FROM system.access.audit\n",
+        "  WHERE event_date >= date_sub(current_date(), 365)\n",
+        "  GROUP BY 1\n",
+        "),\n",
+        "w AS (\n",
+        "  SELECT c.workspace_id, c.workspace_name, c.workspace_class, s.last_activity,\n",
+        "         datediff(current_date(), s.last_activity) AS days_since\n",
+        "  FROM ws_class c LEFT JOIN seen s ON s.workspace_id = c.workspace_id\n",
+        ")\n",
+        "SELECT COALESCE(workspace_name, workspace_id) AS workspace, workspace_id, workspace_class, 1 AS workspaces,\n",
+        "       COALESCE(CAST(last_activity AS STRING), 'none in 365 days') AS last_activity,\n",
+        "       days_since,\n",
+        "       CASE WHEN last_activity IS NULL OR days_since >= 90 THEN 1 ELSE 0 END AS inactive,\n",
+        "       CASE WHEN last_activity IS NULL THEN 1 ELSE 0 END AS no_events\n",
+        "FROM w\n",
+        "ORDER BY no_events DESC, days_since DESC\n"
+      ],
+      "parameters": []
+    }
+  ],
+  "pages": [
+    {
+      "name": "7c2bb620",
+      "displayName": "Workspace usage",
+      "pageType": "PAGE_TYPE_CANVAS",
+      "layoutVersion": "GRID_V1",
+      "layout": [
+        {
+          "widget": {
+            "name": "c363efe4",
+            "multilineTextboxSpec": {
+              "lines": [
+                "# **Workspace usage**\n",
+                "---\n",
+                "\n",
+                "**Active users per class and workspace in the picked month, and workspaces with no activity for 90+ days. The Month filter sets only the active users.**\n"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 12,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "8164d27c",
+            "queries": [
+              {
+                "name": "q_e56c923b",
+                "query": {
+                  "datasetName": "d7657478",
+                  "parameters": [
+                    {
+                      "name": "month",
+                      "keyword": "month"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-date-picker",
+              "encodings": {
+                "fields": [
+                  {
+                    "parameterName": "month",
+                    "queryName": "q_e56c923b"
+                  }
+                ]
+              },
+              "selection": {
+                "defaultSelection": {
+                  "values": {
+                    "dataType": "DATE",
+                    "values": [
+                      {
+                        "value": "now/M"
+                      }
+                    ]
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Month (any day in it)"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 2,
+            "width": 4,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "5048924e",
+            "queries": [
+              {
+                "name": "q_665116e1",
+                "query": {
+                  "datasetName": "d7657478",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "name": "workspace_class",
+                      "expression": "`workspace_class`"
+                    },
+                    {
+                      "name": "workspace_class_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ]
+                }
+              },
+              {
+                "name": "q_17bb6a14",
+                "query": {
+                  "datasetName": "b4873c4a",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "name": "workspace_class",
+                      "expression": "`workspace_class`"
+                    },
+                    {
+                      "name": "workspace_class_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-multi-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "workspace_class",
+                    "displayName": "Class",
+                    "queryName": "q_665116e1"
+                  },
+                  {
+                    "fieldName": "workspace_class",
+                    "displayName": "Class",
+                    "queryName": "q_17bb6a14"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Class"
+              }
+            }
+          },
+          "position": {
+            "x": 4,
+            "y": 2,
+            "width": 4,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "bc405ec3",
+            "queries": [
+              {
+                "name": "q_90a20a1b",
+                "query": {
+                  "datasetName": "d7657478",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "name": "workspace",
+                      "expression": "`workspace`"
+                    },
+                    {
+                      "name": "workspace_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ]
+                }
+              },
+              {
+                "name": "q_30929f13",
+                "query": {
+                  "datasetName": "b4873c4a",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "name": "workspace",
+                      "expression": "`workspace`"
+                    },
+                    {
+                      "name": "workspace_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-multi-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "workspace",
+                    "displayName": "Workspace",
+                    "queryName": "q_90a20a1b"
+                  },
+                  {
+                    "fieldName": "workspace",
+                    "displayName": "Workspace",
+                    "queryName": "q_30929f13"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Workspace"
+              }
+            }
+          },
+          "position": {
+            "x": 8,
+            "y": 2,
+            "width": 4,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "931c7ec9",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "d7657478",
+                  "fields": [
+                    {
+                      "name": "countdistinct(user_name)",
+                      "expression": "COUNT(DISTINCT `user_name`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "countdistinct(user_name)",
+                  "displayName": "Active users",
+                  "style": {
+                    "bold": true,
+                    "fontSize": 32,
+                    "color": "#1c1b18"
+                  },
+                  "format": {
+                    "type": "number-plain",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 0
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "title": "Active users",
+                "showTitle": true,
+                "description": "Distinct people, picked month",
+                "showDescription": true
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 3,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "2dc36fd9",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "d7657478",
+                  "fields": [
+                    {
+                      "name": "countdistinct(workspace)",
+                      "expression": "COUNT(DISTINCT `workspace`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "countdistinct(workspace)",
+                  "displayName": "Workspaces with logins",
+                  "style": {
+                    "bold": true,
+                    "fontSize": 32,
+                    "color": "#1c1b18"
+                  },
+                  "format": {
+                    "type": "number-plain",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 0
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "title": "Workspaces with logins",
+                "showTitle": true,
+                "description": "Picked month",
+                "showDescription": true
+              }
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 3,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "e86739f5",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "b4873c4a",
+                  "fields": [
+                    {
+                      "name": "sum(inactive)",
+                      "expression": "SUM(`inactive`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(inactive)",
+                  "displayName": "Inactive workspaces",
+                  "style": {
+                    "bold": true,
+                    "fontSize": 32,
+                    "color": "#1c1b18"
+                  },
+                  "format": {
+                    "type": "number-plain",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 0
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "title": "Inactive workspaces",
+                "showTitle": true,
+                "description": "No activity for 90+ days",
+                "showDescription": true
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 3,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "4a1e3ee3",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "b4873c4a",
+                  "fields": [
+                    {
+                      "name": "sum(no_events)",
+                      "expression": "SUM(`no_events`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(no_events)",
+                  "displayName": "No audit events",
+                  "style": {
+                    "bold": true,
+                    "fontSize": 32,
+                    "color": "#1c1b18"
+                  },
+                  "format": {
+                    "type": "number-plain",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 0
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "title": "No audit events",
+                "showTitle": true,
+                "description": "In the last 365 days",
+                "showDescription": true
+              }
+            }
+          },
+          "position": {
+            "x": 9,
+            "y": 3,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "81e608b3",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "d7657478",
+                  "fields": [
+                    {
+                      "name": "workspace_class",
+                      "expression": "`workspace_class`"
+                    },
+                    {
+                      "name": "countdistinct(user_name)",
+                      "expression": "COUNT(DISTINCT `user_name`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "countdistinct(user_name)",
+                  "displayName": "Active users",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "format": {
+                    "type": "number-plain",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 0
+                    }
+                  }
+                },
+                "y": {
+                  "fieldName": "workspace_class",
+                  "displayName": "Class",
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "x-reversed"
+                    }
+                  }
+                },
+                "label": {
+                  "show": false
+                }
+              },
+              "frame": {
+                "title": "Active users by class",
+                "showTitle": true,
+                "description": "A person in two classes counts in both",
+                "showDescription": true
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 6,
+            "width": 6,
+            "height": 7
+          }
+        },
+        {
+          "widget": {
+            "name": "311efb16",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "d7657478",
+                  "fields": [
+                    {
+                      "name": "workspace",
+                      "expression": "`workspace`"
+                    },
+                    {
+                      "name": "countdistinct(user_name)",
+                      "expression": "COUNT(DISTINCT `user_name`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "countdistinct(user_name)",
+                  "displayName": "Active users",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "format": {
+                    "type": "number-plain",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 0
+                    }
+                  }
+                },
+                "y": {
+                  "fieldName": "workspace",
+                  "displayName": "Workspace",
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "x-reversed"
+                    }
+                  }
+                },
+                "label": {
+                  "show": false
+                }
+              },
+              "frame": {
+                "title": "Active users by workspace",
+                "showTitle": true,
+                "description": "Picked month",
+                "showDescription": true
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 6,
+            "width": 6,
+            "height": 7
+          }
+        },
+        {
+          "widget": {
+            "name": "c291ec8c",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "b4873c4a",
+                  "fields": [
+                    {
+                      "name": "workspace",
+                      "expression": "`workspace`"
+                    },
+                    {
+                      "name": "workspace_id",
+                      "expression": "`workspace_id`"
+                    },
+                    {
+                      "name": "workspace_class",
+                      "expression": "`workspace_class`"
+                    },
+                    {
+                      "name": "last_activity",
+                      "expression": "`last_activity`"
+                    },
+                    {
+                      "name": "days_since",
+                      "expression": "`days_since`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 1,
+              "widgetType": "table",
+              "allowHTMLByDefault": false,
+              "condensed": false,
+              "withRowNumber": false,
+              "itemsPerPage": 20,
+              "paginationSize": "default",
+              "invisibleColumns": [],
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "workspace",
+                    "title": "Workspace",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 0,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": true,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "workspace_id",
+                    "title": "Workspace id",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 1,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": true,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "workspace_class",
+                    "title": "Class",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 2,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": true,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "last_activity",
+                    "title": "Last activity",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 3,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": true,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "days_since",
+                    "title": "Days since",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 4,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "0,0",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  }
+                ]
+              },
+              "frame": {
+                "title": "Workspaces by days since last activity (90+ is inactive)",
+                "showTitle": true,
+                "showDescription": false
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 13,
+            "width": 12,
+            "height": 10
+          }
+        }
+      ]
+    }
+  ]
+}

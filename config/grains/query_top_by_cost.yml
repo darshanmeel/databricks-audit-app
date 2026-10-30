@@ -1,0 +1,4 @@
+# config/grains/query_top_by_cost.yml. Grain = the query's own key columns ONLY; the generator
+# prepends window_days itself (DEC-24). Taken verbatim from the body's own GROUP BY (the `agg`
+# CTE): workspace_id, warehouse_id, group_kind, group_id, statement_type.
+query_top_by_cost: [workspace_id, warehouse_id, group_kind, group_id, statement_type]

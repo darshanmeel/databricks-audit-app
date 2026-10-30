@@ -1,0 +1,4 @@
+storage_target_table_discovery:
+  - table_catalog
+  - table_schema
+  - table_name

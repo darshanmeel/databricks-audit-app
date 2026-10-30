@@ -1,0 +1,3 @@
+workspace_id,cost_center,environment,catalogs
+1234567890123456,finance,prod,finance_prod
+2345678901234567,data-platform,dev,platform_dev;platform_sandbox

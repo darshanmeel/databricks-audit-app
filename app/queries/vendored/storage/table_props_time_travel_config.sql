@@ -1,0 +1,24 @@
+-- query_id: table_props_time_travel_config
+-- title: Delta time-travel and optimization table properties
+-- domain: storage   tier: standard
+-- reads: none - DESCRIBE EXTENDED / SHOW TBLPROPERTIES output; not a system table
+-- requires: DESCRIBE / SELECT privilege on the target table; GA (standard Delta Lake table properties)
+-- params: none - run per target table; substitute your own catalog.schema.table for main.sales.orders
+-- confidence: confirmed
+-- confidence_note: All 7 property names and their documented defaults are verbatim-verified against Delta Lake / Databricks docs.
+-- read_this: One row block per target table = its current time-travel retention (delta.logRetentionDuration, delta.deletedFileRetentionDuration), data-skipping indexing config, auto-optimize flags, and deletion-vector flag. The properties that matter most for storage bloat are delta.logRetentionDuration and delta.deletedFileRetentionDuration - values are CalendarInterval strings (e.g. 'interval 30 days') that you need to parse to days yourself.
+-- healthy: n/a - inventory
+-- investigate_if: n/a - inventory
+-- actions: n/a - inventory (reference/join input)
+-- next: storage_breakdown_analyze (pairs this retention config with the actual time-travel / vacuumable bytes it produces), po_vacuum_reclaimed_bytes (see whether VACUUM is actually running against this retention window)
+-- caveats: Read per table on a warehouse - this is not a system table, so there is no cross-table rollup and no history; run it once per table you care about. Values are CalendarInterval strings (e.g. 'interval 30 days') that you must parse to days yourself. Excessively large delta.logRetentionDuration or delta.deletedFileRetentionDuration is a storage-bloat risk from over-long time-travel retention, not a bug by itself. On DBR 18.0+, delta.logRetentionDuration must be >= delta.deletedFileRetentionDuration. delta.enableDeletionVectors has no fixed default - its effective value is workspace/runtime-dependent, so absence of the property does not mean the feature is off.
+-- Delta table properties to read from the output (name -> documented default):
+--   delta.logRetentionDuration          (default 'interval 30 days')
+--   delta.deletedFileRetentionDuration  (default 'interval 1 week')
+--   delta.dataSkippingNumIndexedCols    (default 32)
+--   delta.dataSkippingStatsColumns      (default none)
+--   delta.autoOptimize.optimizeWrite
+--   delta.autoOptimize.autoCompact
+--   delta.enableDeletionVectors
+-- Run per target table; substitute your catalog.schema.table for main.sales.orders.
+DESCRIBE EXTENDED main.sales.orders;

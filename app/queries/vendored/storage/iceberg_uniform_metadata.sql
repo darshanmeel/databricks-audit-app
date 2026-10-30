@@ -1,0 +1,16 @@
+-- query_id: iceberg_uniform_metadata
+-- title: Iceberg / UniForm metadata detection (DESCRIBE EXTENDED)
+-- domain: storage   tier: deep
+-- reads: none - DESCRIBE EXTENDED output; not a system table
+-- requires: DESCRIBE / SELECT privilege on the target table; Unity Catalog required (UniForm / managed-Iceberg detection is a UC feature)
+-- params: none - run per target table; substitute your own catalog.schema.table for main.sales.orders
+-- confidence: needs_confirmation
+-- confidence_note: The 'Delta Uniform Iceberg' section exists per Databricks docs, but the exact output row/key strings to parse are unverified - confirm the section key strings the first time you run this against a UniForm-enabled table in your own workspace.
+-- read_this: One row per key = a DESCRIBE EXTENDED output line for the target table. The rows under the 'Delta Uniform Iceberg' section are what matter - their presence (and their format-name value) tells you whether the table is UniForm-enabled / has a synced Iceberg metadata pointer.
+-- healthy: n/a - inventory
+-- investigate_if: n/a - inventory
+-- actions: n/a - inventory (reference/join input)
+-- next: table_inventory_type (to find EXTERNAL / non-DELTA tables worth checking), table_props_time_travel_config (for a fuller per-table metadata pass)
+-- caveats: Metadata only - no size, no metric table; this DESCRIBE EXTENDED call surfaces schema/property rows, nothing about table size. It is most useful pointed at tables flagged EXTERNAL / non-DELTA by table_inventory_type, since those are the ones where UniForm / managed-Iceberg is relevant. The exact 'Delta Uniform Iceberg' output section key strings are unverified - confirm them against your own UniForm-enabled table before parsing the output programmatically; treat any parsed result as informational until you do.
+-- Run per target table; substitute your catalog.schema.table for main.sales.orders.
+DESCRIBE EXTENDED main.sales.orders;
