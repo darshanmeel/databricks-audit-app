@@ -133,6 +133,24 @@ DATABRICKS_TOKEN=<system account>   python tools/export_direct_results.py --no-t
 
 Or keep sizes in their own folder and add `--storage-from <sizes folder>` to the second run.
 
+**Table and volume sizes (storage).** No system table holds sizes reliably, so the export measures them:
+
+- **Tables:** `DESCRIBE DETAIL` on every Delta table it can read, `threads` at a time (16), for size, files and
+  columns; `DESCRIBE HISTORY` in the same pass for the last 30 changes. Tables unchanged since the last
+  export keep its figures.
+- **Volumes:** each volume is listed, up to `volume_max_entries` (50,000) files and folders. One listed in the
+  last `volume_full_days` (7) with no file write in the audit log since keeps its counts.
+- **Files:** `storage/table_detail.parquet`, `table_history.parquet`, `volume_detail.parquet`, loaded as
+  `storage.table_detail`, `storage.table_history`, `storage.volume_detail`.
+- **Used by:** Data usage (sizes, GB by class, largest tables, schemas, volumes) and Storage › Tables.
+  Reads, writes and people come from `system.*` and don't need them.
+- **Grants:** `USE CATALOG`, `USE SCHEMA`, `SELECT` on the tables and `READ VOLUME` on the volumes, for the
+  identity that measures (`BROWSE` isn't enough). A catalog it can't read shows under "Could not describe",
+  and its tables show GB as `-`.
+- **Settings:** `table_sizes` in [Settings](#settings).
+- **AI/BI dashboard:** the `data_usage` dashboard reads the same figures from tables a daily notebook writes;
+  see `databricks_dashboards/system_tables_direct/README.md`.
+
 `load_direct_results.py` with no folder loads the newest export in the data folder. `--db PATH`
 writes the database somewhere else.
 
@@ -230,6 +248,7 @@ The data folder is outside the repo, so an update never touches it.
 | Compute | Warehouses, Clusters & pools, Configuration |
 | Jobs | Failures, Slow & queued, Hygiene, Compute fit, Pipelines |
 | Queries | Heavy queries, Efficiency, Reliability, Capacity, By team |
+| Data usage | Activity, Workspaces, Tables, Volumes, People |
 | Governance & PII | Access & grants, Admin activity, Sensitive data, Lineage, Sharing |
 | Storage | Tables, Maintenance |
 | Tags | – |

@@ -500,6 +500,20 @@ const GUIDE_TABS: Record<string, GuideTabInfo> = {
       "Indexes are relative to the workspaces shown: 100 is the largest of them.",
       "Only direct table grants show; access through a schema, catalog or group isn't expanded.",
       "Volume reads by Spark jobs on a cluster may not be in the audit log, so a volume can read unused when a job reads it.",
+      "Sizes are from the last export, not the Time Window; reads and writes are from the Time Window.",
+    ],
+    extra: [
+      { h: "Sizes and volume files (storage)", items: [
+        "No system table holds table sizes reliably (table_metrics_history is often empty), so the export measures them itself.",
+        "Tables: DESCRIBE DETAIL on every Delta table it can read, 16 at a time, for size, files and columns; DESCRIBE HISTORY in the same pass for the last 30 changes. Unchanged tables keep the last export's figures.",
+        "Volumes: each volume is listed, up to 50,000 files and folders. One listed in the last 7 days with no file write since keeps its counts.",
+        "Files: storage/table_detail.parquet, table_history.parquet and volume_detail.parquet in the export folder, loaded as storage.table_detail, storage.table_history and storage.volume_detail.",
+        "Grants for the export identity: USE CATALOG and USE SCHEMA, SELECT on the tables, READ VOLUME on the volumes. BROWSE isn't enough.",
+        "Another identity can measure sizes: run the export with --sizes-only as it, then the rest with --no-table-sizes into the same folder (or --storage-from).",
+        "Without sizes, GB reads - and Could not describe lists the schemas it couldn't read; reads, writes and people still show.",
+        "Settings: table_sizes (enabled, threads, max_tables, volumes, volume_max_entries, volume_full_days). --no-table-sizes or --no-volumes skips them once and keeps the last ones.",
+        "The AI/BI dashboard can't run DESCRIBE DETAIL in SQL: its data_usage_sizes.py notebook, run daily as a job, writes table_sizes, table_history and volume_sizes into the sizes schema.",
+      ] },
     ],
   },
   governance: {
@@ -542,7 +556,7 @@ const GUIDE_TABS: Record<string, GuideTabInfo> = {
       { sub: "tables", d: "Types, growth, dead-table candidates, tables nobody read in the window, and table sizes from DESCRIBE DETAIL: size per schema, biggest tables, small files, and schemas that could not be described." },
       { sub: "maintenance", d: "Vacuum, clustering and optimization runs, their cost and failures." },
     ],
-    measure: "Table metadata and metrics history; size and files from DESCRIBE DETAIL on every Delta table (16 at a time; unchanged tables keep last export's figure); volume files and size by listing each volume (up to 50,000 entries); maintenance runs from predictive optimization history.",
+    measure: "Table metadata and metrics history; size and files from DESCRIBE DETAIL on every Delta table (16 at a time; unchanged tables keep last export's figure); volume files and size by listing each volume (up to 50,000 entries); maintenance runs from predictive optimization history. How sizes are measured and the grants they need: Data usage's Guide page, Sizes and volume files.",
     judge: "No reads or writes in lineage flags a table as unused.",
     price: "Not priced: maintenance in DBU only (no SKU in the history); storage bytes bill on your cloud.",
     troubles: [
