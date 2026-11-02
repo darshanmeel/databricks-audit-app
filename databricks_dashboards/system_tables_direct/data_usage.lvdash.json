@@ -2733,7 +2733,7 @@
               "frame": {
                 "title": "GB by class",
                 "showTitle": true,
-                "description": "Written, never read: written in the Time Window, not read in it. Idle 90d+: no read or write in the last 90 days, whatever the Time Window. Cooling: not read in the Time Window, used within 90 days. Active: read in the Time Window.",
+                "description": "How much of the data is read, cooling, idle or written and never read",
                 "showDescription": true
               }
             }
@@ -2741,7 +2741,7 @@
           "position": {
             "x": 0,
             "y": 6,
-            "width": 4,
+            "width": 6,
             "height": 8
           }
         },
@@ -2810,92 +2810,15 @@
               "frame": {
                 "title": "Tables and views by class",
                 "showTitle": true,
-                "description": "Every one in exactly one class",
+                "description": "The same by count: many small unread tables still cost upkeep",
                 "showDescription": true
               }
             }
           },
           "position": {
-            "x": 4,
+            "x": 6,
             "y": 6,
-            "width": 4,
-            "height": 8
-          }
-        },
-        {
-          "widget": {
-            "name": "f64a7a6c",
-            "queries": [
-              {
-                "name": "main_query",
-                "query": {
-                  "datasetName": "6d64102f",
-                  "fields": [
-                    {
-                      "name": "signal",
-                      "expression": "`signal`"
-                    },
-                    {
-                      "name": "sum(workspaces)",
-                      "expression": "SUM(`workspaces`)"
-                    }
-                  ],
-                  "disaggregated": false
-                }
-              }
-            ],
-            "spec": {
-              "version": 3,
-              "widgetType": "pie",
-              "encodings": {
-                "angle": {
-                  "fieldName": "sum(workspaces)",
-                  "displayName": "workspaces",
-                  "scale": {
-                    "type": "quantitative"
-                  }
-                },
-                "color": {
-                  "fieldName": "signal",
-                  "displayName": "Signal",
-                  "scale": {
-                    "type": "categorical",
-                    "mappings": [
-                      {
-                        "value": "Retire candidate",
-                        "color": "#C2362B"
-                      },
-                      {
-                        "value": "Review",
-                        "color": "#E0A93B"
-                      },
-                      {
-                        "value": "Light",
-                        "color": "#8E8B84"
-                      },
-                      {
-                        "value": "Healthy",
-                        "color": "#2456A6"
-                      }
-                    ]
-                  }
-                },
-                "label": {
-                  "show": true
-                }
-              },
-              "frame": {
-                "title": "Workspaces by signal",
-                "showTitle": true,
-                "description": "Retire candidate: usage under 10. Review: complexity 50+, usage under 50.",
-                "showDescription": true
-              }
-            }
-          },
-          "position": {
-            "x": 8,
-            "y": 6,
-            "width": 4,
+            "width": 6,
             "height": 8
           }
         },
@@ -3200,109 +3123,6 @@
         },
         {
           "widget": {
-            "name": "3929da13",
-            "queries": [
-              {
-                "name": "main_query",
-                "query": {
-                  "datasetName": "6d64102f",
-                  "disaggregated": true,
-                  "fields": [
-                    {
-                      "name": "complexity_index",
-                      "expression": "`complexity_index`"
-                    },
-                    {
-                      "name": "usage_index",
-                      "expression": "`usage_index`"
-                    },
-                    {
-                      "name": "data_gb",
-                      "expression": "`data_gb`"
-                    },
-                    {
-                      "name": "signal",
-                      "expression": "`signal`"
-                    },
-                    {
-                      "name": "workspace",
-                      "expression": "`workspace`"
-                    }
-                  ]
-                }
-              }
-            ],
-            "spec": {
-              "version": 3,
-              "widgetType": "scatter",
-              "encodings": {
-                "x": {
-                  "fieldName": "complexity_index",
-                  "displayName": "Complexity index",
-                  "scale": {
-                    "type": "quantitative"
-                  }
-                },
-                "y": {
-                  "fieldName": "usage_index",
-                  "displayName": "Usage index",
-                  "scale": {
-                    "type": "quantitative"
-                  }
-                },
-                "size": {
-                  "fieldName": "data_gb",
-                  "displayName": "Data GB",
-                  "scale": {
-                    "type": "quantitative"
-                  }
-                },
-                "color": {
-                  "fieldName": "signal",
-                  "displayName": "Signal",
-                  "scale": {
-                    "type": "categorical",
-                    "mappings": [
-                      {
-                        "value": "Retire candidate",
-                        "color": "#C2362B"
-                      },
-                      {
-                        "value": "Review",
-                        "color": "#E0A93B"
-                      },
-                      {
-                        "value": "Light",
-                        "color": "#8E8B84"
-                      },
-                      {
-                        "value": "Healthy",
-                        "color": "#2456A6"
-                      }
-                    ]
-                  }
-                },
-                "label": {
-                  "show": false
-                }
-              },
-              "frame": {
-                "title": "Complexity against usage",
-                "showTitle": true,
-                "showDescription": true,
-                "description": "One bubble per workspace, bubble = data held. Bottom right first: built a lot, used little."
-              }
-            }
-          },
-          "position": {
-            "x": 0,
-            "y": 33,
-            "width": 12,
-            "height": 12
-          }
-        },
-        {
-          "widget": {
             "name": "a4bccff4",
             "queries": [
               {
@@ -3402,7 +3222,7 @@
           },
           "position": {
             "x": 0,
-            "y": 45,
+            "y": 33,
             "width": 6,
             "height": 12
           }
@@ -3508,7 +3328,7 @@
           },
           "position": {
             "x": 6,
-            "y": 45,
+            "y": 33,
             "width": 6,
             "height": 12
           }
@@ -3604,7 +3424,7 @@
               "frame": {
                 "title": "Everyone by last seen, by workspace",
                 "showTitle": true,
-                "description": "Last audit event or query over the last year",
+                "description": "Red and orange: people who stopped coming; check their access on People",
                 "showDescription": true
               },
               "mark": {
@@ -3614,95 +3434,8 @@
           },
           "position": {
             "x": 0,
-            "y": 57,
-            "width": 6,
-            "height": 12
-          }
-        },
-        {
-          "widget": {
-            "name": "b4e94e02",
-            "queries": [
-              {
-                "name": "main_query",
-                "query": {
-                  "datasetName": "e28abc6a",
-                  "fields": [
-                    {
-                      "name": "workspace",
-                      "expression": "`workspace`"
-                    },
-                    {
-                      "name": "kind",
-                      "expression": "`kind`"
-                    },
-                    {
-                      "name": "sum(active)",
-                      "expression": "SUM(`active`)"
-                    }
-                  ],
-                  "disaggregated": false
-                }
-              }
-            ],
-            "spec": {
-              "version": 3,
-              "widgetType": "bar",
-              "encodings": {
-                "x": {
-                  "fieldName": "sum(active)",
-                  "displayName": "Active",
-                  "scale": {
-                    "type": "quantitative"
-                  },
-                  "format": {
-                    "type": "number-plain",
-                    "abbreviation": "compact",
-                    "decimalPlaces": {
-                      "type": "max",
-                      "places": 0
-                    }
-                  }
-                },
-                "y": {
-                  "fieldName": "workspace",
-                  "displayName": "Workspace",
-                  "scale": {
-                    "type": "categorical",
-                    "sort": {
-                      "by": "x-reversed"
-                    }
-                  }
-                },
-                "label": {
-                  "show": false
-                },
-                "color": {
-                  "fieldName": "kind",
-                  "displayName": "kind",
-                  "legend": {
-                    "position": "bottom"
-                  },
-                  "scale": {
-                    "type": "categorical"
-                  }
-                }
-              },
-              "frame": {
-                "title": "Active people and SPs, by workspace",
-                "showTitle": true,
-                "description": "Seen in the window",
-                "showDescription": true
-              },
-              "mark": {
-                "layout": "stack"
-              }
-            }
-          },
-          "position": {
-            "x": 6,
-            "y": 57,
-            "width": 6,
+            "y": 45,
+            "width": 12,
             "height": 12
           }
         },
@@ -3722,7 +3455,7 @@
           },
           "position": {
             "x": 0,
-            "y": 69,
+            "y": 57,
             "width": 12,
             "height": 5
           }
@@ -3999,7 +3732,7 @@
               "frame": {
                 "title": "Workspaces by signal",
                 "showTitle": true,
-                "description": "Retire candidate: usage under 10. Review: complexity 50+, usage under 50.",
+                "description": "Retire candidate: usage under 10. Review: built a lot (complexity 50+), used little (under 50).",
                 "showDescription": true
               }
             }
@@ -4008,584 +3741,6 @@
             "x": 0,
             "y": 3,
             "width": 4,
-            "height": 8
-          }
-        },
-        {
-          "widget": {
-            "name": "ae1f03dc",
-            "queries": [
-              {
-                "name": "main_query",
-                "query": {
-                  "datasetName": "6d64102f",
-                  "fields": [
-                    {
-                      "name": "signal",
-                      "expression": "`signal`"
-                    },
-                    {
-                      "name": "sum(data_gb)",
-                      "expression": "SUM(`data_gb`)"
-                    }
-                  ],
-                  "disaggregated": false
-                }
-              }
-            ],
-            "spec": {
-              "version": 3,
-              "widgetType": "pie",
-              "encodings": {
-                "angle": {
-                  "fieldName": "sum(data_gb)",
-                  "displayName": "data_gb",
-                  "scale": {
-                    "type": "quantitative"
-                  }
-                },
-                "color": {
-                  "fieldName": "signal",
-                  "displayName": "Signal",
-                  "scale": {
-                    "type": "categorical",
-                    "mappings": [
-                      {
-                        "value": "Retire candidate",
-                        "color": "#C2362B"
-                      },
-                      {
-                        "value": "Review",
-                        "color": "#E0A93B"
-                      },
-                      {
-                        "value": "Light",
-                        "color": "#8E8B84"
-                      },
-                      {
-                        "value": "Healthy",
-                        "color": "#2456A6"
-                      }
-                    ]
-                  }
-                },
-                "label": {
-                  "show": true
-                }
-              },
-              "frame": {
-                "title": "Data GB by signal",
-                "showTitle": true,
-                "description": "Tables and volume files",
-                "showDescription": true
-              }
-            }
-          },
-          "position": {
-            "x": 4,
-            "y": 3,
-            "width": 4,
-            "height": 8
-          }
-        },
-        {
-          "widget": {
-            "name": "71b50c6e",
-            "queries": [
-              {
-                "name": "main_query",
-                "query": {
-                  "datasetName": "6d64102f",
-                  "fields": [
-                    {
-                      "name": "signal",
-                      "expression": "`signal`"
-                    },
-                    {
-                      "name": "sum(unread_gb)",
-                      "expression": "SUM(`unread_gb`)"
-                    }
-                  ],
-                  "disaggregated": false
-                }
-              }
-            ],
-            "spec": {
-              "version": 3,
-              "widgetType": "pie",
-              "encodings": {
-                "angle": {
-                  "fieldName": "sum(unread_gb)",
-                  "displayName": "unread_gb",
-                  "scale": {
-                    "type": "quantitative"
-                  }
-                },
-                "color": {
-                  "fieldName": "signal",
-                  "displayName": "Signal",
-                  "scale": {
-                    "type": "categorical",
-                    "mappings": [
-                      {
-                        "value": "Retire candidate",
-                        "color": "#C2362B"
-                      },
-                      {
-                        "value": "Review",
-                        "color": "#E0A93B"
-                      },
-                      {
-                        "value": "Light",
-                        "color": "#8E8B84"
-                      },
-                      {
-                        "value": "Healthy",
-                        "color": "#2456A6"
-                      }
-                    ]
-                  }
-                },
-                "label": {
-                  "show": true
-                }
-              },
-              "frame": {
-                "title": "Unread GB by signal",
-                "showTitle": true,
-                "description": "Written, never read plus idle 90d+",
-                "showDescription": true
-              }
-            }
-          },
-          "position": {
-            "x": 8,
-            "y": 3,
-            "width": 4,
-            "height": 8
-          }
-        },
-        {
-          "widget": {
-            "name": "343d535a",
-            "queries": [
-              {
-                "name": "main_query",
-                "query": {
-                  "datasetName": "6d64102f",
-                  "fields": [
-                    {
-                      "name": "workspace",
-                      "expression": "`workspace`"
-                    },
-                    {
-                      "name": "signal",
-                      "expression": "`signal`"
-                    },
-                    {
-                      "name": "sum(usage_index)",
-                      "expression": "SUM(`usage_index`)"
-                    }
-                  ],
-                  "disaggregated": false
-                }
-              }
-            ],
-            "spec": {
-              "version": 3,
-              "widgetType": "bar",
-              "encodings": {
-                "x": {
-                  "fieldName": "sum(usage_index)",
-                  "displayName": "Usage index",
-                  "scale": {
-                    "type": "quantitative"
-                  },
-                  "format": {
-                    "type": "number-plain",
-                    "abbreviation": "compact",
-                    "decimalPlaces": {
-                      "type": "max",
-                      "places": 0
-                    }
-                  }
-                },
-                "y": {
-                  "fieldName": "workspace",
-                  "displayName": "Workspace",
-                  "scale": {
-                    "type": "categorical",
-                    "sort": {
-                      "by": "x-reversed"
-                    }
-                  }
-                },
-                "label": {
-                  "show": false
-                },
-                "color": {
-                  "fieldName": "signal",
-                  "displayName": "signal",
-                  "legend": {
-                    "position": "bottom",
-                    "hideTitle": true
-                  },
-                  "scale": {
-                    "type": "categorical",
-                    "mappings": [
-                      {
-                        "value": "Retire candidate",
-                        "color": "#C2362B"
-                      },
-                      {
-                        "value": "Review",
-                        "color": "#E0A93B"
-                      },
-                      {
-                        "value": "Light",
-                        "color": "#8E8B84"
-                      },
-                      {
-                        "value": "Healthy",
-                        "color": "#2456A6"
-                      }
-                    ]
-                  }
-                }
-              },
-              "frame": {
-                "title": "Usage index by workspace",
-                "showTitle": true,
-                "description": "0-100; colour = signal",
-                "showDescription": true
-              },
-              "mark": {
-                "layout": "stack"
-              }
-            }
-          },
-          "position": {
-            "x": 0,
-            "y": 11,
-            "width": 6,
-            "height": 12
-          }
-        },
-        {
-          "widget": {
-            "name": "2dfaa4ea",
-            "queries": [
-              {
-                "name": "main_query",
-                "query": {
-                  "datasetName": "6d64102f",
-                  "fields": [
-                    {
-                      "name": "workspace",
-                      "expression": "`workspace`"
-                    },
-                    {
-                      "name": "signal",
-                      "expression": "`signal`"
-                    },
-                    {
-                      "name": "sum(complexity_index)",
-                      "expression": "SUM(`complexity_index`)"
-                    }
-                  ],
-                  "disaggregated": false
-                }
-              }
-            ],
-            "spec": {
-              "version": 3,
-              "widgetType": "bar",
-              "encodings": {
-                "x": {
-                  "fieldName": "sum(complexity_index)",
-                  "displayName": "Complexity index",
-                  "scale": {
-                    "type": "quantitative"
-                  },
-                  "format": {
-                    "type": "number-plain",
-                    "abbreviation": "compact",
-                    "decimalPlaces": {
-                      "type": "max",
-                      "places": 0
-                    }
-                  }
-                },
-                "y": {
-                  "fieldName": "workspace",
-                  "displayName": "Workspace",
-                  "scale": {
-                    "type": "categorical",
-                    "sort": {
-                      "by": "x-reversed"
-                    }
-                  }
-                },
-                "label": {
-                  "show": false
-                },
-                "color": {
-                  "fieldName": "signal",
-                  "displayName": "signal",
-                  "legend": {
-                    "position": "bottom",
-                    "hideTitle": true
-                  },
-                  "scale": {
-                    "type": "categorical",
-                    "mappings": [
-                      {
-                        "value": "Retire candidate",
-                        "color": "#C2362B"
-                      },
-                      {
-                        "value": "Review",
-                        "color": "#E0A93B"
-                      },
-                      {
-                        "value": "Light",
-                        "color": "#8E8B84"
-                      },
-                      {
-                        "value": "Healthy",
-                        "color": "#2456A6"
-                      }
-                    ]
-                  }
-                }
-              },
-              "frame": {
-                "title": "Complexity index by workspace",
-                "showTitle": true,
-                "description": "0-100: what its home catalogs hold",
-                "showDescription": true
-              },
-              "mark": {
-                "layout": "stack"
-              }
-            }
-          },
-          "position": {
-            "x": 6,
-            "y": 11,
-            "width": 6,
-            "height": 12
-          }
-        },
-        {
-          "widget": {
-            "name": "f7e3e3cd",
-            "queries": [
-              {
-                "name": "main_query",
-                "query": {
-                  "datasetName": "6d64102f",
-                  "fields": [
-                    {
-                      "name": "workspace",
-                      "expression": "`workspace`"
-                    },
-                    {
-                      "name": "signal",
-                      "expression": "`signal`"
-                    },
-                    {
-                      "name": "sum(unread_gb)",
-                      "expression": "SUM(`unread_gb`)"
-                    }
-                  ],
-                  "disaggregated": false
-                }
-              }
-            ],
-            "spec": {
-              "version": 3,
-              "widgetType": "bar",
-              "encodings": {
-                "x": {
-                  "fieldName": "sum(unread_gb)",
-                  "displayName": "Unread GB",
-                  "scale": {
-                    "type": "quantitative"
-                  },
-                  "format": {
-                    "type": "number-plain",
-                    "abbreviation": "compact",
-                    "decimalPlaces": {
-                      "type": "max",
-                      "places": 0
-                    }
-                  }
-                },
-                "y": {
-                  "fieldName": "workspace",
-                  "displayName": "Workspace",
-                  "scale": {
-                    "type": "categorical",
-                    "sort": {
-                      "by": "x-reversed"
-                    }
-                  }
-                },
-                "label": {
-                  "show": false
-                },
-                "color": {
-                  "fieldName": "signal",
-                  "displayName": "signal",
-                  "legend": {
-                    "position": "bottom",
-                    "hideTitle": true
-                  },
-                  "scale": {
-                    "type": "categorical",
-                    "mappings": [
-                      {
-                        "value": "Retire candidate",
-                        "color": "#C2362B"
-                      },
-                      {
-                        "value": "Review",
-                        "color": "#E0A93B"
-                      },
-                      {
-                        "value": "Light",
-                        "color": "#8E8B84"
-                      },
-                      {
-                        "value": "Healthy",
-                        "color": "#2456A6"
-                      }
-                    ]
-                  }
-                }
-              },
-              "frame": {
-                "title": "Unread GB by workspace",
-                "showTitle": true,
-                "description": "Written, never read plus idle 90d+",
-                "showDescription": true
-              },
-              "mark": {
-                "layout": "stack"
-              }
-            }
-          },
-          "position": {
-            "x": 0,
-            "y": 23,
-            "width": 6,
-            "height": 12
-          }
-        },
-        {
-          "widget": {
-            "name": "3f3e047d",
-            "queries": [
-              {
-                "name": "main_query",
-                "query": {
-                  "datasetName": "6d64102f",
-                  "fields": [
-                    {
-                      "name": "workspace",
-                      "expression": "`workspace`"
-                    },
-                    {
-                      "name": "signal",
-                      "expression": "`signal`"
-                    },
-                    {
-                      "name": "sum(active_people)",
-                      "expression": "SUM(`active_people`)"
-                    }
-                  ],
-                  "disaggregated": false
-                }
-              }
-            ],
-            "spec": {
-              "version": 3,
-              "widgetType": "bar",
-              "encodings": {
-                "x": {
-                  "fieldName": "sum(active_people)",
-                  "displayName": "Active people",
-                  "scale": {
-                    "type": "quantitative"
-                  },
-                  "format": {
-                    "type": "number-plain",
-                    "abbreviation": "compact",
-                    "decimalPlaces": {
-                      "type": "max",
-                      "places": 0
-                    }
-                  }
-                },
-                "y": {
-                  "fieldName": "workspace",
-                  "displayName": "Workspace",
-                  "scale": {
-                    "type": "categorical",
-                    "sort": {
-                      "by": "x-reversed"
-                    }
-                  }
-                },
-                "label": {
-                  "show": false
-                },
-                "color": {
-                  "fieldName": "signal",
-                  "displayName": "signal",
-                  "legend": {
-                    "position": "bottom",
-                    "hideTitle": true
-                  },
-                  "scale": {
-                    "type": "categorical",
-                    "mappings": [
-                      {
-                        "value": "Retire candidate",
-                        "color": "#C2362B"
-                      },
-                      {
-                        "value": "Review",
-                        "color": "#E0A93B"
-                      },
-                      {
-                        "value": "Light",
-                        "color": "#8E8B84"
-                      },
-                      {
-                        "value": "Healthy",
-                        "color": "#2456A6"
-                      }
-                    ]
-                  }
-                }
-              },
-              "frame": {
-                "title": "Active people by workspace",
-                "showTitle": true,
-                "description": "Distinct people in the window",
-                "showDescription": true
-              },
-              "mark": {
-                "layout": "stack"
-              }
-            }
-          },
-          "position": {
-            "x": 6,
-            "y": 23,
-            "width": 6,
             "height": 12
           }
         },
@@ -4686,9 +3841,221 @@
             }
           },
           "position": {
+            "x": 4,
+            "y": 3,
+            "width": 8,
+            "height": 12
+          }
+        },
+        {
+          "widget": {
+            "name": "343d535a",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "6d64102f",
+                  "fields": [
+                    {
+                      "name": "workspace",
+                      "expression": "`workspace`"
+                    },
+                    {
+                      "name": "signal",
+                      "expression": "`signal`"
+                    },
+                    {
+                      "name": "sum(usage_index)",
+                      "expression": "SUM(`usage_index`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "sum(usage_index)",
+                  "displayName": "Usage index",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "format": {
+                    "type": "number-plain",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 0
+                    }
+                  }
+                },
+                "y": {
+                  "fieldName": "workspace",
+                  "displayName": "Workspace",
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "x-reversed"
+                    }
+                  }
+                },
+                "label": {
+                  "show": false
+                },
+                "color": {
+                  "fieldName": "signal",
+                  "displayName": "signal",
+                  "legend": {
+                    "position": "bottom",
+                    "hideTitle": true
+                  },
+                  "scale": {
+                    "type": "categorical",
+                    "mappings": [
+                      {
+                        "value": "Retire candidate",
+                        "color": "#C2362B"
+                      },
+                      {
+                        "value": "Review",
+                        "color": "#E0A93B"
+                      },
+                      {
+                        "value": "Light",
+                        "color": "#8E8B84"
+                      },
+                      {
+                        "value": "Healthy",
+                        "color": "#2456A6"
+                      }
+                    ]
+                  }
+                }
+              },
+              "frame": {
+                "title": "Usage index by workspace",
+                "showTitle": true,
+                "description": "Shortest bars first to review; colour = signal",
+                "showDescription": true
+              },
+              "mark": {
+                "layout": "stack"
+              }
+            }
+          },
+          "position": {
             "x": 0,
-            "y": 35,
-            "width": 12,
+            "y": 15,
+            "width": 6,
+            "height": 12
+          }
+        },
+        {
+          "widget": {
+            "name": "f7e3e3cd",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "6d64102f",
+                  "fields": [
+                    {
+                      "name": "workspace",
+                      "expression": "`workspace`"
+                    },
+                    {
+                      "name": "signal",
+                      "expression": "`signal`"
+                    },
+                    {
+                      "name": "sum(unread_gb)",
+                      "expression": "SUM(`unread_gb`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "sum(unread_gb)",
+                  "displayName": "Unread GB",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "format": {
+                    "type": "number-plain",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 0
+                    }
+                  }
+                },
+                "y": {
+                  "fieldName": "workspace",
+                  "displayName": "Workspace",
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "x-reversed"
+                    }
+                  }
+                },
+                "label": {
+                  "show": false
+                },
+                "color": {
+                  "fieldName": "signal",
+                  "displayName": "signal",
+                  "legend": {
+                    "position": "bottom",
+                    "hideTitle": true
+                  },
+                  "scale": {
+                    "type": "categorical",
+                    "mappings": [
+                      {
+                        "value": "Retire candidate",
+                        "color": "#C2362B"
+                      },
+                      {
+                        "value": "Review",
+                        "color": "#E0A93B"
+                      },
+                      {
+                        "value": "Light",
+                        "color": "#8E8B84"
+                      },
+                      {
+                        "value": "Healthy",
+                        "color": "#2456A6"
+                      }
+                    ]
+                  }
+                }
+              },
+              "frame": {
+                "title": "Unread GB by workspace",
+                "showTitle": true,
+                "description": "Written never read plus idle tables: what clean-up would free",
+                "showDescription": true
+              },
+              "mark": {
+                "layout": "stack"
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 15,
+            "width": 6,
             "height": 12
           }
         },
@@ -5568,13 +4935,14 @@
               "frame": {
                 "title": "Every workspace, most used first",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "Tables by class, what it holds, how much work happens in it, and the signal. Open: the workspace."
               }
             }
           },
           "position": {
             "x": 0,
-            "y": 47,
+            "y": 27,
             "width": 12,
             "height": 12
           }
@@ -5855,13 +5223,14 @@
               "frame": {
                 "title": "Clean up first",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "Sensitive and unread first, then written never read before idle, then the biggest."
               }
             }
           },
           "position": {
             "x": 0,
-            "y": 59,
+            "y": 39,
             "width": 6,
             "height": 10
           }
@@ -6139,13 +5508,14 @@
               "frame": {
                 "title": "Largest tables: reads against writes",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "Big and unread is the expensive corner."
               }
             }
           },
           "position": {
             "x": 6,
-            "y": 59,
+            "y": 39,
             "width": 6,
             "height": 10
           }
@@ -7276,7 +6646,8 @@
               "frame": {
                 "title": "By schema",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "Tables by class, columns, views, volumes and size per schema: whole schemas to clean up."
               }
             }
           },
@@ -8182,7 +7553,8 @@
               "frame": {
                 "title": "Its tables, clean-up order",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "Written never read first, then idle, cooling, active. Open: in Catalog Explorer."
               }
             }
           },
@@ -8617,7 +7989,8 @@
               "frame": {
                 "title": "Its people and service principals",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "Most table writes first; writes nobody reads point at jobs to pause."
               }
             }
           },
@@ -8673,19 +8046,6 @@
                 }
               },
               {
-                "name": "q_a470b065",
-                "query": {
-                  "datasetName": "eb14f0b0",
-                  "parameters": [
-                    {
-                      "name": "time_range",
-                      "keyword": "time_range"
-                    }
-                  ],
-                  "disaggregated": false
-                }
-              },
-              {
                 "name": "q_95e9509e",
                 "query": {
                   "datasetName": "94303a17",
@@ -8707,10 +8067,6 @@
                   {
                     "parameterName": "time_range",
                     "queryName": "q_472318e7"
-                  },
-                  {
-                    "parameterName": "time_range",
-                    "queryName": "q_a470b065"
                   },
                   {
                     "parameterName": "time_range",
@@ -8766,23 +8122,6 @@
                 }
               },
               {
-                "name": "q_f17df7e2",
-                "query": {
-                  "datasetName": "eb14f0b0",
-                  "disaggregated": false,
-                  "fields": [
-                    {
-                      "name": "workspace",
-                      "expression": "`workspace`"
-                    },
-                    {
-                      "name": "workspace_associativity",
-                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
-                    }
-                  ]
-                }
-              },
-              {
                 "name": "q_c021698a",
                 "query": {
                   "datasetName": "94303a17",
@@ -8809,11 +8148,6 @@
                     "fieldName": "workspace",
                     "displayName": "Workspace",
                     "queryName": "q_cd1cb1e8"
-                  },
-                  {
-                    "fieldName": "workspace",
-                    "displayName": "Workspace",
-                    "queryName": "q_f17df7e2"
                   },
                   {
                     "fieldName": "workspace",
@@ -9173,83 +8507,6 @@
         },
         {
           "widget": {
-            "name": "3345cac2",
-            "queries": [
-              {
-                "name": "main_query",
-                "query": {
-                  "datasetName": "1159f3be",
-                  "fields": [
-                    {
-                      "name": "usage_class",
-                      "expression": "`usage_class`"
-                    },
-                    {
-                      "name": "sum(size_gb)",
-                      "expression": "SUM(`size_gb`)"
-                    }
-                  ],
-                  "disaggregated": false
-                }
-              }
-            ],
-            "spec": {
-              "version": 3,
-              "widgetType": "pie",
-              "encodings": {
-                "angle": {
-                  "fieldName": "sum(size_gb)",
-                  "displayName": "size_gb",
-                  "scale": {
-                    "type": "quantitative"
-                  }
-                },
-                "color": {
-                  "fieldName": "usage_class",
-                  "displayName": "Usage class",
-                  "scale": {
-                    "type": "categorical",
-                    "mappings": [
-                      {
-                        "value": "Written, never read",
-                        "color": "#C2362B"
-                      },
-                      {
-                        "value": "Idle 90d+",
-                        "color": "#8E8B84"
-                      },
-                      {
-                        "value": "Cooling",
-                        "color": "#E0A93B"
-                      },
-                      {
-                        "value": "Active",
-                        "color": "#2456A6"
-                      }
-                    ]
-                  }
-                },
-                "label": {
-                  "show": true
-                }
-              },
-              "frame": {
-                "title": "GB by class",
-                "showTitle": true,
-                "description": "Written, never read: written in the Time Window, not read in it. Idle 90d+: no read or write in the last 90 days, whatever the Time Window. Cooling: not read in the Time Window, used within 90 days. Active: read in the Time Window.",
-                "showDescription": true
-              }
-            }
-          },
-          "position": {
-            "x": 0,
-            "y": 6,
-            "width": 4,
-            "height": 8
-          }
-        },
-        {
-          "widget": {
             "name": "80b01ec5",
             "queries": [
               {
@@ -9313,373 +8570,15 @@
               "frame": {
                 "title": "Tables and views by class",
                 "showTitle": true,
-                "description": "Every one in exactly one class",
+                "description": "Count per class; the counters above give the GB",
                 "showDescription": true
-              }
-            }
-          },
-          "position": {
-            "x": 4,
-            "y": 6,
-            "width": 4,
-            "height": 8
-          }
-        },
-        {
-          "widget": {
-            "name": "ea40b153",
-            "queries": [
-              {
-                "name": "main_query",
-                "query": {
-                  "datasetName": "1159f3be",
-                  "fields": [
-                    {
-                      "name": "kind",
-                      "expression": "`kind`"
-                    },
-                    {
-                      "name": "sum(objects)",
-                      "expression": "SUM(`objects`)"
-                    }
-                  ],
-                  "disaggregated": false
-                }
-              }
-            ],
-            "spec": {
-              "version": 3,
-              "widgetType": "pie",
-              "encodings": {
-                "angle": {
-                  "fieldName": "sum(objects)",
-                  "displayName": "objects",
-                  "scale": {
-                    "type": "quantitative"
-                  }
-                },
-                "color": {
-                  "fieldName": "kind",
-                  "displayName": "Kind",
-                  "scale": {
-                    "type": "categorical"
-                  }
-                },
-                "label": {
-                  "show": true
-                }
-              },
-              "frame": {
-                "title": "Tables and views",
-                "showTitle": true,
-                "description": "How many of each",
-                "showDescription": true
-              }
-            }
-          },
-          "position": {
-            "x": 8,
-            "y": 6,
-            "width": 4,
-            "height": 8
-          }
-        },
-        {
-          "widget": {
-            "name": "86993e3a",
-            "queries": [
-              {
-                "name": "main_query",
-                "query": {
-                  "datasetName": "eb14f0b0",
-                  "fields": [
-                    {
-                      "name": "day",
-                      "expression": "`day`"
-                    },
-                    {
-                      "name": "direction",
-                      "expression": "`direction`"
-                    },
-                    {
-                      "name": "sum(events)",
-                      "expression": "SUM(`events`)"
-                    }
-                  ],
-                  "disaggregated": false
-                }
-              }
-            ],
-            "spec": {
-              "version": 3,
-              "widgetType": "bar",
-              "encodings": {
-                "x": {
-                  "fieldName": "day",
-                  "displayName": "Day",
-                  "scale": {
-                    "type": "temporal"
-                  }
-                },
-                "y": {
-                  "fieldName": "sum(events)",
-                  "displayName": "Events",
-                  "scale": {
-                    "type": "quantitative"
-                  }
-                },
-                "label": {
-                  "show": false
-                },
-                "color": {
-                  "fieldName": "direction",
-                  "displayName": "direction",
-                  "legend": {
-                    "position": "bottom",
-                    "hideTitle": true
-                  },
-                  "scale": {
-                    "type": "categorical",
-                    "mappings": [
-                      {
-                        "value": "Reads",
-                        "color": "#2456A6"
-                      },
-                      {
-                        "value": "Writes",
-                        "color": "#D27A2C"
-                      }
-                    ]
-                  }
-                }
-              },
-              "frame": {
-                "title": "Table reads and writes per day",
-                "showTitle": true,
-                "description": "Lineage events in the window",
-                "showDescription": true
-              },
-              "mark": {
-                "layout": "stack"
               }
             }
           },
           "position": {
             "x": 0,
-            "y": 14,
-            "width": 12,
-            "height": 8
-          }
-        },
-        {
-          "widget": {
-            "name": "477c9368",
-            "queries": [
-              {
-                "name": "main_query",
-                "query": {
-                  "datasetName": "1159f3be",
-                  "fields": [
-                    {
-                      "name": "workspace",
-                      "expression": "`workspace`"
-                    },
-                    {
-                      "name": "usage_class",
-                      "expression": "`usage_class`"
-                    },
-                    {
-                      "name": "sum(size_gb)",
-                      "expression": "SUM(`size_gb`)"
-                    }
-                  ],
-                  "disaggregated": false
-                }
-              }
-            ],
-            "spec": {
-              "version": 3,
-              "widgetType": "bar",
-              "encodings": {
-                "x": {
-                  "fieldName": "sum(size_gb)",
-                  "displayName": "GB",
-                  "scale": {
-                    "type": "quantitative"
-                  },
-                  "format": {
-                    "type": "number-plain",
-                    "abbreviation": "compact",
-                    "decimalPlaces": {
-                      "type": "max",
-                      "places": 0
-                    }
-                  }
-                },
-                "y": {
-                  "fieldName": "workspace",
-                  "displayName": "Workspace",
-                  "scale": {
-                    "type": "categorical",
-                    "sort": {
-                      "by": "x-reversed"
-                    }
-                  }
-                },
-                "label": {
-                  "show": false
-                },
-                "color": {
-                  "fieldName": "usage_class",
-                  "displayName": "usage_class",
-                  "legend": {
-                    "position": "bottom",
-                    "hideTitle": true
-                  },
-                  "scale": {
-                    "type": "categorical",
-                    "mappings": [
-                      {
-                        "value": "Written, never read",
-                        "color": "#C2362B"
-                      },
-                      {
-                        "value": "Idle 90d+",
-                        "color": "#8E8B84"
-                      },
-                      {
-                        "value": "Cooling",
-                        "color": "#E0A93B"
-                      },
-                      {
-                        "value": "Active",
-                        "color": "#2456A6"
-                      }
-                    ]
-                  }
-                }
-              },
-              "frame": {
-                "title": "GB by class, by workspace",
-                "showTitle": true,
-                "description": "Written, never read: written in the Time Window, not read in it. Idle 90d+: no read or write in the last 90 days, whatever the Time Window. Cooling: not read in the Time Window, used within 90 days. Active: read in the Time Window.",
-                "showDescription": true
-              },
-              "mark": {
-                "layout": "stack"
-              }
-            }
-          },
-          "position": {
-            "x": 0,
-            "y": 22,
-            "width": 6,
-            "height": 12
-          }
-        },
-        {
-          "widget": {
-            "name": "0e14a1e3",
-            "queries": [
-              {
-                "name": "main_query",
-                "query": {
-                  "datasetName": "1159f3be",
-                  "fields": [
-                    {
-                      "name": "workspace",
-                      "expression": "`workspace`"
-                    },
-                    {
-                      "name": "usage_class",
-                      "expression": "`usage_class`"
-                    },
-                    {
-                      "name": "sum(objects)",
-                      "expression": "SUM(`objects`)"
-                    }
-                  ],
-                  "disaggregated": false
-                }
-              }
-            ],
-            "spec": {
-              "version": 3,
-              "widgetType": "bar",
-              "encodings": {
-                "x": {
-                  "fieldName": "sum(objects)",
-                  "displayName": "Tables and views",
-                  "scale": {
-                    "type": "quantitative"
-                  },
-                  "format": {
-                    "type": "number-plain",
-                    "abbreviation": "compact",
-                    "decimalPlaces": {
-                      "type": "max",
-                      "places": 0
-                    }
-                  }
-                },
-                "y": {
-                  "fieldName": "workspace",
-                  "displayName": "Workspace",
-                  "scale": {
-                    "type": "categorical",
-                    "sort": {
-                      "by": "x-reversed"
-                    }
-                  }
-                },
-                "label": {
-                  "show": false
-                },
-                "color": {
-                  "fieldName": "usage_class",
-                  "displayName": "usage_class",
-                  "legend": {
-                    "position": "bottom",
-                    "hideTitle": true
-                  },
-                  "scale": {
-                    "type": "categorical",
-                    "mappings": [
-                      {
-                        "value": "Written, never read",
-                        "color": "#C2362B"
-                      },
-                      {
-                        "value": "Idle 90d+",
-                        "color": "#8E8B84"
-                      },
-                      {
-                        "value": "Cooling",
-                        "color": "#E0A93B"
-                      },
-                      {
-                        "value": "Active",
-                        "color": "#2456A6"
-                      }
-                    ]
-                  }
-                }
-              },
-              "frame": {
-                "title": "Tables by class, by workspace",
-                "showTitle": true,
-                "description": "Views count too: a view nobody reads is one to drop",
-                "showDescription": true
-              },
-              "mark": {
-                "layout": "stack"
-              }
-            }
-          },
-          "position": {
-            "x": 6,
-            "y": 22,
-            "width": 6,
+            "y": 6,
+            "width": 4,
             "height": 12
           }
         },
@@ -9774,7 +8673,7 @@
               "frame": {
                 "title": "GB by class, per schema",
                 "showTitle": true,
-                "description": "Where the unread data sits",
+                "description": "Where the unread data sits: schemas to clean up as a whole",
                 "showDescription": true
               },
               "mark": {
@@ -9783,9 +8682,9 @@
             }
           },
           "position": {
-            "x": 0,
-            "y": 34,
-            "width": 6,
+            "x": 4,
+            "y": 6,
+            "width": 4,
             "height": 12
           }
         },
@@ -9880,7 +8779,7 @@
               "frame": {
                 "title": "Tables with sensitive columns, by class",
                 "showTitle": true,
-                "description": "Sensitive and unread first",
+                "description": "Sensitive and unread: clean up first",
                 "showDescription": true
               },
               "mark": {
@@ -9889,9 +8788,9 @@
             }
           },
           "position": {
-            "x": 6,
-            "y": 34,
-            "width": 6,
+            "x": 8,
+            "y": 6,
+            "width": 4,
             "height": 12
           }
         },
@@ -9996,7 +8895,7 @@
           },
           "position": {
             "x": 0,
-            "y": 46,
+            "y": 18,
             "width": 12,
             "height": 12
           }
@@ -10703,13 +9602,14 @@
               "frame": {
                 "title": "Every table and view, clean-up order",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "Reads and writes: lineage in the window; last read and write: a year. Open: in Catalog Explorer."
               }
             }
           },
           "position": {
             "x": 0,
-            "y": 58,
+            "y": 30,
             "width": 12,
             "height": 14
           }
@@ -12075,7 +10975,8 @@
               "frame": {
                 "title": "The table",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "Its class, size, reads and writes, sensitive columns, last change and maintenance. Open: in Catalog Explorer."
               }
             }
           },
@@ -12511,7 +11412,8 @@
               "frame": {
                 "title": "Who reads and writes it",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "Who to ask before you change or drop it."
               }
             }
           },
@@ -12676,7 +11578,8 @@
               "frame": {
                 "title": "Who can read it (direct grants)",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "Never read in the window: a grant to remove. A group's grant reads never used: lineage records people."
               }
             }
           },
@@ -12810,7 +11713,8 @@
               "frame": {
                 "title": "Sensitive columns",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "A column tag, else the column name. Unmasked: add a column mask."
               }
             }
           },
@@ -12974,7 +11878,8 @@
               "frame": {
                 "title": "Where it comes from, where it goes",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "A downstream nobody reads: the job building it can stop."
               }
             }
           },
@@ -13198,7 +12103,8 @@
               "frame": {
                 "title": "Change history (DESCRIBE HISTORY)",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "Its last versions from the sizes job: what changed, when, who."
               }
             }
           },
@@ -13670,7 +12576,7 @@
               "frame": {
                 "title": "GB by class",
                 "showTitle": true,
-                "description": "Written, never read: written in the Time Window, not read in it. Idle 90d+: no read or write in the last 90 days, whatever the Time Window. Cooling: not read in the Time Window, used within 90 days. Active: read in the Time Window.",
+                "description": "How much of the files are read, idle or written and never read",
                 "showDescription": true
               }
             }
@@ -13678,84 +12584,7 @@
           "position": {
             "x": 0,
             "y": 6,
-            "width": 4,
-            "height": 8
-          }
-        },
-        {
-          "widget": {
-            "name": "2a5f72ba",
-            "queries": [
-              {
-                "name": "main_query",
-                "query": {
-                  "datasetName": "d11eacba",
-                  "fields": [
-                    {
-                      "name": "usage_class",
-                      "expression": "`usage_class`"
-                    },
-                    {
-                      "name": "sum(volumes)",
-                      "expression": "SUM(`volumes`)"
-                    }
-                  ],
-                  "disaggregated": false
-                }
-              }
-            ],
-            "spec": {
-              "version": 3,
-              "widgetType": "pie",
-              "encodings": {
-                "angle": {
-                  "fieldName": "sum(volumes)",
-                  "displayName": "volumes",
-                  "scale": {
-                    "type": "quantitative"
-                  }
-                },
-                "color": {
-                  "fieldName": "usage_class",
-                  "displayName": "Usage class",
-                  "scale": {
-                    "type": "categorical",
-                    "mappings": [
-                      {
-                        "value": "Written, never read",
-                        "color": "#C2362B"
-                      },
-                      {
-                        "value": "Idle 90d+",
-                        "color": "#8E8B84"
-                      },
-                      {
-                        "value": "Cooling",
-                        "color": "#E0A93B"
-                      },
-                      {
-                        "value": "Active",
-                        "color": "#2456A6"
-                      }
-                    ]
-                  }
-                },
-                "label": {
-                  "show": true
-                }
-              },
-              "frame": {
-                "title": "Volumes by class",
-                "showTitle": true,
-                "description": "Every one in exactly one class",
-                "showDescription": true
-              }
-            }
-          },
-          "position": {
-            "x": 4,
-            "y": 6,
-            "width": 4,
+            "width": 6,
             "height": 8
           }
         },
@@ -13806,15 +12635,15 @@
               "frame": {
                 "title": "GB, managed or external",
                 "showTitle": true,
-                "description": "From the daily listing",
+                "description": "External: storage Databricks doesn't clean up for you",
                 "showDescription": true
               }
             }
           },
           "position": {
-            "x": 8,
+            "x": 6,
             "y": 6,
-            "width": 4,
+            "width": 6,
             "height": 8
           }
         },
@@ -14026,218 +12855,6 @@
           "position": {
             "x": 6,
             "y": 14,
-            "width": 6,
-            "height": 12
-          }
-        },
-        {
-          "widget": {
-            "name": "4845e7b9",
-            "queries": [
-              {
-                "name": "main_query",
-                "query": {
-                  "datasetName": "d11eacba",
-                  "fields": [
-                    {
-                      "name": "workspace",
-                      "expression": "`workspace`"
-                    },
-                    {
-                      "name": "usage_class",
-                      "expression": "`usage_class`"
-                    },
-                    {
-                      "name": "sum(files)",
-                      "expression": "SUM(`files`)"
-                    }
-                  ],
-                  "disaggregated": false
-                }
-              }
-            ],
-            "spec": {
-              "version": 3,
-              "widgetType": "bar",
-              "encodings": {
-                "x": {
-                  "fieldName": "sum(files)",
-                  "displayName": "Files",
-                  "scale": {
-                    "type": "quantitative"
-                  },
-                  "format": {
-                    "type": "number-plain",
-                    "abbreviation": "compact",
-                    "decimalPlaces": {
-                      "type": "max",
-                      "places": 0
-                    }
-                  }
-                },
-                "y": {
-                  "fieldName": "workspace",
-                  "displayName": "Workspace",
-                  "scale": {
-                    "type": "categorical",
-                    "sort": {
-                      "by": "x-reversed"
-                    }
-                  }
-                },
-                "label": {
-                  "show": false
-                },
-                "color": {
-                  "fieldName": "usage_class",
-                  "displayName": "usage_class",
-                  "legend": {
-                    "position": "bottom",
-                    "hideTitle": true
-                  },
-                  "scale": {
-                    "type": "categorical",
-                    "mappings": [
-                      {
-                        "value": "Written, never read",
-                        "color": "#C2362B"
-                      },
-                      {
-                        "value": "Idle 90d+",
-                        "color": "#8E8B84"
-                      },
-                      {
-                        "value": "Cooling",
-                        "color": "#E0A93B"
-                      },
-                      {
-                        "value": "Active",
-                        "color": "#2456A6"
-                      }
-                    ]
-                  }
-                }
-              },
-              "frame": {
-                "title": "Files by class, by workspace",
-                "showTitle": true,
-                "description": "From the daily listing",
-                "showDescription": true
-              },
-              "mark": {
-                "layout": "stack"
-              }
-            }
-          },
-          "position": {
-            "x": 0,
-            "y": 26,
-            "width": 6,
-            "height": 12
-          }
-        },
-        {
-          "widget": {
-            "name": "fc56a8b8",
-            "queries": [
-              {
-                "name": "main_query",
-                "query": {
-                  "datasetName": "d11eacba",
-                  "fields": [
-                    {
-                      "name": "workspace",
-                      "expression": "`workspace`"
-                    },
-                    {
-                      "name": "usage_class",
-                      "expression": "`usage_class`"
-                    },
-                    {
-                      "name": "sum(writes)",
-                      "expression": "SUM(`writes`)"
-                    }
-                  ],
-                  "disaggregated": false
-                }
-              }
-            ],
-            "spec": {
-              "version": 3,
-              "widgetType": "bar",
-              "encodings": {
-                "x": {
-                  "fieldName": "sum(writes)",
-                  "displayName": "File writes",
-                  "scale": {
-                    "type": "quantitative"
-                  },
-                  "format": {
-                    "type": "number-plain",
-                    "abbreviation": "compact",
-                    "decimalPlaces": {
-                      "type": "max",
-                      "places": 0
-                    }
-                  }
-                },
-                "y": {
-                  "fieldName": "workspace",
-                  "displayName": "Workspace",
-                  "scale": {
-                    "type": "categorical",
-                    "sort": {
-                      "by": "x-reversed"
-                    }
-                  }
-                },
-                "label": {
-                  "show": false
-                },
-                "color": {
-                  "fieldName": "usage_class",
-                  "displayName": "usage_class",
-                  "legend": {
-                    "position": "bottom",
-                    "hideTitle": true
-                  },
-                  "scale": {
-                    "type": "categorical",
-                    "mappings": [
-                      {
-                        "value": "Written, never read",
-                        "color": "#C2362B"
-                      },
-                      {
-                        "value": "Idle 90d+",
-                        "color": "#8E8B84"
-                      },
-                      {
-                        "value": "Cooling",
-                        "color": "#E0A93B"
-                      },
-                      {
-                        "value": "Active",
-                        "color": "#2456A6"
-                      }
-                    ]
-                  }
-                }
-              },
-              "frame": {
-                "title": "File writes by workspace",
-                "showTitle": true,
-                "description": "Uploads, puts and deletes in the window",
-                "showDescription": true
-              },
-              "mark": {
-                "layout": "stack"
-              }
-            }
-          },
-          "position": {
-            "x": 6,
-            "y": 26,
             "width": 6,
             "height": 12
           }
@@ -14638,13 +13255,14 @@
               "frame": {
                 "title": "Every volume, clean-up order",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "Spark jobs reading a volume on a cluster may not be in the audit log: check before you drop."
               }
             }
           },
           "position": {
             "x": 0,
-            "y": 38,
+            "y": 26,
             "width": 12,
             "height": 10
           }
@@ -15530,7 +14148,8 @@
               "frame": {
                 "title": "Who reads and who writes",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "Most table writes first. Writes nobody reads: tables they wrote that nobody read."
               }
             }
           },
@@ -15785,7 +14404,8 @@
               "frame": {
                 "title": "Not seen for 90+ days, still with access (direct grants)",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "Remove from the workspace or its groups; sensitive first."
               }
             }
           },
@@ -16476,7 +15096,8 @@
               "frame": {
                 "title": "Where they work",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "Logins, queries and last seen per workspace."
               }
             }
           },
@@ -16825,7 +15446,8 @@
               "frame": {
                 "title": "The tables they read or wrote",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "In the window, most used first, with each table's class."
               }
             }
           },
