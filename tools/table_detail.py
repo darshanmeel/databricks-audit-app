@@ -30,7 +30,7 @@ SCHEMA = pa.schema([
     ("table_catalog", pa.string()), ("table_schema", pa.string()), ("table_name", pa.string()),
     ("table_type", pa.string()), ("data_source_format", pa.string()), ("last_altered", pa.string()),
     ("column_count", pa.int64()), ("size_in_bytes", pa.int64()), ("num_files", pa.int64()),
-    ("last_modified", pa.string()), ("detail", pa.string()),
+    ("last_modified", pa.string()), ("detail", pa.string()), ("created", pa.string()), ("owner", pa.string()),
 ])
 # detail: described | reused (unchanged since the last export) | view | not_delta | not_asked
 # (over max_tables) | failed: <first line of the error>
@@ -70,7 +70,8 @@ def _previous_history(path: Path | None) -> dict[str, list[dict]]:
 
 _LIST_SQL = """
 SELECT t.table_catalog, t.table_schema, t.table_name, t.table_type, t.data_source_format,
-       CAST(t.last_altered AS STRING) AS last_altered, c.column_count
+       CAST(t.last_altered AS STRING) AS last_altered, c.column_count,
+       CAST(t.created AS STRING) AS created, t.table_owner AS owner
 FROM system.information_schema.tables t
 LEFT JOIN (
   SELECT table_catalog, table_schema, table_name, COUNT(*) AS column_count
@@ -139,7 +140,7 @@ def export(connect_fn: Callable, out_dir: Path, *, previous: Path | None = None,
         key = (r["table_catalog"], r["table_schema"], r["table_name"])
         row = {**{f.name: None for f in SCHEMA}, **{k: r.get(k) for k in
                ("table_catalog", "table_schema", "table_name", "table_type", "data_source_format",
-                "last_altered", "column_count")}}
+                "last_altered", "column_count", "created", "owner")}}
         old = prev.get(key)
         if not _describable(r):
             row["detail"] = "view" if (r.get("table_type") or "").upper() == "VIEW" else "not_delta"

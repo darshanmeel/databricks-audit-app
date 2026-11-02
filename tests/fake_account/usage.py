@@ -73,18 +73,21 @@ def add(db: Path) -> dict:
                 view = t.startswith("v_")
                 altered = ts(rnd.choice([1, 2, 5, 12, 40, 160, 300]) if cat != "archive" else 400)
                 cols = rnd.randint(4, 60)
+                born = ts(2 if full == "sandbox.scratch.copy_customers" else 500 if cat == "archive" else rnd.choice([3, 30, 200, 500]))
+                owner = PEOPLE[CATALOGS[cat][0]][0]
                 if view:
-                    detail.append((cat, sch, t, "VIEW", None, altered, cols, None, None, None, "view"))
+                    detail.append((cat, sch, t, "VIEW", None, altered, cols, None, None, None, "view", born, owner))
                     names.append((full, True))
                     continue
                 if full == "finance.reporting.budget":
                     detail.append((cat, sch, t, "MANAGED", "DELTA", altered, cols, None, None, None,
-                                   "failed: PERMISSION_DENIED: User does not have SELECT on Table 'finance.reporting.budget'"))
+                                   "failed: PERMISSION_DENIED: User does not have SELECT on Table 'finance.reporting.budget'",
+                                   born, owner))
                     names.append((full, False))
                     continue
                 size = int(10 ** rnd.uniform(6, 11.5))
                 files = max(1, size // rnd.choice([2_000_000, 30_000_000, 120_000_000]))
-                detail.append((cat, sch, t, "MANAGED", "DELTA", altered, cols, size, files, altered, "described"))
+                detail.append((cat, sch, t, "MANAGED", "DELTA", altered, cols, size, files, altered, "described", born, owner))
                 names.append((full, False))
                 for v in range(rnd.randint(2, 6)):
                     op = rnd.choice(["WRITE", "MERGE", "OPTIMIZE", "DELETE", "WRITE", "VACUUM END"])
@@ -92,7 +95,7 @@ def add(db: Path) -> dict:
                                     f"numOutputRows={rnd.randint(100, 900000)}" if op in ("WRITE", "MERGE") else None))
     put(con, "storage.table_detail", "table_catalog VARCHAR, table_schema VARCHAR, table_name VARCHAR, table_type VARCHAR, "
         "data_source_format VARCHAR, last_altered VARCHAR, column_count BIGINT, size_in_bytes BIGINT, num_files BIGINT, "
-        "last_modified VARCHAR, detail VARCHAR", detail)
+        "last_modified VARCHAR, detail VARCHAR, created VARCHAR, owner VARCHAR", detail)
     put(con, "storage.table_history", "table_full_name VARCHAR, version BIGINT, timestamp VARCHAR, operation VARCHAR, "
         "user_name VARCHAR, metrics VARCHAR", history)
     described = sum(1 for d in detail if d[-1] == "described")
@@ -123,28 +126,43 @@ def add(db: Path) -> dict:
     for full, view in names:
         cat = full.split(".")[0]
         ws = CATALOGS[cat][0]
-        if cat == "archive" or full.endswith(("old_extract", "archive_xl", "t11", "t10", "returns")):
+        if cat == "archive" or full.endswith(("old_extract", "archive_xl", "t11", "t10", "copy_customers")):
             continue  # never read in the lookback
+        written_only = full.endswith(("returns", "clicks_raw", "t9"))  # written every day, read by nobody
         last = rnd.choice([0, 1, 2, 3, 8, 20, 45, 70, 110, 200])
-        reads, writes = rnd.randint(1, 900), 0 if view else rnd.randint(0, 60)
-        access.append((ws, full, ts(last), None if view or not writes else ts(last + rnd.randint(0, 5)), reads, writes,
-                       rnd.randint(1, len(PEOPLE[ws]))))
+        reads, writes = (0 if written_only else rnd.randint(1, 900)), 0 if view else rnd.randint(0 if not written_only else 20, 60)
+        last_write = ts(rnd.randint(0, 2)) if written_only else (None if view or not writes else ts(last + rnd.randint(0, 5)))
+        readers = rnd.sample(PEOPLE[ws], k=rnd.randint(1, len(PEOPLE[ws]))) if reads else []
+        writers = [] if view or not writes else (SPS.get(ws, PEOPLE[ws])[:1] + rnd.sample(PEOPLE[ws], k=1))
+        for w in WINDOWS:
+            share = 0 if (not written_only and last >= w) else w / 90
+            r_w, w_w = int(reads * share), int(writes * (w / 90 if written_only else share))
+            access.append((w, ws, full, None if written_only else ts(last), last_write, r_w, w_w,
+                           len(readers) if r_w else 0, len(set(writers)) if w_w else 0,
+                           ", ".join(sorted(readers)[:3]) if r_w else None,
+                           ", ".join(sorted(set(writers))[:3]) if w_w else None))
+        if written_only:
+            continue
         if last < 30:
             for d in range(30):
                 r = rnd.randint(0, reads // 20 + 1)
                 daily.append((full, (END - timedelta(days=d)).isoformat(), r, 0 if view else rnd.randint(0, 3), min(r, 4), 0 if view else 1))
         for who in rnd.sample(PEOPLE[ws], k=min(2, len(PEOPLE[ws]))):
-            user_tables.append((ws, who, full, rnd.randint(1, reads), rnd.randint(0, writes), ts(last)))
+            user_tables.append((ws, who, full, rnd.randint(1, reads), rnd.randint(0, writes), ts(last),
+                                rnd.choice(["DBSQL_QUERY", "NOTEBOOK", "DASHBOARD", "JOB, NOTEBOOK"])))
         if not view and rnd.random() < 0.4:
             maint.append((full, ts(rnd.randint(1, 20), 3), rnd.choice(["COMPACTION", "VACUUM", "ANALYZE"]), "SUCCESSFUL",
                           round(rnd.uniform(0.1, 4.0), 2), "ESTIMATED_DBU"))
-    if "finance.reporting.monthly_pnl" in {a[1] for a in access}:  # also read from acme-prod
-        access.append(("2001", "finance.reporting.monthly_pnl", ts(2), None, 40, 0, 2))
-    put(con, "usage.table_access", "workspace_id VARCHAR, table_full_name VARCHAR, last_read VARCHAR, last_write VARCHAR, "
-        "reads BIGINT, writes BIGINT, readers BIGINT", access)
+    if "finance.reporting.monthly_pnl" in {a[2] for a in access}:  # also read from acme-prod
+        for w in WINDOWS:
+            access.append((w, "2001", "finance.reporting.monthly_pnl", ts(2), None, 40 * w // 90, 0, 2, 0,
+                           "ana@acme.example, ben@acme.example", None))
+    put(con, "usage.table_access", "window_days BIGINT, workspace_id VARCHAR, table_full_name VARCHAR, last_read VARCHAR, "
+        "last_write VARCHAR, reads BIGINT, writes BIGINT, readers BIGINT, writers BIGINT, reader_names VARCHAR, "
+        "writer_names VARCHAR", access)
     put(con, "usage.table_daily", "table_full_name VARCHAR, day VARCHAR, reads BIGINT, writes BIGINT, readers BIGINT, writers BIGINT", daily)
     put(con, "usage.user_tables", "workspace_id VARCHAR, identity VARCHAR, table_full_name VARCHAR, reads BIGINT, writes BIGINT, "
-        "last_access VARCHAR", user_tables)
+        "last_access VARCHAR, via VARCHAR", user_tables)
     put(con, "usage.table_maintenance", "table_full_name VARCHAR, start_time VARCHAR, operation_type VARCHAR, "
         "operation_status VARCHAR, usage_quantity DOUBLE, usage_unit VARCHAR", maint)
 
@@ -169,10 +187,25 @@ def add(db: Path) -> dict:
         for ws, people in PEOPLE.items():
             row = [u for u in users if u[0] == ws and (END - date.fromisoformat(u[2][:10])).days < w]
             act.append((w, ws, sum(1 for u in row if "@" in u[1]), sum(1 for u in row if "@" not in u[1]),
-                        sum(u[4] for u in row) * w // 90, sum(1 for u in row if u[4]), max((u[2] for u in row), default=None)))
-    act.append((90, "2004", 1, 0, 12, 1, ts(60)))
+                        sum(u[4] for u in row) * w // 90, sum(1 for u in row if u[4]), max((u[2] for u in row), default=None),
+                        min(w, int(w * (0.9 if len(row) > 3 else 0.5 if row else 0)))))
+    act.append((90, "2004", 1, 0, 12, 1, ts(60), 2))
     put(con, "usage.workspace_activity", "window_days BIGINT, workspace_id VARCHAR, active_people BIGINT, "
-        "active_service_principals BIGINT, queries BIGINT, query_identities BIGINT, last_activity VARCHAR", act)
+        "active_service_principals BIGINT, queries BIGINT, query_identities BIGINT, last_activity VARCHAR, "
+        "active_days BIGINT", act)
+    # usage.sensitive_columns: from a tag, data classification or the column name; masked or not
+    put(con, "usage.sensitive_columns", "table_full_name VARCHAR, column_name VARCHAR, pii_type VARCHAR, method VARCHAR, "
+        "masked BOOLEAN", [
+            ("acme.sales.customers", "email", "Email", "classification", True),
+            ("acme.sales.customers", "phone", "Phone number", "name", False),
+            ("acme.sales.customers", "street", "Postal address", "name", False),
+            ("acme.raw.events_old", "ip_address", "IP address", "name", False),
+            ("lab.sales.users", "email", "Email", "tag", False),
+            ("lab.sales.archive_xl", "birth_date", "Date of birth", "name", False),
+            ("finance.ledger.accounts", "iban", "IBAN / bank account", "tag", True),
+            ("sandbox.scratch.copy_customers", "email", "Email", "name", False),
+            ("archive.y2024.orders_2024", "customer_email", "Email", "name", False),
+        ])
     con.execute("CREATE OR REPLACE TABLE usage.workspace_activity_info AS SELECT ? AS info", [json.dumps(
         {"exported": True, "error": None, "end": END.isoformat(), "windows": list(WINDOWS), "read_lookback_days": 365})])
 

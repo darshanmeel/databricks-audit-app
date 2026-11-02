@@ -5,7 +5,7 @@ belongs to, for Governance > Workspaces. Plain statements, not checks:
 - workspace_activity: people, service principals and queries per workspace and window;
 - catalog_workspace: each catalog's lineage events per workspace (its home workspace is the one
   that reads and writes it most);
-- table_access: per workspace and table, last read and write, reads, writes and readers;
+- table_access: per window, workspace and table, last read and write, reads, writes, readers and writers;
 - user_access: per workspace and identity, last seen, logins, queries, tables read and written;
 - user_tables: per workspace and identity, the 50 tables it used most and when;
 - user_last_seen: per workspace and identity, its last audit event and last login over a year,
@@ -13,7 +13,12 @@ belongs to, for Governance > Workspaces. Plain statements, not checks:
 - volume_access: per workspace, volume and identity, reads and writes of files under /Volumes from
   the audit log's file-system events;
 - table_daily: per table and day, reads, writes and readers (lineage);
-- table_maintenance: predictive optimization runs per table (compaction, vacuum, clustering).
+- table_maintenance: predictive optimization runs per table (compaction, vacuum, clustering);
+- sensitive_columns: columns that look sensitive (a tag, data classification or the column name),
+  and whether a column mask covers them. Names and types only, never values.
+
+Reads and writes count distinct events: one query reading A and writing B and C leaves two lineage
+rows for A, one read.
 
 Called by tools/export_direct_results.py after the checks; writes usage/<name>.parquet.
 """
@@ -35,21 +40,23 @@ _UUID = "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
 ACTIVITY_SCHEMA = pa.schema([
     ("window_days", pa.int64()), ("workspace_id", pa.string()), ("active_people", pa.int64()),
     ("active_service_principals", pa.int64()), ("queries", pa.int64()), ("query_identities", pa.int64()),
-    ("last_activity", pa.string()),
+    ("last_activity", pa.string()), ("active_days", pa.int64()),
 ])
 CATALOG_SCHEMA = pa.schema([("catalog", pa.string()), ("workspace_id", pa.string()), ("events", pa.int64())])
 TABLE_FILE, USER_FILE, USER_TABLES_FILE = "table_access.parquet", "user_access.parquet", "user_tables.parquet"
 TABLE_SCHEMA = pa.schema([
-    ("workspace_id", pa.string()), ("table_full_name", pa.string()), ("last_read", pa.string()),
+    ("window_days", pa.int64()), ("workspace_id", pa.string()), ("table_full_name", pa.string()), ("last_read", pa.string()),
     ("last_write", pa.string()), ("reads", pa.int64()), ("writes", pa.int64()), ("readers", pa.int64()),
+    ("writers", pa.int64()), ("reader_names", pa.string()), ("writer_names", pa.string()),
 ])
+NAMES_SHOWN = 3  # reader_names, writer_names: the first few, alphabetically
 USER_SCHEMA = pa.schema([
     ("workspace_id", pa.string()), ("identity", pa.string()), ("last_seen", pa.string()), ("logins", pa.int64()),
     ("queries", pa.int64()), ("last_query", pa.string()), ("tables_read", pa.int64()), ("tables_written", pa.int64()),
 ])
 USER_TABLES_SCHEMA = pa.schema([
     ("workspace_id", pa.string()), ("identity", pa.string()), ("table_full_name", pa.string()),
-    ("reads", pa.int64()), ("writes", pa.int64()), ("last_access", pa.string()),
+    ("reads", pa.int64()), ("writes", pa.int64()), ("last_access", pa.string()), ("via", pa.string()),
 ])
 USER_TABLES_MAX = 50  # per workspace and identity
 VOLUME_ACCESS_FILE = "volume_access.parquet"
@@ -72,6 +79,24 @@ LAST_SEEN_DAYS = 365  # the audit log's retention
 LAST_SEEN_SCHEMA = pa.schema([
     ("workspace_id", pa.string()), ("identity", pa.string()), ("last_seen", pa.string()), ("last_login", pa.string()),
 ])
+SENSITIVE_FILE = "sensitive_columns.parquet"
+SENSITIVE_SCHEMA = pa.schema([
+    ("table_full_name", pa.string()), ("column_name", pa.string()), ("pii_type", pa.string()),
+    ("method", pa.string()), ("masked", pa.bool_()),
+])
+# a column tag naming it sensitive; its value (or the tag name) is the type
+SENSITIVE_TAGS = "^(pii|sensitive|gdpr|class[.])"
+# column name pattern -> type, first match wins (IP before postal address: ip_address)
+SENSITIVE_NAMES = (
+    ("e_?mail", "Email"),
+    ("phone|mobile|msisdn", "Phone number"),
+    ("iban|(^|_)bic($|_)|account_?(no|number)", "IBAN / bank account"),
+    ("ssn|(^|_)ahv|passport|national_?id", "National ID"),
+    ("(^|_)ip(_?address)?($|_)", "IP address"),
+    ("address|street|(^|_)zip|postal", "Postal address"),
+    ("birth|(^|_)dob($|_)", "Date of birth"),
+    ("card_?(no|number|num)|(^|_)pan$", "Payment card"),
+)
 
 
 def activity_sql(end: dt.date, windows: list[int]) -> str:
@@ -115,15 +140,31 @@ q AS (
   FROM qd d JOIN w ON d.day >= date_sub({e}, w.days)
   GROUP BY 1, 2
 ),
-last AS (SELECT workspace_id, MAX(last_day) AS last_activity FROM seen GROUP BY 1)
+last AS (SELECT workspace_id, MAX(last_day) AS last_activity FROM seen GROUP BY 1),
+-- days with any audit event or query by a person or service principal
+ad AS (
+  SELECT DISTINCT CAST(workspace_id AS STRING) AS workspace_id, event_date AS day
+  FROM system.access.audit
+  WHERE event_date >= date_sub({e}, {days}) AND event_date < {e} AND workspace_id IS NOT NULL AND workspace_id <> 0
+    AND (lower(COALESCE(user_identity.email, user_identity.subject_name)) LIKE '%@%'
+         OR lower(COALESCE(user_identity.email, user_identity.subject_name)) RLIKE '{_UUID}')
+  UNION
+  SELECT DISTINCT workspace_id, day FROM qd
+),
+dd AS (
+  SELECT w.days, a.workspace_id, COUNT(DISTINCT a.day) AS active_days
+  FROM ad a JOIN w ON a.day >= date_sub({e}, w.days)
+  GROUP BY 1, 2
+)
 SELECT w.days AS window_days, l.workspace_id,
        COALESCE(p.active_people, 0) AS active_people,
        COALESCE(p.active_service_principals, 0) AS active_service_principals,
        COALESCE(q.queries, 0) AS queries, COALESCE(q.query_identities, 0) AS query_identities,
-       CAST(l.last_activity AS STRING) AS last_activity
+       CAST(l.last_activity AS STRING) AS last_activity, COALESCE(dd.active_days, 0) AS active_days
 FROM last l CROSS JOIN w
 LEFT JOIN people p ON p.days = w.days AND p.workspace_id = l.workspace_id
 LEFT JOIN q ON q.days = w.days AND q.workspace_id = l.workspace_id
+LEFT JOIN dd ON dd.days = w.days AND dd.workspace_id = l.workspace_id
 """
 
 
@@ -145,14 +186,17 @@ GROUP BY 1, 2
 
 
 def _lineage(e: str, days: int) -> str:
-    """Every read (source) and write (target) of a table in the window, with who and when."""
+    """Every read (source) and write (target) of a table in the window, with who, when, through what
+    (entity_type) and an event key k: the same run, identity and time is one event."""
+    key = ("concat_ws('|', COALESCE(CAST(entity_run_id AS STRING), CAST(entity_id AS STRING), ''), "
+           "COALESCE(created_by, ''), CAST(event_time AS STRING))")
     return f"""lin AS (
   SELECT CAST(workspace_id AS STRING) AS workspace_id, source_table_full_name AS table_full_name,
-         1 AS is_read, 0 AS is_write, event_time, lower(created_by) AS who
+         1 AS is_read, 0 AS is_write, event_time, lower(created_by) AS who, entity_type, {key} AS k
   FROM system.access.table_lineage
   WHERE event_date >= date_sub({e}, {days}) AND event_date < {e} AND source_table_full_name IS NOT NULL
   UNION ALL
-  SELECT CAST(workspace_id AS STRING), target_table_full_name, 0, 1, event_time, lower(created_by)
+  SELECT CAST(workspace_id AS STRING), target_table_full_name, 0, 1, event_time, lower(created_by), entity_type, {key}
   FROM system.access.table_lineage
   WHERE event_date >= date_sub({e}, {days}) AND event_date < {e} AND target_table_full_name IS NOT NULL
 )"""
@@ -161,21 +205,38 @@ def _lineage(e: str, days: int) -> str:
 READ_LOOKBACK_DAYS = 365  # lineage's retention: last read and write look back this far
 
 
-def table_access_sql(end: dt.date, days: int) -> str:
-    """Per table: last read and write over the lineage's year; reads, writes and readers in the window."""
+def table_access_sql(end: dt.date, windows: list[int]) -> str:
+    """Per table and window: last read and write over the lineage's year; reads, writes, readers and
+    writers in the window, and the first few of each by name."""
     e = f"DATE'{end.isoformat()}'"
-    w = f"date_sub({e}, {days})"
+    ws = ", ".join(str(int(x)) for x in sorted(set(windows)))
+    since = f"date_sub({e}, w.days)"
     return f"""
-WITH {_lineage(e, max(days, READ_LOOKBACK_DAYS))}
-SELECT workspace_id, table_full_name,
-       CAST(MAX(CASE WHEN is_read = 1 THEN event_time END) AS STRING) AS last_read,
-       CAST(MAX(CASE WHEN is_write = 1 THEN event_time END) AS STRING) AS last_write,
-       SUM(CASE WHEN event_time >= {w} THEN is_read ELSE 0 END) AS reads,
-       SUM(CASE WHEN event_time >= {w} THEN is_write ELSE 0 END) AS writes,
-       COUNT(DISTINCT CASE WHEN is_read = 1 AND event_time >= {w} THEN who END) AS readers
-FROM lin
-WHERE workspace_id IS NOT NULL
-GROUP BY workspace_id, table_full_name
+WITH {_lineage(e, max(max(windows), READ_LOOKBACK_DAYS))},
+w AS (SELECT explode(array({ws})) AS days),
+last AS (
+  SELECT workspace_id, table_full_name,
+         CAST(MAX(CASE WHEN is_read = 1 THEN event_time END) AS STRING) AS last_read,
+         CAST(MAX(CASE WHEN is_write = 1 THEN event_time END) AS STRING) AS last_write
+  FROM lin WHERE workspace_id IS NOT NULL GROUP BY 1, 2
+),
+win AS (
+  SELECT w.days, l.workspace_id, l.table_full_name,
+         COUNT(DISTINCT CASE WHEN l.is_read = 1 THEN l.k END) AS reads,
+         COUNT(DISTINCT CASE WHEN l.is_write = 1 THEN l.k END) AS writes,
+         COUNT(DISTINCT CASE WHEN l.is_read = 1 THEN l.who END) AS readers,
+         COUNT(DISTINCT CASE WHEN l.is_write = 1 THEN l.who END) AS writers,
+         concat_ws(', ', slice(array_sort(collect_set(CASE WHEN l.is_read = 1 THEN l.who END)), 1, {NAMES_SHOWN})) AS reader_names,
+         concat_ws(', ', slice(array_sort(collect_set(CASE WHEN l.is_write = 1 THEN l.who END)), 1, {NAMES_SHOWN})) AS writer_names
+  FROM lin l JOIN w ON l.event_time >= {since}
+  WHERE l.workspace_id IS NOT NULL
+  GROUP BY 1, 2, 3
+)
+SELECT w.days AS window_days, a.workspace_id, a.table_full_name, a.last_read, a.last_write,
+       COALESCE(n.reads, 0) AS reads, COALESCE(n.writes, 0) AS writes, COALESCE(n.readers, 0) AS readers,
+       COALESCE(n.writers, 0) AS writers, n.reader_names, n.writer_names
+FROM last a CROSS JOIN w
+LEFT JOIN win n ON n.days = w.days AND n.workspace_id = a.workspace_id AND n.table_full_name = a.table_full_name
 """
 
 
@@ -223,12 +284,13 @@ def user_tables_sql(end: dt.date, days: int) -> str:
     return f"""
 WITH {_lineage(e, days)},
 per AS (
-  SELECT workspace_id, who, table_full_name, SUM(is_read) AS reads, SUM(is_write) AS writes,
-         MAX(event_time) AS last_access
+  SELECT workspace_id, who, table_full_name, COUNT(DISTINCT CASE WHEN is_read = 1 THEN k END) AS reads,
+         COUNT(DISTINCT CASE WHEN is_write = 1 THEN k END) AS writes, MAX(event_time) AS last_access,
+         concat_ws(', ', array_sort(collect_set(entity_type))) AS via
   FROM lin WHERE workspace_id IS NOT NULL AND who IS NOT NULL
   GROUP BY 1, 2, 3
 )
-SELECT workspace_id, who AS identity, table_full_name, reads, writes, CAST(last_access AS STRING) AS last_access
+SELECT workspace_id, who AS identity, table_full_name, reads, writes, CAST(last_access AS STRING) AS last_access, via
 FROM per
 QUALIFY ROW_NUMBER() OVER (PARTITION BY workspace_id, who ORDER BY reads + writes DESC, table_full_name) <= {USER_TABLES_MAX}
 """
@@ -265,7 +327,7 @@ def table_daily_sql(end: dt.date, days: int) -> str:
     return f"""
 WITH {_lineage(e, days)}
 SELECT table_full_name, CAST(CAST(event_time AS DATE) AS STRING) AS day,
-       SUM(is_read) AS reads, SUM(is_write) AS writes,
+       COUNT(DISTINCT CASE WHEN is_read = 1 THEN k END) AS reads, COUNT(DISTINCT CASE WHEN is_write = 1 THEN k END) AS writes,
        COUNT(DISTINCT CASE WHEN is_read = 1 THEN who END) AS readers,
        COUNT(DISTINCT CASE WHEN is_write = 1 THEN who END) AS writers
 FROM lin
@@ -302,6 +364,37 @@ GROUP BY 1, 2
 """
 
 
+def sensitive_columns_sql(classification: bool = True) -> str:
+    """One row per sensitive-looking column: from a tag, data classification (HIGH confidence) or the
+    column name, in that order of trust, and whether a column mask covers it."""
+    names = "\n".join(f"      WHEN lower(column_name) RLIKE '{rx}' THEN '{kind}'" for rx, kind in SENSITIVE_NAMES)
+    dc = """
+  UNION ALL
+  SELECT catalog_name, schema_name, table_name, column_name, class_tag, 'classification', 2
+  FROM system.data_classification.results WHERE confidence = 'HIGH' AND class_tag IS NOT NULL""" if classification else ""
+    return f"""
+WITH found AS (
+  SELECT catalog_name AS c, schema_name AS s, table_name AS t, column_name,
+         COALESCE(NULLIF(tag_value, ''), tag_name) AS pii_type, 'tag' AS method, 1 AS rank
+  FROM system.information_schema.column_tags WHERE lower(tag_name) RLIKE '{SENSITIVE_TAGS}'{dc}
+  UNION ALL
+  SELECT table_catalog, table_schema, table_name, column_name,
+    CASE
+{names}
+    END, 'name', 3
+  FROM system.information_schema.columns
+  WHERE table_schema <> 'information_schema' AND table_catalog NOT IN ('system', 'samples', '__databricks_internal')
+)
+SELECT f.c || '.' || f.s || '.' || f.t AS table_full_name, f.column_name, f.pii_type, f.method,
+       cm.mask_name IS NOT NULL AS masked
+FROM found f
+LEFT JOIN system.information_schema.column_masks cm
+  ON cm.table_catalog = f.c AND cm.table_schema = f.s AND cm.table_name = f.t AND cm.column_name = f.column_name
+WHERE f.pii_type IS NOT NULL
+QUALIFY ROW_NUMBER() OVER (PARTITION BY f.c, f.s, f.t, f.column_name ORDER BY f.rank) = 1
+"""
+
+
 def _rows(cur, sql: str) -> list[dict]:
     cur.execute(sql)
     names = [d[0] for d in cur.description or []]
@@ -334,16 +427,22 @@ def export(connect_fn: Callable, out_dir: Path, *, end: dt.date, windows: list[i
         for key, sql, name, schema in (
             ("activity", activity_sql(end, windows), ACTIVITY_FILE, ACTIVITY_SCHEMA),
             ("catalogs", catalog_sql(end, max(windows)), CATALOG_FILE, CATALOG_SCHEMA),
-            ("tables", table_access_sql(end, max(windows)), TABLE_FILE, TABLE_SCHEMA),
+            ("tables", table_access_sql(end, windows), TABLE_FILE, TABLE_SCHEMA),
             ("users", user_access_sql(end, max(windows)), USER_FILE, USER_SCHEMA),
             ("user_tables", user_tables_sql(end, max(windows)), USER_TABLES_FILE, USER_TABLES_SCHEMA),
             ("last_seen", last_seen_sql(end), LAST_SEEN_FILE, LAST_SEEN_SCHEMA),
             ("volume_access", volume_access_sql(end, max(windows)), VOLUME_ACCESS_FILE, VOLUME_ACCESS_SCHEMA),
             ("table_daily", table_daily_sql(end, max(windows)), TABLE_DAILY_FILE, TABLE_DAILY_SCHEMA),
             ("table_maintenance", maintenance_sql(end, max(windows)), MAINTENANCE_FILE, MAINTENANCE_SCHEMA),
+            ("sensitive_columns", sensitive_columns_sql(), SENSITIVE_FILE, SENSITIVE_SCHEMA),
         ):
             try:
-                rows = _rows(cur, sql)
+                try:
+                    rows = _rows(cur, sql)
+                except Exception:  # noqa: BLE001 -- no data classification in this account: tags and names still count
+                    if key != "sensitive_columns":
+                        raise
+                    rows = _rows(cur, sensitive_columns_sql(classification=False))
                 if mask is not None and "identity" in schema.names:
                     rows = [{**r, "identity": None if r.get("identity") is None else mask(str(r["identity"]))}
                             for r in rows]

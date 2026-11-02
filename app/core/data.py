@@ -1738,19 +1738,77 @@ def _catalog_homes(con, have) -> dict[str, tuple[str, float]]:
     return home
 
 
-# Index weights: each input on a log scale, 0..1 against the largest workspace shown, summed to 0..100.
-COMPLEXITY_WEIGHTS = {"tables": 0.25, "views": 0.15, "columns": 0.2, "size_in_bytes": 0.25, "volume_files": 0.15}
-USAGE_WEIGHTS = {"active_people": 0.4, "active_service_principals": 0.2, "queries": 0.4}
+def _columns(con, schema: str, table: str) -> set[str]:
+    return {r[0] for r in con.execute(
+        "SELECT column_name FROM information_schema.columns WHERE table_catalog = current_database() "
+        "AND table_schema = ? AND table_name = ?", [schema, table]).fetchall()}
 
 
-def _index(rows: list[dict], weights: dict[str, float]) -> list[float | None]:
-    import math
+def _table_access(con, have, window: int | None) -> tuple[str | None, int | None]:
+    """usage.table_access for one window (the smallest exported one covering `window`; None = the
+    largest), as a FROM clause; an export from before windows has one set of rows."""
+    if ("usage", "table_access") not in have:
+        return None, None
+    if "window_days" not in _columns(con, "usage", "table_access"):
+        return "usage.table_access", None
+    got = [r[0] for r in con.execute("SELECT DISTINCT window_days FROM usage.table_access ORDER BY 1").fetchall()]
+    if not got:
+        return "usage.table_access", None
+    used = max(got) if window is None else min((w for w in got if w >= window), default=max(got))
+    return f"(SELECT * FROM usage.table_access WHERE window_days = {int(used)})", used
 
-    top = {k: max((math.log1p(r.get(k) or 0) for r in rows), default=0) for k in weights}
-    # an input nobody has (no volumes anywhere) drops out, and the rest still reach 100
-    held = sum(w for k, w in weights.items() if top[k]) or 1
-    return [round(100 * sum(w * math.log1p(r.get(k) or 0) / top[k] for k, w in weights.items() if top[k]) / held, 1)
-            for r in rows]
+
+def _table_classes(con, have, window: int, end) -> dict[str, dict]:
+    """Every table (storage.table_detail) and every table lineage saw, with its usage class in the
+    window (app/core/usage.py), reads and writes summed over workspaces, readers, writers, size."""
+    from app.core import usage
+
+    src, _used = _table_access(con, have, window)
+    acc: dict[str, dict] = {}
+    if src:
+        cols = _columns(con, "usage", "table_access")
+        w = "SUM(writers)" if "writers" in cols else "NULL"
+        names = "MAX(reader_names), MAX(writer_names)" if "reader_names" in cols else "NULL, NULL"
+        for name, lr, lw, r, wr, rd, wt, rn, wn in con.execute(
+                f"SELECT table_full_name, MAX(last_read), MAX(last_write), SUM(reads), SUM(writes), SUM(readers), {w}, "
+                f"{names} FROM {src} GROUP BY 1").fetchall():
+            acc[str(name)] = {"last_read": lr, "last_write": lw, "reads": int(r or 0), "writes": int(wr or 0),
+                              "readers": int(rd or 0), "writers": None if wt is None else int(wt),
+                              "reader_names": rn, "writer_names": wn}
+    out: dict[str, dict] = {}
+    if ("storage", "table_detail") in have:
+        has = _columns(con, "storage", "table_detail")
+        created = "created" if "created" in has else "NULL"
+        owner = "owner" if "owner" in has else "NULL"
+        for name, kind, size, files, detail, born, who in con.execute(
+                f"SELECT table_catalog || '.' || table_schema || '.' || table_name, table_type, size_in_bytes, num_files, "
+                f"detail, {created}, {owner} FROM storage.table_detail").fetchall():
+            out[str(name)] = {"table_type": kind, "size_in_bytes": size, "num_files": files, "detail": detail,
+                              "created": born, "owner": who}
+    for name in acc:
+        out.setdefault(name, {"table_type": None, "size_in_bytes": None, "num_files": None, "detail": None,
+                              "created": None, "owner": None})
+    blank = {"last_read": None, "last_write": None, "reads": 0, "writes": 0, "readers": 0, "writers": None,
+             "reader_names": None, "writer_names": None}
+    for name, t in out.items():
+        t.update(acc.get(name, blank))
+        t["usage_class"], t["new"] = usage.usage_class(t["reads"], t["writes"], t["last_read"], t["last_write"],
+                                                       t["created"], end)
+        t["view"] = (t.get("table_type") or "").upper() == "VIEW" or t.get("detail") == "view"
+    return out
+
+
+def _sensitive(con, have) -> dict[str, list[dict]]:
+    """table -> its sensitive columns (usage.sensitive_columns)."""
+    if ("usage", "sensitive_columns") not in have:
+        return {}
+    out: dict[str, list[dict]] = {}
+    for name, col, kind, method, masked in con.execute(
+            "SELECT table_full_name, column_name, pii_type, method, masked FROM usage.sensitive_columns "
+            "ORDER BY 1, 2").fetchall():
+        out.setdefault(str(name), []).append({"column_name": col, "pii_type": kind, "method": method,
+                                              "masked": bool(masked)})
+    return out
 
 
 def _tag_kept_workspaces(con, tag_filter) -> set[str] | None:
@@ -1789,23 +1847,26 @@ def read_workspaces(window: int, workspace_scope: set[str] | None, tag_filter=No
         windows = [r[0] for r in con.execute(
             "SELECT DISTINCT window_days FROM usage.workspace_activity ORDER BY 1").fetchall()]
         used = min((w for w in windows if w >= window), default=max(windows, default=window))
+        days_col = "active_days" if "active_days" in _columns(con, "usage", "workspace_activity") else "NULL"
         act = {str(r[0]): r[1:] for r in con.execute(
-            "SELECT workspace_id, active_people, active_service_principals, queries, query_identities, last_activity "
-            "FROM usage.workspace_activity WHERE window_days = ?", [used]).fetchall()}
+            "SELECT workspace_id, active_people, active_service_principals, queries, query_identities, last_activity, "
+            f"{days_col} FROM usage.workspace_activity WHERE window_days = ?", [used]).fetchall()}
         # each catalog's home workspace: pinned in config/workspace.csv, else the most lineage events
         home = _catalog_homes(con, have)
         held: dict[str, dict] = {}
         sized = ("storage", "table_detail") in have
         if sized:
-            for cat, tables, views, cols, size, files in con.execute(
+            for cat, tables, views, cols, vcols, size, files in con.execute(
                     "SELECT table_catalog, COUNT(*) FILTER (WHERE detail <> 'view'), COUNT(*) FILTER (WHERE detail = 'view'), "
-                    "SUM(column_count), SUM(size_in_bytes), SUM(num_files) FROM storage.table_detail GROUP BY 1").fetchall():
+                    "SUM(column_count), SUM(column_count) FILTER (WHERE detail = 'view'), SUM(size_in_bytes), SUM(num_files) "
+                    "FROM storage.table_detail GROUP BY 1").fetchall():
                 if str(cat) not in home:
                     continue
                 h = held.setdefault(home[str(cat)][0], {"catalogs": [], "tables": 0, "views": 0, "columns": 0,
-                                                        "size_in_bytes": 0, "num_files": 0})
+                                                        "view_columns": 0, "size_in_bytes": 0, "num_files": 0})
                 h["catalogs"].append(str(cat))
-                for k, v in zip(("tables", "views", "columns", "size_in_bytes", "num_files"), (tables, views, cols, size, files)):
+                for k, v in zip(("tables", "views", "columns", "view_columns", "size_in_bytes", "num_files"),
+                                (tables, views, cols, vcols, size, files)):
                     h[k] += int(v or 0)
         vols: dict[str, dict] = {}
         if ("storage", "volume_detail") in have:
@@ -1827,10 +1888,11 @@ def read_workspaces(window: int, workspace_scope: set[str] | None, tag_filter=No
         kept = _tag_kept_workspaces(con, tag_filter)
         # the held tables read in their home workspace, per workspace
         read_held: dict[str, int] = {}
-        if ("usage", "table_access") in have:
+        ta, _ta_window = _table_access(con, have, used)
+        if ta:
             for ws, cat, n in con.execute(
                     "SELECT workspace_id, split_part(table_full_name, '.', 1), COUNT(*) FILTER (WHERE reads > 0) "
-                    "FROM usage.table_access GROUP BY 1, 2").fetchall():
+                    f"FROM {ta} GROUP BY 1, 2").fetchall():
                 if home.get(str(cat), (None,))[0] == str(ws):
                     read_held[str(ws)] = read_held.get(str(ws), 0) + int(n or 0)
         user_rows = con.execute(
@@ -1839,27 +1901,53 @@ def read_workspaces(window: int, workspace_scope: set[str] | None, tag_filter=No
         seen_rows = con.execute(
             "SELECT identity, workspace_id, last_seen, last_login FROM usage.user_last_seen"
         ).fetchall() if ("usage", "user_last_seen") in have else []
+        # each held table's usage class, summed per home workspace
+        classes = _table_classes(con, have, used, _seen_end(info))
+        sensitive = _sensitive(con, have)
     finally:
         con.close()
+    from app.core import usage
+
+    mix: dict[str, dict] = {}
+    for name, tb in classes.items():
+        ws = home.get(name.split(".")[0], (None,))[0]
+        if ws is None or tb["view"]:
+            continue
+        m = mix.setdefault(ws, {"classes": {k: 0 for k, _l, _m in usage.CLASSES}, "unread_bytes": 0, "reads": 0,
+                                "writes": 0, "last_read": None, "last_write": None, "sensitive_tables": 0})
+        m["classes"][tb["usage_class"]] += 1
+        if tb["usage_class"] in usage.UNREAD_CLASSES:
+            m["unread_bytes"] += int(tb["size_in_bytes"] or 0)
+        m["reads"] += tb["reads"]
+        m["writes"] += tb["writes"]
+        m["last_read"] = max(filter(None, [m["last_read"], tb["last_read"]]), default=None)
+        m["last_write"] = max(filter(None, [m["last_write"], tb["last_write"]]), default=None)
+        m["sensitive_tables"] += 1 if name in sensitive else 0
     ids = (set(act) | set(held)) - {"0"}
     rows = []
     for ws in sorted(ids):
         if (workspace_scope is not None and ws not in workspace_scope) or (kept is not None and ws not in kept):
             continue
-        a = act.get(ws) or (0, 0, 0, 0, None)
-        h = held.get(ws) or {"catalogs": [], "tables": 0, "views": 0, "columns": 0, "size_in_bytes": 0, "num_files": 0}
+        a = act.get(ws) or (0, 0, 0, 0, None, None)
+        h = held.get(ws) or {"catalogs": [], "tables": 0, "views": 0, "columns": 0, "view_columns": 0,
+                             "size_in_bytes": 0, "num_files": 0}
         name, url, env = names.get(ws, (None, None, None))
         v = vols.get(ws) or {"volumes": 0, "volume_files": 0, "volume_bytes": 0}
         rows.append({"workspace_id": ws, "workspace_name": name or ws, "url": url, "env": env, **v,
                      "active_people": int(a[0] or 0), "active_service_principals": int(a[1] or 0),
                      "queries": int(a[2] or 0), "query_identities": int(a[3] or 0), "last_activity": a[4],
-                     **{k: h[k] for k in ("tables", "views", "columns", "size_in_bytes", "num_files")},
+                     "active_days": None if a[5] is None else int(a[5]),
+                     **{k: h[k] for k in ("tables", "views", "columns", "view_columns", "size_in_bytes", "num_files")},
+                     "table_columns": h["columns"] - h["view_columns"],
+                     **(mix.get(ws) or {"classes": None, "unread_bytes": None, "reads": None, "writes": None,
+                                        "last_read": None, "last_write": None, "sensitive_tables": None}),
                      "catalogs": sorted(h["catalogs"]),
                      "tables_read": min(read_held.get(ws, 0), h["tables"]),
                      "tables_not_read": max(h["tables"] - read_held.get(ws, 0), 0)})
-    for r, c, u in zip(rows, _index(rows, COMPLEXITY_WEIGHTS), _index(rows, USAGE_WEIGHTS)):
+    for r, c, u in zip(rows, usage.complexity_index(rows), usage.usage_index(rows, used)):
         r["complexity_index"] = c if sized else None
         r["usage_index"] = u
+        r["signal"] = usage.signal(r["complexity_index"], u)
     rows.sort(key=lambda r: (-(r["usage_index"] or 0), r["workspace_name"]))
     # everyone across the workspaces shown: how many of them they use, and how much
     shown = {r["workspace_id"]: r["workspace_name"] for r in rows}
@@ -1901,7 +1989,10 @@ def read_workspaces(window: int, workspace_scope: set[str] | None, tag_filter=No
     inactive = sorted((p for p in by_id.values() if (p["days"] or 0) >= INACTIVE_DAYS),
                       key=lambda p: (-(p["days"] or 0), p["identity"]))
     return {"outcome": "ok_rows" if rows else "ok_empty", "info": info, "window_days": used, "sized": sized,
-            "weights": {"complexity": COMPLEXITY_WEIGHTS, "usage": USAGE_WEIGHTS}, "rows": rows,
+            "weights": {"complexity": usage.COMPLEXITY_WEIGHTS, "usage": usage.USAGE_WEIGHTS,
+                        "active_days": usage.ACTIVE_DAYS_WEIGHT},
+            "classes": [{"key": k, "label": label, "meaning": meaning} for k, label, meaning in usage.CLASSES],
+            "rows": rows,
             "people": top_people, "people_total": len(people), "last_seen": bool(seen_rows),
             "seen_bands": bands, "inactive": inactive[:500], "inactive_total": len(inactive),
             "inactive_days": INACTIVE_DAYS}
@@ -1990,13 +2081,14 @@ def read_workspace_detail(workspace_id: str) -> dict:
         info = json.loads(info_raw[0]) if info_raw and info_raw[0] else None
         catalogs = sorted(c for c, (ws, _s) in _catalog_homes(con, have).items() if ws == str(workspace_id))
         detail = ("storage", "table_detail") in have
-        access = ("usage", "table_access") in have
+        ta, _ta_window = _table_access(con, have, None)
+        access = ta is not None
         held = (
             "SELECT table_catalog || '.' || table_schema || '.' || table_name AS table_full_name, table_type, "
             "size_in_bytes, num_files, column_count, last_modified, detail FROM storage.table_detail "
             "WHERE list_contains(?, table_catalog)") if detail else None
-        used = ("SELECT table_full_name, last_read, last_write, reads, writes, readers FROM usage.table_access "
-                "WHERE workspace_id = ?") if access else None
+        used = ("SELECT table_full_name, last_read, last_write, reads, writes, readers FROM " + ta +
+                " WHERE workspace_id = ?") if access else None
         if held and used:
             tables = rows(f"SELECT COALESCE(h.table_full_name, u.table_full_name) AS table_full_name, h.table_type, "
                           f"h.size_in_bytes, h.num_files, h.column_count, h.last_modified, h.detail, u.last_read, "
@@ -2206,9 +2298,12 @@ def _home_and_names(con, have) -> tuple[dict, dict, dict]:
     return home, names, envs
 
 
-def read_tables(workspace_scope: set[str] | None, tag_filter=None, limit: int = 2000) -> dict:
-    """Every table and view with its home workspace and env, size, files, and reads and writes across
-    workspaces (lineage), biggest first; not_assessed without table sizes."""
+def read_tables(workspace_scope: set[str] | None, tag_filter=None, limit: int = 2000, window: int = 30) -> dict:
+    """Every table and view with its home workspace and env, size, files, reads and writes across
+    workspaces in the window (lineage), readers, writers, usage class and sensitive columns, in
+    attention order (class, then size); not_assessed without table sizes."""
+    from app.core import usage
+
     con = _connect()
     try:
         have = {(r[0], r[1]) for r in con.execute(
@@ -2217,35 +2312,50 @@ def read_tables(workspace_scope: set[str] | None, tag_filter=None, limit: int = 
         if ("storage", "table_detail") not in have:
             return {"outcome": "not_assessed", "rows": []}
         home, names, envs = _home_and_names(con, have)
-        access = ("LEFT JOIN (SELECT table_full_name, MAX(last_read) AS last_read, MAX(last_write) AS last_write, "
-                  "SUM(reads) AS reads, SUM(writes) AS writes, SUM(readers) AS readers FROM usage.table_access GROUP BY 1) a "
-                  "ON a.table_full_name = t.table_catalog || '.' || t.table_schema || '.' || t.table_name"
-                  ) if ("usage", "table_access") in have else ""
-        cols = ("a.last_read, a.last_write, COALESCE(a.reads, 0) AS reads, COALESCE(a.writes, 0) AS writes, "
-                "COALESCE(a.readers, 0) AS readers") if access else \
-            "NULL AS last_read, NULL AS last_write, 0 AS reads, 0 AS writes, 0 AS readers"
         cur = con.execute(
-            f"SELECT t.table_catalog || '.' || t.table_schema || '.' || t.table_name AS table_full_name, t.table_catalog, "
-            f"t.table_type, t.data_source_format, t.column_count, t.size_in_bytes, t.num_files, t.last_modified, t.detail, {cols} "
-            f"FROM storage.table_detail t {access} ORDER BY t.size_in_bytes DESC NULLS LAST, 1")
+            "SELECT table_catalog || '.' || table_schema || '.' || table_name AS table_full_name, table_catalog, "
+            "table_type, data_source_format, column_count, last_modified FROM storage.table_detail")
         names_ = [d[0] for d in cur.description]
-        rows = [dict(zip(names_, r)) for r in cur.fetchall()]
+        facts = {r[0]: dict(zip(names_, r)) for r in cur.fetchall()}
+        info_raw = con.execute("SELECT info FROM usage.workspace_activity_info LIMIT 1").fetchone() \
+            if ("usage", "workspace_activity_info") in have else None
+        info = json.loads(info_raw[0]) if info_raw and info_raw[0] else None
+        _src, used = _table_access(con, have, window)
+        classes = _table_classes(con, have, window, _seen_end(info))
+        sensitive = _sensitive(con, have)
+        unreadable = con.execute(
+            "SELECT table_catalog, table_schema, COUNT(*), MIN(substr(detail, 9)) FROM storage.table_detail "
+            "WHERE detail LIKE 'failed%' GROUP BY ALL ORDER BY 3 DESC LIMIT 200").fetchall()
         kept = _tag_kept_workspaces(con, tag_filter)
     finally:
         con.close()
     out = []
-    for r in rows:
-        ws = home.get(str(r["table_catalog"]))
+    for name, tb in classes.items():
+        f = facts.get(name) or {"table_full_name": name, "table_catalog": name.split(".")[0], "table_type": None,
+                                "data_source_format": None, "column_count": None, "last_modified": None}
+        ws = home.get(str(f["table_catalog"]))
         if workspace_scope is not None and ws not in workspace_scope:
             continue
         if kept is not None and ws not in kept:
             continue
-        out.append({**r, "workspace_id": ws, "workspace_name": names.get(ws, ws) if ws else None,
-                    "env": envs.get(ws) if ws else None})
-    return {"outcome": "ok_rows" if out else "ok_empty", "total": len(out), "rows": out[:limit]}
+        cols = sensitive.get(name, [])
+        out.append({**f, **tb, "table_full_name": name, "workspace_id": ws,
+                    "workspace_name": names.get(ws, ws) if ws else None, "env": envs.get(ws) if ws else None,
+                    "sensitive": [c["pii_type"] for c in cols], "sensitive_masked": sum(1 for c in cols if c["masked"])})
+    out.sort(key=lambda r: (usage.CLASS_RANK[r["usage_class"]], -(r["size_in_bytes"] or 0), r["table_full_name"]))
+    counts = {k: sum(1 for r in out if r["usage_class"] == k) for k, _l, _m in usage.CLASSES}
+    return {"outcome": "ok_rows" if out else "ok_empty", "total": len(out), "window_days": used or window,
+            "classes": [{"key": k, "label": label, "meaning": meaning, "tables": counts[k],
+                         "size_in_bytes": sum(r["size_in_bytes"] or 0 for r in out if r["usage_class"] == k)}
+                        for k, label, meaning in usage.CLASSES],
+            "sensitive_tables": sum(1 for r in out if r["sensitive"]),
+            "clean_up_first": sorted((r for r in out if r["usage_class"] in usage.UNREAD_CLASSES and not r["view"]),
+                                     key=usage.cleanup_order)[:6],
+            "not_described": [{"table_catalog": c, "table_schema": s, "tables": n, "error": e} for c, s, n, e in unreadable],
+            "rows": out[:limit]}
 
 
-def read_table(full_name: str) -> dict:
+def read_table(full_name: str, window: int = 30) -> dict:
     """One table: its facts, reads and writes per day, who used it, its change history (DESCRIBE
     HISTORY) and the predictive optimization runs on it."""
     con = _connect()
@@ -2259,15 +2369,19 @@ def read_table(full_name: str) -> dict:
             cols = [d[0] for d in cur.description]
             return [dict(zip(cols, r)) for r in cur.fetchall()]
 
+        extra = "".join(f", {c}" for c in ("created", "owner")
+                        if ("storage", "table_detail") in have and c in _columns(con, "storage", "table_detail"))
         facts = rows("SELECT table_catalog, table_schema, table_name, table_type, data_source_format, column_count, "
-                     "size_in_bytes, num_files, last_modified, last_altered, detail FROM storage.table_detail "
+                     f"size_in_bytes, num_files, last_modified, last_altered, detail{extra} FROM storage.table_detail "
                      "WHERE table_catalog || '.' || table_schema || '.' || table_name = ?", [full_name]
                      ) if ("storage", "table_detail") in have else []
         home, names, envs = _home_and_names(con, have)
         daily = rows("SELECT day, reads, writes, readers, writers FROM usage.table_daily WHERE table_full_name = ? ORDER BY day",
                      [full_name]) if ("usage", "table_daily") in have else []
-        users = rows("SELECT identity, SUM(reads) AS reads, SUM(writes) AS writes, MAX(last_access) AS last_access "
-                     "FROM usage.user_tables WHERE table_full_name = ? GROUP BY 1 ORDER BY 2 + 3 DESC",
+        via = "string_agg(DISTINCT via, ', ')" if ("usage", "user_tables") in have \
+            and "via" in _columns(con, "usage", "user_tables") else "NULL"
+        users = rows("SELECT identity, SUM(reads) AS reads, SUM(writes) AS writes, MAX(last_access) AS last_access, "
+                     f"{via} AS via FROM usage.user_tables WHERE table_full_name = ? GROUP BY 1 ORDER BY 2 + 3 DESC",
                      [full_name]) if ("usage", "user_tables") in have else []
         history = rows("SELECT version, timestamp, operation, user_name, metrics FROM storage.table_history "
                        "WHERE table_full_name = ? ORDER BY version DESC", [full_name]
@@ -2277,7 +2391,11 @@ def read_table(full_name: str) -> dict:
                      ) if ("usage", "table_maintenance") in have else []
         access = rows("SELECT MAX(last_read) AS last_read, MAX(last_write) AS last_write FROM usage.table_access "
                       "WHERE table_full_name = ?", [full_name]) if ("usage", "table_access") in have else []
-        info_row = con.execute("SELECT info FROM usage.workspace_activity_info").fetchone()             if ("usage", "workspace_activity_info") in have else None
+        info_row = con.execute("SELECT info FROM usage.workspace_activity_info").fetchone() \
+            if ("usage", "workspace_activity_info") in have else None
+        sensitive = _sensitive(con, have).get(full_name, [])
+        cls = _table_classes(con, have, window, _seen_end(json.loads(info_row[0]) if info_row and info_row[0] else None)
+                             ).get(full_name)
     finally:
         con.close()
     f = facts[0] if facts else {}
@@ -2286,7 +2404,10 @@ def read_table(full_name: str) -> dict:
         u["kind"] = _identity_kind(u["identity"])
     return {"outcome": "ok_rows" if (facts or daily or history) else "ok_empty", "table_full_name": full_name,
             "facts": f, "workspace_name": names.get(ws, ws) if ws else None, "env": envs.get(ws) if ws else None,
-            "daily": daily, "users": users, "history": history, "maintenance": maint,
+            "daily": daily, "users": users, "history": history, "maintenance": maint, "sensitive": sensitive,
+            "usage_class": cls["usage_class"] if cls else None, "new": bool(cls and cls["new"]),
+            "reads": cls["reads"] if cls else None, "writes": cls["writes"] if cls else None,
+            "readers": cls["readers"] if cls else None, "writers": cls["writers"] if cls else None,
             "lineage": ("usage", "table_daily") in have, "has_history": ("storage", "table_history") in have,
             "has_maintenance": ("usage", "table_maintenance") in have,
             "last_read": (access[0] if access else {}).get("last_read"),
