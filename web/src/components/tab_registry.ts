@@ -151,6 +151,11 @@ const COMPUTE_SUBTABS: Subtab[] = [
     refIds: ["sql_warehouse_config_current"],
   },
   {
+    key: "warehouse_detail", label: "Warehouse detail",
+    ids: [],
+    refIds: [],
+  },
+  {
     key: "clusters", label: "Clusters & pools",
     ids: ["compute_idle_node_ratio", "node_timeline_utilization", "instance_pools_idle_capacity", "instance_events_idle_active"],
     refIds: ["classic_clusters_config_current", "node_types_reference"],

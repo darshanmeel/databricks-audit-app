@@ -36,6 +36,7 @@ import "./tabs/query_trend";
 import "./tabs/tab_storage";
 import "./tabs/tab_workspaces";
 import "./tabs/tab_volumes";
+import "./tabs/tab_warehouse";
 import "./tabs/tab_tags";
 import "./tabs/tab_waste";
 import "./components/job_panel";

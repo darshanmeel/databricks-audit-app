@@ -2415,6 +2415,146 @@ def read_table(full_name: str, window: int = 30) -> dict:
             "read_lookback_days": _lookback(info_row)}
 
 
+def _discount() -> float:
+    try:
+        return float(app_config.load_settings().get("discount_pct", 0.0))
+    except Exception:  # noqa: BLE001 -- a bad settings file shows list price
+        return 0.0
+
+
+def _check_rows(con, have, qid: str, window: int, where: str = "TRUE", params: list | None = None) -> list[dict]:
+    """A check's rows for the exported window closest to `window` (findings.f_<qid>)."""
+    if ("findings", f"f_{qid}") not in have:
+        return []
+    got = [r[0] for r in con.execute(f'SELECT DISTINCT window_days FROM findings."f_{qid}" ORDER BY 1').fetchall()]
+    if not got:
+        return []
+    used = min(got, key=lambda w: (abs(int(w) - window), -int(w)))
+    cur = con.execute(f'SELECT * FROM findings."f_{qid}" WHERE window_days = ? AND ({where})', [used, *(params or [])])
+    cols = [d[0] for d in cur.description]
+    return [dict(zip(cols, r)) for r in cur.fetchall()]
+
+
+def read_warehouses(window: int, workspace_scope: set[str] | None) -> dict:
+    """Every SQL warehouse with its spend (cost_daily_by_resource), up, busy and idle minutes, queries and
+    users in the window (warehouse.warehouse_daily), most spend first; not_assessed without either."""
+    import datetime as _dt
+
+    con = _connect()
+    try:
+        have = {(r[0], r[1]) for r in con.execute(
+            "SELECT table_schema, table_name FROM information_schema.tables WHERE table_catalog = current_database()"
+        ).fetchall()}
+        cost = _check_rows(con, have, "cost_daily_by_resource", window, "resource_type = 'warehouse'")
+        daily, users = [], {}
+        if ("warehouse", "warehouse_daily") in have:
+            end = con.execute("SELECT MAX(day) FROM warehouse.warehouse_daily").fetchone()[0]
+            if end:
+                since = (_dt.date.fromisoformat(str(end)[:10]) - _dt.timedelta(days=window - 1)).isoformat()
+                daily = con.execute(
+                    "SELECT workspace_id, warehouse_id, SUM(up_minutes), SUM(busy_minutes), SUM(queries), SUM(failed) "
+                    "FROM warehouse.warehouse_daily WHERE day >= ? GROUP BY 1, 2", [since]).fetchall()
+        if ("warehouse", "warehouse_users") in have:
+            users = {str(w): int(n) for w, n in con.execute(
+                "SELECT warehouse_id, COUNT(DISTINCT identity) FROM warehouse.warehouse_users GROUP BY 1").fetchall()}
+        names = {str(w): (str(ws), n) for ws, w, n in con.execute(
+            "SELECT workspace_id, warehouse_id, warehouse_name FROM dims.dim_warehouse").fetchall()
+        } if ("dims", "dim_warehouse") in have else {}
+        ws_names = {str(w): n for w, n in con.execute("SELECT workspace_id, name FROM dims.dim_workspace").fetchall()
+                    } if ("dims", "dim_workspace") in have else {}
+    finally:
+        con.close()
+    if not cost and not daily:
+        return {"outcome": "not_assessed", "rows": []}
+    rows: dict[str, dict] = {}
+
+    def row(ws, wh) -> dict:
+        wh = str(wh)
+        return rows.setdefault(wh, {"warehouse_id": wh, "workspace_id": str(ws) if ws is not None else names.get(wh, (None,))[0],
+                                    "usd_list": 0.0, "up_minutes": None, "busy_minutes": None, "idle_minutes": None,
+                                    "queries": None, "failed": None, "users": users.get(wh)})
+    for c in cost:
+        if c.get("warehouse_id"):
+            r = row(c.get("workspace_id"), c["warehouse_id"])
+            r["usd_list"] += float(c.get("usd_list") or 0)
+    for ws, wh, up, busy, q, failed in daily:
+        r = row(ws, wh)
+        r.update(up_minutes=float(up or 0), busy_minutes=float(busy or 0), idle_minutes=max(float(up or 0) - float(busy or 0), 0),
+                 queries=int(q or 0), failed=int(failed or 0))
+    out = []
+    for r in rows.values():
+        if workspace_scope is not None and r["workspace_id"] not in workspace_scope:
+            continue
+        r["warehouse_name"] = names.get(r["warehouse_id"], (None, None))[1] or r["warehouse_id"]
+        r["workspace_name"] = ws_names.get(r["workspace_id"], r["workspace_id"])
+        out.append(r)
+    out.sort(key=lambda r: (-r["usd_list"], -(r["queries"] or 0), r["warehouse_name"]))
+    return {"outcome": "ok_rows" if out else "ok_empty", "detail": bool(daily), "discount_pct": _discount(), "rows": out}
+
+
+def read_warehouse(warehouse_id: str, window: int) -> dict:
+    """One SQL warehouse: spend per day (cost_daily_by_resource), up, busy and idle minutes and queries
+    per day (warehouse.warehouse_daily), idle gaps and what-ifs (compute_warehouse_idle_minutes),
+    pressure (query_warehouse_pressure), its settings, who uses it, the tables it touches and its
+    slowest queries."""
+    import datetime as _dt
+
+    con = _connect()
+    try:
+        have = {(r[0], r[1]) for r in con.execute(
+            "SELECT table_schema, table_name FROM information_schema.tables WHERE table_catalog = current_database()"
+        ).fetchall()}
+
+        def rows(sql: str, params: list) -> list[dict]:
+            cur = con.execute(sql, params)
+            cols = [d[0] for d in cur.description]
+            return [dict(zip(cols, r)) for r in cur.fetchall()]
+
+        wh = [warehouse_id]
+        cost = _check_rows(con, have, "cost_daily_by_resource", window, "resource_type = 'warehouse' AND warehouse_id = ?", wh)
+        idle = _check_rows(con, have, "compute_warehouse_idle_minutes", window, "warehouse_id = ?", wh)
+        pressure = _check_rows(con, have, "query_warehouse_pressure", window, "warehouse_id = ?", wh)
+        config = _check_rows(con, have, "sql_warehouse_config_current", window, "warehouse_id = ?", wh)
+        daily, users, tables, slow, info = [], [], [], [], None
+        if ("warehouse", "warehouse_daily") in have:
+            end = con.execute("SELECT MAX(day) FROM warehouse.warehouse_daily").fetchone()[0]
+            since = (_dt.date.fromisoformat(str(end)[:10]) - _dt.timedelta(days=window - 1)).isoformat() if end else "9999"
+            daily = rows("SELECT day, up_minutes, busy_minutes, queries, failed, people, service_principals, queued_ms, run_ms "
+                         "FROM warehouse.warehouse_daily WHERE warehouse_id = ? AND day >= ? ORDER BY day", [warehouse_id, since])
+        if ("warehouse", "warehouse_users") in have:
+            users = rows("SELECT identity, queries, failed, run_ms, last_query FROM warehouse.warehouse_users "
+                         "WHERE warehouse_id = ? ORDER BY queries DESC, identity LIMIT 200", wh)
+        if ("warehouse", "warehouse_tables") in have:
+            tables = rows("SELECT table_full_name, reads, writes, people, last_access FROM warehouse.warehouse_tables "
+                          "WHERE warehouse_id = ? ORDER BY reads + writes DESC, table_full_name", wh)
+        if ("warehouse", "warehouse_slow") in have:
+            slow = rows("SELECT statement_id, identity, start_time, total_ms, queued_ms, status, statement_type, text "
+                        "FROM warehouse.warehouse_slow WHERE warehouse_id = ? ORDER BY total_ms DESC", wh)
+        if ("warehouse", "warehouse_activity_info") in have:
+            raw = con.execute("SELECT info FROM warehouse.warehouse_activity_info LIMIT 1").fetchone()
+            info = json.loads(raw[0]) if raw and raw[0] else None
+        name = con.execute("SELECT warehouse_name, workspace_id FROM dims.dim_warehouse WHERE warehouse_id = ?", wh
+                           ).fetchone() if ("dims", "dim_warehouse") in have else None
+    finally:
+        con.close()
+    for d in daily:
+        d["idle_minutes"] = max(float(d["up_minutes"] or 0) - float(d["busy_minutes"] or 0), 0)
+    for u in users:
+        u["kind"] = _identity_kind(u["identity"])
+    cost_by_day: dict[str, float] = {}
+    for c in cost:
+        day = str(c.get("usage_date"))[:10]
+        cost_by_day[day] = cost_by_day.get(day, 0.0) + float(c.get("usd_list") or 0)
+    found = bool(cost or daily or idle or users)
+    return {"outcome": "ok_rows" if found else "ok_empty", "warehouse_id": warehouse_id, "discount_pct": _discount(),
+            "warehouse_name": (name[0] if name else None) or warehouse_id,
+            "workspace_id": str(name[1]) if name else None,
+            "cost_by_day": [{"day": d, "usd_list": v} for d, v in sorted(cost_by_day.items())],
+            "daily": daily, "idle": idle[0] if idle else None, "pressure": pressure[0] if pressure else None,
+            "config": config[0] if config else None, "users": users, "tables": tables, "slow": slow,
+            "tables_error": ((info or {}).get("tables") or {}).get("error"), "detail": ("warehouse", "warehouse_daily") in have}
+
+
 def read_workspace_tags(workspace_scope: set[str] | None, tag_filter=None) -> list[dict] | None:
     """Every tag key seen on each workspace's bill, with the value the app counts for it
     (tags.tag_workspace), for the workspaces whose own tags the tag filter keeps; None when this

@@ -219,8 +219,64 @@ def add(db: Path) -> dict:
     va.append(("2005", "analytics.ml.unlisted_models", "hana@acme.example", 12, 3, ts(4), ts(4)))
     put(con, "usage.volume_access", "workspace_id VARCHAR, volume_full_name VARCHAR, identity VARCHAR, reads BIGINT, "
         "writes BIGINT, last_read VARCHAR, last_write VARCHAR", va)
+    _warehouses(con, rnd)
     con.close()
     return {"tables": len(detail), "volumes": len(vols), "table_access": len(access), "users": len(users), "seen": len(seen)}
+
+
+# warehouse -> (workspace, $ per up hour, typical up hours a day, share of up time busy)
+WAREHOUSES = {"ac_wh_bi": ("2001", 12, 10, 0.35), "ac_wh_etl": ("2001", 24, 3, 0.85), "ac_wh_alwayson": ("2002", 6, 24, 0.02),
+              "ac_wh_analytics": ("2005", 18, 9, 0.6), "ac_wh_fin_scd": ("2006", 10, 8, 0.5), "ac_wh_huge": ("2014", 60, 5, 0.3)}
+
+
+def _warehouses(con, rnd) -> None:
+    """warehouse.* (one warehouse in detail) and the cost_daily_by_resource rows its spend comes from."""
+    con.execute("CREATE SCHEMA IF NOT EXISTS warehouse")
+    daily, users, tables, slow, cost = [], [], [], [], []
+    every = [t for cat, (_ws, _e, schemas) in CATALOGS.items() for sch, ts_ in schemas.items() for t in
+             (f"{cat}.{sch}.{x}" for x in ts_)]
+    for wh, (ws, rate, hours, busy_share) in WAREHOUSES.items():
+        people = PEOPLE[ws] + SPS.get(ws, [])
+        for n in range(90, 0, -1):
+            d = (END - timedelta(days=n)).isoformat()
+            weekend = (END - timedelta(days=n)).weekday() >= 5
+            up = 0.0 if weekend and hours < 24 else max(0.0, rnd.gauss(hours, hours * 0.2)) * 60
+            busy = round(up * min(1.0, max(0.0, rnd.gauss(busy_share, 0.08))))
+            q = int(busy * rnd.uniform(0.5, 3)) if busy else 0
+            daily.append((ws, wh, d, round(up, 1), float(busy), q, int(q * rnd.uniform(0, 0.04)),
+                          min(len(PEOPLE[ws]), max(1, q // 40)) if q else 0, 1 if q and ws in SPS else 0,
+                          int(q * rnd.uniform(50, 3000)), int(busy * 60_000 * rnd.uniform(0.5, 1.5))))
+            for window in (7, 30, 90):
+                if n <= window:
+                    usd = round(up / 60 * rate, 2)
+                    cost.append((window, d, "warehouse", f"{ws}:{wh}", ws, wh, wh, usd, round(usd / 0.7, 2)))
+        for who in people:
+            q = rnd.randint(5, 4000)
+            users.append((ws, wh, who, q, int(q * rnd.uniform(0, 0.05)), q * rnd.randint(500, 20000), ts(rnd.randint(0, 6))))
+        for t in rnd.sample(every, k=8):
+            tables.append((ws, wh, t, rnd.randint(1, 3000), rnd.randint(0, 200), rnd.randint(1, len(people)), ts(rnd.randint(0, 10))))
+        for i in range(10):
+            ms = rnd.randint(60_000, 3_600_000)
+            slow.append((ws, wh, f"stmt-{wh}-{i}", rnd.choice(people), ts(rnd.randint(0, 29), rnd.randint(0, 23)), ms,
+                         rnd.randint(0, ms // 4), rnd.choice(["FINISHED", "FINISHED", "FAILED"]), "SELECT",
+                         f"SELECT * FROM {rnd.choice(every)} WHERE day >= current_date() - 30"))
+    put(con, "warehouse.warehouse_daily", "workspace_id VARCHAR, warehouse_id VARCHAR, day VARCHAR, up_minutes DOUBLE, "
+        "busy_minutes DOUBLE, queries BIGINT, failed BIGINT, people BIGINT, service_principals BIGINT, queued_ms BIGINT, "
+        "run_ms BIGINT", daily)
+    put(con, "warehouse.warehouse_users", "workspace_id VARCHAR, warehouse_id VARCHAR, identity VARCHAR, queries BIGINT, "
+        "failed BIGINT, run_ms BIGINT, last_query VARCHAR", users)
+    put(con, "warehouse.warehouse_tables", "workspace_id VARCHAR, warehouse_id VARCHAR, table_full_name VARCHAR, "
+        "reads BIGINT, writes BIGINT, people BIGINT, last_access VARCHAR", tables)
+    put(con, "warehouse.warehouse_slow", "workspace_id VARCHAR, warehouse_id VARCHAR, statement_id VARCHAR, identity VARCHAR, "
+        "start_time VARCHAR, total_ms BIGINT, queued_ms BIGINT, status VARCHAR, statement_type VARCHAR, text VARCHAR", slow)
+    con.execute("CREATE OR REPLACE TABLE warehouse.warehouse_activity_info AS SELECT ? AS info",
+                [json.dumps({"exported": True, "days": 90, "end": END.isoformat(), "tables": {"rows": len(tables), "error": None}})])
+    # the snapshot build has no cost_daily_by_resource; a direct export does
+    if not con.execute("SELECT 1 FROM information_schema.tables WHERE table_schema = 'findings' "
+                       "AND table_name = 'f_cost_daily_by_resource'").fetchone():
+        put(con, "findings.f_cost_daily_by_resource", "window_days BIGINT, usage_date VARCHAR, resource_type VARCHAR, "
+            "resource_key VARCHAR, workspace_id VARCHAR, resource_id VARCHAR, warehouse_id VARCHAR, usd_list DOUBLE, "
+            "dbus DOUBLE", cost)
 
 
 if __name__ == "__main__":

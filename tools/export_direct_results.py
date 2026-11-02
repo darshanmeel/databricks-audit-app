@@ -42,6 +42,7 @@ from tools import dbt_run  # noqa: E402
 from tools import generate_models as gm  # noqa: E402
 from tools import snapshot as tools_snapshot  # noqa: E402
 from tools import table_detail  # noqa: E402
+from tools import warehouse_activity  # noqa: E402
 from tools import workspace_activity  # noqa: E402
 
 TOOL_VERSION = "2.0.0"
@@ -1224,6 +1225,11 @@ def run_export(
         activity_info = workspace_activity.export(
             connect, work_dir, end=_cutoff(now, include_today).date(), windows=labels,
             redact=lambda text: _redact(text, token), mask=_mask_user if mask_users else None)
+    warehouse_info = None
+    if not partial:
+        warehouse_info = warehouse_activity.export(
+            connect, work_dir, end=_cutoff(now, include_today).date(), days=max(labels),
+            redact=lambda text: _redact(text, token), mask=_mask_user if mask_users else None)
     for qid, tables in optional_missing.items():
         if qid in entries_by_id:
             entries_by_id[qid]["sources_not_exported"] = tables
@@ -1302,6 +1308,7 @@ def run_export(
         "table_detail": detail_info,
         "volume_detail": volume_info,
         "workspace_activity": activity_info,
+        "warehouse_activity": warehouse_info,
     }
     (work_dir / "manifest.json").write_text(
         json.dumps(manifest_out, indent=2, sort_keys=False) + "\n", encoding="utf-8"

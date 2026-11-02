@@ -894,6 +894,23 @@ def get_tables(
     return app_core_data.read_tables(scope, _parse_tag_filter(None, None, tag), window=window)
 
 
+@app.get("/api/warehouses")
+def get_warehouses(
+    request: Request,
+    window: int = Query(default=30),
+    workspace_ids: list[str] = Query(default=[]),
+    env: list[str] = Query(default=[]),
+) -> dict:
+    attributes = _read_attribute_filters(request, _canonical_keys()) or None
+    scope = app_rollup._resolve_workspace_scope(workspace_ids or None, env or None, attributes)
+    return app_core_data.read_warehouses(window, scope)
+
+
+@app.get("/api/warehouse")
+def get_warehouse(warehouse_id: str = Query(...), window: int = Query(default=30)) -> dict:
+    return app_core_data.read_warehouse(warehouse_id, window)
+
+
 @app.get("/api/table")
 def get_table(name: str = Query(...), window: int = Query(default=30)) -> dict:
     return app_core_data.read_table(name, window)

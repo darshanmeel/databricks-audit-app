@@ -781,6 +781,21 @@ def _load_root(root: Path, db_path: Path, *, zip_as_of: str | None = None) -> di
                 except Exception as exc:  # noqa: BLE001 -- a bad usage file must not crash the load
                     print(f"warning: could not read {path} ({exc}) -- usage.{name} not built", file=sys.stderr)
 
+            # warehouse/*.parquet (one warehouse in detail: up, busy and idle minutes per day, users,
+            # tables, slowest queries) -> warehouse.<name>, with warehouse.warehouse_activity_info.
+            wh_dir = root / "warehouse"
+            if wh_dir.is_dir():
+                con.execute("CREATE SCHEMA IF NOT EXISTS warehouse")
+                con.execute("CREATE OR REPLACE TABLE warehouse.warehouse_activity_info AS SELECT ? AS info",
+                            [json.dumps(manifest.get("warehouse_activity"))])
+                for name in ("warehouse_daily", "warehouse_users", "warehouse_tables", "warehouse_slow"):
+                    path = _find_data_file(wh_dir, name)
+                    if path is None:
+                        continue
+                    try:
+                        _create_from_parquet(con, f"warehouse.{name}", path)
+                    except Exception as exc:  # noqa: BLE001 -- a bad file must not crash the load
+                        print(f"warning: could not read {path} ({exc}) -- warehouse.{name} not built", file=sys.stderr)
             if rls_info and rls_info.get("enabled"):
                 ent = root / "entitlements"
                 app_rls.load_entitlements(con, _find_data_file(ent, "entitlements") if ent.is_dir() else None, rls_info,

@@ -245,7 +245,7 @@ export function TrendByCard({ filters, meta }: { filters: Filters; meta: Meta | 
 }
 
 // One workspace, warehouse or SKU: its latest 45 days and its months side by side.
-function TrendItemCard({ name, byDay, days, byMonth, months, monthNote, openMonth, isFull, partDay }: {
+export function TrendItemCard({ name, byDay, days, byMonth, months, monthNote, openMonth, isFull, partDay }: {
   name: string; byDay: Map<string, number> | null; days: string[]; byMonth: Map<string, number> | null; months: string[];
   monthNote: string; openMonth: string | null; isFull: (m: string) => boolean; partDay: string | null;
 }) {
