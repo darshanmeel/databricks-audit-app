@@ -1057,189 +1057,155 @@ ER["waste_savings"] = {
 }
 
 # ------------------------------------------------------------------------------------------------
-# Workspace data and usage
+# Data usage
 # ------------------------------------------------------------------------------------------------
 
-from tools import direct_workspace_data as wd  # noqa: E402
+from app.core import usage as _usage  # noqa: E402
+from tools import direct_data_usage as wd  # noqa: E402
 
 BASICS["volume"] = ("Volume", "A Unity Catalog folder for files (CSV, images, exports) inside a schema, under "
                     "/Volumes/<catalog>/<schema>/<volume>. Its files are not tables, so no system table counts them.")
 BASICS["home_workspace"] = ("Home workspace", "The workspace that reads and writes a catalog most in lineage over "
                             f"{wd.HOME_DAYS} days. A catalog's tables and volumes count for that workspace.")
+BASICS["usage_class"] = ("Usage class", "Every table, view and volume falls in exactly one: " + "; ".join(
+    f"{label} ({meaning.split('.')[0].lower()})" for _k, label, meaning in _usage.CLASSES) + ".")
 
 _WS = {"workspace": "The home workspace of the catalog, by name; No home workspace when lineage has none."}
+_CLS = {"usage_class": "Written, never read; Idle 90d+; Cooling; or Active (app/core/usage.py).",
+        "table_name": "catalog.schema.table.", "table_link": "The table in Catalog Explorer of its home workspace."}
 
 COLUMNS.update({
     "wd_workspaces": {
-        "workspace": "The workspace, by name.",
-        "workspace_id": "Its id.",
-        "workspace_link": "The workspace URL, to open it.",
-        "catalogs": "Catalogs it is home to.",
-        "tables": "Tables in those catalogs.",
-        "views": "Views in those catalogs.",
-        "columns": "Columns of those tables and views.",
-        "volumes": "Volumes in those catalogs.",
-        "volume_files": "Files in those volumes, from the sizes job.",
-        "table_bytes": "Bytes of those tables (DESCRIBE DETAIL in the sizes job).",
-        "data_bytes": "table_bytes plus the volume files' bytes.",
-        "data_gb": "data_bytes in GB.",
-        "active_people": "People (emails) with an audit event or a query in the workspace in the window.",
-        "active_service_principals": "Service principals (UUIDs) the same way.",
-        "queries": "Queries run in the workspace in the window.",
-        "last_activity": "The latest audit event or query in the window.",
-        "complexity_index": "0-100: tables, views, columns, table bytes and volume files, each on a log scale "
-                            "against the largest workspace, weighted 25/15/20/25/15.",
-        "usage_index": "0-100: active people, service principals and queries the same way, weighted 40/20/40.",
-        "workspaces": "Always 1: tiles add it up to count workspaces.",
+        "workspace": "The workspace, by name.", "workspace_id": "Its id.", "workspace_link": "The workspace URL.",
+        "tables_written_never_read": "Its tables written in the window but never read.",
+        "tables_idle": "Its tables with no read or write in 90 days.", "tables_cooling": "Its tables not read in the window.",
+        "tables_active": "Its tables read in the window.", "data_gb": "Table bytes plus volume files, in GB.",
+        "unread_gb": "GB in written-never-read and idle tables.", "sensitive_tables": "Tables with a sensitive column.",
+        "catalogs": "Catalogs it is home to.", "tables": "Tables in those catalogs.", "views": "Views in those catalogs.",
+        "table_columns": "Columns of those tables.", "view_columns": "Columns of those views.",
+        "volumes": "Volumes in those catalogs.", "volume_files": "Files in those volumes, from the sizes job.",
+        "active_people": "People (emails) with an audit event or a query in the window.",
+        "active_service_principals": "Service principals (UUIDs) the same way.", "queries": "Queries in the window.",
+        "active_days": "Days in the window with any activity.", "last_query": "The latest query.",
+        "complexity_index": "0-100: views 20, view columns 15, tables 20, table columns 15, volume files 10, size 20; "
+                            "each on a log scale against the largest workspace.",
+        "usage_index": "0-100: people 35, service principals 15, queries 30 (log scale), active days / window days 20.",
+        "signal": "Retire candidate, Review, Light or Healthy.", "flagged": "1 when Retire candidate or Review.",
+        "workspaces": "Always 1: counts workspaces.",
     },
-    "wd_tables": {
-        **_WS,
-        "catalog": "The table's catalog.",
-        "schema_name": "The table's schema.",
-        "table_name": "catalog.schema.table.",
-        "kind": "Table or View.",
-        "size_in_bytes": "From DESCRIBE DETAIL in the sizes job; empty for views and tables it could not read.",
-        "size_gb": "size_in_bytes in GB.",
-        "num_files": "Data files, from DESCRIBE DETAIL.",
-        "reads": "Lineage events reading the table in the window.",
-        "writes": "Lineage events writing it in the window.",
-        "readers": "Distinct identities reading it.",
-        "last_read": "The latest read over the lookback; empty when none.",
-        "last_write": "The latest write, from lineage or DESCRIBE HISTORY.",
-        "last_altered": "When its definition or data last changed, from information_schema.",
-        "use": "Read, Written never read, or Not used in the window.",
-        "objects": "Always 1: charts add it up to count tables and views.",
-        "schema_full": "catalog.schema.",
-        "days_since_read": "Days from the end of the window to the last read; empty when not read in the lookback.",
-        "read_band": f"Read in 30 days, 30-90 days ago, 90+ days ago, or not read in {wd.READ_LOOKBACK_DAYS} days of lineage.",
-        "last_change_op": "The operation of the last data change (write, merge, delete, ...), from DESCRIBE HISTORY.",
-        "last_maintenance": "The last OPTIMIZE, VACUUM or predictive optimization run.",
-        "rows_changed": "Rows inserted, updated and deleted (or written) in the window, from DESCRIBE HISTORY.",
-        "gb_written": "Bytes written in the window, in GB.",
-    },
-    "wd_volumes": {
-        **_WS,
-        "catalog": "The volume's catalog.",
-        "schema_name": "The schema holding the volume.",
-        "volume": "catalog.schema.volume.",
-        "size_in_bytes": "Bytes of the listed files.",
-        "volume_type": "managed or external.",
-        "files": "Files listed by the sizes job (capped per volume).",
-        "size_gb": "Their size in GB.",
-        "reads": "File reads and listings under the volume in the window (audit).",
-        "writes": "File uploads, deletes and new folders.",
-        "users": "Distinct identities doing either.",
-        "last_access": "The latest of them.",
-        "use": "Used or Not used in the window.",
-        "volumes": "Always 1: counts volumes.",
-    },
-    "wd_people": {
-        "workspace": "The workspace, by name.",
-        "identity": "The email, or a service principal's application id.",
-        "kind": "Person or Service principal.",
-        "logins": "Successful logins in the window.",
-        "queries": "Queries in the window.",
-        "last_seen": "The latest audit event or query.",
-        "days_since": "Days from the end of the window to the last audit event in the past year.",
-        "last_seen_band": "under 30, 30-90, 90-180 or 180+ days.",
-        "inactive": f"1 when not seen for {wd.INACTIVE_DAYS}+ days.",
-        "active": "1 when it logged in or ran a query in the window.",
-        "identities": "Always 1: counts people and service principals.",
-    },
+    "wd_tables": {**_WS, **_CLS,
+                  "kind": "Table or View.", "size_gb": "From DESCRIBE DETAIL in the sizes job.", "num_files": "Data files.",
+                  "reads": "Lineage reads in the window.", "writes": "Lineage writes in the window.",
+                  "readers": "Distinct identities reading it.", "writers": "Distinct identities writing it.",
+                  "last_read": f"The latest read over {wd.READ_LOOKBACK_DAYS} days.",
+                  "last_write": "The latest write, lineage or DESCRIBE HISTORY.",
+                  "sensitive_types": "Types of its sensitive columns.", "unmasked_columns": "Sensitive columns without a mask.",
+                  "unread_gb": "Its GB when written never read or idle.", "objects": "Always 1: counts tables and views."},
+    "wd_volumes": {**_WS, "volume": "catalog.schema.volume.", "usage_class": _CLS["usage_class"],
+                   "files": "Files listed by the sizes job.", "size_gb": "Their size in GB.",
+                   "reads": "File reads in the window.", "writes": "File writes in the window.",
+                   "unread_gb": "Its GB when written never read or idle."},
+    "wd_people": {"workspace": "The workspace, by name.", "identity": "The email, or a service principal's id.",
+                  "kind": "Person or Service principal.", "tables_read": "Tables read in the window.",
+                  "tables_written": "Tables written in the window.", "writes_nobody_reads": "Tables it wrote that nobody read.",
+                  "sensitive_tables": "Tables with sensitive columns it read or wrote.",
+                  "direct_grants": "Tables it can read through a direct grant.", "last_seen": "The latest audit event or query.",
+                  "inactive": f"1 when not seen for {wd.INACTIVE_DAYS}+ days.", "active": "1 when seen in the window."},
+    "wd_daily": {**_WS, "day": "The day.", "table_name": "catalog.schema.table.", "direction": "Reads or Writes.",
+                 "events": "Lineage events."},
+    "wd_access": {"identity": "Who.", "table_name": "catalog.schema.table.", "access": "Reads, Writes, or both.",
+                  "last_access": "The latest of them."},
+    "wd_edges": {"direction": "Upstream (it reads from) or Downstream (it feeds).", "other_table": "The other table.",
+                 "other_class": "The other table's usage class."},
+    "wd_grants": {"grantee": "Who holds the grant.", "used": "Whether the grantee read the table in the window."},
 })
 
 WHY.update({
-    "wd_workspaces": "One row per workspace with what it holds and how much it is used, plus the scatter. Each "
-                     "catalog counts once, for its home workspace; logs keep one large workspace from flattening "
-                     "the others.",
-    "wd_tables": "Size alone doesn't say if a table matters; reads do. Lineage records every read and write, so a "
-                 "big table nobody read stands out as a clean-up candidate.",
-    "wd_volumes": "Volume files are invisible to SQL, so the job lists them; the audit log's file events show "
-                  "whether anyone touches them.",
-    "wd_people": "Active users answer who works there; a year of audit answers who stopped, for access reviews.",
+    "wd_workspaces": "One row per workspace: how its data is used, what it holds and how much work happens there.",
+    "wd_tables": "Size alone doesn't say if a table matters; reads do. The class says what to do with it.",
+    "wd_volumes": "Volume files are invisible to SQL, so the job lists them; the audit log's file events show use.",
+    "wd_people": "Who reads and writes, and who stopped coming but can still read.",
+    "wd_daily": "A trend shows a table going quiet before it is idle.",
+    "wd_access": "Who to ask before you drop or change a table.",
+    "wd_edges": "A downstream table nobody reads means the job that builds it can stop.",
+    "wd_grants": "Grants nobody uses are the easiest access to remove.",
 })
 
-GUIDES["workspace_data"] = {
-    "purpose": "Shows each workspace: what the catalogs it is home to hold, who uses it, which tables and volumes "
-               "are used, and who has not been seen for a long time. The app's Workspaces tab as a dashboard.",
-    "basics": ["workspace", "home_workspace", "uc", "volume", "system_tables", "audit", "principal", "sql"],
+GUIDES["data_usage"] = {
+    "purpose": "The app's Data usage section as a dashboard: an overview, workspaces, tables and volumes in one usage "
+               "class each, people, and detail pages for one workspace, table or person. For every workspace.",
+    "basics": ["workspace", "home_workspace", "usage_class", "uc", "volume", "system_tables", "audit", "principal", "sql"],
     "rules": [
         ("Home workspace", f"The workspace with the most lineage reads and writes of a catalog over {wd.HOME_DAYS} days.",
          "A catalog shared by many workspaces counts once."),
-        ("Active", "A person or service principal with an audit event or a query in the workspace in the window.",
-         "Logins alone miss token users; queries alone miss people browsing."),
+        ("Usage class", "; ".join(f"{label}: {meaning}" for _k, label, meaning in _usage.CLASSES),
+         "Exactly one per table; the first rule that holds wins."),
+        ("Complexity index", "Views 20, view columns 15, tables 20, table columns 15, volume files 10, table size 20; each "
+         "on a log scale against the largest workspace shown.", "A rough size of what is held, not a quality score."),
+        ("Usage index", "People 35, service principals 15, queries 30 (log scale); active days / window days 20.",
+         "Steady use beats a burst."),
+        ("Signal", "Usage under 10: Retire candidate. Complexity 50+ and usage under 50: Review. Complexity under 50: "
+         "Light. Else Healthy.", "Bottom right on the scatter: built a lot, used little."),
+        ("Sensitive column", "A column tag starting pii, sensitive, gdpr or class., else a column name such as email, "
+         "phone, iban, birth.", "Values are never read."),
         ("Inactive", f"Not seen in the workspace for {wd.INACTIVE_DAYS}+ days within the last year.",
-         "Candidates for an access review."),
-        ("Not used", "A table or volume with no read or write in the window.",
-         "Big and unused is the clean-up list."),
-        ("Complexity index", "Tables, views, columns, table bytes and volume files, each 0-1 on a log scale against "
-         "the largest workspace, weighted 25/15/20/25/15, times 100.",
-         "A rough size of what is held, not a quality score."),
-        ("Usage index", "Active people, service principals and queries the same way, weighted 40/20/40.",
-         "Bottom right on the scatter: holds a lot, used little."),
+         "With a direct grant: easy access to remove."),
     ],
     "limits": [
-        "Sizes and volume files come from the sizes job (DESCRIBE DETAIL, a file listing); tables it can't read "
-        "show no size, with the error in table_sizes.detail.",
-        f"A catalog with no lineage in {wd.HOME_DAYS} days has no home workspace: its tables show under No home "
-        "workspace and count for no workspace.",
-        "Volume reads and writes depend on the audit log's request_params path; check the keys below.",
+        "Sizes and volume files come from the sizes job; tables it can't read show no size.",
+        f"A catalog with no lineage in {wd.HOME_DAYS} days has no home workspace: No home workspace.",
+        "Direct table grants only; schema, catalog and group grants aren't expanded. A group's grant reads never used.",
+        "Data classification results aren't used, so sensitive columns come from tags and names only.",
         _REGION,
     ],
     "checks": [
         ("Which file-system actions and path keys your audit log has",
          "SELECT action_name, map_keys(request_params) AS keys, COUNT(*)\nFROM system.access.audit\n"
          "WHERE service_name = 'filesystem' AND event_date >= current_date() - 7\nGROUP BY 1, 2 ORDER BY 3 DESC;"),
-        ("Tables with the most rows changed in the last 30 days",
-         f"SELECT catalog, schema, table_name, SUM(rows_changed) AS rows_changed\nFROM {wd._sized('table_history')}\n"
-         "WHERE timestamp >= current_date() - 30\nGROUP BY ALL ORDER BY rows_changed DESC LIMIT 20;"),
         ("Tables the sizes job could not read",
          f"SELECT catalog, schema, table_name, detail\nFROM {wd._sized('table_sizes')}\nWHERE detail <> 'described';"),
     ],
 }
 
-SHORT["workspace_data"] = {
+SHORT["data_usage"] = {
     "how": [
-        "Lineage gives each catalog its home workspace: the one that reads and writes it most.",
-        "information_schema counts tables, views, columns and volumes per catalog; the sizes job adds bytes and files.",
-        "Audit and query history give the people per workspace; lineage gives each table's reads and writes.",
+        "Lineage gives each catalog its home workspace, and each table its reads, writes and last use.",
+        "The class rules put every table and volume in one class; information_schema adds columns, tags and grants.",
+        "Audit and query history give the people; the sizes job adds bytes and files.",
     ],
-    "rules": ["Home workspace", "Active", "Inactive", "Not used", "Complexity index", "Usage index"],
-    "sql": f"""-- Tables of its home catalogs and active people per workspace, simplified.
-WITH home AS (
-  SELECT target_table_catalog AS catalog, max_by(CAST(workspace_id AS STRING), n) AS workspace_id
-  FROM (SELECT target_table_catalog, workspace_id, COUNT(*) AS n FROM system.access.table_lineage
-        WHERE event_date >= current_date() - {wd.HOME_DAYS} GROUP BY 1, 2)
-  GROUP BY 1
+    "rules": ["Home workspace", "Usage class", "Complexity index", "Usage index", "Signal", "Sensitive column", "Inactive"],
+    "sql": """-- Each table's usage class in the last 30 days, simplified.
+WITH used AS (
+  SELECT full_name, SUM(is_read) AS reads, SUM(is_write) AS writes FROM (
+    SELECT source_table_full_name AS full_name, 1 AS is_read, 0 AS is_write FROM system.access.table_lineage
+    WHERE event_date >= current_date() - 30
+    UNION ALL
+    SELECT target_table_full_name, 0, 1 FROM system.access.table_lineage WHERE event_date >= current_date() - 30
+  ) GROUP BY 1
 )
-SELECT h.workspace_id,
-       COUNT(DISTINCT t.table_name) AS tables,
-       COUNT(DISTINCT q.executed_by) AS active_people
-FROM home h
-LEFT JOIN system.information_schema.tables t ON t.table_catalog = h.catalog AND t.table_type <> 'VIEW'
-LEFT JOIN system.query.history q
-  ON CAST(q.workspace_id AS STRING) = h.workspace_id AND q.start_time >= current_date() - 30
-GROUP BY h.workspace_id;""",
+SELECT full_name,
+       CASE WHEN writes > 0 AND reads = 0 THEN 'Written, never read'
+            WHEN reads = 0 THEN 'Cooling or idle' ELSE 'Active' END AS usage_class
+FROM used;""",
 }
 
-ER["workspace_data"] = {
+ER["data_usage"] = {
     "nodes": [
-        ("lin", "system.access.table_lineage", "table", ["*workspace_id", "source / target catalog", "event_time"], 0),
-        ("is", "system.information_schema", "table", ["*table_catalog", "table_schema", "table_name", "columns"], 0),
+        ("lin", "system.access.table_lineage", "table", ["*workspace_id", "source / target table", "event_time"], 0),
+        ("is", "system.information_schema", "table", ["*table_catalog", "tables, columns, tags, grants"], 0),
         ("sz", "table_sizes / volume_sizes (job)", "table", ["*catalog", "schema", "size_in_bytes", "files"], 0),
         ("aud", "system.access.audit", "table", ["*workspace_id", "user_identity", "event_time"], 0),
         ("qh", "system.query.history", "table", ["*workspace_id", "executed_by", "start_time"], 0),
         ("home", "home: catalog to workspace", "step", ["*catalog", "workspace_id"], 1),
-        ("held", "held: per workspace", "step", ["*workspace_id", "tables", "views", "columns", "bytes"], 1),
-        ("who", "who: per workspace and identity", "step", ["*workspace_id", "who", "kind", "last_seen"], 1),
-        ("out", "workspaces, tables, volumes, people", "result",
-         ["workspace", "tables", "data_gb", "active_people", "complexity_index", "usage_index"], 2),
+        ("c", "c: every table, classed", "step", ["*full_name", "usage_class", "size", "sensitive"], 1),
+        ("who", "people per workspace", "step", ["*workspace_id", "who", "kind", "last_seen"], 1),
+        ("out", "workspaces, tables, volumes, people, details", "result",
+         ["workspace", "usage_class", "unread_gb", "complexity_index", "usage_index", "signal"], 2),
     ],
     "edges": [
-        ("lin", "home", "most reads and writes"), ("home", "held", "ON catalog"),
-        ("is", "held", "COUNT per catalog"), ("sz", "held", "SUM bytes, files"),
+        ("lin", "home", "most reads and writes"), ("lin", "c", "reads, writes, last use"), ("home", "c", "ON catalog"),
+        ("is", "c", "tables, tags"), ("sz", "c", "bytes, files"),
         ("aud", "who", "events"), ("qh", "who", "queries"),
-        ("held", "out", "LEFT JOIN ON workspace_id"), ("who", "out", "LEFT JOIN ON workspace_id"),
-        ("lin", "out", "reads, writes per table"),
+        ("c", "out", "per workspace, per table"), ("who", "out", "LEFT JOIN ON workspace_id"),
     ],
 }

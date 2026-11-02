@@ -3,11 +3,11 @@
 # MAGIC # Collect table and volume sizes
 # MAGIC DESCRIBE DETAIL and DESCRIBE HISTORY on every Delta table and a file listing of every volume the
 # MAGIC job can read, many at once. Writes `table_sizes`, `table_history` and `volume_sizes`, read by the
-# MAGIC "Workspace data and usage" dashboard. Empty `catalogs` = every catalog.
+# MAGIC "Data usage" dashboard. Empty `catalogs` = every catalog.
 
 # COMMAND ----------
 
-dbutils.widgets.text("sizes_schema", "main.workspace_data")
+dbutils.widgets.text("sizes_schema", "main.data_usage")
 dbutils.widgets.text("catalogs", "")
 dbutils.widgets.text("threads", "16")
 dbutils.widgets.text("max_tables", "20000")

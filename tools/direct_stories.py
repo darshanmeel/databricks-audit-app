@@ -334,7 +334,7 @@ STORIES["waste_savings"] = [
     },
 ]
 
-STORIES["workspace_data"] = [
+STORIES["data_usage"] = [
     {
         "title": "1. One workspace, from lineage to the dashboard",
         "text": ["Lineage shows workspace analytics-lab reads and writes catalog sales_lab most, so the 40 tables "
@@ -347,9 +347,9 @@ STORIES["workspace_data"] = [
                  {"lineage": "table", "one row: analytics-lab": "final"}),
         "tables": [
             ("What the dashboard shows",
-             ["workspace", "tables", "views", "GB", "active people", "queries", "complexity", "usage"],
-             [["analytics-lab", "40", "12", "85.2", "6", "1,240", "71.0", "64.5"],
-              ["hr-sandbox", "2", "0", "0.1", "0", "0", "8.4", "0.0"]]),
+             ["workspace", "tables", "views", "GB", "active people", "queries", "complexity", "usage", "signal"],
+             [["analytics-lab", "40", "12", "85.2", "6", "1,240", "71.0", "64.5", "Healthy"],
+              ["hr-sandbox", "2", "0", "0.1", "0", "0", "8.4", "0.0", "Retire candidate"]]),
         ],
         "after": [
             "hr-sandbox: almost empty and nobody used it in the window; a candidate to retire.",

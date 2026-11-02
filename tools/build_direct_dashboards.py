@@ -918,14 +918,14 @@ def dashboards() -> list[tuple[str, str, object, list[Dataset]]]:
     """(file stem, title, builder, datasets) for each dashboard."""
     from tools import direct_governance as gov
     from tools import direct_jobs_health as jobs
-    from tools import direct_workspace_data as wdata
+    from tools import direct_data_usage as wdata
 
     return [("waste_savings", "Waste & savings", waste_dashboard, DATASETS),
             ("jobs_health", jobs.TITLE, jobs.dashboard, jobs.DATASETS),
             ("workspace_usage", gov.USAGE_TITLE, gov.usage_dashboard, gov.USAGE_DATASETS),
             ("broad_grants", gov.GRANTS_TITLE, gov.grants_dashboard, gov.GRANTS_DATASETS),
             ("admin_changes", gov.ADMIN_TITLE, gov.admin_dashboard, gov.ADMIN_DATASETS),
-            ("workspace_data", wdata.TITLE, wdata.dashboard, wdata.DATASETS)]
+            ("data_usage", wdata.TITLE, wdata.dashboard, wdata.DATASETS)]
 
 
 def build() -> dict[str, str]:
@@ -939,21 +939,21 @@ def build() -> dict[str, str]:
         out[f"{stem}.html"] = doc.build(dash, datasets, title, stem)
         if stem in guides.SHORT:
             out[f"{stem}_summary.html"] = doc.build_short(dash, datasets, title, stem)
-    from tools import direct_workspace_data as wdata
-    out["workspace_data_sizes.py"] = wdata.collect_sizes_notebook()
+    from tools import direct_data_usage as wdata
+    out["data_usage_sizes.py"] = wdata.collect_sizes_notebook()
     return out
 
 
 def main() -> int:
     from tools import direct_governance as gov
-    from tools import direct_workspace_data as wdata
+    from tools import direct_data_usage as wdata
 
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--out-dir", default=str(OUT_DIR), help="output directory (default %(default)s)")
     parser.add_argument("--query-tags", help="k=v,k=v in place of the settings' query_tags (letters, digits, _)")
     parser.add_argument("--workspace-class", action="append", default=[], metavar="CLASS=PATTERN",
                         help="Workspace usage: a workspace class and a LIKE pattern on the lower-case workspace name")
-    parser.add_argument("--sizes-schema", help="Workspace data: the catalog.schema its sizes job writes to")
+    parser.add_argument("--sizes-schema", help="Data usage: the catalog.schema its sizes job writes to")
     args = parser.parse_args()
     if args.query_tags:
         bdd.QUERY_TAGS_OVERRIDE = dict(p.split("=", 1) for p in args.query_tags.split(","))
