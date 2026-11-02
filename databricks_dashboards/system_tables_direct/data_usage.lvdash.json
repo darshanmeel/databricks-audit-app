@@ -2007,6 +2007,1165 @@
           }
         }
       ]
+    },
+    {
+      "name": "b62d50fe",
+      "displayName": "The most active workspaces",
+      "queryLines": [
+        "SET QUERY_TAGS['cost_center'] = 'lakehouse_health';\n",
+        "SET QUERY_TAGS['domain'] = 'lakehouse_health';\n",
+        "SET QUERY_TAGS['dashboard'] = 'data_usage';\n",
+        "SET QUERY_TAGS['tab'] = 'overview';\n",
+        "-- The most active workspaces. Dates from the Time Window.\n",
+        "WITH wsl AS (\n",
+        "  SELECT CAST(workspace_id AS STRING) AS workspace_id, workspace_name, workspace_url\n",
+        "  FROM system.access.workspaces_latest\n",
+        "),\n",
+        "seen AS (\n",
+        "  SELECT catalog, CAST(workspace_id AS STRING) AS workspace_id, COUNT(*) AS events FROM (\n",
+        "    SELECT workspace_id, source_table_catalog AS catalog FROM system.access.table_lineage\n",
+        "    WHERE event_date >= date_sub(date_add(:time_range.max, 1), 90) AND event_date < date_add(:time_range.max, 1)\n",
+        "    UNION ALL\n",
+        "    SELECT workspace_id, target_table_catalog FROM system.access.table_lineage\n",
+        "    WHERE event_date >= date_sub(date_add(:time_range.max, 1), 90) AND event_date < date_add(:time_range.max, 1)\n",
+        "  ) WHERE catalog IS NOT NULL GROUP BY 1, 2\n",
+        "),\n",
+        "home AS (\n",
+        "  SELECT c.catalog_name AS catalog, max_by(s.workspace_id, s.events) AS workspace_id\n",
+        "  FROM system.information_schema.catalogs c LEFT JOIN seen s ON s.catalog = c.catalog_name\n",
+        "  WHERE c.catalog_name NOT IN ('system', 'samples', '__databricks_internal')\n",
+        "  GROUP BY c.catalog_name\n",
+        "),\n",
+        "place AS (\n",
+        "  -- a catalog without lineage in 90 days keeps its rows, under No home workspace\n",
+        "  SELECT h.catalog, h.workspace_id, w.workspace_url,\n",
+        "         COALESCE(w.workspace_name, h.workspace_id, 'No home workspace') AS workspace\n",
+        "  FROM home h LEFT JOIN wsl w ON w.workspace_id = h.workspace_id\n",
+        "),\n",
+        "t AS (\n",
+        "  SELECT table_catalog AS catalog, table_schema AS sch, table_name, table_type, table_owner, created,\n",
+        "         table_catalog || '.' || table_schema || '.' || table_name AS full_name\n",
+        "  FROM system.information_schema.tables\n",
+        "  WHERE table_catalog NOT IN ('system', 'samples', '__databricks_internal') AND table_schema <> 'information_schema'\n",
+        "),\n",
+        "lin AS (\n",
+        "  SELECT source_table_full_name AS full_name, 1 AS is_read, 0 AS is_write, event_time, lower(created_by) AS who\n",
+        "  FROM system.access.table_lineage\n",
+        "  WHERE event_date >= date_sub(date_add(:time_range.max, 1), 365) AND event_date < date_add(:time_range.max, 1) AND source_table_full_name IS NOT NULL\n",
+        "  UNION ALL\n",
+        "  SELECT target_table_full_name, 0, 1, event_time, lower(created_by) FROM system.access.table_lineage\n",
+        "  WHERE event_date >= date_sub(date_add(:time_range.max, 1), 365) AND event_date < date_add(:time_range.max, 1) AND target_table_full_name IS NOT NULL\n",
+        "),\n",
+        "used AS (\n",
+        "  -- counts in the Time Window; last read and write over the lineage's year\n",
+        "  SELECT full_name,\n",
+        "         SUM(CASE WHEN event_time >= CAST(:time_range.min AS DATE) THEN is_read ELSE 0 END) AS reads,\n",
+        "         SUM(CASE WHEN event_time >= CAST(:time_range.min AS DATE) THEN is_write ELSE 0 END) AS writes,\n",
+        "         COUNT(DISTINCT CASE WHEN is_read = 1 AND event_time >= CAST(:time_range.min AS DATE) THEN who END) AS readers,\n",
+        "         COUNT(DISTINCT CASE WHEN is_write = 1 AND event_time >= CAST(:time_range.min AS DATE) THEN who END) AS writers,\n",
+        "         MAX(CASE WHEN is_read = 1 THEN event_time END) AS last_read,\n",
+        "         MAX(CASE WHEN is_write = 1 THEN event_time END) AS last_write\n",
+        "  FROM lin GROUP BY 1\n",
+        "),\n",
+        "hist AS (\n",
+        "  SELECT catalog, schema, table_name,\n",
+        "         MAX(CASE WHEN operation RLIKE 'WRITE|MERGE|UPDATE|DELETE|STREAMING UPDATE|CREATE OR REPLACE|COPY INTO|TRUNCATE|RESTORE' THEN timestamp END) AS last_change,\n",
+        "         max_by(operation, CASE WHEN operation RLIKE 'WRITE|MERGE|UPDATE|DELETE|STREAMING UPDATE|CREATE OR REPLACE|COPY INTO|TRUNCATE|RESTORE' THEN timestamp END) AS last_change_op,\n",
+        "         MAX(CASE WHEN operation RLIKE 'OPTIMIZE|VACUUM|ANALYZE|REORG' THEN timestamp END) AS last_maintenance,\n",
+        "         SUM(CASE WHEN timestamp >= CAST(:time_range.min AS DATE) THEN rows_changed ELSE 0 END) AS rows_changed,\n",
+        "         SUM(CASE WHEN timestamp >= CAST(:time_range.min AS DATE) THEN bytes_written ELSE 0 END) AS bytes_written\n",
+        "  FROM main.data_usage.table_history GROUP BY 1, 2, 3\n",
+        "),\n",
+        "po AS (\n",
+        "  SELECT catalog_name AS catalog, schema_name AS schema, table_name, MAX(start_time) AS last_po\n",
+        "  FROM system.storage.predictive_optimization_operations_history\n",
+        "  WHERE start_time >= date_sub(date_add(:time_range.max, 1), 365)\n",
+        "  GROUP BY 1, 2, 3\n",
+        "),\n",
+        "found AS (\n",
+        "  SELECT catalog_name AS c, schema_name AS s, table_name AS t, column_name,\n",
+        "         COALESCE(NULLIF(tag_value, ''), tag_name) AS pii_type, 1 AS rnk\n",
+        "  FROM system.information_schema.column_tags\n",
+        "  WHERE lower(tag_name) RLIKE '^(pii|sensitive|gdpr|class[.])' AND catalog_name NOT IN ('system', 'samples', '__databricks_internal')\n",
+        "  UNION ALL\n",
+        "  SELECT table_catalog, table_schema, table_name, column_name,\n",
+        "         CASE\n",
+        "         WHEN lower(column_name) RLIKE 'e_?mail' THEN 'Email'\n",
+        "         WHEN lower(column_name) RLIKE 'phone|mobile|msisdn' THEN 'Phone number'\n",
+        "         WHEN lower(column_name) RLIKE 'iban|(^|_)bic($|_)|account_?(no|number)' THEN 'IBAN / bank account'\n",
+        "         WHEN lower(column_name) RLIKE 'ssn|(^|_)ahv|passport|national_?id' THEN 'National ID'\n",
+        "         WHEN lower(column_name) RLIKE '(^|_)ip(_?address)?($|_)' THEN 'IP address'\n",
+        "         WHEN lower(column_name) RLIKE 'address|street|(^|_)zip|postal' THEN 'Postal address'\n",
+        "         WHEN lower(column_name) RLIKE 'birth|(^|_)dob($|_)' THEN 'Date of birth'\n",
+        "         WHEN lower(column_name) RLIKE 'card_?(no|number|num)|(^|_)pan$' THEN 'Payment card'\n",
+        "         END, 2\n",
+        "  FROM system.information_schema.columns\n",
+        "  WHERE table_catalog NOT IN ('system', 'samples', '__databricks_internal') AND table_schema <> 'information_schema'\n",
+        "),\n",
+        "sens_col AS (\n",
+        "  SELECT f.c || '.' || f.s || '.' || f.t AS full_name, f.column_name, f.pii_type, cm.mask_name IS NOT NULL AS masked\n",
+        "  FROM found f\n",
+        "  LEFT JOIN system.information_schema.column_masks cm\n",
+        "    ON cm.table_catalog = f.c AND cm.table_schema = f.s AND cm.table_name = f.t AND cm.column_name = f.column_name\n",
+        "  WHERE f.pii_type IS NOT NULL\n",
+        "  QUALIFY ROW_NUMBER() OVER (PARTITION BY f.c, f.s, f.t, f.column_name ORDER BY f.rnk) = 1\n",
+        "),\n",
+        "sens AS (\n",
+        "  SELECT full_name, COUNT(*) AS sensitive_columns, COUNT_IF(NOT masked) AS unmasked_columns,\n",
+        "         concat_ws(', ', sort_array(collect_set(pii_type))) AS sensitive_types\n",
+        "  FROM sens_col GROUP BY 1\n",
+        "),\n",
+        "j AS (\n",
+        "  SELECT p.workspace, p.workspace_id, p.workspace_url, t.catalog, t.sch AS schema_name, t.table_name AS name, t.full_name,\n",
+        "         t.table_type, t.table_owner, t.created,\n",
+        "         s.size_in_bytes, s.num_files, COALESCE(u.reads, 0) AS reads, COALESCE(u.writes, 0) AS writes,\n",
+        "         COALESCE(u.readers, 0) AS readers, COALESCE(u.writers, 0) AS writers, u.last_read,\n",
+        "         GREATEST(u.last_write, h.last_change) AS last_write, h.last_change_op,\n",
+        "         GREATEST(h.last_maintenance, po.last_po) AS last_maintenance,\n",
+        "         COALESCE(h.rows_changed, 0) AS rows_changed, COALESCE(h.bytes_written, 0) AS bytes_written,\n",
+        "         COALESCE(se.sensitive_columns, 0) AS sensitive_columns, COALESCE(se.unmasked_columns, 0) AS unmasked_columns,\n",
+        "         se.sensitive_types\n",
+        "  FROM t\n",
+        "  LEFT JOIN place p ON p.catalog = t.catalog\n",
+        "  LEFT JOIN main.data_usage.table_sizes s ON s.catalog = t.catalog AND s.schema = t.sch AND s.table_name = t.table_name\n",
+        "  LEFT JOIN used u ON u.full_name = t.full_name\n",
+        "  LEFT JOIN hist h ON h.catalog = t.catalog AND h.schema = t.sch AND h.table_name = t.table_name\n",
+        "  LEFT JOIN po ON po.catalog = t.catalog AND po.schema = t.sch AND po.table_name = t.table_name\n",
+        "  LEFT JOIN sens se ON se.full_name = t.full_name\n",
+        "),\n",
+        "c AS (\n",
+        "  SELECT *, CASE WHEN writes > 0 AND reads = 0 THEN 'Written, never read'\n",
+        "            WHEN reads = 0 AND writes = 0 AND last_read IS NULL AND last_write IS NULL\n",
+        "                 AND created >= date_sub(date_add(:time_range.max, 1), 7) THEN 'Active'\n",
+        "            WHEN GREATEST(last_read, last_write) IS NULL OR datediff(date_add(:time_range.max, 1), CAST(GREATEST(last_read, last_write) AS DATE)) >= 90 THEN 'Idle 90d+'\n",
+        "            WHEN reads = 0 THEN 'Cooling'\n",
+        "            ELSE 'Active' END AS usage_class FROM j\n",
+        "),\n",
+        "cls AS (\n",
+        "  -- tables (not views) by usage class\n",
+        "  SELECT workspace_id,\n",
+        "         COUNT_IF(usage_class = 'Written, never read' AND table_type <> 'VIEW') AS tables_written_never_read,\n",
+        "         COUNT_IF(usage_class = 'Idle 90d+' AND table_type <> 'VIEW') AS tables_idle,\n",
+        "         COUNT_IF(usage_class = 'Cooling' AND table_type <> 'VIEW') AS tables_cooling,\n",
+        "         COUNT_IF(usage_class = 'Active' AND table_type <> 'VIEW') AS tables_active,\n",
+        "         SUM(CASE WHEN usage_class IN ('Written, never read', 'Idle 90d+') THEN size_in_bytes ELSE 0 END) AS unread_bytes,\n",
+        "         SUM(reads) AS reads, SUM(writes) AS writes, MAX(last_read) AS last_read, MAX(last_write) AS last_write,\n",
+        "         COUNT_IF(sensitive_columns > 0) AS sensitive_tables\n",
+        "  FROM c WHERE workspace_id IS NOT NULL GROUP BY 1\n",
+        "),\n",
+        "cols AS (\n",
+        "  SELECT table_catalog, table_schema, table_name, COUNT(*) AS n FROM system.information_schema.columns\n",
+        "  WHERE table_schema <> 'information_schema' GROUP BY 1, 2, 3\n",
+        "),\n",
+        "held AS (\n",
+        "  SELECT p.workspace_id, COUNT(DISTINCT p.catalog) AS catalogs,\n",
+        "         COUNT_IF(t.table_type <> 'VIEW') AS tables, COUNT_IF(t.table_type = 'VIEW') AS views,\n",
+        "         COALESCE(SUM(CASE WHEN t.table_type <> 'VIEW' THEN cl.n END), 0) AS table_columns,\n",
+        "         COALESCE(SUM(CASE WHEN t.table_type = 'VIEW' THEN cl.n END), 0) AS view_columns\n",
+        "  FROM place p\n",
+        "  LEFT JOIN system.information_schema.tables t ON t.table_catalog = p.catalog AND t.table_schema <> 'information_schema'\n",
+        "  LEFT JOIN cols cl ON cl.table_catalog = t.table_catalog AND cl.table_schema = t.table_schema AND cl.table_name = t.table_name\n",
+        "  WHERE p.workspace_id IS NOT NULL\n",
+        "  GROUP BY 1\n",
+        "),\n",
+        "vols AS (\n",
+        "  SELECT p.workspace_id, COUNT(*) AS volumes, COALESCE(SUM(vs.files), 0) AS volume_files,\n",
+        "         COALESCE(SUM(vs.size_in_bytes), 0) AS volume_bytes\n",
+        "  FROM system.information_schema.volumes v\n",
+        "  JOIN place p ON p.catalog = v.volume_catalog\n",
+        "  LEFT JOIN main.data_usage.volume_sizes vs\n",
+        "    ON vs.catalog = v.volume_catalog AND vs.schema = v.volume_schema AND vs.volume_name = v.volume_name\n",
+        "  WHERE p.workspace_id IS NOT NULL\n",
+        "  GROUP BY 1\n",
+        "),\n",
+        "sizes AS (\n",
+        "  SELECT p.workspace_id, SUM(s.size_in_bytes) AS table_bytes\n",
+        "  FROM main.data_usage.table_sizes s JOIN place p ON p.catalog = s.catalog\n",
+        "  WHERE p.workspace_id IS NOT NULL\n",
+        "  GROUP BY 1\n",
+        "),\n",
+        "ev AS (\n",
+        "  -- people and service principals seen in the window: an audit event or a query\n",
+        "  SELECT CAST(workspace_id AS STRING) AS workspace_id, lower(COALESCE(user_identity.email, user_identity.subject_name)) AS who,\n",
+        "         event_date AS d, event_time AS ts, 0 AS is_query\n",
+        "  FROM system.access.audit WHERE event_date >= CAST(:time_range.min AS DATE) AND event_date < date_add(:time_range.max, 1)\n",
+        "  UNION ALL\n",
+        "  SELECT CAST(workspace_id AS STRING), lower(executed_by), CAST(start_time AS DATE), start_time, 1\n",
+        "  FROM system.query.history WHERE start_time >= CAST(:time_range.min AS DATE) AND start_time < date_add(:time_range.max, 1)\n",
+        "),\n",
+        "act AS (\n",
+        "  SELECT workspace_id,\n",
+        "         COUNT(DISTINCT CASE WHEN who LIKE '%@%' THEN who END) AS active_people,\n",
+        "         COUNT(DISTINCT CASE WHEN who RLIKE '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' THEN who END) AS active_service_principals,\n",
+        "         SUM(is_query) AS queries,\n",
+        "         COUNT(DISTINCT CASE WHEN who LIKE '%@%' OR who RLIKE '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' THEN d END) AS active_days,\n",
+        "         MAX(CASE WHEN is_query = 1 THEN ts END) AS last_query\n",
+        "  FROM ev GROUP BY 1\n",
+        "),\n",
+        "ids AS (\n",
+        "  SELECT workspace_id FROM act UNION SELECT workspace_id FROM held\n",
+        "),\n",
+        "base AS (\n",
+        "  SELECT i.workspace_id, COALESCE(w.workspace_name, i.workspace_id) AS workspace, w.workspace_url,\n",
+        "         COALESCE(h.catalogs, 0) AS catalogs, COALESCE(h.tables, 0) AS tables, COALESCE(h.views, 0) AS views,\n",
+        "         COALESCE(h.table_columns, 0) AS table_columns, COALESCE(h.view_columns, 0) AS view_columns,\n",
+        "         COALESCE(v.volumes, 0) AS volumes, COALESCE(v.volume_files, 0) AS volume_files,\n",
+        "         COALESCE(s.table_bytes, 0) AS table_bytes, COALESCE(s.table_bytes, 0) + COALESCE(v.volume_bytes, 0) AS data_bytes,\n",
+        "         COALESCE(a.active_people, 0) AS active_people, COALESCE(a.active_service_principals, 0) AS active_service_principals,\n",
+        "         COALESCE(a.queries, 0) AS queries, COALESCE(a.active_days, 0) AS active_days, a.last_query,\n",
+        "         COALESCE(k.tables_written_never_read, 0) AS tables_written_never_read, COALESCE(k.tables_idle, 0) AS tables_idle,\n",
+        "         COALESCE(k.tables_cooling, 0) AS tables_cooling, COALESCE(k.tables_active, 0) AS tables_active,\n",
+        "         COALESCE(k.unread_bytes, 0) AS unread_bytes, COALESCE(k.reads, 0) AS reads, COALESCE(k.writes, 0) AS writes,\n",
+        "         k.last_read, k.last_write, COALESCE(k.sensitive_tables, 0) AS sensitive_tables\n",
+        "  FROM ids i\n",
+        "  LEFT JOIN held h ON h.workspace_id = i.workspace_id\n",
+        "  LEFT JOIN vols v ON v.workspace_id = i.workspace_id\n",
+        "  LEFT JOIN sizes s ON s.workspace_id = i.workspace_id\n",
+        "  LEFT JOIN act a ON a.workspace_id = i.workspace_id\n",
+        "  LEFT JOIN cls k ON k.workspace_id = i.workspace_id\n",
+        "  LEFT JOIN wsl w ON w.workspace_id = i.workspace_id\n",
+        "  WHERE i.workspace_id IS NOT NULL AND i.workspace_id <> '0'\n",
+        "),\n",
+        "idx AS (\n",
+        "  SELECT *,\n",
+        "         ROUND(100 * (0.2 * COALESCE(ln(1 + views) / NULLIF(MAX(ln(1 + views)) OVER (), 0), 0) + 0.15 * COALESCE(ln(1 + view_columns) / NULLIF(MAX(ln(1 + view_columns)) OVER (), 0), 0) + 0.2 * COALESCE(ln(1 + tables) / NULLIF(MAX(ln(1 + tables)) OVER (), 0), 0) + 0.15 * COALESCE(ln(1 + table_columns) / NULLIF(MAX(ln(1 + table_columns)) OVER (), 0), 0) + 0.1 * COALESCE(ln(1 + volume_files) / NULLIF(MAX(ln(1 + volume_files)) OVER (), 0), 0) + 0.2 * COALESCE(ln(1 + table_bytes) / NULLIF(MAX(ln(1 + table_bytes)) OVER (), 0), 0)), 1) AS complexity_index,\n",
+        "         ROUND(100 * (0.35 * COALESCE(ln(1 + active_people) / NULLIF(MAX(ln(1 + active_people)) OVER (), 0), 0) + 0.15 * COALESCE(ln(1 + active_service_principals) / NULLIF(MAX(ln(1 + active_service_principals)) OVER (), 0), 0) + 0.3 * COALESCE(ln(1 + queries) / NULLIF(MAX(ln(1 + queries)) OVER (), 0), 0)) + 100 * 0.2 * LEAST(active_days, datediff(date_add(:time_range.max, 1), CAST(:time_range.min AS DATE))) / datediff(date_add(:time_range.max, 1), CAST(:time_range.min AS DATE)), 1) AS usage_index\n",
+        "  FROM base\n",
+        "),\n",
+        "b AS (\n",
+        "SELECT workspace, workspace_id,\n",
+        "       concat('https://', regexp_replace(regexp_replace(COALESCE(workspace_url, ''), '^https?://', ''), '/.*$', '')) AS workspace_link,\n",
+        "       tables_written_never_read, tables_idle, tables_cooling, tables_active,\n",
+        "       ROUND(data_bytes / 1073741824.0, 2) AS data_gb, ROUND(unread_bytes / 1073741824.0, 2) AS unread_gb,\n",
+        "       reads, writes, CAST(date_format(last_read, 'yyyy-MM-dd') AS STRING) AS last_read,\n",
+        "       CAST(date_format(last_write, 'yyyy-MM-dd') AS STRING) AS last_write, sensitive_tables,\n",
+        "       catalogs, tables, views, table_columns, view_columns, volumes, volume_files, complexity_index,\n",
+        "       active_people, active_service_principals, queries, active_days,\n",
+        "       CAST(date_format(last_query, 'yyyy-MM-dd HH:mm') AS STRING) AS last_query, usage_index,\n",
+        "       CASE WHEN usage_index < 10 THEN 'Retire candidate'\n",
+        "            WHEN complexity_index >= 50 AND usage_index < 50 THEN 'Review'\n",
+        "            WHEN complexity_index < 50 THEN 'Light'\n",
+        "            ELSE 'Healthy' END AS signal,\n",
+        "       CASE WHEN usage_index < 10 OR (complexity_index >= 50 AND usage_index < 50) THEN 1 ELSE 0 END AS flagged,\n",
+        "       1 AS workspaces\n",
+        "FROM idx\n",
+        "ORDER BY usage_index DESC, workspace\n",
+        "),\n",
+        "r AS (\n",
+        "  SELECT *, ROW_NUMBER() OVER (ORDER BY reads + writes DESC, workspace) AS rnk FROM b WHERE reads + writes > 0\n",
+        ")\n",
+        "SELECT workspace, workspace AS name, 'Reads' AS direction, reads AS events FROM r WHERE rnk <= 50\n",
+        "UNION ALL\n",
+        "SELECT workspace, workspace AS name, 'Writes' AS direction, writes AS events FROM r WHERE rnk <= 50\n"
+      ],
+      "parameters": [
+        {
+          "displayName": "time_range",
+          "keyword": "time_range",
+          "dataType": "DATE",
+          "complexType": "RANGE",
+          "defaultSelection": {
+            "range": {
+              "dataType": "DATE",
+              "min": {
+                "value": "now-30d/d"
+              },
+              "max": {
+                "value": "now-1d/d"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5fa6f201",
+      "displayName": "The most used tables",
+      "queryLines": [
+        "SET QUERY_TAGS['cost_center'] = 'lakehouse_health';\n",
+        "SET QUERY_TAGS['domain'] = 'lakehouse_health';\n",
+        "SET QUERY_TAGS['dashboard'] = 'data_usage';\n",
+        "SET QUERY_TAGS['tab'] = 'overview';\n",
+        "-- The most used tables. Dates from the Time Window.\n",
+        "WITH wsl AS (\n",
+        "  SELECT CAST(workspace_id AS STRING) AS workspace_id, workspace_name, workspace_url\n",
+        "  FROM system.access.workspaces_latest\n",
+        "),\n",
+        "seen AS (\n",
+        "  SELECT catalog, CAST(workspace_id AS STRING) AS workspace_id, COUNT(*) AS events FROM (\n",
+        "    SELECT workspace_id, source_table_catalog AS catalog FROM system.access.table_lineage\n",
+        "    WHERE event_date >= date_sub(date_add(:time_range.max, 1), 90) AND event_date < date_add(:time_range.max, 1)\n",
+        "    UNION ALL\n",
+        "    SELECT workspace_id, target_table_catalog FROM system.access.table_lineage\n",
+        "    WHERE event_date >= date_sub(date_add(:time_range.max, 1), 90) AND event_date < date_add(:time_range.max, 1)\n",
+        "  ) WHERE catalog IS NOT NULL GROUP BY 1, 2\n",
+        "),\n",
+        "home AS (\n",
+        "  SELECT c.catalog_name AS catalog, max_by(s.workspace_id, s.events) AS workspace_id\n",
+        "  FROM system.information_schema.catalogs c LEFT JOIN seen s ON s.catalog = c.catalog_name\n",
+        "  WHERE c.catalog_name NOT IN ('system', 'samples', '__databricks_internal')\n",
+        "  GROUP BY c.catalog_name\n",
+        "),\n",
+        "place AS (\n",
+        "  -- a catalog without lineage in 90 days keeps its rows, under No home workspace\n",
+        "  SELECT h.catalog, h.workspace_id, w.workspace_url,\n",
+        "         COALESCE(w.workspace_name, h.workspace_id, 'No home workspace') AS workspace\n",
+        "  FROM home h LEFT JOIN wsl w ON w.workspace_id = h.workspace_id\n",
+        "),\n",
+        "t AS (\n",
+        "  SELECT table_catalog AS catalog, table_schema AS sch, table_name, table_type, table_owner, created,\n",
+        "         table_catalog || '.' || table_schema || '.' || table_name AS full_name\n",
+        "  FROM system.information_schema.tables\n",
+        "  WHERE table_catalog NOT IN ('system', 'samples', '__databricks_internal') AND table_schema <> 'information_schema'\n",
+        "),\n",
+        "lin AS (\n",
+        "  SELECT source_table_full_name AS full_name, 1 AS is_read, 0 AS is_write, event_time, lower(created_by) AS who\n",
+        "  FROM system.access.table_lineage\n",
+        "  WHERE event_date >= date_sub(date_add(:time_range.max, 1), 365) AND event_date < date_add(:time_range.max, 1) AND source_table_full_name IS NOT NULL\n",
+        "  UNION ALL\n",
+        "  SELECT target_table_full_name, 0, 1, event_time, lower(created_by) FROM system.access.table_lineage\n",
+        "  WHERE event_date >= date_sub(date_add(:time_range.max, 1), 365) AND event_date < date_add(:time_range.max, 1) AND target_table_full_name IS NOT NULL\n",
+        "),\n",
+        "used AS (\n",
+        "  -- counts in the Time Window; last read and write over the lineage's year\n",
+        "  SELECT full_name,\n",
+        "         SUM(CASE WHEN event_time >= CAST(:time_range.min AS DATE) THEN is_read ELSE 0 END) AS reads,\n",
+        "         SUM(CASE WHEN event_time >= CAST(:time_range.min AS DATE) THEN is_write ELSE 0 END) AS writes,\n",
+        "         COUNT(DISTINCT CASE WHEN is_read = 1 AND event_time >= CAST(:time_range.min AS DATE) THEN who END) AS readers,\n",
+        "         COUNT(DISTINCT CASE WHEN is_write = 1 AND event_time >= CAST(:time_range.min AS DATE) THEN who END) AS writers,\n",
+        "         MAX(CASE WHEN is_read = 1 THEN event_time END) AS last_read,\n",
+        "         MAX(CASE WHEN is_write = 1 THEN event_time END) AS last_write\n",
+        "  FROM lin GROUP BY 1\n",
+        "),\n",
+        "hist AS (\n",
+        "  SELECT catalog, schema, table_name,\n",
+        "         MAX(CASE WHEN operation RLIKE 'WRITE|MERGE|UPDATE|DELETE|STREAMING UPDATE|CREATE OR REPLACE|COPY INTO|TRUNCATE|RESTORE' THEN timestamp END) AS last_change,\n",
+        "         max_by(operation, CASE WHEN operation RLIKE 'WRITE|MERGE|UPDATE|DELETE|STREAMING UPDATE|CREATE OR REPLACE|COPY INTO|TRUNCATE|RESTORE' THEN timestamp END) AS last_change_op,\n",
+        "         MAX(CASE WHEN operation RLIKE 'OPTIMIZE|VACUUM|ANALYZE|REORG' THEN timestamp END) AS last_maintenance,\n",
+        "         SUM(CASE WHEN timestamp >= CAST(:time_range.min AS DATE) THEN rows_changed ELSE 0 END) AS rows_changed,\n",
+        "         SUM(CASE WHEN timestamp >= CAST(:time_range.min AS DATE) THEN bytes_written ELSE 0 END) AS bytes_written\n",
+        "  FROM main.data_usage.table_history GROUP BY 1, 2, 3\n",
+        "),\n",
+        "po AS (\n",
+        "  SELECT catalog_name AS catalog, schema_name AS schema, table_name, MAX(start_time) AS last_po\n",
+        "  FROM system.storage.predictive_optimization_operations_history\n",
+        "  WHERE start_time >= date_sub(date_add(:time_range.max, 1), 365)\n",
+        "  GROUP BY 1, 2, 3\n",
+        "),\n",
+        "found AS (\n",
+        "  SELECT catalog_name AS c, schema_name AS s, table_name AS t, column_name,\n",
+        "         COALESCE(NULLIF(tag_value, ''), tag_name) AS pii_type, 1 AS rnk\n",
+        "  FROM system.information_schema.column_tags\n",
+        "  WHERE lower(tag_name) RLIKE '^(pii|sensitive|gdpr|class[.])' AND catalog_name NOT IN ('system', 'samples', '__databricks_internal')\n",
+        "  UNION ALL\n",
+        "  SELECT table_catalog, table_schema, table_name, column_name,\n",
+        "         CASE\n",
+        "         WHEN lower(column_name) RLIKE 'e_?mail' THEN 'Email'\n",
+        "         WHEN lower(column_name) RLIKE 'phone|mobile|msisdn' THEN 'Phone number'\n",
+        "         WHEN lower(column_name) RLIKE 'iban|(^|_)bic($|_)|account_?(no|number)' THEN 'IBAN / bank account'\n",
+        "         WHEN lower(column_name) RLIKE 'ssn|(^|_)ahv|passport|national_?id' THEN 'National ID'\n",
+        "         WHEN lower(column_name) RLIKE '(^|_)ip(_?address)?($|_)' THEN 'IP address'\n",
+        "         WHEN lower(column_name) RLIKE 'address|street|(^|_)zip|postal' THEN 'Postal address'\n",
+        "         WHEN lower(column_name) RLIKE 'birth|(^|_)dob($|_)' THEN 'Date of birth'\n",
+        "         WHEN lower(column_name) RLIKE 'card_?(no|number|num)|(^|_)pan$' THEN 'Payment card'\n",
+        "         END, 2\n",
+        "  FROM system.information_schema.columns\n",
+        "  WHERE table_catalog NOT IN ('system', 'samples', '__databricks_internal') AND table_schema <> 'information_schema'\n",
+        "),\n",
+        "sens_col AS (\n",
+        "  SELECT f.c || '.' || f.s || '.' || f.t AS full_name, f.column_name, f.pii_type, cm.mask_name IS NOT NULL AS masked\n",
+        "  FROM found f\n",
+        "  LEFT JOIN system.information_schema.column_masks cm\n",
+        "    ON cm.table_catalog = f.c AND cm.table_schema = f.s AND cm.table_name = f.t AND cm.column_name = f.column_name\n",
+        "  WHERE f.pii_type IS NOT NULL\n",
+        "  QUALIFY ROW_NUMBER() OVER (PARTITION BY f.c, f.s, f.t, f.column_name ORDER BY f.rnk) = 1\n",
+        "),\n",
+        "sens AS (\n",
+        "  SELECT full_name, COUNT(*) AS sensitive_columns, COUNT_IF(NOT masked) AS unmasked_columns,\n",
+        "         concat_ws(', ', sort_array(collect_set(pii_type))) AS sensitive_types\n",
+        "  FROM sens_col GROUP BY 1\n",
+        "),\n",
+        "j AS (\n",
+        "  SELECT p.workspace, p.workspace_id, p.workspace_url, t.catalog, t.sch AS schema_name, t.table_name AS name, t.full_name,\n",
+        "         t.table_type, t.table_owner, t.created,\n",
+        "         s.size_in_bytes, s.num_files, COALESCE(u.reads, 0) AS reads, COALESCE(u.writes, 0) AS writes,\n",
+        "         COALESCE(u.readers, 0) AS readers, COALESCE(u.writers, 0) AS writers, u.last_read,\n",
+        "         GREATEST(u.last_write, h.last_change) AS last_write, h.last_change_op,\n",
+        "         GREATEST(h.last_maintenance, po.last_po) AS last_maintenance,\n",
+        "         COALESCE(h.rows_changed, 0) AS rows_changed, COALESCE(h.bytes_written, 0) AS bytes_written,\n",
+        "         COALESCE(se.sensitive_columns, 0) AS sensitive_columns, COALESCE(se.unmasked_columns, 0) AS unmasked_columns,\n",
+        "         se.sensitive_types\n",
+        "  FROM t\n",
+        "  LEFT JOIN place p ON p.catalog = t.catalog\n",
+        "  LEFT JOIN main.data_usage.table_sizes s ON s.catalog = t.catalog AND s.schema = t.sch AND s.table_name = t.table_name\n",
+        "  LEFT JOIN used u ON u.full_name = t.full_name\n",
+        "  LEFT JOIN hist h ON h.catalog = t.catalog AND h.schema = t.sch AND h.table_name = t.table_name\n",
+        "  LEFT JOIN po ON po.catalog = t.catalog AND po.schema = t.sch AND po.table_name = t.table_name\n",
+        "  LEFT JOIN sens se ON se.full_name = t.full_name\n",
+        "),\n",
+        "c AS (\n",
+        "  SELECT *, CASE WHEN writes > 0 AND reads = 0 THEN 'Written, never read'\n",
+        "            WHEN reads = 0 AND writes = 0 AND last_read IS NULL AND last_write IS NULL\n",
+        "                 AND created >= date_sub(date_add(:time_range.max, 1), 7) THEN 'Active'\n",
+        "            WHEN GREATEST(last_read, last_write) IS NULL OR datediff(date_add(:time_range.max, 1), CAST(GREATEST(last_read, last_write) AS DATE)) >= 90 THEN 'Idle 90d+'\n",
+        "            WHEN reads = 0 THEN 'Cooling'\n",
+        "            ELSE 'Active' END AS usage_class FROM j\n",
+        "),\n",
+        "b AS (\n",
+        "SELECT workspace, catalog, schema_name, catalog || '.' || schema_name AS schema_full, full_name AS table_name,\n",
+        "       CASE WHEN table_type = 'VIEW' THEN 'View' ELSE 'Table' END AS kind, usage_class, CASE usage_class WHEN 'Written, never read' THEN 1 WHEN 'Idle 90d+' THEN 2 WHEN 'Cooling' THEN 3 ELSE 4 END AS class_rank,\n",
+        "       size_in_bytes, ROUND(size_in_bytes / 1073741824.0, 3) AS size_gb, num_files,\n",
+        "       CASE WHEN usage_class = 'Written, never read' THEN ROUND(size_in_bytes / 1073741824.0, 3) ELSE 0 END AS gb_written_never_read,\n",
+        "       CASE WHEN usage_class = 'Idle 90d+' THEN ROUND(size_in_bytes / 1073741824.0, 3) ELSE 0 END AS gb_idle,\n",
+        "       CASE WHEN usage_class = 'Cooling' THEN ROUND(size_in_bytes / 1073741824.0, 3) ELSE 0 END AS gb_cooling,\n",
+        "       CASE WHEN usage_class = 'Active' THEN ROUND(size_in_bytes / 1073741824.0, 3) ELSE 0 END AS gb_active,\n",
+        "       reads, writes, readers, writers,\n",
+        "       CAST(date_format(last_read, 'yyyy-MM-dd') AS STRING) AS last_read,\n",
+        "       datediff(date_add(:time_range.max, 1), CAST(last_read AS DATE)) AS days_since_read,\n",
+        "       CAST(date_format(last_write, 'yyyy-MM-dd') AS STRING) AS last_write, lower(last_change_op) AS last_change_op,\n",
+        "       CAST(date_format(last_maintenance, 'yyyy-MM-dd') AS STRING) AS last_maintenance,\n",
+        "       rows_changed, ROUND(bytes_written / 1073741824.0, 2) AS gb_written,\n",
+        "       sensitive_columns, unmasked_columns, COALESCE(sensitive_types, '') AS sensitive_types,\n",
+        "       CASE WHEN sensitive_columns > 0 THEN 1 ELSE 0 END AS sensitive,\n",
+        "       CASE WHEN sensitive_columns > 0 AND usage_class IN ('Written, never read', 'Idle 90d+') THEN 1 ELSE 0 END AS sensitive_unread,\n",
+        "       CASE WHEN unmasked_columns > 0 THEN 1 ELSE 0 END AS has_unmasked,\n",
+        "       CASE WHEN usage_class IN ('Written, never read', 'Idle 90d+') THEN ROUND(size_in_bytes / 1073741824.0, 3) ELSE 0 END AS unread_gb,\n",
+        "       CASE WHEN workspace_url IS NOT NULL THEN concat('https://', regexp_replace(regexp_replace(workspace_url, '^https?://', ''), '/.*$', ''), '/explore/data/', catalog, '/', schema_name, '/', name) END AS table_link,\n",
+        "       table_owner AS owner, CAST(date_format(created, 'yyyy-MM-dd') AS STRING) AS created, 1 AS objects\n",
+        "FROM c\n",
+        "ORDER BY class_rank, size_in_bytes DESC NULLS LAST, table_name\n",
+        "),\n",
+        "r AS (\n",
+        "  SELECT *, ROW_NUMBER() OVER (ORDER BY reads + writes DESC, table_name) AS rnk FROM b WHERE reads + writes > 0\n",
+        ")\n",
+        "SELECT workspace, table_name AS name, 'Reads' AS direction, reads AS events FROM r WHERE rnk <= 15\n",
+        "UNION ALL\n",
+        "SELECT workspace, table_name AS name, 'Writes' AS direction, writes AS events FROM r WHERE rnk <= 15\n"
+      ],
+      "parameters": [
+        {
+          "displayName": "time_range",
+          "keyword": "time_range",
+          "dataType": "DATE",
+          "complexType": "RANGE",
+          "defaultSelection": {
+            "range": {
+              "dataType": "DATE",
+              "min": {
+                "value": "now-30d/d"
+              },
+              "max": {
+                "value": "now-1d/d"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4146353c",
+      "displayName": "Each workspace's most used tables",
+      "queryLines": [
+        "SET QUERY_TAGS['cost_center'] = 'lakehouse_health';\n",
+        "SET QUERY_TAGS['domain'] = 'lakehouse_health';\n",
+        "SET QUERY_TAGS['dashboard'] = 'data_usage';\n",
+        "SET QUERY_TAGS['tab'] = 'workspace_detail';\n",
+        "-- Each workspace's most used tables. Dates from the Time Window.\n",
+        "WITH wsl AS (\n",
+        "  SELECT CAST(workspace_id AS STRING) AS workspace_id, workspace_name, workspace_url\n",
+        "  FROM system.access.workspaces_latest\n",
+        "),\n",
+        "seen AS (\n",
+        "  SELECT catalog, CAST(workspace_id AS STRING) AS workspace_id, COUNT(*) AS events FROM (\n",
+        "    SELECT workspace_id, source_table_catalog AS catalog FROM system.access.table_lineage\n",
+        "    WHERE event_date >= date_sub(date_add(:time_range.max, 1), 90) AND event_date < date_add(:time_range.max, 1)\n",
+        "    UNION ALL\n",
+        "    SELECT workspace_id, target_table_catalog FROM system.access.table_lineage\n",
+        "    WHERE event_date >= date_sub(date_add(:time_range.max, 1), 90) AND event_date < date_add(:time_range.max, 1)\n",
+        "  ) WHERE catalog IS NOT NULL GROUP BY 1, 2\n",
+        "),\n",
+        "home AS (\n",
+        "  SELECT c.catalog_name AS catalog, max_by(s.workspace_id, s.events) AS workspace_id\n",
+        "  FROM system.information_schema.catalogs c LEFT JOIN seen s ON s.catalog = c.catalog_name\n",
+        "  WHERE c.catalog_name NOT IN ('system', 'samples', '__databricks_internal')\n",
+        "  GROUP BY c.catalog_name\n",
+        "),\n",
+        "place AS (\n",
+        "  -- a catalog without lineage in 90 days keeps its rows, under No home workspace\n",
+        "  SELECT h.catalog, h.workspace_id, w.workspace_url,\n",
+        "         COALESCE(w.workspace_name, h.workspace_id, 'No home workspace') AS workspace\n",
+        "  FROM home h LEFT JOIN wsl w ON w.workspace_id = h.workspace_id\n",
+        "),\n",
+        "t AS (\n",
+        "  SELECT table_catalog AS catalog, table_schema AS sch, table_name, table_type, table_owner, created,\n",
+        "         table_catalog || '.' || table_schema || '.' || table_name AS full_name\n",
+        "  FROM system.information_schema.tables\n",
+        "  WHERE table_catalog NOT IN ('system', 'samples', '__databricks_internal') AND table_schema <> 'information_schema'\n",
+        "),\n",
+        "lin AS (\n",
+        "  SELECT source_table_full_name AS full_name, 1 AS is_read, 0 AS is_write, event_time, lower(created_by) AS who\n",
+        "  FROM system.access.table_lineage\n",
+        "  WHERE event_date >= date_sub(date_add(:time_range.max, 1), 365) AND event_date < date_add(:time_range.max, 1) AND source_table_full_name IS NOT NULL\n",
+        "  UNION ALL\n",
+        "  SELECT target_table_full_name, 0, 1, event_time, lower(created_by) FROM system.access.table_lineage\n",
+        "  WHERE event_date >= date_sub(date_add(:time_range.max, 1), 365) AND event_date < date_add(:time_range.max, 1) AND target_table_full_name IS NOT NULL\n",
+        "),\n",
+        "used AS (\n",
+        "  -- counts in the Time Window; last read and write over the lineage's year\n",
+        "  SELECT full_name,\n",
+        "         SUM(CASE WHEN event_time >= CAST(:time_range.min AS DATE) THEN is_read ELSE 0 END) AS reads,\n",
+        "         SUM(CASE WHEN event_time >= CAST(:time_range.min AS DATE) THEN is_write ELSE 0 END) AS writes,\n",
+        "         COUNT(DISTINCT CASE WHEN is_read = 1 AND event_time >= CAST(:time_range.min AS DATE) THEN who END) AS readers,\n",
+        "         COUNT(DISTINCT CASE WHEN is_write = 1 AND event_time >= CAST(:time_range.min AS DATE) THEN who END) AS writers,\n",
+        "         MAX(CASE WHEN is_read = 1 THEN event_time END) AS last_read,\n",
+        "         MAX(CASE WHEN is_write = 1 THEN event_time END) AS last_write\n",
+        "  FROM lin GROUP BY 1\n",
+        "),\n",
+        "hist AS (\n",
+        "  SELECT catalog, schema, table_name,\n",
+        "         MAX(CASE WHEN operation RLIKE 'WRITE|MERGE|UPDATE|DELETE|STREAMING UPDATE|CREATE OR REPLACE|COPY INTO|TRUNCATE|RESTORE' THEN timestamp END) AS last_change,\n",
+        "         max_by(operation, CASE WHEN operation RLIKE 'WRITE|MERGE|UPDATE|DELETE|STREAMING UPDATE|CREATE OR REPLACE|COPY INTO|TRUNCATE|RESTORE' THEN timestamp END) AS last_change_op,\n",
+        "         MAX(CASE WHEN operation RLIKE 'OPTIMIZE|VACUUM|ANALYZE|REORG' THEN timestamp END) AS last_maintenance,\n",
+        "         SUM(CASE WHEN timestamp >= CAST(:time_range.min AS DATE) THEN rows_changed ELSE 0 END) AS rows_changed,\n",
+        "         SUM(CASE WHEN timestamp >= CAST(:time_range.min AS DATE) THEN bytes_written ELSE 0 END) AS bytes_written\n",
+        "  FROM main.data_usage.table_history GROUP BY 1, 2, 3\n",
+        "),\n",
+        "po AS (\n",
+        "  SELECT catalog_name AS catalog, schema_name AS schema, table_name, MAX(start_time) AS last_po\n",
+        "  FROM system.storage.predictive_optimization_operations_history\n",
+        "  WHERE start_time >= date_sub(date_add(:time_range.max, 1), 365)\n",
+        "  GROUP BY 1, 2, 3\n",
+        "),\n",
+        "found AS (\n",
+        "  SELECT catalog_name AS c, schema_name AS s, table_name AS t, column_name,\n",
+        "         COALESCE(NULLIF(tag_value, ''), tag_name) AS pii_type, 1 AS rnk\n",
+        "  FROM system.information_schema.column_tags\n",
+        "  WHERE lower(tag_name) RLIKE '^(pii|sensitive|gdpr|class[.])' AND catalog_name NOT IN ('system', 'samples', '__databricks_internal')\n",
+        "  UNION ALL\n",
+        "  SELECT table_catalog, table_schema, table_name, column_name,\n",
+        "         CASE\n",
+        "         WHEN lower(column_name) RLIKE 'e_?mail' THEN 'Email'\n",
+        "         WHEN lower(column_name) RLIKE 'phone|mobile|msisdn' THEN 'Phone number'\n",
+        "         WHEN lower(column_name) RLIKE 'iban|(^|_)bic($|_)|account_?(no|number)' THEN 'IBAN / bank account'\n",
+        "         WHEN lower(column_name) RLIKE 'ssn|(^|_)ahv|passport|national_?id' THEN 'National ID'\n",
+        "         WHEN lower(column_name) RLIKE '(^|_)ip(_?address)?($|_)' THEN 'IP address'\n",
+        "         WHEN lower(column_name) RLIKE 'address|street|(^|_)zip|postal' THEN 'Postal address'\n",
+        "         WHEN lower(column_name) RLIKE 'birth|(^|_)dob($|_)' THEN 'Date of birth'\n",
+        "         WHEN lower(column_name) RLIKE 'card_?(no|number|num)|(^|_)pan$' THEN 'Payment card'\n",
+        "         END, 2\n",
+        "  FROM system.information_schema.columns\n",
+        "  WHERE table_catalog NOT IN ('system', 'samples', '__databricks_internal') AND table_schema <> 'information_schema'\n",
+        "),\n",
+        "sens_col AS (\n",
+        "  SELECT f.c || '.' || f.s || '.' || f.t AS full_name, f.column_name, f.pii_type, cm.mask_name IS NOT NULL AS masked\n",
+        "  FROM found f\n",
+        "  LEFT JOIN system.information_schema.column_masks cm\n",
+        "    ON cm.table_catalog = f.c AND cm.table_schema = f.s AND cm.table_name = f.t AND cm.column_name = f.column_name\n",
+        "  WHERE f.pii_type IS NOT NULL\n",
+        "  QUALIFY ROW_NUMBER() OVER (PARTITION BY f.c, f.s, f.t, f.column_name ORDER BY f.rnk) = 1\n",
+        "),\n",
+        "sens AS (\n",
+        "  SELECT full_name, COUNT(*) AS sensitive_columns, COUNT_IF(NOT masked) AS unmasked_columns,\n",
+        "         concat_ws(', ', sort_array(collect_set(pii_type))) AS sensitive_types\n",
+        "  FROM sens_col GROUP BY 1\n",
+        "),\n",
+        "j AS (\n",
+        "  SELECT p.workspace, p.workspace_id, p.workspace_url, t.catalog, t.sch AS schema_name, t.table_name AS name, t.full_name,\n",
+        "         t.table_type, t.table_owner, t.created,\n",
+        "         s.size_in_bytes, s.num_files, COALESCE(u.reads, 0) AS reads, COALESCE(u.writes, 0) AS writes,\n",
+        "         COALESCE(u.readers, 0) AS readers, COALESCE(u.writers, 0) AS writers, u.last_read,\n",
+        "         GREATEST(u.last_write, h.last_change) AS last_write, h.last_change_op,\n",
+        "         GREATEST(h.last_maintenance, po.last_po) AS last_maintenance,\n",
+        "         COALESCE(h.rows_changed, 0) AS rows_changed, COALESCE(h.bytes_written, 0) AS bytes_written,\n",
+        "         COALESCE(se.sensitive_columns, 0) AS sensitive_columns, COALESCE(se.unmasked_columns, 0) AS unmasked_columns,\n",
+        "         se.sensitive_types\n",
+        "  FROM t\n",
+        "  LEFT JOIN place p ON p.catalog = t.catalog\n",
+        "  LEFT JOIN main.data_usage.table_sizes s ON s.catalog = t.catalog AND s.schema = t.sch AND s.table_name = t.table_name\n",
+        "  LEFT JOIN used u ON u.full_name = t.full_name\n",
+        "  LEFT JOIN hist h ON h.catalog = t.catalog AND h.schema = t.sch AND h.table_name = t.table_name\n",
+        "  LEFT JOIN po ON po.catalog = t.catalog AND po.schema = t.sch AND po.table_name = t.table_name\n",
+        "  LEFT JOIN sens se ON se.full_name = t.full_name\n",
+        "),\n",
+        "c AS (\n",
+        "  SELECT *, CASE WHEN writes > 0 AND reads = 0 THEN 'Written, never read'\n",
+        "            WHEN reads = 0 AND writes = 0 AND last_read IS NULL AND last_write IS NULL\n",
+        "                 AND created >= date_sub(date_add(:time_range.max, 1), 7) THEN 'Active'\n",
+        "            WHEN GREATEST(last_read, last_write) IS NULL OR datediff(date_add(:time_range.max, 1), CAST(GREATEST(last_read, last_write) AS DATE)) >= 90 THEN 'Idle 90d+'\n",
+        "            WHEN reads = 0 THEN 'Cooling'\n",
+        "            ELSE 'Active' END AS usage_class FROM j\n",
+        "),\n",
+        "b AS (\n",
+        "SELECT workspace, catalog, schema_name, catalog || '.' || schema_name AS schema_full, full_name AS table_name,\n",
+        "       CASE WHEN table_type = 'VIEW' THEN 'View' ELSE 'Table' END AS kind, usage_class, CASE usage_class WHEN 'Written, never read' THEN 1 WHEN 'Idle 90d+' THEN 2 WHEN 'Cooling' THEN 3 ELSE 4 END AS class_rank,\n",
+        "       size_in_bytes, ROUND(size_in_bytes / 1073741824.0, 3) AS size_gb, num_files,\n",
+        "       CASE WHEN usage_class = 'Written, never read' THEN ROUND(size_in_bytes / 1073741824.0, 3) ELSE 0 END AS gb_written_never_read,\n",
+        "       CASE WHEN usage_class = 'Idle 90d+' THEN ROUND(size_in_bytes / 1073741824.0, 3) ELSE 0 END AS gb_idle,\n",
+        "       CASE WHEN usage_class = 'Cooling' THEN ROUND(size_in_bytes / 1073741824.0, 3) ELSE 0 END AS gb_cooling,\n",
+        "       CASE WHEN usage_class = 'Active' THEN ROUND(size_in_bytes / 1073741824.0, 3) ELSE 0 END AS gb_active,\n",
+        "       reads, writes, readers, writers,\n",
+        "       CAST(date_format(last_read, 'yyyy-MM-dd') AS STRING) AS last_read,\n",
+        "       datediff(date_add(:time_range.max, 1), CAST(last_read AS DATE)) AS days_since_read,\n",
+        "       CAST(date_format(last_write, 'yyyy-MM-dd') AS STRING) AS last_write, lower(last_change_op) AS last_change_op,\n",
+        "       CAST(date_format(last_maintenance, 'yyyy-MM-dd') AS STRING) AS last_maintenance,\n",
+        "       rows_changed, ROUND(bytes_written / 1073741824.0, 2) AS gb_written,\n",
+        "       sensitive_columns, unmasked_columns, COALESCE(sensitive_types, '') AS sensitive_types,\n",
+        "       CASE WHEN sensitive_columns > 0 THEN 1 ELSE 0 END AS sensitive,\n",
+        "       CASE WHEN sensitive_columns > 0 AND usage_class IN ('Written, never read', 'Idle 90d+') THEN 1 ELSE 0 END AS sensitive_unread,\n",
+        "       CASE WHEN unmasked_columns > 0 THEN 1 ELSE 0 END AS has_unmasked,\n",
+        "       CASE WHEN usage_class IN ('Written, never read', 'Idle 90d+') THEN ROUND(size_in_bytes / 1073741824.0, 3) ELSE 0 END AS unread_gb,\n",
+        "       CASE WHEN workspace_url IS NOT NULL THEN concat('https://', regexp_replace(regexp_replace(workspace_url, '^https?://', ''), '/.*$', ''), '/explore/data/', catalog, '/', schema_name, '/', name) END AS table_link,\n",
+        "       table_owner AS owner, CAST(date_format(created, 'yyyy-MM-dd') AS STRING) AS created, 1 AS objects\n",
+        "FROM c\n",
+        "ORDER BY class_rank, size_in_bytes DESC NULLS LAST, table_name\n",
+        "),\n",
+        "r AS (\n",
+        "  SELECT *, ROW_NUMBER() OVER (PARTITION BY workspace ORDER BY reads + writes DESC, table_name) AS rnk FROM b WHERE reads + writes > 0\n",
+        ")\n",
+        "SELECT workspace, table_name AS name, 'Reads' AS direction, reads AS events FROM r WHERE rnk <= 10\n",
+        "UNION ALL\n",
+        "SELECT workspace, table_name AS name, 'Writes' AS direction, writes AS events FROM r WHERE rnk <= 10\n"
+      ],
+      "parameters": [
+        {
+          "displayName": "time_range",
+          "keyword": "time_range",
+          "dataType": "DATE",
+          "complexType": "RANGE",
+          "defaultSelection": {
+            "range": {
+              "dataType": "DATE",
+              "min": {
+                "value": "now-30d/d"
+              },
+              "max": {
+                "value": "now-1d/d"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "e21b58c9",
+      "displayName": "The most active people",
+      "queryLines": [
+        "SET QUERY_TAGS['cost_center'] = 'lakehouse_health';\n",
+        "SET QUERY_TAGS['domain'] = 'lakehouse_health';\n",
+        "SET QUERY_TAGS['dashboard'] = 'data_usage';\n",
+        "SET QUERY_TAGS['tab'] = 'overview';\n",
+        "-- The most active people. Dates from the Time Window; last seen over a year.\n",
+        "WITH wsl AS (\n",
+        "  SELECT CAST(workspace_id AS STRING) AS workspace_id, workspace_name FROM system.access.workspaces_latest\n",
+        "),\n",
+        "aev AS (\n",
+        "  SELECT CAST(workspace_id AS STRING) AS workspace_id, lower(COALESCE(user_identity.email, user_identity.subject_name)) AS who,\n",
+        "         event_date, event_time,\n",
+        "         service_name = 'accounts' AND action_name RLIKE '(?i)login' AND response.status_code = 200 AS is_login\n",
+        "  FROM system.access.audit\n",
+        "  WHERE event_date >= date_sub(date_add(:time_range.max, 1), 365) AND event_date < date_add(:time_range.max, 1)\n",
+        "),\n",
+        "seen AS (\n",
+        "  -- last seen over the year; logins in the window\n",
+        "  SELECT workspace_id, who, MAX(event_time) AS last_seen, COUNT_IF(is_login AND event_date >= CAST(:time_range.min AS DATE)) AS logins,\n",
+        "         MAX(CASE WHEN event_date >= CAST(:time_range.min AS DATE) THEN 1 ELSE 0 END) AS seen_in_window\n",
+        "  FROM aev GROUP BY 1, 2\n",
+        "),\n",
+        "qh AS (\n",
+        "  SELECT CAST(workspace_id AS STRING) AS workspace_id, lower(executed_by) AS who, COUNT(*) AS queries, MAX(start_time) AS last_query\n",
+        "  FROM system.query.history WHERE start_time >= CAST(:time_range.min AS DATE) AND start_time < date_add(:time_range.max, 1)\n",
+        "  GROUP BY 1, 2\n",
+        "),\n",
+        "lin AS (\n",
+        "  SELECT CAST(workspace_id AS STRING) AS workspace_id, source_table_full_name AS full_name, 1 AS is_read, 0 AS is_write,\n",
+        "         lower(created_by) AS who\n",
+        "  FROM system.access.table_lineage\n",
+        "  WHERE event_date >= CAST(:time_range.min AS DATE) AND event_date < date_add(:time_range.max, 1) AND source_table_full_name IS NOT NULL\n",
+        "  UNION ALL\n",
+        "  SELECT CAST(workspace_id AS STRING), target_table_full_name, 0, 1, lower(created_by)\n",
+        "  FROM system.access.table_lineage\n",
+        "  WHERE event_date >= CAST(:time_range.min AS DATE) AND event_date < date_add(:time_range.max, 1) AND target_table_full_name IS NOT NULL\n",
+        "),\n",
+        "read_any AS (SELECT DISTINCT full_name FROM lin WHERE is_read = 1),\n",
+        "found AS (\n",
+        "  SELECT catalog_name AS c, schema_name AS s, table_name AS t, column_name,\n",
+        "         COALESCE(NULLIF(tag_value, ''), tag_name) AS pii_type, 1 AS rnk\n",
+        "  FROM system.information_schema.column_tags\n",
+        "  WHERE lower(tag_name) RLIKE '^(pii|sensitive|gdpr|class[.])' AND catalog_name NOT IN ('system', 'samples', '__databricks_internal')\n",
+        "  UNION ALL\n",
+        "  SELECT table_catalog, table_schema, table_name, column_name,\n",
+        "         CASE\n",
+        "         WHEN lower(column_name) RLIKE 'e_?mail' THEN 'Email'\n",
+        "         WHEN lower(column_name) RLIKE 'phone|mobile|msisdn' THEN 'Phone number'\n",
+        "         WHEN lower(column_name) RLIKE 'iban|(^|_)bic($|_)|account_?(no|number)' THEN 'IBAN / bank account'\n",
+        "         WHEN lower(column_name) RLIKE 'ssn|(^|_)ahv|passport|national_?id' THEN 'National ID'\n",
+        "         WHEN lower(column_name) RLIKE '(^|_)ip(_?address)?($|_)' THEN 'IP address'\n",
+        "         WHEN lower(column_name) RLIKE 'address|street|(^|_)zip|postal' THEN 'Postal address'\n",
+        "         WHEN lower(column_name) RLIKE 'birth|(^|_)dob($|_)' THEN 'Date of birth'\n",
+        "         WHEN lower(column_name) RLIKE 'card_?(no|number|num)|(^|_)pan$' THEN 'Payment card'\n",
+        "         END, 2\n",
+        "  FROM system.information_schema.columns\n",
+        "  WHERE table_catalog NOT IN ('system', 'samples', '__databricks_internal') AND table_schema <> 'information_schema'\n",
+        "),\n",
+        "sens_col AS (\n",
+        "  SELECT f.c || '.' || f.s || '.' || f.t AS full_name, f.column_name, f.pii_type, cm.mask_name IS NOT NULL AS masked\n",
+        "  FROM found f\n",
+        "  LEFT JOIN system.information_schema.column_masks cm\n",
+        "    ON cm.table_catalog = f.c AND cm.table_schema = f.s AND cm.table_name = f.t AND cm.column_name = f.column_name\n",
+        "  WHERE f.pii_type IS NOT NULL\n",
+        "  QUALIFY ROW_NUMBER() OVER (PARTITION BY f.c, f.s, f.t, f.column_name ORDER BY f.rnk) = 1\n",
+        "),\n",
+        "sens AS (\n",
+        "  SELECT full_name, COUNT(*) AS sensitive_columns, COUNT_IF(NOT masked) AS unmasked_columns,\n",
+        "         concat_ws(', ', sort_array(collect_set(pii_type))) AS sensitive_types\n",
+        "  FROM sens_col GROUP BY 1\n",
+        "),\n",
+        "tw AS (\n",
+        "  SELECT l.workspace_id, l.who,\n",
+        "         COUNT(DISTINCT CASE WHEN l.is_read = 1 THEN l.full_name END) AS tables_read,\n",
+        "         COUNT(DISTINCT CASE WHEN l.is_write = 1 THEN l.full_name END) AS tables_written,\n",
+        "         SUM(l.is_read) AS reads, SUM(l.is_write) AS writes,\n",
+        "         COUNT(DISTINCT CASE WHEN l.is_write = 1 AND r.full_name IS NULL THEN l.full_name END) AS writes_nobody_reads,\n",
+        "         COUNT(DISTINCT CASE WHEN se.full_name IS NOT NULL THEN l.full_name END) AS sensitive_tables\n",
+        "  FROM lin l\n",
+        "  LEFT JOIN read_any r ON r.full_name = l.full_name\n",
+        "  LEFT JOIN sens se ON se.full_name = l.full_name\n",
+        "  GROUP BY 1, 2\n",
+        "),\n",
+        "grants AS (\n",
+        "  -- direct grants on tables, per grantee; through a schema, catalog or group isn't expanded\n",
+        "  SELECT lower(p.grantee) AS who, COUNT(DISTINCT p.table_catalog || '.' || p.table_schema || '.' || p.table_name) AS direct_grants,\n",
+        "         COUNT(DISTINCT CASE WHEN se.full_name IS NOT NULL THEN p.table_catalog || '.' || p.table_schema || '.' || p.table_name END) AS sensitive_grants\n",
+        "  FROM system.information_schema.table_privileges p\n",
+        "  LEFT JOIN sens se ON se.full_name = p.table_catalog || '.' || p.table_schema || '.' || p.table_name\n",
+        "  WHERE p.privilege_type IN ('SELECT', 'ALL PRIVILEGES') AND p.table_catalog NOT IN ('system', 'samples', '__databricks_internal')\n",
+        "  GROUP BY 1\n",
+        "),\n",
+        "ids AS (\n",
+        "  SELECT workspace_id, who FROM seen UNION SELECT workspace_id, who FROM qh UNION SELECT workspace_id, who FROM tw\n",
+        "),\n",
+        "k AS (\n",
+        "  SELECT i.workspace_id, i.who, CASE WHEN i.who RLIKE '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' THEN 'Service principal' WHEN i.who LIKE '%@%' THEN 'Person' ELSE 'Other' END AS kind,\n",
+        "         COALESCE(s.logins, 0) AS logins, COALESCE(q.queries, 0) AS queries,\n",
+        "         COALESCE(w.tables_read, 0) AS tables_read, COALESCE(w.tables_written, 0) AS tables_written,\n",
+        "         COALESCE(w.reads, 0) AS reads, COALESCE(w.writes, 0) AS writes,\n",
+        "         COALESCE(w.writes_nobody_reads, 0) AS writes_nobody_reads, COALESCE(w.sensitive_tables, 0) AS sensitive_tables,\n",
+        "         COALESCE(g.direct_grants, 0) AS direct_grants, COALESCE(g.sensitive_grants, 0) AS sensitive_grants,\n",
+        "         GREATEST(s.last_seen, q.last_query) AS last_seen,\n",
+        "         COALESCE(s.seen_in_window, 0) + CASE WHEN q.queries > 0 OR w.reads + w.writes > 0 THEN 1 ELSE 0 END AS seen_in_window\n",
+        "  FROM ids i\n",
+        "  LEFT JOIN seen s ON s.workspace_id = i.workspace_id AND s.who = i.who\n",
+        "  LEFT JOIN qh q ON q.workspace_id = i.workspace_id AND q.who = i.who\n",
+        "  LEFT JOIN tw w ON w.workspace_id = i.workspace_id AND w.who = i.who\n",
+        "  LEFT JOIN grants g ON g.who = i.who\n",
+        "),\n",
+        "people AS (\n",
+        "  SELECT COALESCE(n.workspace_name, k.workspace_id) AS workspace, k.who AS identity, k.kind, k.logins, k.queries,\n",
+        "         k.tables_read, k.tables_written, k.reads, k.writes, k.writes_nobody_reads, k.sensitive_tables,\n",
+        "         k.direct_grants, k.sensitive_grants,\n",
+        "         CAST(date_format(k.last_seen, 'yyyy-MM-dd') AS STRING) AS last_seen,\n",
+        "         datediff(date_add(:time_range.max, 1), CAST(k.last_seen AS DATE)) AS days_since,\n",
+        "         CASE WHEN datediff(date_add(:time_range.max, 1), CAST(k.last_seen AS DATE)) < 30 THEN 'Under 30 days'\n",
+        "              WHEN datediff(date_add(:time_range.max, 1), CAST(k.last_seen AS DATE)) < 90 THEN '30-90 days'\n",
+        "              WHEN datediff(date_add(:time_range.max, 1), CAST(k.last_seen AS DATE)) < 180 THEN '90-180 days'\n",
+        "              ELSE '180+ days' END AS last_seen_band,\n",
+        "         CASE WHEN datediff(date_add(:time_range.max, 1), CAST(k.last_seen AS DATE)) >= 90 THEN 1 ELSE 0 END AS inactive,\n",
+        "         CASE WHEN k.seen_in_window > 0 THEN 1 ELSE 0 END AS active,\n",
+        "         CASE WHEN k.sensitive_tables > 0 THEN 1 ELSE 0 END AS touched_sensitive,\n",
+        "         CASE WHEN k.kind = 'Person' AND k.seen_in_window > 0 THEN 1 ELSE 0 END AS active_person,\n",
+        "         CASE WHEN k.kind = 'Service principal' AND k.seen_in_window > 0 THEN 1 ELSE 0 END AS active_sp,\n",
+        "         1 AS identities\n",
+        "  FROM k\n",
+        "  LEFT JOIN wsl n ON n.workspace_id = k.workspace_id\n",
+        "  WHERE k.kind <> 'Other' AND k.workspace_id IS NOT NULL AND k.workspace_id <> '0'\n",
+        "),\n",
+        "b AS (\n",
+        "SELECT workspace, identity, kind, logins, queries, tables_read, tables_written, reads, writes, writes_nobody_reads,\n",
+        "       sensitive_tables, direct_grants, sensitive_grants, last_seen, days_since, last_seen_band, inactive, active,\n",
+        "       touched_sensitive, active_person, active_sp, identities\n",
+        "FROM people\n",
+        "ORDER BY writes DESC, reads DESC, queries DESC, identity\n",
+        "),\n",
+        "r AS (\n",
+        "  SELECT *, ROW_NUMBER() OVER (ORDER BY reads + writes DESC, identity) AS rnk FROM b WHERE reads + writes > 0\n",
+        ")\n",
+        "SELECT workspace, identity AS name, kind, 'Reads' AS direction, reads AS events FROM r WHERE rnk <= 15\n",
+        "UNION ALL\n",
+        "SELECT workspace, identity AS name, kind, 'Writes' AS direction, writes AS events FROM r WHERE rnk <= 15\n"
+      ],
+      "parameters": [
+        {
+          "displayName": "time_range",
+          "keyword": "time_range",
+          "dataType": "DATE",
+          "complexType": "RANGE",
+          "defaultSelection": {
+            "range": {
+              "dataType": "DATE",
+              "min": {
+                "value": "now-30d/d"
+              },
+              "max": {
+                "value": "now-1d/d"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "0903fee3",
+      "displayName": "Each workspace's most active people",
+      "queryLines": [
+        "SET QUERY_TAGS['cost_center'] = 'lakehouse_health';\n",
+        "SET QUERY_TAGS['domain'] = 'lakehouse_health';\n",
+        "SET QUERY_TAGS['dashboard'] = 'data_usage';\n",
+        "SET QUERY_TAGS['tab'] = 'workspace_detail';\n",
+        "-- Each workspace's most active people. Dates from the Time Window; last seen over a year.\n",
+        "WITH wsl AS (\n",
+        "  SELECT CAST(workspace_id AS STRING) AS workspace_id, workspace_name FROM system.access.workspaces_latest\n",
+        "),\n",
+        "aev AS (\n",
+        "  SELECT CAST(workspace_id AS STRING) AS workspace_id, lower(COALESCE(user_identity.email, user_identity.subject_name)) AS who,\n",
+        "         event_date, event_time,\n",
+        "         service_name = 'accounts' AND action_name RLIKE '(?i)login' AND response.status_code = 200 AS is_login\n",
+        "  FROM system.access.audit\n",
+        "  WHERE event_date >= date_sub(date_add(:time_range.max, 1), 365) AND event_date < date_add(:time_range.max, 1)\n",
+        "),\n",
+        "seen AS (\n",
+        "  -- last seen over the year; logins in the window\n",
+        "  SELECT workspace_id, who, MAX(event_time) AS last_seen, COUNT_IF(is_login AND event_date >= CAST(:time_range.min AS DATE)) AS logins,\n",
+        "         MAX(CASE WHEN event_date >= CAST(:time_range.min AS DATE) THEN 1 ELSE 0 END) AS seen_in_window\n",
+        "  FROM aev GROUP BY 1, 2\n",
+        "),\n",
+        "qh AS (\n",
+        "  SELECT CAST(workspace_id AS STRING) AS workspace_id, lower(executed_by) AS who, COUNT(*) AS queries, MAX(start_time) AS last_query\n",
+        "  FROM system.query.history WHERE start_time >= CAST(:time_range.min AS DATE) AND start_time < date_add(:time_range.max, 1)\n",
+        "  GROUP BY 1, 2\n",
+        "),\n",
+        "lin AS (\n",
+        "  SELECT CAST(workspace_id AS STRING) AS workspace_id, source_table_full_name AS full_name, 1 AS is_read, 0 AS is_write,\n",
+        "         lower(created_by) AS who\n",
+        "  FROM system.access.table_lineage\n",
+        "  WHERE event_date >= CAST(:time_range.min AS DATE) AND event_date < date_add(:time_range.max, 1) AND source_table_full_name IS NOT NULL\n",
+        "  UNION ALL\n",
+        "  SELECT CAST(workspace_id AS STRING), target_table_full_name, 0, 1, lower(created_by)\n",
+        "  FROM system.access.table_lineage\n",
+        "  WHERE event_date >= CAST(:time_range.min AS DATE) AND event_date < date_add(:time_range.max, 1) AND target_table_full_name IS NOT NULL\n",
+        "),\n",
+        "read_any AS (SELECT DISTINCT full_name FROM lin WHERE is_read = 1),\n",
+        "found AS (\n",
+        "  SELECT catalog_name AS c, schema_name AS s, table_name AS t, column_name,\n",
+        "         COALESCE(NULLIF(tag_value, ''), tag_name) AS pii_type, 1 AS rnk\n",
+        "  FROM system.information_schema.column_tags\n",
+        "  WHERE lower(tag_name) RLIKE '^(pii|sensitive|gdpr|class[.])' AND catalog_name NOT IN ('system', 'samples', '__databricks_internal')\n",
+        "  UNION ALL\n",
+        "  SELECT table_catalog, table_schema, table_name, column_name,\n",
+        "         CASE\n",
+        "         WHEN lower(column_name) RLIKE 'e_?mail' THEN 'Email'\n",
+        "         WHEN lower(column_name) RLIKE 'phone|mobile|msisdn' THEN 'Phone number'\n",
+        "         WHEN lower(column_name) RLIKE 'iban|(^|_)bic($|_)|account_?(no|number)' THEN 'IBAN / bank account'\n",
+        "         WHEN lower(column_name) RLIKE 'ssn|(^|_)ahv|passport|national_?id' THEN 'National ID'\n",
+        "         WHEN lower(column_name) RLIKE '(^|_)ip(_?address)?($|_)' THEN 'IP address'\n",
+        "         WHEN lower(column_name) RLIKE 'address|street|(^|_)zip|postal' THEN 'Postal address'\n",
+        "         WHEN lower(column_name) RLIKE 'birth|(^|_)dob($|_)' THEN 'Date of birth'\n",
+        "         WHEN lower(column_name) RLIKE 'card_?(no|number|num)|(^|_)pan$' THEN 'Payment card'\n",
+        "         END, 2\n",
+        "  FROM system.information_schema.columns\n",
+        "  WHERE table_catalog NOT IN ('system', 'samples', '__databricks_internal') AND table_schema <> 'information_schema'\n",
+        "),\n",
+        "sens_col AS (\n",
+        "  SELECT f.c || '.' || f.s || '.' || f.t AS full_name, f.column_name, f.pii_type, cm.mask_name IS NOT NULL AS masked\n",
+        "  FROM found f\n",
+        "  LEFT JOIN system.information_schema.column_masks cm\n",
+        "    ON cm.table_catalog = f.c AND cm.table_schema = f.s AND cm.table_name = f.t AND cm.column_name = f.column_name\n",
+        "  WHERE f.pii_type IS NOT NULL\n",
+        "  QUALIFY ROW_NUMBER() OVER (PARTITION BY f.c, f.s, f.t, f.column_name ORDER BY f.rnk) = 1\n",
+        "),\n",
+        "sens AS (\n",
+        "  SELECT full_name, COUNT(*) AS sensitive_columns, COUNT_IF(NOT masked) AS unmasked_columns,\n",
+        "         concat_ws(', ', sort_array(collect_set(pii_type))) AS sensitive_types\n",
+        "  FROM sens_col GROUP BY 1\n",
+        "),\n",
+        "tw AS (\n",
+        "  SELECT l.workspace_id, l.who,\n",
+        "         COUNT(DISTINCT CASE WHEN l.is_read = 1 THEN l.full_name END) AS tables_read,\n",
+        "         COUNT(DISTINCT CASE WHEN l.is_write = 1 THEN l.full_name END) AS tables_written,\n",
+        "         SUM(l.is_read) AS reads, SUM(l.is_write) AS writes,\n",
+        "         COUNT(DISTINCT CASE WHEN l.is_write = 1 AND r.full_name IS NULL THEN l.full_name END) AS writes_nobody_reads,\n",
+        "         COUNT(DISTINCT CASE WHEN se.full_name IS NOT NULL THEN l.full_name END) AS sensitive_tables\n",
+        "  FROM lin l\n",
+        "  LEFT JOIN read_any r ON r.full_name = l.full_name\n",
+        "  LEFT JOIN sens se ON se.full_name = l.full_name\n",
+        "  GROUP BY 1, 2\n",
+        "),\n",
+        "grants AS (\n",
+        "  -- direct grants on tables, per grantee; through a schema, catalog or group isn't expanded\n",
+        "  SELECT lower(p.grantee) AS who, COUNT(DISTINCT p.table_catalog || '.' || p.table_schema || '.' || p.table_name) AS direct_grants,\n",
+        "         COUNT(DISTINCT CASE WHEN se.full_name IS NOT NULL THEN p.table_catalog || '.' || p.table_schema || '.' || p.table_name END) AS sensitive_grants\n",
+        "  FROM system.information_schema.table_privileges p\n",
+        "  LEFT JOIN sens se ON se.full_name = p.table_catalog || '.' || p.table_schema || '.' || p.table_name\n",
+        "  WHERE p.privilege_type IN ('SELECT', 'ALL PRIVILEGES') AND p.table_catalog NOT IN ('system', 'samples', '__databricks_internal')\n",
+        "  GROUP BY 1\n",
+        "),\n",
+        "ids AS (\n",
+        "  SELECT workspace_id, who FROM seen UNION SELECT workspace_id, who FROM qh UNION SELECT workspace_id, who FROM tw\n",
+        "),\n",
+        "k AS (\n",
+        "  SELECT i.workspace_id, i.who, CASE WHEN i.who RLIKE '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' THEN 'Service principal' WHEN i.who LIKE '%@%' THEN 'Person' ELSE 'Other' END AS kind,\n",
+        "         COALESCE(s.logins, 0) AS logins, COALESCE(q.queries, 0) AS queries,\n",
+        "         COALESCE(w.tables_read, 0) AS tables_read, COALESCE(w.tables_written, 0) AS tables_written,\n",
+        "         COALESCE(w.reads, 0) AS reads, COALESCE(w.writes, 0) AS writes,\n",
+        "         COALESCE(w.writes_nobody_reads, 0) AS writes_nobody_reads, COALESCE(w.sensitive_tables, 0) AS sensitive_tables,\n",
+        "         COALESCE(g.direct_grants, 0) AS direct_grants, COALESCE(g.sensitive_grants, 0) AS sensitive_grants,\n",
+        "         GREATEST(s.last_seen, q.last_query) AS last_seen,\n",
+        "         COALESCE(s.seen_in_window, 0) + CASE WHEN q.queries > 0 OR w.reads + w.writes > 0 THEN 1 ELSE 0 END AS seen_in_window\n",
+        "  FROM ids i\n",
+        "  LEFT JOIN seen s ON s.workspace_id = i.workspace_id AND s.who = i.who\n",
+        "  LEFT JOIN qh q ON q.workspace_id = i.workspace_id AND q.who = i.who\n",
+        "  LEFT JOIN tw w ON w.workspace_id = i.workspace_id AND w.who = i.who\n",
+        "  LEFT JOIN grants g ON g.who = i.who\n",
+        "),\n",
+        "people AS (\n",
+        "  SELECT COALESCE(n.workspace_name, k.workspace_id) AS workspace, k.who AS identity, k.kind, k.logins, k.queries,\n",
+        "         k.tables_read, k.tables_written, k.reads, k.writes, k.writes_nobody_reads, k.sensitive_tables,\n",
+        "         k.direct_grants, k.sensitive_grants,\n",
+        "         CAST(date_format(k.last_seen, 'yyyy-MM-dd') AS STRING) AS last_seen,\n",
+        "         datediff(date_add(:time_range.max, 1), CAST(k.last_seen AS DATE)) AS days_since,\n",
+        "         CASE WHEN datediff(date_add(:time_range.max, 1), CAST(k.last_seen AS DATE)) < 30 THEN 'Under 30 days'\n",
+        "              WHEN datediff(date_add(:time_range.max, 1), CAST(k.last_seen AS DATE)) < 90 THEN '30-90 days'\n",
+        "              WHEN datediff(date_add(:time_range.max, 1), CAST(k.last_seen AS DATE)) < 180 THEN '90-180 days'\n",
+        "              ELSE '180+ days' END AS last_seen_band,\n",
+        "         CASE WHEN datediff(date_add(:time_range.max, 1), CAST(k.last_seen AS DATE)) >= 90 THEN 1 ELSE 0 END AS inactive,\n",
+        "         CASE WHEN k.seen_in_window > 0 THEN 1 ELSE 0 END AS active,\n",
+        "         CASE WHEN k.sensitive_tables > 0 THEN 1 ELSE 0 END AS touched_sensitive,\n",
+        "         CASE WHEN k.kind = 'Person' AND k.seen_in_window > 0 THEN 1 ELSE 0 END AS active_person,\n",
+        "         CASE WHEN k.kind = 'Service principal' AND k.seen_in_window > 0 THEN 1 ELSE 0 END AS active_sp,\n",
+        "         1 AS identities\n",
+        "  FROM k\n",
+        "  LEFT JOIN wsl n ON n.workspace_id = k.workspace_id\n",
+        "  WHERE k.kind <> 'Other' AND k.workspace_id IS NOT NULL AND k.workspace_id <> '0'\n",
+        "),\n",
+        "b AS (\n",
+        "SELECT workspace, identity, kind, logins, queries, tables_read, tables_written, reads, writes, writes_nobody_reads,\n",
+        "       sensitive_tables, direct_grants, sensitive_grants, last_seen, days_since, last_seen_band, inactive, active,\n",
+        "       touched_sensitive, active_person, active_sp, identities\n",
+        "FROM people\n",
+        "ORDER BY writes DESC, reads DESC, queries DESC, identity\n",
+        "),\n",
+        "r AS (\n",
+        "  SELECT *, ROW_NUMBER() OVER (PARTITION BY workspace ORDER BY reads + writes DESC, identity) AS rnk FROM b WHERE reads + writes > 0\n",
+        ")\n",
+        "SELECT workspace, identity AS name, kind, 'Reads' AS direction, reads AS events FROM r WHERE rnk <= 10\n",
+        "UNION ALL\n",
+        "SELECT workspace, identity AS name, kind, 'Writes' AS direction, writes AS events FROM r WHERE rnk <= 10\n"
+      ],
+      "parameters": [
+        {
+          "displayName": "time_range",
+          "keyword": "time_range",
+          "dataType": "DATE",
+          "complexType": "RANGE",
+          "defaultSelection": {
+            "range": {
+              "dataType": "DATE",
+              "min": {
+                "value": "now-30d/d"
+              },
+              "max": {
+                "value": "now-1d/d"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "94d9b4c6",
+      "displayName": "Each workspace's most active volumes",
+      "queryLines": [
+        "SET QUERY_TAGS['cost_center'] = 'lakehouse_health';\n",
+        "SET QUERY_TAGS['domain'] = 'lakehouse_health';\n",
+        "SET QUERY_TAGS['dashboard'] = 'data_usage';\n",
+        "SET QUERY_TAGS['tab'] = 'workspace_detail';\n",
+        "-- Each workspace's most active volumes. Dates from the Time Window.\n",
+        "WITH wsl AS (\n",
+        "  SELECT CAST(workspace_id AS STRING) AS workspace_id, workspace_name, workspace_url\n",
+        "  FROM system.access.workspaces_latest\n",
+        "),\n",
+        "seen AS (\n",
+        "  SELECT catalog, CAST(workspace_id AS STRING) AS workspace_id, COUNT(*) AS events FROM (\n",
+        "    SELECT workspace_id, source_table_catalog AS catalog FROM system.access.table_lineage\n",
+        "    WHERE event_date >= date_sub(date_add(:time_range.max, 1), 90) AND event_date < date_add(:time_range.max, 1)\n",
+        "    UNION ALL\n",
+        "    SELECT workspace_id, target_table_catalog FROM system.access.table_lineage\n",
+        "    WHERE event_date >= date_sub(date_add(:time_range.max, 1), 90) AND event_date < date_add(:time_range.max, 1)\n",
+        "  ) WHERE catalog IS NOT NULL GROUP BY 1, 2\n",
+        "),\n",
+        "home AS (\n",
+        "  SELECT c.catalog_name AS catalog, max_by(s.workspace_id, s.events) AS workspace_id\n",
+        "  FROM system.information_schema.catalogs c LEFT JOIN seen s ON s.catalog = c.catalog_name\n",
+        "  WHERE c.catalog_name NOT IN ('system', 'samples', '__databricks_internal')\n",
+        "  GROUP BY c.catalog_name\n",
+        "),\n",
+        "place AS (\n",
+        "  -- a catalog without lineage in 90 days keeps its rows, under No home workspace\n",
+        "  SELECT h.catalog, h.workspace_id, w.workspace_url,\n",
+        "         COALESCE(w.workspace_name, h.workspace_id, 'No home workspace') AS workspace\n",
+        "  FROM home h LEFT JOIN wsl w ON w.workspace_id = h.workspace_id\n",
+        "),\n",
+        "v AS (\n",
+        "  SELECT volume_catalog AS catalog, volume_schema AS sch, volume_name, volume_type, created,\n",
+        "         volume_catalog || '.' || volume_schema || '.' || volume_name AS full_name\n",
+        "  FROM system.information_schema.volumes WHERE volume_catalog NOT IN ('system', 'samples', '__databricks_internal')\n",
+        "),\n",
+        "ev AS (\n",
+        "  SELECT regexp_extract(COALESCE(request_params['path'], request_params['file_path'], request_params['directory_path']),\n",
+        "                        '^/Volumes/([^/]+)/([^/]+)/([^/]+)', 0) AS path_root,\n",
+        "         lower(COALESCE(user_identity.email, user_identity.subject_name)) AS who, event_time,\n",
+        "         action_name RLIKE '(?i)put|upload|create|delete|write|mkdir' AS is_write\n",
+        "  FROM system.access.audit\n",
+        "  WHERE event_date >= date_sub(date_add(:time_range.max, 1), 365) AND event_date < date_add(:time_range.max, 1)\n",
+        "    AND service_name = 'filesystem' AND response.status_code = 200\n",
+        "),\n",
+        "used AS (\n",
+        "  SELECT replace(substr(path_root, 10), '/', '.') AS full_name,\n",
+        "         COUNT_IF(NOT is_write AND event_time >= CAST(:time_range.min AS DATE)) AS reads, COUNT_IF(is_write AND event_time >= CAST(:time_range.min AS DATE)) AS writes,\n",
+        "         COUNT(DISTINCT CASE WHEN NOT is_write AND event_time >= CAST(:time_range.min AS DATE) THEN who END) AS readers,\n",
+        "         COUNT(DISTINCT CASE WHEN is_write AND event_time >= CAST(:time_range.min AS DATE) THEN who END) AS writers,\n",
+        "         MAX(CASE WHEN NOT is_write THEN event_time END) AS last_read, MAX(CASE WHEN is_write THEN event_time END) AS last_write\n",
+        "  FROM ev WHERE path_root <> '' GROUP BY 1\n",
+        "),\n",
+        "j AS (\n",
+        "  SELECT p.workspace, v.catalog, v.sch AS schema_name, v.full_name, lower(v.volume_type) AS volume_type, v.created,\n",
+        "         vs.files, vs.size_in_bytes, COALESCE(u.reads, 0) AS reads, COALESCE(u.writes, 0) AS writes,\n",
+        "         COALESCE(u.readers, 0) AS readers, COALESCE(u.writers, 0) AS writers, u.last_read, u.last_write\n",
+        "  FROM v\n",
+        "  LEFT JOIN place p ON p.catalog = v.catalog\n",
+        "  LEFT JOIN main.data_usage.volume_sizes vs ON vs.catalog = v.catalog AND vs.schema = v.sch AND vs.volume_name = v.volume_name\n",
+        "  LEFT JOIN used u ON u.full_name = v.full_name\n",
+        "),\n",
+        "c AS (\n",
+        "  SELECT *, CASE WHEN writes > 0 AND reads = 0 THEN 'Written, never read'\n",
+        "            WHEN reads = 0 AND writes = 0 AND last_read IS NULL AND last_write IS NULL\n",
+        "                 AND created >= date_sub(date_add(:time_range.max, 1), 7) THEN 'Active'\n",
+        "            WHEN GREATEST(last_read, last_write) IS NULL OR datediff(date_add(:time_range.max, 1), CAST(GREATEST(last_read, last_write) AS DATE)) >= 90 THEN 'Idle 90d+'\n",
+        "            WHEN reads = 0 THEN 'Cooling'\n",
+        "            ELSE 'Active' END AS usage_class FROM j\n",
+        "),\n",
+        "b AS (\n",
+        "SELECT workspace, catalog, schema_name, full_name AS volume, volume_type, usage_class, CASE usage_class WHEN 'Written, never read' THEN 1 WHEN 'Idle 90d+' THEN 2 WHEN 'Cooling' THEN 3 ELSE 4 END AS class_rank,\n",
+        "       files, size_in_bytes, ROUND(size_in_bytes / 1073741824.0, 3) AS size_gb,\n",
+        "       reads, writes, readers, writers,\n",
+        "       CAST(date_format(last_read, 'yyyy-MM-dd') AS STRING) AS last_read,\n",
+        "       CAST(date_format(last_write, 'yyyy-MM-dd') AS STRING) AS last_write,\n",
+        "       CASE WHEN usage_class IN ('Written, never read', 'Idle 90d+') THEN ROUND(size_in_bytes / 1073741824.0, 3) ELSE 0 END AS unread_gb,\n",
+        "       1 AS volumes\n",
+        "FROM c\n",
+        "ORDER BY class_rank, size_in_bytes DESC NULLS LAST, volume\n",
+        "),\n",
+        "r AS (\n",
+        "  SELECT *, ROW_NUMBER() OVER (PARTITION BY workspace ORDER BY reads + writes DESC, volume) AS rnk FROM b WHERE reads + writes > 0\n",
+        ")\n",
+        "SELECT workspace, volume AS name, usage_class, 'Reads' AS direction, reads AS events FROM r WHERE rnk <= 10\n",
+        "UNION ALL\n",
+        "SELECT workspace, volume AS name, usage_class, 'Writes' AS direction, writes AS events FROM r WHERE rnk <= 10\n"
+      ],
+      "parameters": [
+        {
+          "displayName": "time_range",
+          "keyword": "time_range",
+          "dataType": "DATE",
+          "complexType": "RANGE",
+          "defaultSelection": {
+            "range": {
+              "dataType": "DATE",
+              "min": {
+                "value": "now-30d/d"
+              },
+              "max": {
+                "value": "now-1d/d"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "1b362b70",
+      "displayName": "Each workspace's busiest tables per day",
+      "queryLines": [
+        "SET QUERY_TAGS['cost_center'] = 'lakehouse_health';\n",
+        "SET QUERY_TAGS['domain'] = 'lakehouse_health';\n",
+        "SET QUERY_TAGS['dashboard'] = 'data_usage';\n",
+        "SET QUERY_TAGS['tab'] = 'workspace_detail';\n",
+        "-- Each workspace's busiest tables per day. Dates from the Time Window.\n",
+        "WITH wsl AS (\n",
+        "  SELECT CAST(workspace_id AS STRING) AS workspace_id, workspace_name, workspace_url\n",
+        "  FROM system.access.workspaces_latest\n",
+        "),\n",
+        "seen AS (\n",
+        "  SELECT catalog, CAST(workspace_id AS STRING) AS workspace_id, COUNT(*) AS events FROM (\n",
+        "    SELECT workspace_id, source_table_catalog AS catalog FROM system.access.table_lineage\n",
+        "    WHERE event_date >= date_sub(date_add(:time_range.max, 1), 90) AND event_date < date_add(:time_range.max, 1)\n",
+        "    UNION ALL\n",
+        "    SELECT workspace_id, target_table_catalog FROM system.access.table_lineage\n",
+        "    WHERE event_date >= date_sub(date_add(:time_range.max, 1), 90) AND event_date < date_add(:time_range.max, 1)\n",
+        "  ) WHERE catalog IS NOT NULL GROUP BY 1, 2\n",
+        "),\n",
+        "home AS (\n",
+        "  SELECT c.catalog_name AS catalog, max_by(s.workspace_id, s.events) AS workspace_id\n",
+        "  FROM system.information_schema.catalogs c LEFT JOIN seen s ON s.catalog = c.catalog_name\n",
+        "  WHERE c.catalog_name NOT IN ('system', 'samples', '__databricks_internal')\n",
+        "  GROUP BY c.catalog_name\n",
+        "),\n",
+        "place AS (\n",
+        "  -- a catalog without lineage in 90 days keeps its rows, under No home workspace\n",
+        "  SELECT h.catalog, h.workspace_id, w.workspace_url,\n",
+        "         COALESCE(w.workspace_name, h.workspace_id, 'No home workspace') AS workspace\n",
+        "  FROM home h LEFT JOIN wsl w ON w.workspace_id = h.workspace_id\n",
+        "),\n",
+        "b AS (\n",
+        "SELECT l.day, p.workspace, l.full_name AS table_name, l.direction, COUNT(*) AS events\n",
+        "FROM (\n",
+        "  SELECT event_date AS day, source_table_full_name AS full_name, source_table_catalog AS catalog, 'Reads' AS direction\n",
+        "  FROM system.access.table_lineage\n",
+        "  WHERE event_date >= CAST(:time_range.min AS DATE) AND event_date < date_add(:time_range.max, 1) AND source_table_full_name IS NOT NULL\n",
+        "  UNION ALL\n",
+        "  SELECT event_date, target_table_full_name, target_table_catalog, 'Writes'\n",
+        "  FROM system.access.table_lineage\n",
+        "  WHERE event_date >= CAST(:time_range.min AS DATE) AND event_date < date_add(:time_range.max, 1) AND target_table_full_name IS NOT NULL\n",
+        ") l\n",
+        "LEFT JOIN place p ON p.catalog = l.catalog\n",
+        "WHERE l.catalog NOT IN ('system', 'samples', '__databricks_internal')\n",
+        "GROUP BY 1, 2, 3, 4\n",
+        "),\n",
+        "t AS (\n",
+        "  SELECT workspace, table_name, ROW_NUMBER() OVER (PARTITION BY workspace ORDER BY SUM(events) DESC, table_name) AS rnk\n",
+        "  FROM b GROUP BY workspace, table_name\n",
+        ")\n",
+        "SELECT b.day, b.workspace, b.table_name, b.direction, b.events\n",
+        "FROM b JOIN t ON t.workspace <=> b.workspace AND t.table_name = b.table_name WHERE t.rnk <= 10\n"
+      ],
+      "parameters": [
+        {
+          "displayName": "time_range",
+          "keyword": "time_range",
+          "dataType": "DATE",
+          "complexType": "RANGE",
+          "defaultSelection": {
+            "range": {
+              "dataType": "DATE",
+              "min": {
+                "value": "now-30d/d"
+              },
+              "max": {
+                "value": "now-1d/d"
+              }
+            }
+          }
+        }
+      ]
     }
   ],
   "pages": [
@@ -2103,6 +3262,45 @@
                   ],
                   "disaggregated": false
                 }
+              },
+              {
+                "name": "q_ca44850d",
+                "query": {
+                  "datasetName": "b62d50fe",
+                  "parameters": [
+                    {
+                      "name": "time_range",
+                      "keyword": "time_range"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_48314fc0",
+                "query": {
+                  "datasetName": "5fa6f201",
+                  "parameters": [
+                    {
+                      "name": "time_range",
+                      "keyword": "time_range"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_5ff122f0",
+                "query": {
+                  "datasetName": "e21b58c9",
+                  "parameters": [
+                    {
+                      "name": "time_range",
+                      "keyword": "time_range"
+                    }
+                  ],
+                  "disaggregated": false
+                }
               }
             ],
             "spec": {
@@ -2129,6 +3327,18 @@
                   {
                     "parameterName": "time_range",
                     "queryName": "q_f17dcbdb"
+                  },
+                  {
+                    "parameterName": "time_range",
+                    "queryName": "q_ca44850d"
+                  },
+                  {
+                    "parameterName": "time_range",
+                    "queryName": "q_48314fc0"
+                  },
+                  {
+                    "parameterName": "time_range",
+                    "queryName": "q_5ff122f0"
                   }
                 ]
               },
@@ -2246,6 +3456,57 @@
                     }
                   ]
                 }
+              },
+              {
+                "name": "q_9784a0ef",
+                "query": {
+                  "datasetName": "b62d50fe",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "name": "workspace",
+                      "expression": "`workspace`"
+                    },
+                    {
+                      "name": "workspace_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ]
+                }
+              },
+              {
+                "name": "q_513c798a",
+                "query": {
+                  "datasetName": "5fa6f201",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "name": "workspace",
+                      "expression": "`workspace`"
+                    },
+                    {
+                      "name": "workspace_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ]
+                }
+              },
+              {
+                "name": "q_82f7fa42",
+                "query": {
+                  "datasetName": "e21b58c9",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "name": "workspace",
+                      "expression": "`workspace`"
+                    },
+                    {
+                      "name": "workspace_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ]
+                }
               }
             ],
             "spec": {
@@ -2277,6 +3538,21 @@
                     "fieldName": "workspace",
                     "displayName": "Workspace",
                     "queryName": "q_a908f19e"
+                  },
+                  {
+                    "fieldName": "workspace",
+                    "displayName": "Workspace",
+                    "queryName": "q_9784a0ef"
+                  },
+                  {
+                    "fieldName": "workspace",
+                    "displayName": "Workspace",
+                    "queryName": "q_513c798a"
+                  },
+                  {
+                    "fieldName": "workspace",
+                    "displayName": "Workspace",
+                    "queryName": "q_82f7fa42"
                   }
                 ]
               },
@@ -2866,6 +4142,682 @@
         },
         {
           "widget": {
+            "name": "4666e09c",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "b62d50fe",
+                  "fields": [
+                    {
+                      "name": "name",
+                      "expression": "`name`"
+                    },
+                    {
+                      "name": "direction",
+                      "expression": "`direction`"
+                    },
+                    {
+                      "name": "sum(events)",
+                      "expression": "SUM(`events`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "sum(events)",
+                  "displayName": "Events",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "format": {
+                    "type": "number-plain",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 0
+                    }
+                  }
+                },
+                "y": {
+                  "fieldName": "name",
+                  "displayName": "Workspace",
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "x-reversed"
+                    }
+                  }
+                },
+                "label": {
+                  "show": false
+                },
+                "color": {
+                  "fieldName": "direction",
+                  "displayName": "direction",
+                  "legend": {
+                    "position": "bottom",
+                    "hideTitle": true
+                  },
+                  "scale": {
+                    "type": "categorical",
+                    "mappings": [
+                      {
+                        "value": "Reads",
+                        "color": "#2456A6"
+                      },
+                      {
+                        "value": "Writes",
+                        "color": "#D27A2C"
+                      }
+                    ]
+                  }
+                }
+              },
+              "frame": {
+                "title": "Most active workspaces",
+                "showTitle": true,
+                "description": "Table read and write events in the window, by home workspace; pick one on Workspace detail",
+                "showDescription": true
+              },
+              "mark": {
+                "layout": "stack"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 21,
+            "width": 6,
+            "height": 10
+          }
+        },
+        {
+          "widget": {
+            "name": "bef57a01",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "6d64102f",
+                  "disaggregated": true,
+                  "fields": [
+                    {
+                      "name": "reads",
+                      "expression": "`reads`"
+                    },
+                    {
+                      "name": "writes",
+                      "expression": "`writes`"
+                    },
+                    {
+                      "name": "active_people",
+                      "expression": "`active_people`"
+                    },
+                    {
+                      "name": "signal",
+                      "expression": "`signal`"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "scatter",
+              "encodings": {
+                "x": {
+                  "fieldName": "reads",
+                  "displayName": "Table reads",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "y": {
+                  "fieldName": "writes",
+                  "displayName": "Table writes",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "size": {
+                  "fieldName": "active_people",
+                  "displayName": "Active people",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "color": {
+                  "fieldName": "signal",
+                  "displayName": "Signal",
+                  "scale": {
+                    "type": "categorical",
+                    "mappings": [
+                      {
+                        "value": "Retire candidate",
+                        "color": "#C2362B"
+                      },
+                      {
+                        "value": "Review",
+                        "color": "#E0A93B"
+                      },
+                      {
+                        "value": "Light",
+                        "color": "#8E8B84"
+                      },
+                      {
+                        "value": "Healthy",
+                        "color": "#2456A6"
+                      }
+                    ]
+                  }
+                },
+                "label": {
+                  "show": false
+                }
+              },
+              "frame": {
+                "title": "Workspaces: reads against writes",
+                "showTitle": true,
+                "showDescription": true,
+                "description": "One bubble per workspace, bubble = active people. Bottom right: read, rarely written. Top left: written, rarely read."
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 21,
+            "width": 6,
+            "height": 10
+          }
+        },
+        {
+          "widget": {
+            "name": "29c103bd",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "eb14f0b0",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "name": "day",
+                      "expression": "`day`"
+                    },
+                    {
+                      "name": "workspace",
+                      "expression": "`workspace`"
+                    },
+                    {
+                      "name": "sum(events)",
+                      "expression": "SUM(`events`)"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "heatmap",
+              "encodings": {
+                "x": {
+                  "fieldName": "day",
+                  "displayName": "Day",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "y": {
+                  "fieldName": "workspace",
+                  "displayName": "Workspace",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "color": {
+                  "fieldName": "sum(events)",
+                  "displayName": "Read and write events",
+                  "scale": {
+                    "type": "quantitative",
+                    "colorRamp": {
+                      "mode": "scheme",
+                      "scheme": "blues"
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "title": "Activity per workspace per day",
+                "showTitle": true,
+                "showDescription": true,
+                "description": "Darker = more table read and write events"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 31,
+            "width": 12,
+            "height": 9
+          }
+        },
+        {
+          "widget": {
+            "name": "e636afd6",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "5fa6f201",
+                  "fields": [
+                    {
+                      "name": "name",
+                      "expression": "`name`"
+                    },
+                    {
+                      "name": "direction",
+                      "expression": "`direction`"
+                    },
+                    {
+                      "name": "sum(events)",
+                      "expression": "SUM(`events`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "sum(events)",
+                  "displayName": "Events",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "format": {
+                    "type": "number-plain",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 0
+                    }
+                  }
+                },
+                "y": {
+                  "fieldName": "name",
+                  "displayName": "Table",
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "x-reversed"
+                    }
+                  }
+                },
+                "label": {
+                  "show": false
+                },
+                "color": {
+                  "fieldName": "direction",
+                  "displayName": "direction",
+                  "legend": {
+                    "position": "bottom",
+                    "hideTitle": true
+                  },
+                  "scale": {
+                    "type": "categorical",
+                    "mappings": [
+                      {
+                        "value": "Reads",
+                        "color": "#2456A6"
+                      },
+                      {
+                        "value": "Writes",
+                        "color": "#D27A2C"
+                      }
+                    ]
+                  }
+                }
+              },
+              "frame": {
+                "title": "Most used tables",
+                "showTitle": true,
+                "description": "The 15 tables with the most read and write events",
+                "showDescription": true
+              },
+              "mark": {
+                "layout": "stack"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 40,
+            "width": 6,
+            "height": 10
+          }
+        },
+        {
+          "widget": {
+            "name": "481a2567",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "e21b58c9",
+                  "fields": [
+                    {
+                      "name": "name",
+                      "expression": "`name`"
+                    },
+                    {
+                      "name": "direction",
+                      "expression": "`direction`"
+                    },
+                    {
+                      "name": "sum(events)",
+                      "expression": "SUM(`events`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "sum(events)",
+                  "displayName": "Events",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "format": {
+                    "type": "number-plain",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 0
+                    }
+                  }
+                },
+                "y": {
+                  "fieldName": "name",
+                  "displayName": "Who",
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "x-reversed"
+                    }
+                  }
+                },
+                "label": {
+                  "show": false
+                },
+                "color": {
+                  "fieldName": "direction",
+                  "displayName": "direction",
+                  "legend": {
+                    "position": "bottom",
+                    "hideTitle": true
+                  },
+                  "scale": {
+                    "type": "categorical",
+                    "mappings": [
+                      {
+                        "value": "Reads",
+                        "color": "#2456A6"
+                      },
+                      {
+                        "value": "Writes",
+                        "color": "#D27A2C"
+                      }
+                    ]
+                  }
+                }
+              },
+              "frame": {
+                "title": "Most active people",
+                "showTitle": true,
+                "description": "The 15 people and service principals with the most table events, per workspace",
+                "showDescription": true
+              },
+              "mark": {
+                "layout": "stack"
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 40,
+            "width": 6,
+            "height": 10
+          }
+        },
+        {
+          "widget": {
+            "name": "a518a9d1",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "1159f3be",
+                  "fields": [
+                    {
+                      "name": "workspace",
+                      "expression": "`workspace`"
+                    },
+                    {
+                      "name": "usage_class",
+                      "expression": "`usage_class`"
+                    },
+                    {
+                      "name": "sum(objects)",
+                      "expression": "SUM(`objects`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "sum(objects)",
+                  "displayName": "Tables and views",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "format": {
+                    "type": "number-plain",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 0
+                    }
+                  }
+                },
+                "y": {
+                  "fieldName": "workspace",
+                  "displayName": "Workspace",
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "x-reversed"
+                    }
+                  }
+                },
+                "label": {
+                  "show": false
+                },
+                "color": {
+                  "fieldName": "usage_class",
+                  "displayName": "usage_class",
+                  "legend": {
+                    "position": "bottom",
+                    "hideTitle": true
+                  },
+                  "scale": {
+                    "type": "categorical",
+                    "mappings": [
+                      {
+                        "value": "Written, never read",
+                        "color": "#C2362B"
+                      },
+                      {
+                        "value": "Idle 90d+",
+                        "color": "#8E8B84"
+                      },
+                      {
+                        "value": "Cooling",
+                        "color": "#E0A93B"
+                      },
+                      {
+                        "value": "Active",
+                        "color": "#2456A6"
+                      }
+                    ]
+                  }
+                }
+              },
+              "frame": {
+                "title": "Tables in use, by workspace",
+                "showTitle": true,
+                "description": "Active of all: blue = read in the window",
+                "showDescription": true
+              },
+              "mark": {
+                "layout": "stack"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 50,
+            "width": 6,
+            "height": 10
+          }
+        },
+        {
+          "widget": {
+            "name": "ae659427",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "d11eacba",
+                  "fields": [
+                    {
+                      "name": "workspace",
+                      "expression": "`workspace`"
+                    },
+                    {
+                      "name": "usage_class",
+                      "expression": "`usage_class`"
+                    },
+                    {
+                      "name": "sum(volumes)",
+                      "expression": "SUM(`volumes`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "sum(volumes)",
+                  "displayName": "Volumes",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "format": {
+                    "type": "number-plain",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 0
+                    }
+                  }
+                },
+                "y": {
+                  "fieldName": "workspace",
+                  "displayName": "Workspace",
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "x-reversed"
+                    }
+                  }
+                },
+                "label": {
+                  "show": false
+                },
+                "color": {
+                  "fieldName": "usage_class",
+                  "displayName": "usage_class",
+                  "legend": {
+                    "position": "bottom",
+                    "hideTitle": true
+                  },
+                  "scale": {
+                    "type": "categorical",
+                    "mappings": [
+                      {
+                        "value": "Written, never read",
+                        "color": "#C2362B"
+                      },
+                      {
+                        "value": "Idle 90d+",
+                        "color": "#8E8B84"
+                      },
+                      {
+                        "value": "Cooling",
+                        "color": "#E0A93B"
+                      },
+                      {
+                        "value": "Active",
+                        "color": "#2456A6"
+                      }
+                    ]
+                  }
+                }
+              },
+              "frame": {
+                "title": "Volumes in use, by workspace",
+                "showTitle": true,
+                "description": "Active of all: blue = a file read in the window",
+                "showDescription": true
+              },
+              "mark": {
+                "layout": "stack"
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 50,
+            "width": 6,
+            "height": 10
+          }
+        },
+        {
+          "widget": {
             "name": "3a2935f7",
             "queries": [
               {
@@ -2965,7 +4917,7 @@
           },
           "position": {
             "x": 0,
-            "y": 21,
+            "y": 60,
             "width": 6,
             "height": 12
           }
@@ -3071,7 +5023,7 @@
           },
           "position": {
             "x": 6,
-            "y": 21,
+            "y": 60,
             "width": 6,
             "height": 12
           }
@@ -3177,7 +5129,7 @@
           },
           "position": {
             "x": 0,
-            "y": 33,
+            "y": 72,
             "width": 6,
             "height": 12
           }
@@ -3283,7 +5235,7 @@
           },
           "position": {
             "x": 6,
-            "y": 33,
+            "y": 72,
             "width": 6,
             "height": 12
           }
@@ -3389,7 +5341,7 @@
           },
           "position": {
             "x": 0,
-            "y": 45,
+            "y": 84,
             "width": 12,
             "height": 12
           }
@@ -3410,7 +5362,7 @@
           },
           "position": {
             "x": 0,
-            "y": 57,
+            "y": 96,
             "width": 12,
             "height": 5
           }
@@ -5570,6 +7522,58 @@
                   ],
                   "disaggregated": false
                 }
+              },
+              {
+                "name": "q_60770994",
+                "query": {
+                  "datasetName": "4146353c",
+                  "parameters": [
+                    {
+                      "name": "time_range",
+                      "keyword": "time_range"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_646d4d4a",
+                "query": {
+                  "datasetName": "0903fee3",
+                  "parameters": [
+                    {
+                      "name": "time_range",
+                      "keyword": "time_range"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_93ae40af",
+                "query": {
+                  "datasetName": "94d9b4c6",
+                  "parameters": [
+                    {
+                      "name": "time_range",
+                      "keyword": "time_range"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_e4247573",
+                "query": {
+                  "datasetName": "1b362b70",
+                  "parameters": [
+                    {
+                      "name": "time_range",
+                      "keyword": "time_range"
+                    }
+                  ],
+                  "disaggregated": false
+                }
               }
             ],
             "spec": {
@@ -5596,6 +7600,22 @@
                   {
                     "parameterName": "time_range",
                     "queryName": "q_7d5e8a04"
+                  },
+                  {
+                    "parameterName": "time_range",
+                    "queryName": "q_60770994"
+                  },
+                  {
+                    "parameterName": "time_range",
+                    "queryName": "q_646d4d4a"
+                  },
+                  {
+                    "parameterName": "time_range",
+                    "queryName": "q_93ae40af"
+                  },
+                  {
+                    "parameterName": "time_range",
+                    "queryName": "q_e4247573"
                   }
                 ]
               },
@@ -5713,6 +7733,74 @@
                     }
                   ]
                 }
+              },
+              {
+                "name": "q_a6a69bc4",
+                "query": {
+                  "datasetName": "4146353c",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "name": "workspace",
+                      "expression": "`workspace`"
+                    },
+                    {
+                      "name": "workspace_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ]
+                }
+              },
+              {
+                "name": "q_fd71cb8d",
+                "query": {
+                  "datasetName": "0903fee3",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "name": "workspace",
+                      "expression": "`workspace`"
+                    },
+                    {
+                      "name": "workspace_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ]
+                }
+              },
+              {
+                "name": "q_8b3b9afc",
+                "query": {
+                  "datasetName": "94d9b4c6",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "name": "workspace",
+                      "expression": "`workspace`"
+                    },
+                    {
+                      "name": "workspace_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ]
+                }
+              },
+              {
+                "name": "q_ac85c6a9",
+                "query": {
+                  "datasetName": "1b362b70",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "name": "workspace",
+                      "expression": "`workspace`"
+                    },
+                    {
+                      "name": "workspace_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ]
+                }
               }
             ],
             "spec": {
@@ -5744,6 +7832,26 @@
                     "fieldName": "workspace",
                     "displayName": "Workspace",
                     "queryName": "q_2fee45b4"
+                  },
+                  {
+                    "fieldName": "workspace",
+                    "displayName": "Workspace",
+                    "queryName": "q_a6a69bc4"
+                  },
+                  {
+                    "fieldName": "workspace",
+                    "displayName": "Workspace",
+                    "queryName": "q_fd71cb8d"
+                  },
+                  {
+                    "fieldName": "workspace",
+                    "displayName": "Workspace",
+                    "queryName": "q_8b3b9afc"
+                  },
+                  {
+                    "fieldName": "workspace",
+                    "displayName": "Workspace",
+                    "queryName": "q_ac85c6a9"
                   }
                 ]
               },
@@ -6808,6 +8916,569 @@
         },
         {
           "widget": {
+            "name": "986e0c89",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "1159f3be",
+                  "disaggregated": true,
+                  "fields": [
+                    {
+                      "name": "reads",
+                      "expression": "`reads`"
+                    },
+                    {
+                      "name": "writes",
+                      "expression": "`writes`"
+                    },
+                    {
+                      "name": "readers",
+                      "expression": "`readers`"
+                    },
+                    {
+                      "name": "usage_class",
+                      "expression": "`usage_class`"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "scatter",
+              "encodings": {
+                "x": {
+                  "fieldName": "reads",
+                  "displayName": "Reads",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "y": {
+                  "fieldName": "writes",
+                  "displayName": "Writes",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "size": {
+                  "fieldName": "readers",
+                  "displayName": "Readers",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "color": {
+                  "fieldName": "usage_class",
+                  "displayName": "Class",
+                  "scale": {
+                    "type": "categorical",
+                    "mappings": [
+                      {
+                        "value": "Written, never read",
+                        "color": "#C2362B"
+                      },
+                      {
+                        "value": "Idle 90d+",
+                        "color": "#8E8B84"
+                      },
+                      {
+                        "value": "Cooling",
+                        "color": "#E0A93B"
+                      },
+                      {
+                        "value": "Active",
+                        "color": "#2456A6"
+                      }
+                    ]
+                  }
+                },
+                "label": {
+                  "show": false
+                }
+              },
+              "frame": {
+                "title": "Its tables: reads against writes",
+                "showTitle": true,
+                "showDescription": true,
+                "description": "Bubble = readers, colour = class. Top left: written, rarely read."
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 28,
+            "width": 6,
+            "height": 10
+          }
+        },
+        {
+          "widget": {
+            "name": "d090fd02",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "1159f3be",
+                  "disaggregated": true,
+                  "fields": [
+                    {
+                      "name": "size_gb",
+                      "expression": "`size_gb`"
+                    },
+                    {
+                      "name": "reads",
+                      "expression": "`reads`"
+                    },
+                    {
+                      "name": "readers",
+                      "expression": "`readers`"
+                    },
+                    {
+                      "name": "usage_class",
+                      "expression": "`usage_class`"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "scatter",
+              "encodings": {
+                "x": {
+                  "fieldName": "size_gb",
+                  "displayName": "GB",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "y": {
+                  "fieldName": "reads",
+                  "displayName": "Reads",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "size": {
+                  "fieldName": "readers",
+                  "displayName": "Readers",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "color": {
+                  "fieldName": "usage_class",
+                  "displayName": "Class",
+                  "scale": {
+                    "type": "categorical",
+                    "mappings": [
+                      {
+                        "value": "Written, never read",
+                        "color": "#C2362B"
+                      },
+                      {
+                        "value": "Idle 90d+",
+                        "color": "#8E8B84"
+                      },
+                      {
+                        "value": "Cooling",
+                        "color": "#E0A93B"
+                      },
+                      {
+                        "value": "Active",
+                        "color": "#2456A6"
+                      }
+                    ]
+                  }
+                },
+                "label": {
+                  "show": false
+                }
+              },
+              "frame": {
+                "title": "Its tables: size against reads",
+                "showTitle": true,
+                "showDescription": true,
+                "description": "Every table, idle ones on the bottom line. Right and low: big, little used."
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 28,
+            "width": 6,
+            "height": 10
+          }
+        },
+        {
+          "widget": {
+            "name": "3069524b",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "4146353c",
+                  "fields": [
+                    {
+                      "name": "name",
+                      "expression": "`name`"
+                    },
+                    {
+                      "name": "direction",
+                      "expression": "`direction`"
+                    },
+                    {
+                      "name": "sum(events)",
+                      "expression": "SUM(`events`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "sum(events)",
+                  "displayName": "Events",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "format": {
+                    "type": "number-plain",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 0
+                    }
+                  }
+                },
+                "y": {
+                  "fieldName": "name",
+                  "displayName": "Table",
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "x-reversed"
+                    }
+                  }
+                },
+                "label": {
+                  "show": false
+                },
+                "color": {
+                  "fieldName": "direction",
+                  "displayName": "direction",
+                  "legend": {
+                    "position": "bottom",
+                    "hideTitle": true
+                  },
+                  "scale": {
+                    "type": "categorical",
+                    "mappings": [
+                      {
+                        "value": "Reads",
+                        "color": "#2456A6"
+                      },
+                      {
+                        "value": "Writes",
+                        "color": "#D27A2C"
+                      }
+                    ]
+                  }
+                }
+              },
+              "frame": {
+                "title": "Most used tables",
+                "showTitle": true,
+                "description": "Its 10 tables with the most read and write events",
+                "showDescription": true
+              },
+              "mark": {
+                "layout": "stack"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 38,
+            "width": 6,
+            "height": 10
+          }
+        },
+        {
+          "widget": {
+            "name": "13553d80",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "0903fee3",
+                  "fields": [
+                    {
+                      "name": "name",
+                      "expression": "`name`"
+                    },
+                    {
+                      "name": "direction",
+                      "expression": "`direction`"
+                    },
+                    {
+                      "name": "sum(events)",
+                      "expression": "SUM(`events`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "sum(events)",
+                  "displayName": "Events",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "format": {
+                    "type": "number-plain",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 0
+                    }
+                  }
+                },
+                "y": {
+                  "fieldName": "name",
+                  "displayName": "Who",
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "x-reversed"
+                    }
+                  }
+                },
+                "label": {
+                  "show": false
+                },
+                "color": {
+                  "fieldName": "direction",
+                  "displayName": "direction",
+                  "legend": {
+                    "position": "bottom",
+                    "hideTitle": true
+                  },
+                  "scale": {
+                    "type": "categorical",
+                    "mappings": [
+                      {
+                        "value": "Reads",
+                        "color": "#2456A6"
+                      },
+                      {
+                        "value": "Writes",
+                        "color": "#D27A2C"
+                      }
+                    ]
+                  }
+                }
+              },
+              "frame": {
+                "title": "Most active people",
+                "showTitle": true,
+                "description": "Its 10 people and service principals with the most table events",
+                "showDescription": true
+              },
+              "mark": {
+                "layout": "stack"
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 38,
+            "width": 6,
+            "height": 10
+          }
+        },
+        {
+          "widget": {
+            "name": "6cd51c2b",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "1b362b70",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "name": "day",
+                      "expression": "`day`"
+                    },
+                    {
+                      "name": "table_name",
+                      "expression": "`table_name`"
+                    },
+                    {
+                      "name": "sum(events)",
+                      "expression": "SUM(`events`)"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "heatmap",
+              "encodings": {
+                "x": {
+                  "fieldName": "day",
+                  "displayName": "Day",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "y": {
+                  "fieldName": "table_name",
+                  "displayName": "Table",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "color": {
+                  "fieldName": "sum(events)",
+                  "displayName": "Read and write events",
+                  "scale": {
+                    "type": "quantitative",
+                    "colorRamp": {
+                      "mode": "scheme",
+                      "scheme": "blues"
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "title": "Busiest tables per day",
+                "showTitle": true,
+                "showDescription": true,
+                "description": "Its 10 busiest tables; darker = more events"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 48,
+            "width": 8,
+            "height": 9
+          }
+        },
+        {
+          "widget": {
+            "name": "aeaa862c",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "94d9b4c6",
+                  "fields": [
+                    {
+                      "name": "name",
+                      "expression": "`name`"
+                    },
+                    {
+                      "name": "direction",
+                      "expression": "`direction`"
+                    },
+                    {
+                      "name": "sum(events)",
+                      "expression": "SUM(`events`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "sum(events)",
+                  "displayName": "Events",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "format": {
+                    "type": "number-plain",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 0
+                    }
+                  }
+                },
+                "y": {
+                  "fieldName": "name",
+                  "displayName": "Volume",
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "x-reversed"
+                    }
+                  }
+                },
+                "label": {
+                  "show": false
+                },
+                "color": {
+                  "fieldName": "direction",
+                  "displayName": "direction",
+                  "legend": {
+                    "position": "bottom",
+                    "hideTitle": true
+                  },
+                  "scale": {
+                    "type": "categorical",
+                    "mappings": [
+                      {
+                        "value": "Reads",
+                        "color": "#2456A6"
+                      },
+                      {
+                        "value": "Writes",
+                        "color": "#D27A2C"
+                      }
+                    ]
+                  }
+                }
+              },
+              "frame": {
+                "title": "Most active volumes",
+                "showTitle": true,
+                "description": "File reads and writes",
+                "showDescription": true
+              },
+              "mark": {
+                "layout": "stack"
+              }
+            }
+          },
+          "position": {
+            "x": 8,
+            "y": 48,
+            "width": 4,
+            "height": 9
+          }
+        },
+        {
+          "widget": {
             "name": "95fa296c",
             "queries": [
               {
@@ -7515,7 +10186,7 @@
           },
           "position": {
             "x": 0,
-            "y": 28,
+            "y": 57,
             "width": 12,
             "height": 10
           }
@@ -7951,7 +10622,7 @@
           },
           "position": {
             "x": 0,
-            "y": 38,
+            "y": 67,
             "width": 12,
             "height": 10
           }
@@ -8012,6 +10683,19 @@
                   ],
                   "disaggregated": false
                 }
+              },
+              {
+                "name": "q_e0435dff",
+                "query": {
+                  "datasetName": "4146353c",
+                  "parameters": [
+                    {
+                      "name": "time_range",
+                      "keyword": "time_range"
+                    }
+                  ],
+                  "disaggregated": false
+                }
               }
             ],
             "spec": {
@@ -8026,6 +10710,10 @@
                   {
                     "parameterName": "time_range",
                     "queryName": "q_95e9509e"
+                  },
+                  {
+                    "parameterName": "time_range",
+                    "queryName": "q_e0435dff"
                   }
                 ]
               },
@@ -8092,6 +10780,23 @@
                     }
                   ]
                 }
+              },
+              {
+                "name": "q_d8ec4c53",
+                "query": {
+                  "datasetName": "4146353c",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "name": "workspace",
+                      "expression": "`workspace`"
+                    },
+                    {
+                      "name": "workspace_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ]
+                }
               }
             ],
             "spec": {
@@ -8108,6 +10813,11 @@
                     "fieldName": "workspace",
                     "displayName": "Workspace",
                     "queryName": "q_c021698a"
+                  },
+                  {
+                    "fieldName": "workspace",
+                    "displayName": "Workspace",
+                    "queryName": "q_d8ec4c53"
                   }
                 ]
               },
@@ -8857,6 +11567,104 @@
         },
         {
           "widget": {
+            "name": "68392110",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "4146353c",
+                  "fields": [
+                    {
+                      "name": "name",
+                      "expression": "`name`"
+                    },
+                    {
+                      "name": "direction",
+                      "expression": "`direction`"
+                    },
+                    {
+                      "name": "sum(events)",
+                      "expression": "SUM(`events`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "sum(events)",
+                  "displayName": "Events",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "format": {
+                    "type": "number-plain",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 0
+                    }
+                  }
+                },
+                "y": {
+                  "fieldName": "name",
+                  "displayName": "Table",
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "x-reversed"
+                    }
+                  }
+                },
+                "label": {
+                  "show": false
+                },
+                "color": {
+                  "fieldName": "direction",
+                  "displayName": "direction",
+                  "legend": {
+                    "position": "bottom",
+                    "hideTitle": true
+                  },
+                  "scale": {
+                    "type": "categorical",
+                    "mappings": [
+                      {
+                        "value": "Reads",
+                        "color": "#2456A6"
+                      },
+                      {
+                        "value": "Writes",
+                        "color": "#D27A2C"
+                      }
+                    ]
+                  }
+                }
+              },
+              "frame": {
+                "title": "Most active tables",
+                "showTitle": true,
+                "description": "The 10 with the most read and write events in each workspace; pick a workspace above for its own",
+                "showDescription": true
+              },
+              "mark": {
+                "layout": "stack"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 30,
+            "width": 12,
+            "height": 10
+          }
+        },
+        {
+          "widget": {
             "name": "59dcd3d5",
             "queries": [
               {
@@ -9564,7 +12372,7 @@
           },
           "position": {
             "x": 0,
-            "y": 30,
+            "y": 40,
             "width": 12,
             "height": 14
           }
@@ -12113,6 +14921,19 @@
                   ],
                   "disaggregated": false
                 }
+              },
+              {
+                "name": "q_62230c9c",
+                "query": {
+                  "datasetName": "94d9b4c6",
+                  "parameters": [
+                    {
+                      "name": "time_range",
+                      "keyword": "time_range"
+                    }
+                  ],
+                  "disaggregated": false
+                }
               }
             ],
             "spec": {
@@ -12123,6 +14944,10 @@
                   {
                     "parameterName": "time_range",
                     "queryName": "q_717d893e"
+                  },
+                  {
+                    "parameterName": "time_range",
+                    "queryName": "q_62230c9c"
                   }
                 ]
               },
@@ -12172,6 +14997,23 @@
                     }
                   ]
                 }
+              },
+              {
+                "name": "q_4b5a50a3",
+                "query": {
+                  "datasetName": "94d9b4c6",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "name": "workspace",
+                      "expression": "`workspace`"
+                    },
+                    {
+                      "name": "workspace_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ]
+                }
               }
             ],
             "spec": {
@@ -12183,6 +15025,11 @@
                     "fieldName": "workspace",
                     "displayName": "Workspace",
                     "queryName": "q_8298df92"
+                  },
+                  {
+                    "fieldName": "workspace",
+                    "displayName": "Workspace",
+                    "queryName": "q_4b5a50a3"
                   }
                 ]
               },
@@ -12219,6 +15066,23 @@
                     }
                   ]
                 }
+              },
+              {
+                "name": "q_11252247",
+                "query": {
+                  "datasetName": "94d9b4c6",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "name": "usage_class",
+                      "expression": "`usage_class`"
+                    },
+                    {
+                      "name": "usage_class_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ]
+                }
               }
             ],
             "spec": {
@@ -12230,6 +15094,11 @@
                     "fieldName": "usage_class",
                     "displayName": "Class",
                     "queryName": "q_9b25c6a2"
+                  },
+                  {
+                    "fieldName": "usage_class",
+                    "displayName": "Class",
+                    "queryName": "q_11252247"
                   }
                 ]
               },
@@ -12816,6 +15685,104 @@
         },
         {
           "widget": {
+            "name": "88bc7d15",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "94d9b4c6",
+                  "fields": [
+                    {
+                      "name": "name",
+                      "expression": "`name`"
+                    },
+                    {
+                      "name": "direction",
+                      "expression": "`direction`"
+                    },
+                    {
+                      "name": "sum(events)",
+                      "expression": "SUM(`events`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "sum(events)",
+                  "displayName": "Events",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "format": {
+                    "type": "number-plain",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 0
+                    }
+                  }
+                },
+                "y": {
+                  "fieldName": "name",
+                  "displayName": "Volume",
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "x-reversed"
+                    }
+                  }
+                },
+                "label": {
+                  "show": false
+                },
+                "color": {
+                  "fieldName": "direction",
+                  "displayName": "direction",
+                  "legend": {
+                    "position": "bottom",
+                    "hideTitle": true
+                  },
+                  "scale": {
+                    "type": "categorical",
+                    "mappings": [
+                      {
+                        "value": "Reads",
+                        "color": "#2456A6"
+                      },
+                      {
+                        "value": "Writes",
+                        "color": "#D27A2C"
+                      }
+                    ]
+                  }
+                }
+              },
+              "frame": {
+                "title": "Most active volumes",
+                "showTitle": true,
+                "description": "The 10 with the most file reads and writes in each workspace; pick a workspace above for its own",
+                "showDescription": true
+              },
+              "mark": {
+                "layout": "stack"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 26,
+            "width": 12,
+            "height": 8
+          }
+        },
+        {
+          "widget": {
             "name": "30c1fb86",
             "queries": [
               {
@@ -13217,7 +16184,7 @@
           },
           "position": {
             "x": 0,
-            "y": 26,
+            "y": 34,
             "width": 12,
             "height": 10
           }
@@ -13278,6 +16245,19 @@
                   ],
                   "disaggregated": false
                 }
+              },
+              {
+                "name": "q_64a0dfe0",
+                "query": {
+                  "datasetName": "0903fee3",
+                  "parameters": [
+                    {
+                      "name": "time_range",
+                      "keyword": "time_range"
+                    }
+                  ],
+                  "disaggregated": false
+                }
               }
             ],
             "spec": {
@@ -13292,6 +16272,10 @@
                   {
                     "parameterName": "time_range",
                     "queryName": "q_675907f1"
+                  },
+                  {
+                    "parameterName": "time_range",
+                    "queryName": "q_64a0dfe0"
                   }
                 ]
               },
@@ -13358,6 +16342,23 @@
                     }
                   ]
                 }
+              },
+              {
+                "name": "q_f2adcaa7",
+                "query": {
+                  "datasetName": "0903fee3",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "name": "workspace",
+                      "expression": "`workspace`"
+                    },
+                    {
+                      "name": "workspace_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ]
+                }
               }
             ],
             "spec": {
@@ -13374,6 +16375,11 @@
                     "fieldName": "workspace",
                     "displayName": "Workspace",
                     "queryName": "q_999f44c1"
+                  },
+                  {
+                    "fieldName": "workspace",
+                    "displayName": "Workspace",
+                    "queryName": "q_f2adcaa7"
                   }
                 ]
               },
@@ -13427,6 +16433,23 @@
                     }
                   ]
                 }
+              },
+              {
+                "name": "q_e3c851f3",
+                "query": {
+                  "datasetName": "0903fee3",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "name": "kind",
+                      "expression": "`kind`"
+                    },
+                    {
+                      "name": "kind_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ]
+                }
               }
             ],
             "spec": {
@@ -13443,6 +16466,11 @@
                     "fieldName": "kind",
                     "displayName": "Kind",
                     "queryName": "q_c6d83793"
+                  },
+                  {
+                    "fieldName": "kind",
+                    "displayName": "Kind",
+                    "queryName": "q_e3c851f3"
                   }
                 ]
               },
@@ -13677,6 +16705,104 @@
             "y": 3,
             "width": 3,
             "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "67c3df23",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "0903fee3",
+                  "fields": [
+                    {
+                      "name": "name",
+                      "expression": "`name`"
+                    },
+                    {
+                      "name": "direction",
+                      "expression": "`direction`"
+                    },
+                    {
+                      "name": "sum(events)",
+                      "expression": "SUM(`events`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "sum(events)",
+                  "displayName": "Events",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "format": {
+                    "type": "number-plain",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 0
+                    }
+                  }
+                },
+                "y": {
+                  "fieldName": "name",
+                  "displayName": "Who",
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "x-reversed"
+                    }
+                  }
+                },
+                "label": {
+                  "show": false
+                },
+                "color": {
+                  "fieldName": "direction",
+                  "displayName": "direction",
+                  "legend": {
+                    "position": "bottom",
+                    "hideTitle": true
+                  },
+                  "scale": {
+                    "type": "categorical",
+                    "mappings": [
+                      {
+                        "value": "Reads",
+                        "color": "#2456A6"
+                      },
+                      {
+                        "value": "Writes",
+                        "color": "#D27A2C"
+                      }
+                    ]
+                  }
+                }
+              },
+              "frame": {
+                "title": "Most active people",
+                "showTitle": true,
+                "description": "The 10 with the most table events in each workspace; pick a workspace above for its own",
+                "showDescription": true
+              },
+              "mark": {
+                "layout": "stack"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 6,
+            "width": 12,
+            "height": 9
           }
         },
         {
@@ -14110,7 +17236,7 @@
           },
           "position": {
             "x": 0,
-            "y": 6,
+            "y": 15,
             "width": 12,
             "height": 10
           }
@@ -14366,7 +17492,7 @@
           },
           "position": {
             "x": 0,
-            "y": 16,
+            "y": 25,
             "width": 12,
             "height": 9
           }

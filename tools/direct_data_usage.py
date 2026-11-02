@@ -857,9 +857,68 @@ ORDER BY unused DESC, table_name, grantee""",
     )
 
 
+def _ranked(base: Dataset, key: str, title: str, name: str, top: int, per_workspace: bool, extra: str = "") -> Dataset:
+    """base's rows with the most read and write events, one row per direction: base's own steps and final
+    SELECT (step b), ranked (step r). per_workspace: the top of each workspace, for the pages that pick one."""
+    at = base.body.rfind("\nSELECT ")
+    over = "PARTITION BY workspace " if per_workspace else ""
+    keep = f"workspace, {name} AS name{extra}"
+    return Dataset(
+        key, title, [], [],
+        f"""{base.body[:at]},
+b AS (
+{base.body[at + 1:]}
+),
+r AS (
+  SELECT *, ROW_NUMBER() OVER ({over}ORDER BY reads + writes DESC, {name}) AS rnk FROM b WHERE reads + writes > 0
+)
+SELECT {keep}, 'Reads' AS direction, reads AS events FROM r WHERE rnk <= {top}
+UNION ALL
+SELECT {keep}, 'Writes' AS direction, writes AS events FROM r WHERE rnk <= {top}""",
+        f"The {top} with the most read and write events in the window{' in each workspace' if per_workspace else ''}, "
+        f"from {base.key}: one row per direction.",
+        "The most active charts.",
+        f"Up to {2 * top} rows{' per workspace' if per_workspace else ''}.",
+        {**base.steps, "b": f"Every row of {base.key}.",
+         "r": "Ranked by read plus write events" + (", within each workspace." if per_workspace else ".")},
+        head=base.head,
+    )
+
+
+def busiest_days() -> Dataset:
+    """wd_daily's rows for the 10 tables of each workspace with the most events."""
+    base = daily()
+    at = base.body.rfind("\nSELECT ")
+    return Dataset(
+        "wd_daily_top", "Each workspace's busiest tables per day", [], [],
+        f"""{base.body[:at]},
+b AS (
+{base.body[at + 1:]}
+),
+t AS (
+  SELECT workspace, table_name, ROW_NUMBER() OVER (PARTITION BY workspace ORDER BY SUM(events) DESC, table_name) AS rnk
+  FROM b GROUP BY workspace, table_name
+)
+SELECT b.day, b.workspace, b.table_name, b.direction, b.events
+FROM b JOIN t ON t.workspace <=> b.workspace AND t.table_name = b.table_name WHERE t.rnk <= 10""",
+        "wd_daily for the 10 tables of each workspace with the most read and write events in the window.",
+        "Busiest tables per day on Workspace detail.",
+        "One row per day, table and direction, 10 tables per workspace.",
+        {**base.steps, "b": "Every row of wd_daily.", "t": "Each workspace's tables ranked by events."},
+        head=base.head,
+    )
+
+
 def _all() -> list[Dataset]:
     return [workspaces(), tables(), cleanup(), largest(), volumes(), people(), inactive(),
-            daily(), schemas(), access(), edges(), history(), columns(), grants()]
+            daily(), schemas(), access(), edges(), history(), columns(), grants(),
+            _ranked(workspaces(), "wd_top_workspaces", "The most active workspaces", "workspace", 50, False),
+            _ranked(tables(), "wd_top_tables", "The most used tables", "table_name", 15, False),
+            _ranked(tables(), "wd_top_tables_ws", "Each workspace's most used tables", "table_name", 10, True),
+            _ranked(people(), "wd_top_people", "The most active people", "identity", 15, False, ", kind"),
+            _ranked(people(), "wd_top_people_ws", "Each workspace's most active people", "identity", 10, True, ", kind"),
+            _ranked(volumes(), "wd_top_volumes_ws", "Each workspace's most active volumes", "volume", 10, True, ", usage_class"),
+            busiest_days()]
 
 
 DATASETS: list[Dataset] = _all()
@@ -888,6 +947,41 @@ def _scatter(key: str, d: Dataset) -> dict:
         },
         "frame": {"title": "Complexity against usage", "showTitle": True, "showDescription": True,
                   "description": "One bubble per workspace, bubble = data held. Bottom right first: built a lot, used little."},
+    }}}
+
+
+def _bubbles(key: str, d: Dataset, x: tuple, y: tuple, size: tuple, color: tuple, colors, title: str, desc: str) -> dict:
+    """One bubble per row: x, y and size are (column, label); colour is (column, label)."""
+    fields = list(dict.fromkeys([x[0], y[0], size[0], color[0]]))
+    c = {"fieldName": color[0], "displayName": color[1], "scale": {"type": "categorical"}}
+    if colors:
+        c["scale"]["mappings"] = [{"value": v, "color": k} for v, k in colors]
+    q = {"name": bdd.MAIN_QUERY, "query": {"datasetName": d.name, "disaggregated": True, "fields": [bdd.bare_field(f) for f in fields]}}
+    return {"widget": {"name": bdd.hid("widget:bubbles:" + key), "queries": [q], "spec": {
+        "version": 3, "widgetType": "scatter",
+        "encodings": {
+            "x": {"fieldName": x[0], "displayName": x[1], "scale": {"type": "quantitative"}},
+            "y": {"fieldName": y[0], "displayName": y[1], "scale": {"type": "quantitative"}},
+            "size": {"fieldName": size[0], "displayName": size[1], "scale": {"type": "quantitative"}},
+            "color": c, "label": {"show": False},
+        },
+        "frame": {"title": title, "showTitle": True, "showDescription": True, "description": desc},
+    }}}
+
+
+def _heat(key: str, d: Dataset, row: str, row_title: str, title: str, desc: str) -> dict:
+    """Rows against days, darker = more read and write events."""
+    q = {"name": bdd.MAIN_QUERY, "query": {"datasetName": d.name, "disaggregated": False, "fields": [
+        bdd.bare_field("day"), bdd.bare_field(row), {"name": "sum(events)", "expression": "SUM(`events`)"}]}}
+    return {"widget": {"name": bdd.hid("widget:heat:" + key), "queries": [q], "spec": {
+        "version": 3, "widgetType": "heatmap",
+        "encodings": {
+            "x": {"fieldName": "day", "displayName": "Day", "scale": {"type": "categorical"}},
+            "y": {"fieldName": row, "displayName": row_title, "scale": {"type": "categorical"}},
+            "color": {"fieldName": "sum(events)", "displayName": "Read and write events",
+                      "scale": {"type": "quantitative", "colorRamp": {"mode": "scheme", "scheme": "blues"}}},
+        },
+        "frame": {"title": title, "showTitle": True, "showDescription": True, "description": desc},
     }}}
 
 
@@ -1001,7 +1095,10 @@ TABLE_NOTES = {
 
 
 def dashboard() -> dict:
-    W, T, C, L, V, U, I, D, S, A, E, H, K, G = DATASETS
+    W, T, C, L, V, U, I, D, S, A, E, H, K, G, TW, TT, TTW, TP, TPW, TVW, DT = DATASETS
+    rw = lambda key, d, cat_t, title, desc: _colored(  # noqa: E731
+        bar(key, d, "name", cat_t, "events", "Events", title, desc, money=False, color="direction"),
+        [("Reads", "#2456A6"), ("Writes", "#D27A2C")])
     filt = lambda key, ds, extra=(): (1, [time_window(f"{key}:time", ds),  # noqa: E731
                                          field_filter(f"{key}:ws", "workspace", "Workspace", ds),
                                          *[field_filter(f"{key}:{col}", col, t, ds) for col, t in extra]])
@@ -1013,7 +1110,7 @@ def dashboard() -> dict:
         (2, [header("du:ov:head", "Overview",
                     "Where the data sits by how it is used, who reads and writes it, and what to clean up, for the "
                     "workspaces and the window picked above. Every chart follows the filters.")]),
-        filt("du:ov", [W, T, V, U, D]),
+        filt("du:ov", [W, T, V, U, D, TW, TT, TP]),
         (3, [_counter("du:ov:gb", W, "data_gb", "Data · GB", "Tables and volume files"),
              _counter("du:ov:unread", W, "unread_gb", "Unread · GB", f"{WNR} plus {IDLE.lower()}", "#C2362B"),
              _counter("du:ov:reads", W, "reads", "Table reads", "Lineage, in the window", "#2456A6"),
@@ -1025,6 +1122,20 @@ def dashboard() -> dict:
              _pie("du:ov:pie_n", T, "usage_class", "objects", "Tables and views by class",
                   "The same by count: many small unread tables still cost upkeep", CLASS_COLORS)]),
         (7, [_daily("du:ov:daily", D, "Table reads and writes per day", "Lineage events in the window")]),
+        (10, [rw("du:ov:top_ws", TW, "Workspace", "Most active workspaces",
+                 "Table read and write events in the window, by home workspace; pick one on Workspace detail"),
+              _bubbles("du:ov:rw", W, ("reads", "Table reads"), ("writes", "Table writes"), ("active_people", "Active people"),
+                       ("signal", "Signal"), SIGNAL_COLORS, "Workspaces: reads against writes",
+                       "One bubble per workspace, bubble = active people. Bottom right: read, rarely written. Top left: written, rarely read.")]),
+        (9, [_heat("du:ov:heat", D, "workspace", "Workspace", "Activity per workspace per day",
+                   "Darker = more table read and write events")]),
+        (10, [rw("du:ov:top_t", TT, "Table", "Most used tables", "The 15 tables with the most read and write events"),
+              rw("du:ov:top_p", TP, "Who", "Most active people",
+                 "The 15 people and service principals with the most table events, per workspace")]),
+        (10, [by_class("du:ov:ws_n", T, "workspace", "Workspace", "objects", "Tables and views", "Tables in use, by workspace",
+                       "Active of all: blue = read in the window"),
+              by_class("du:ov:vol_n", V, "workspace", "Workspace", "volumes", "Volumes", "Volumes in use, by workspace",
+                       "Active of all: blue = a file read in the window")]),
         (12, [by_class("du:ov:ws_gb", T, "workspace", "Workspace", "size_gb", "GB", "Where the data sits, by workspace", CLASS_NOTE),
              by_class("du:ov:schema_gb", T, "schema_full", "Schema", "unread_gb", "Unread GB", "Unread GB, by schema",
                       "Written never read plus idle: the clean-up list")]),
@@ -1073,7 +1184,8 @@ def dashboard() -> dict:
     ws_detail = place([
         (2, [header("du:wd:head", "Workspace detail",
                     "Pick one workspace: its schemas, its tables by class, its reads and writes per day, and its people.")]),
-        (1, [time_window("du:wd:time", [W, S, T, D, U]), _pick("du:wd:ws", "workspace", "Workspace", [W, S, T, D, U])]),
+        (1, [time_window("du:wd:time", [W, S, T, D, U, TTW, TPW, TVW, DT]),
+             _pick("du:wd:ws", "workspace", "Workspace", [W, S, T, D, U, TTW, TPW, TVW, DT])]),
         (3, [_counter("du:wd:gb", W, "data_gb", "Data · GB", "Tables and volume files"),
              _counter("du:wd:unread", W, "unread_gb", "Unread · GB", f"{WNR} plus {IDLE.lower()}", "#C2362B"),
              _counter("du:wd:tables", W, "tables", "Tables", "In its home catalogs"),
@@ -1090,6 +1202,16 @@ def dashboard() -> dict:
             ("sensitive_tables", "PII tables", "int")], "By schema")]),
         (12, [by_class("du:wd:sch_gb", T, "schema_full", "Schema", "size_gb", "GB", "GB by class, per schema", CLASS_NOTE),
              _daily("du:wd:daily", D, "Reads and writes per day", "Its tables, lineage events")]),
+        (10, [_bubbles("du:wd:rw", T, ("reads", "Reads"), ("writes", "Writes"), ("readers", "Readers"), ("usage_class", "Class"),
+                       CLASS_COLORS, "Its tables: reads against writes", "Bubble = readers, colour = class. Top left: written, rarely read."),
+              _bubbles("du:wd:size", T, ("size_gb", "GB"), ("reads", "Reads"), ("readers", "Readers"), ("usage_class", "Class"),
+                       CLASS_COLORS, "Its tables: size against reads",
+                       "Every table, idle ones on the bottom line. Right and low: big, little used.")]),
+        (10, [rw("du:wd:top_t", TTW, "Table", "Most used tables", "Its 10 tables with the most read and write events"),
+              rw("du:wd:top_p", TPW, "Who", "Most active people", "Its 10 people and service principals with the most table events")]),
+        (9, [(_heat("du:wd:heat", DT, "table_name", "Table", "Busiest tables per day",
+                    "Its 10 busiest tables; darker = more events"), 8),
+             (rw("du:wd:top_v", TVW, "Volume", "Most active volumes", "File reads and writes"), 4)]),
         (10, [_links(table("du:wd:tables", T, TABLE_COLS, "Its tables, clean-up order"), "table_link")]),
         (10, [table("du:wd:people", U, PEOPLE_COLS, "Its people and service principals")]),
     ])
@@ -1097,7 +1219,7 @@ def dashboard() -> dict:
         (2, [header("du:tb:head", "Tables",
                     "Every table and view in one usage class: what is read, what is written but never read, and what "
                     "sits idle. Open one in Catalog Explorer, or pick it on Table detail.")]),
-        (1, [time_window("du:tb:time", [T, L]), field_filter("du:tb:ws", "workspace", "Workspace", [T, L]),
+        (1, [time_window("du:tb:time", [T, L, TTW]), field_filter("du:tb:ws", "workspace", "Workspace", [T, L, TTW]),
              field_filter("du:tb:schema_full", "schema_full", "Schema", [T]),
              field_filter("du:tb:usage_class", "usage_class", "Class", [T, L])]),
         (3, [gb("du:tb:wnr", "gb_written_never_read", f"{WNR} · GB", "Pause the writer", "#C2362B"),
@@ -1112,6 +1234,8 @@ def dashboard() -> dict:
                        "Sensitive and unread: clean up first")]),
         (12, [by_class("du:tb:largest", L, "table_name", "Table", "size_gb", "GB", "The 25 largest tables, by class",
                        "Big and unread is the expensive corner")]),
+        (10, [rw("du:tb:top", TTW, "Table", "Most active tables",
+                 "The 10 with the most read and write events in each workspace; pick a workspace above for its own")]),
         (14, [_links(table("du:tb:table", T, TABLE_COLS, "Every table and view, clean-up order"), "table_link")]),
     ])
     table_detail = place([
@@ -1145,7 +1269,7 @@ def dashboard() -> dict:
         (2, [header("du:vol:head", "Volumes",
                     "Every volume in one usage class: files and size from the daily listing, file reads and writes from "
                     "the audit log.")]),
-        filt("du:vol", [V], [("usage_class", "Class")]),
+        filt("du:vol", [V, TVW], [("usage_class", "Class")]),
         (3, [_counter("du:vol:n", V, "volumes", "Volumes", "Every catalog"),
              _counter("du:vol:files", V, "files", "Files", "From the daily listing"),
              _counter("du:vol:gb", V, "size_gb", "Size · GB", "From the daily listing"),
@@ -1157,6 +1281,8 @@ def dashboard() -> dict:
         (12, [by_class("du:vol:gb_cls", V, "workspace", "Workspace", "size_gb", "GB", "GB by class, by workspace", CLASS_NOTE),
              by_class("du:vol:n_cls", V, "workspace", "Workspace", "volumes", "Volumes", "Volumes by class, by workspace",
                       "File reads and writes through the Files API, UI or SQL on /Volumes")]),
+        (8, [rw("du:vol:top", TVW, "Volume", "Most active volumes",
+                "The 10 with the most file reads and writes in each workspace; pick a workspace above for its own")]),
         (10, [table("du:vol:table", V, [
             ("volume", "Volume", "text"), ("workspace", "Workspace", "text"), ("volume_type", "Type", "text"),
             ("usage_class", "Class", "text"), ("files", "Files", "int"), ("size_gb", "GB", "num"),
@@ -1168,11 +1294,13 @@ def dashboard() -> dict:
         (2, [header("du:usr:head", "People",
                     "Who reads and writes, who writes what nobody reads, who touched sensitive data, and who stopped "
                     "coming but can still read. Pick one person on Person detail.")]),
-        filt("du:usr", [U, I], [("kind", "Kind")]),
+        filt("du:usr", [U, I, TPW], [("kind", "Kind")]),
         (3, [_counter("du:usr:people", U, "active_person", "Active people", "Signed in, queried or used a table"),
              _counter("du:usr:sps", U, "active_sp", "Active service principals", "In the window"),
              _counter("du:usr:pii", U, "touched_sensitive", "Touched sensitive data", "Read or wrote a table with sensitive columns", "#5B2FA6"),
              _counter("du:usr:inactive", U, "inactive", f"Inactive {INACTIVE_DAYS}d+", "Seen in the last year, not lately", "#C2362B")]),
+        (9, [rw("du:usr:top", TPW, "Who", "Most active people",
+                "The 10 with the most table events in each workspace; pick a workspace above for its own")]),
         (10, [table("du:usr:table", U, PEOPLE_COLS, "Who reads and who writes")]),
         (9, [table("du:usr:inactive_table", I, [
             ("identity", "Who", "text"), ("kind", "Kind", "text"), ("workspace", "Workspace", "text"),

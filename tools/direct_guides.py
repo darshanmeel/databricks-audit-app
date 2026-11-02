@@ -1161,12 +1161,21 @@ _DU = {
     "version": "The table version.", "changed_at": "When.", "operation": "What changed.", "user_name": "Who.",
     "column_name": "The column.", "pii_type": "What it holds: email, phone, IBAN, ...", "mask": "masked or unmasked.",
     "unmasked": "1 when unmasked.", "columns": "Always 1: counts columns.",
+    "name": "The workspace, table, person or volume ranked.",
 }
 for _key in ("wd_workspaces", "wd_tables", "wd_cleanup", "wd_largest", "wd_volumes", "wd_people", "wd_inactive", "wd_daily",
-             "wd_schemas", "wd_access", "wd_edges", "wd_history", "wd_columns", "wd_grants"):
+             "wd_schemas", "wd_access", "wd_edges", "wd_history", "wd_columns", "wd_grants", "wd_top_workspaces",
+             "wd_top_tables", "wd_top_tables_ws", "wd_top_people", "wd_top_people_ws", "wd_top_volumes_ws", "wd_daily_top"):
     COLUMNS[_key] = {**_DU, **COLUMNS.get(_key, {})}
 
 WHY.update({
+    "wd_top_workspaces": "Which workspaces carry the work, and which barely read or write anything.",
+    "wd_top_tables": "The tables the platform runs on: break one of these and many people notice.",
+    "wd_top_tables_ws": "The same inside one workspace: what its owners should protect first.",
+    "wd_top_people": "Who reads and writes most: the people to ask before changing shared data.",
+    "wd_top_people_ws": "The same inside one workspace.",
+    "wd_top_volumes_ws": "The volumes in daily use inside one workspace; the rest are clean-up candidates.",
+    "wd_daily_top": "Whether a workspace's main tables are used every day or in bursts.",
     "wd_cleanup": "The short list to act on: unread tables, sensitive ones first.",
     "wd_largest": "Size is where the money is; reads say whether it earns it.",
     "wd_inactive": "Access nobody uses is the easiest access to remove.",
