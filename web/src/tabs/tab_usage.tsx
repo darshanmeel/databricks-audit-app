@@ -249,6 +249,12 @@ function UsageWorkspacesContent({ filters, goTo, onVerdict }: LooseProps) {
           <PqgsNote facts={[{ label: "Nobody reads", value: fmtInt(tot.sensitive_unread || 0), tone: tot.sensitive_unread ? "warn" : "ok" }, { label: "Masked", value: fmtInt(tot.sensitive_masked || 0) }]} /></Card>
       </div>
 
+      {wrows.length > 1 && (
+        <Card title="Complexity against usage" right={<span className="muted">bubble = data held · right and low: built, little used</span>}>
+          <Scatter rows={wrows} />
+        </Card>
+      )}
+
       <Card title="Every workspace" right={<span className="muted">click one for its tables</span>}>
         <ClassLegend />
         <div className="data-table-wrap">
@@ -294,12 +300,6 @@ function UsageWorkspacesContent({ filters, goTo, onVerdict }: LooseProps) {
         </div>
         <div className="metric-note">{"Reads and writes are table events in lineage. A table belongs to the workspace that reads and writes its catalog most. Unread = written-never-read + idle tables. Complexity: views, view columns, tables, columns, volume files and size; usage: people, service principals, queries and active days, each against the largest workspace shown."}</div>
       </Card>
-
-      {wrows.length > 1 && (
-        <Card title="Complexity against usage" right={<span className="muted">bubble = data held · right and low: built, little used</span>}>
-          <Scatter rows={wrows} />
-        </Card>
-      )}
 
       <div className="grid-2">
         <Card title="Clean up first" right={<span className="muted">sensitive and unread first, then class, then size</span>}>
