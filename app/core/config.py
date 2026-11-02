@@ -204,7 +204,8 @@ DEFAULT_SETTINGS: dict = {
     "mandatory_tag_keys": ["cost_center", "domain", "env"],
     "admin_groups": [],
     "load": {"memory_limit": "1GB", "threads": 4, "tag_keys": None, "top_tag_keys": 10},
-    "table_sizes": {"enabled": True, "threads": 16, "max_tables": 20000},
+    "table_sizes": {"enabled": True, "threads": 16, "max_tables": 20000, "volumes": True,
+                    "volume_max_entries": 50000, "volume_full_days": 7},
 }
 
 
@@ -227,9 +228,11 @@ def _validate_contract(contract) -> dict | None:
 
 
 def _validate_table_sizes(value) -> dict:
-    """{enabled, threads (1-64), max_tables (0-1,000,000)}; a missing key keeps its default."""
+    """{enabled, threads (1-64), max_tables (0-1,000,000), volumes, volume_max_entries (100-10,000,000),
+    volume_full_days (0-365)}; a missing key keeps its default."""
     merged = dict(DEFAULT_SETTINGS["table_sizes"])
-    msg = "table_sizes takes enabled (true/false), threads (1-64) and max_tables (0-1000000)"
+    msg = ("table_sizes takes enabled and volumes (true/false), threads (1-64), max_tables (0-1000000), "
+           "volume_max_entries (100-10000000) and volume_full_days (0-365)")
     if value is None:
         return merged
     if not isinstance(value, dict) or set(value) - set(merged):
@@ -239,7 +242,12 @@ def _validate_table_sizes(value) -> dict:
           and isinstance(merged["threads"], int) and not isinstance(merged["threads"], bool)
           and 1 <= merged["threads"] <= 64
           and isinstance(merged["max_tables"], int) and not isinstance(merged["max_tables"], bool)
-          and 0 <= merged["max_tables"] <= 1_000_000)
+          and 0 <= merged["max_tables"] <= 1_000_000
+          and isinstance(merged["volumes"], bool)
+          and isinstance(merged["volume_max_entries"], int) and not isinstance(merged["volume_max_entries"], bool)
+          and 100 <= merged["volume_max_entries"] <= 10_000_000
+          and isinstance(merged["volume_full_days"], int) and not isinstance(merged["volume_full_days"], bool)
+          and 0 <= merged["volume_full_days"] <= 365)
     if not ok:
         raise SettingsError(msg, key="table_sizes")
     return merged

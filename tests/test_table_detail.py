@@ -118,9 +118,11 @@ def test_a_failed_listing_is_reported_not_raised(tmp_path):
 def test_table_sizes_setting_is_checked():
     from app.core import config
 
-    assert config._validate_table_sizes(None) == {"enabled": True, "threads": 16, "max_tables": 20000}
+    assert config._validate_table_sizes(None) == {"enabled": True, "threads": 16, "max_tables": 20000, "volumes": True,
+                                                  "volume_max_entries": 50000, "volume_full_days": 7}
     assert config._validate_table_sizes({"threads": 32})["threads"] == 32
-    for bad in ({"threads": 0}, {"threads": 65}, {"max_tables": -1}, {"enabled": "yes"}, {"other": 1}):
+    for bad in ({"threads": 0}, {"threads": 65}, {"max_tables": -1}, {"enabled": "yes"}, {"other": 1},
+                {"volumes": 1}, {"volume_max_entries": 10}, {"volume_full_days": 400}):
         with pytest.raises(config.SettingsError):
             config._validate_table_sizes(bad)
 
@@ -151,8 +153,9 @@ class VolCursor:
     TREE = {"/Volumes/main/work/raw/": [("/Volumes/main/work/raw/a.csv", "a.csv", 100), ("/Volumes/main/work/raw/sub/", "sub/", 0)],
             "/Volumes/main/work/raw/sub/": [("/Volumes/main/work/raw/sub/b.csv", "b.csv", 50)]}
 
-    def __init__(self):
+    def __init__(self, writes=()):
         self.description, self._rows = None, []
+        self.listed, self.writes = [], list(writes)
 
     def execute(self, sql):
         if sql.startswith("LIST"):
@@ -161,6 +164,10 @@ class VolCursor:
                 raise RuntimeError("[INSUFFICIENT_PERMISSIONS] no READ VOLUME\nmore")
             self.description = [("path",), ("name",), ("size",)]
             self._rows = self.TREE.get(path, [])
+            self.listed.append(path)
+        elif "system.access.audit" in sql:
+            self.description = [("v",), ("last_write",)]
+            self._rows = self.writes
         else:
             self.description = [("volume_catalog",), ("volume_schema",), ("volume_name",), ("volume_type",)]
             self._rows = [("main", "work", "raw", "MANAGED"), ("main", "work", "locked", "EXTERNAL"),
@@ -170,8 +177,8 @@ class VolCursor:
         return self._rows
 
 
-def _vol_connect():
-    cur = VolCursor()
+def _vol_connect(cur=None):
+    cur = cur or VolCursor()
     conn = type("C", (), {"cursor": lambda self: cur, "close": lambda self: None})()
     return lambda: type("K", (), {"conn": conn})()
 
@@ -201,3 +208,27 @@ def test_history_is_kept_per_described_table_and_carried_over_when_unchanged(tmp
     table_detail.export(_connect([]), second, previous=first / "storage" / table_detail.FILE, log=lambda m: None)
     again = pq.read_table(str(second / "storage" / table_detail.HISTORY_FILE)).to_pylist()
     assert len([h for h in again if h["table_full_name"] == "main.sales.orders"]) == 2  # reused, not asked again
+
+
+def test_a_volume_listed_lately_and_not_written_since_keeps_its_counts(tmp_path):
+    import datetime as dt
+
+    day1 = dt.datetime(2026, 9, 20, 6)
+    table_detail.export_volumes(_vol_connect(), tmp_path / "a", now=day1, log=lambda m: None)
+    prev = tmp_path / "a" / "storage" / table_detail.VOLUME_FILE
+    # a day later, no writes: raw is reused, the failed one is tried again
+    cur = VolCursor()
+    info = table_detail.export_volumes(_vol_connect(cur), tmp_path / "b", previous=prev, now=day1 + dt.timedelta(days=1),
+                                       log=lambda m: None)
+    rows = {r["volume_name"]: r for r in pq.read_table(str(tmp_path / "b" / "storage" / table_detail.VOLUME_FILE)).to_pylist()}
+    assert info["reused"] == 1 and not any("/raw/" in p for p in cur.listed)
+    assert rows["raw"]["files"] == 2 and rows["raw"]["listed_at"] == "2026-09-20 06:00:00"
+    # written since: listed again
+    cur = VolCursor(writes=[("main/work/raw", "2026-09-20 08:00:00")])
+    info = table_detail.export_volumes(_vol_connect(cur), tmp_path / "c", previous=prev, now=day1 + dt.timedelta(days=1),
+                                       log=lambda m: None)
+    assert info["reused"] == 0 and any("/raw/" in p for p in cur.listed)
+    # older than full_days: listed again
+    info = table_detail.export_volumes(_vol_connect(), tmp_path / "d", previous=prev, now=day1 + dt.timedelta(days=8),
+                                       log=lambda m: None)
+    assert info["reused"] == 0

@@ -1099,6 +1099,7 @@ def run_export(
     include_today: bool = False,
     table_sizes: bool | None = None,
     storage_from: Path | None = None,
+    volumes: bool | None = None,
 ) -> dict:
     """Run the export into out_dir (tests inject connect_fn/compile_fn/env/names_sql); built in a temp sibling folder, swapped into out_dir only on success."""
     direct_manifest_path = direct_manifest_path if direct_manifest_path is not None else DIRECT_MANIFEST_PATH
@@ -1216,9 +1217,8 @@ def run_export(
             threads=sizes_cfg["threads"], max_tables=sizes_cfg["max_tables"],
             redact=lambda text: _redact(text, token))
     volume_info = None
-    if sizes_on and not partial:
-        volume_info = table_detail.export_volumes(connect, work_dir, threads=sizes_cfg["threads"],
-                                                  redact=lambda text: _redact(text, token))
+    if sizes_on and not partial and (sizes_cfg["volumes"] if volumes is None else volumes):
+        volume_info = _export_volumes(connect, work_dir, out_dir, sizes_cfg, token)
     activity_info = None
     if not partial:
         activity_info = workspace_activity.export(
@@ -1307,10 +1307,9 @@ def run_export(
         json.dumps(manifest_out, indent=2, sort_keys=False) + "\n", encoding="utf-8"
     )
 
-    # No sizes this run: keep the ones --sizes-only (maybe as another account) wrote, here or in storage_from.
-    kept = (storage_from or out_dir) / "storage"
-    if not (work_dir / "storage").exists() and kept.is_dir():
-        shutil.copytree(kept, work_dir / "storage")
+    # Sizes or volumes not taken this run: keep the files --sizes-only (maybe as another account) wrote,
+    # here or in storage_from.
+    _keep_storage((storage_from or out_dir) / "storage", work_dir / "storage")
 
     total_bytes = sum(p.stat().st_size for p in work_dir.rglob("*") if p.is_file())
 
@@ -1336,7 +1335,25 @@ def run_export(
     }
 
 
-def export_sizes_only(out_dir: Path, *, connect_fn: Callable | None = None, env: dict | None = None) -> dict:
+def _keep_storage(kept: Path, into: Path) -> None:
+    """Copies each file of `kept` this run didn't write into `into`."""
+    if not kept.is_dir():
+        return
+    into.mkdir(parents=True, exist_ok=True)
+    for f in kept.iterdir():
+        if f.is_file() and not (into / f.name).exists():
+            shutil.copy2(f, into / f.name)
+
+
+def _export_volumes(connect, work_dir: Path, out_dir: Path, cfg: dict, token: str | None) -> dict:
+    return table_detail.export_volumes(
+        connect, work_dir, threads=cfg["threads"], max_entries=cfg["volume_max_entries"],
+        previous=out_dir / "storage" / table_detail.VOLUME_FILE, full_days=cfg["volume_full_days"],
+        redact=lambda text: _redact(text, token))
+
+
+def export_sizes_only(out_dir: Path, *, connect_fn: Callable | None = None, env: dict | None = None,
+                      volumes: bool | None = None) -> dict:
     """Table sizes, history and volume files only, into out_dir/storage; the rest of out_dir stays."""
     if datasource.inside_repo(out_dir):
         raise ExportConfigError(
@@ -1355,7 +1372,9 @@ def export_sizes_only(out_dir: Path, *, connect_fn: Callable | None = None, env:
     if not detail.get("exported"):
         shutil.rmtree(work, ignore_errors=True)
         raise ExportConfigError(f"table sizes not exported: {detail.get('error')}")
-    volumes = table_detail.export_volumes(connect, work, threads=cfg["threads"], redact=redact)
+    vol_info = _export_volumes(connect, work, out_dir, cfg, token) \
+        if (cfg["volumes"] if volumes is None else volumes) else None
+    _keep_storage(out_dir / "storage", work / "storage")
     out_dir.mkdir(parents=True, exist_ok=True)
     old = out_dir / "storage.old"
     if old.exists():
@@ -1369,9 +1388,9 @@ def export_sizes_only(out_dir: Path, *, connect_fn: Callable | None = None, env:
     manifest_path = out_dir / "manifest.json"
     if manifest_path.is_file():
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-        manifest.update(table_detail=detail, volume_detail=volumes)
+        manifest.update(table_detail=detail, **({"volume_detail": vol_info} if vol_info else {}))
         manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=False) + "\n", encoding="utf-8")
-    return {"table_detail": detail, "volume_detail": volumes, "out_dir": out_dir}
+    return {"table_detail": detail, "volume_detail": vol_info, "out_dir": out_dir}
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -1405,6 +1424,8 @@ def build_parser() -> argparse.ArgumentParser:
     ap.add_argument("--no-table-sizes", action="store_true",
                     help="skip DESCRIBE DETAIL of every table (settings table_sizes.enabled); "
                          "the storage/ already in --out is kept")
+    ap.add_argument("--no-volumes", action="store_true",
+                    help="don't list volume files this run (settings table_sizes.volumes); the last listing is kept")
     ap.add_argument("--storage-from", metavar="DIR",
                     help="no sizes this run: take storage/ from DIR, a --sizes-only run's --out")
     ap.add_argument("--mask-users", action="store_true",
@@ -1434,13 +1455,15 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     if args.sizes_only:
         try:
-            done = export_sizes_only(out_dir)
+            done = export_sizes_only(out_dir, volumes=False if args.no_volumes else None)
         except ExportConfigError as e:
             print(f"error: {e}", file=sys.stderr)
             return 2
         d, v = done["table_detail"], done["volume_detail"]
+        vols = (f"{v.get('volumes', 0)} volumes, {v.get('reused', 0)} unchanged since their last listing"
+                if v else "volumes not listed, last listing kept")
         print(f"table sizes: {d.get('tables')} tables, {d.get('described', 0)} described, "
-              f"{d.get('failed', 0)} failed; volumes: {v.get('volumes', 0)} -- {out_dir / 'storage'}")
+              f"{d.get('failed', 0)} failed; {vols} -- {out_dir / 'storage'}")
         return 0
 
     try:
@@ -1450,6 +1473,7 @@ def main(argv: list[str] | None = None) -> int:
             mask_users=args.mask_users or masking_enabled(), include_today=_include_today(),
             table_sizes=False if args.no_table_sizes else None,
             storage_from=Path(args.storage_from).resolve() if args.storage_from else None,
+            volumes=False if args.no_volumes else None,
         )
     except ExportConfigError as e:
         print(f"error: {e}", file=sys.stderr)

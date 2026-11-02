@@ -100,6 +100,9 @@ table_sizes:
   enabled: true
   threads: 16          # statements at once (1-64)
   max_tables: 20000    # the most recently changed first; the rest read "not asked"
+  volumes: true        # list every volume's files (count, bytes); false keeps the last listing
+  volume_max_entries: 50000  # files and folders listed per volume; more reads "too big to list"
+  volume_full_days: 7  # re-list every volume this often; in between only volumes written to (audit log)
 
 # Your Databricks commit, if you have one. Cost > Pricing & policy then shows how much of it is
 # used and when it runs out at the current pace. Spend is list price after discount_pct, so give

@@ -14,6 +14,7 @@ storage/table_history.parquet.
 from __future__ import annotations
 
 import concurrent.futures
+import datetime
 import threading
 import time
 from pathlib import Path
@@ -230,13 +231,37 @@ VOLUME_MAX_ENTRIES = 50000  # files and folders listed per volume before it read
 VOLUME_SCHEMA = pa.schema([
     ("volume_catalog", pa.string()), ("volume_schema", pa.string()), ("volume_name", pa.string()),
     ("volume_type", pa.string()), ("files", pa.int64()), ("size_in_bytes", pa.int64()),
-    ("truncated", pa.bool_()), ("detail", pa.string()),
+    ("truncated", pa.bool_()), ("detail", pa.string()), ("listed_at", pa.string()),
 ])
+# listed_at: when these counts were listed (UTC); an unchanged volume keeps last run's counts and time
 _VOLUMES_SQL = """
 SELECT volume_catalog, volume_schema, volume_name, volume_type
 FROM system.information_schema.volumes
 WHERE volume_schema <> 'information_schema'
 """
+# the last file write per volume in the audit log since `since`; Spark writes to /Volumes paths may
+# not be logged, hence the full re-list every volume_full_days
+_VOLUME_WRITES_SQL = """
+SELECT regexp_extract(p, '^/Volumes/([^/]+/[^/]+/[^/]+)', 1) AS v, CAST(MAX(event_time) AS STRING) AS last_write
+FROM (SELECT event_time, COALESCE(request_params['path'], request_params['file_path'], request_params['directory_path']) AS p
+      FROM system.access.audit
+      WHERE event_date >= DATE'{since}' AND service_name = 'filesystem' AND response.status_code = 200
+        AND action_name RLIKE '(?i)put|upload|create|delete|write|mkdir|move|rename')
+WHERE p RLIKE '^/Volumes/[^/]+/[^/]+/[^/]+'
+GROUP BY 1
+"""
+
+
+def _previous_volumes(path: Path | None) -> dict[str, dict]:
+    """Last run's volumes that were listed, by catalog/schema/name."""
+    if path is None or not path.is_file():
+        return {}
+    try:
+        rows = pq.read_table(str(path)).to_pylist()
+    except Exception:  # noqa: BLE001 -- an unreadable old file just means listing again
+        return {}
+    return {"/".join((r["volume_catalog"], r["volume_schema"], r["volume_name"])): r for r in rows
+            if r.get("detail") == "listed" and r.get("listed_at")}
 
 
 def _sq(text: str) -> str:
@@ -263,16 +288,31 @@ def _list_volume(cur, root: str, max_entries: int) -> tuple[int, int, bool]:
 
 
 def export_volumes(connect_fn: Callable, out_dir: Path, *, threads: int = 16,
-                   max_entries: int = VOLUME_MAX_ENTRIES, redact: Callable[[str], str] = str,
+                   max_entries: int = VOLUME_MAX_ENTRIES, previous: Path | None = None, full_days: int = 7,
+                   now: datetime.datetime | None = None, redact: Callable[[str], str] = str,
                    log: Callable[[str], None] = print) -> dict:
-    """List every volume's files `threads` volumes at a time; write out_dir/storage/volume_detail.parquet."""
+    """List the volumes' files `threads` volumes at a time; write out_dir/storage/volume_detail.parquet.
+    A volume listed in the last full_days with no file write in the audit log since keeps its counts."""
     t0 = time.perf_counter()
+    now = now or datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
+    stamp = now.strftime("%Y-%m-%d %H:%M:%S")
+    prev = _previous_volumes(previous)
+    cutoff = (now - datetime.timedelta(days=full_days)).strftime("%Y-%m-%d %H:%M:%S")
+    fresh = {k: r for k, r in prev.items() if full_days and r["listed_at"] >= cutoff}
     try:
         lister = connect_fn()
     except Exception as exc:  # noqa: BLE001 -- a side table; the export goes on
         return {"exported": False, "error": redact(str(exc))}
+    writes: dict[str, str] | None = {}
     try:
-        vols = [r for r in _rows(lister.conn.cursor(), _VOLUMES_SQL) if r["volume_catalog"] not in SKIP_CATALOGS]
+        cur = lister.conn.cursor()
+        vols = [r for r in _rows(cur, _VOLUMES_SQL) if r["volume_catalog"] not in SKIP_CATALOGS]
+        if fresh:
+            since = min(r["listed_at"] for r in fresh.values())[:10]
+            try:
+                writes = {r["v"]: r["last_write"] for r in _rows(cur, _VOLUME_WRITES_SQL.format(since=since))}
+            except Exception:  # noqa: BLE001 -- no audit log access: list them all
+                writes = None
     except Exception as exc:  # noqa: BLE001
         return {"exported": False, "error": redact(str(exc))}
     finally:
@@ -280,11 +320,20 @@ def export_volumes(connect_fn: Callable, out_dir: Path, *, threads: int = 16,
             lister.conn.close()
         except Exception:  # noqa: BLE001
             pass
-    log(f"volume files: listing {len(vols)} volumes")
+    out: list[dict] = []
+    todo: list[dict] = []
+    for v in vols:
+        key = "/".join(str(v[k]) for k in ("volume_catalog", "volume_schema", "volume_name"))
+        old = fresh.get(key) if writes is not None else None
+        if old is not None and (writes.get(key) or "") < old["listed_at"]:
+            out.append({**{f.name: old.get(f.name) for f in VOLUME_SCHEMA}, "volume_type": v.get("volume_type")})
+        else:
+            todo.append(v)
+    reused = len(out)
+    log(f"volume files: listing {len(todo)} of {len(vols)} volumes, {reused} unchanged since their last listing")
     local = threading.local()
     lock = threading.Lock()
     conns: list = []
-    out: list[dict] = []
 
     def walk(v: dict) -> None:
         row = {f.name: None for f in VOLUME_SCHEMA}
@@ -297,15 +346,15 @@ def export_volumes(connect_fn: Callable, out_dir: Path, *, threads: int = 16,
                 local.cur = c.conn.cursor()
             root = "/Volumes/" + "/".join(str(v[k]) for k in ("volume_catalog", "volume_schema", "volume_name")) + "/"
             files, size, cut = _list_volume(local.cur, root, max_entries)
-            row.update(files=files, size_in_bytes=size, truncated=cut, detail="listed")
+            row.update(files=files, size_in_bytes=size, truncated=cut, detail="listed", listed_at=stamp)
         except Exception as exc:  # noqa: BLE001 -- one volume it can't read must not stop the rest
             row.update(truncated=False, detail="failed: " + (redact(str(exc)).splitlines() or [""])[0][:200])
         with lock:
             out.append(row)
 
-    if vols:
+    if todo:
         with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, threads)) as pool:
-            list(pool.map(walk, vols))
+            list(pool.map(walk, todo))
     for c in conns:
         try:
             c.conn.close()
@@ -319,4 +368,4 @@ def export_volumes(connect_fn: Callable, out_dir: Path, *, threads: int = 16,
     return {"exported": True, "error": None, "volumes": len(out), "listed": len(out) - len(failed),
             "failed": len(failed), "truncated": sum(1 for r in out if r["truncated"]),
             "first_error": failed[0]["detail"][8:] if failed else None, "max_entries": max_entries,
-            "seconds": round(time.perf_counter() - t0, 1)}
+            "reused": reused, "full_days": full_days, "seconds": round(time.perf_counter() - t0, 1)}

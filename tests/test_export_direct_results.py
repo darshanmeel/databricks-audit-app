@@ -847,3 +847,15 @@ def test_a_full_export_without_sizes_keeps_storage_or_takes_it_from_another_fold
     # the next run without sizes keeps them
     edr.run_export(tmp_path / "results", only=["cost_by_job"], table_sizes=False, **run)
     assert (tmp_path / "results" / "storage" / "table_detail.parquet").read_text(encoding="utf-8") == "B"
+
+
+def test_sizes_only_without_volumes_keeps_the_last_listing(tmp_path, monkeypatch):
+    out = tmp_path / "results"
+    (out / "storage").mkdir(parents=True)
+    (out / "storage" / "volume_detail.parquet").write_text("OLD", encoding="utf-8")
+    _fake_sizes(monkeypatch, "B")
+    monkeypatch.setattr(edr.table_detail, "export_volumes", lambda *a, **k: pytest.fail("volumes must not be listed"))
+    done = edr.export_sizes_only(out, connect_fn=lambda: None, env=dict(FAKE_ENV), volumes=False)
+    assert done["volume_detail"] is None
+    assert (out / "storage" / "volume_detail.parquet").read_text(encoding="utf-8") == "OLD"
+    assert (out / "storage" / "table_detail.parquet").read_text(encoding="utf-8") == "B"
