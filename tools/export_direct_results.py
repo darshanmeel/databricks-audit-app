@@ -36,6 +36,7 @@ from app.core import data as app_core_data  # noqa: E402
 from app.core import datasource  # noqa: E402
 from app.core import registry as app_registry  # noqa: E402
 from app.core import rls as app_rls  # noqa: E402
+from app.core.usage import skipped_catalog  # noqa: E402
 from app.core import tag_compliance as app_tag_compliance  # noqa: E402
 from app.core.identity import format_identity, masking_enabled  # noqa: E402
 from tools import dbt_run  # noqa: E402
@@ -501,7 +502,6 @@ def _export_names(cur, names_sql: dict[str, str], out_dir: Path, mask_users: boo
 # this token (READ METADATA or MANAGE), is not covered; the manifest says how many were asked.
 # Databricks names the columns "Policy Name", "Policy Type", "Catalog", "Schema", "Table", "Comment".
 POLICY_COLUMNS = ("policy_name", "policy_type", "catalog", "schema", "table_name", "comment")
-POLICY_SKIP_CATALOGS = {"system", "samples", "hive_metastore", "__databricks_internal"}
 POLICY_SCHEMAS_MAX = 5000
 
 
@@ -517,7 +517,7 @@ def _export_policies(cur, out_dir: Path) -> dict:
 
     try:
         catalogs = [r["catalog_name"] for r in rows_of("SELECT catalog_name FROM system.information_schema.catalogs ORDER BY 1")
-                    if r["catalog_name"] not in POLICY_SKIP_CATALOGS]
+                    if not skipped_catalog(r["catalog_name"])]
         wanted = set(catalogs)
         schemas = [(r["catalog_name"], r["schema_name"]) for r in rows_of(
             "SELECT catalog_name, schema_name FROM system.information_schema.schemata "

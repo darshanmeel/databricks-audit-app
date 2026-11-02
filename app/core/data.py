@@ -2174,7 +2174,10 @@ def read_volumes(workspace_scope: set[str] | None, tag_filter=None) -> dict:
             return workspace_scope is None and kept is None
         return (workspace_scope is None or ws in workspace_scope) and (kept is None or ws in kept)
 
-    access = [a for a in access if in_scope(str(a["workspace_id"]))]
+    from app.core.usage import skipped_catalog
+
+    vols = [v for v in vols if not skipped_catalog(v["volume_catalog"])]
+    access = [a for a in access if in_scope(str(a["workspace_id"])) and not skipped_catalog(a["volume_full_name"].split(".")[0])]
     by_vol: dict[str, dict] = {}
     for v in vols:
         ws = home.get(str(v["volume_catalog"]))

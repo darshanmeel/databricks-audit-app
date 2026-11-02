@@ -23,7 +23,7 @@ from typing import Callable
 import pyarrow as pa
 import pyarrow.parquet as pq
 
-SKIP_CATALOGS = {"system", "samples", "hive_metastore", "__databricks_internal"}
+from app.core.usage import skipped_catalog as skipped
 FILE = "table_detail.parquet"
 
 SCHEMA = pa.schema([
@@ -122,7 +122,7 @@ def export(connect_fn: Callable, out_dir: Path, *, previous: Path | None = None,
     except Exception as exc:  # noqa: BLE001 -- table sizes are a side table; the export goes on
         return {"exported": False, "error": redact(str(exc))}
     try:
-        tables = [r for r in _rows(lister.conn.cursor(), _LIST_SQL) if r["table_catalog"] not in SKIP_CATALOGS]
+        tables = [r for r in _rows(lister.conn.cursor(), _LIST_SQL) if not skipped(r["table_catalog"])]
     except Exception as exc:  # noqa: BLE001
         return {"exported": False, "error": redact(str(exc))}
     finally:
@@ -307,7 +307,7 @@ def export_volumes(connect_fn: Callable, out_dir: Path, *, threads: int = 16,
     writes: dict[str, str] | None = {}
     try:
         cur = lister.conn.cursor()
-        vols = [r for r in _rows(cur, _VOLUMES_SQL) if r["volume_catalog"] not in SKIP_CATALOGS]
+        vols = [r for r in _rows(cur, _VOLUMES_SQL) if not skipped(r["volume_catalog"])]
         if fresh:
             since = min(r["listed_at"] for r in fresh.values())[:10]
             try:

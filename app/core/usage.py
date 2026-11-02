@@ -19,6 +19,12 @@ CLASSES = (
 )
 CLASS_RANK = {key: i for i, (key, _label, _meaning) in enumerate(CLASSES)}
 UNREAD_CLASSES = ("written_never_read", "idle_90d")  # their size is a workspace's unread GB
+SKIP_CATALOGS = ("system", "samples", "hive_metastore")
+
+
+def skipped_catalog(catalog: str | None) -> bool:
+    """System and sample catalogs, and Databricks' own (__databricks_internal, __databricks_internal_catalog_*)."""
+    return not catalog or catalog in SKIP_CATALOGS or catalog.startswith("__databricks_internal")
 
 # each input on a log scale against the largest workspace shown; the weights sum to 1
 COMPLEXITY_WEIGHTS = {"views": 0.20, "view_columns": 0.15, "tables": 0.20, "table_columns": 0.15,

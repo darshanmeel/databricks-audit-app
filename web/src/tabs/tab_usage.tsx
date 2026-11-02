@@ -680,7 +680,7 @@ function UsageVolumesContent({ filters, onVerdict }: LooseProps) {
             </tbody>
           </table>
         </div>
-        {notListed.length ? <div className="metric-note">{`Could not list ${fmtInt(notListed.length)}: ${notListed.map((v) => `${v.volume_full_name} (${v.detail})`).join(" · ")}. Grant READ VOLUME to the export identity.`}</div> : null}
+        {notListed.length ? <NotListed vols={notListed} /> : null}
       </Card>
       {sel && <VolumeDetail v={sel} wsNames={new Map(vols.filter((x) => x.workspace_id).map((x) => [String(x.workspace_id), x.workspace_name]))} />}
       <Card title="File reads and writes by workspace">
@@ -694,6 +694,37 @@ function UsageVolumesContent({ filters, onVerdict }: LooseProps) {
           </div>
         ))}
       </Card>
+    </div>
+  );
+}
+
+// Volumes with no size: used but missing from the listing, or the listing failed. Grouped, names on request.
+function NotListed({ vols }: { vols: any[] }) {
+  const [open, setOpen] = React.useState(false);
+  const why = (v: any) => (v.detail === "not listed" ? "Used, but not in the listing" : "Listing failed");
+  const groups = new Map<string, Map<string, number>>();
+  vols.forEach((v) => {
+    const g = groups.get(why(v)) || new Map<string, number>();
+    const cat = String(v.volume_full_name).split(".")[0];
+    g.set(cat, (g.get(cat) || 0) + 1);
+    groups.set(why(v), g);
+  });
+  return (
+    <div className="metric-note">
+      {`${fmtInt(vols.length)} volumes have no size. `}
+      {Array.from(groups.entries()).map(([reason, cats]) => {
+        const n = Array.from(cats.values()).reduce((a, b) => a + b, 0);
+        const top = Array.from(cats.entries()).sort((a, b) => b[1] - a[1]);
+        return <span key={reason}>{`${reason}: ${fmtInt(n)} in ${fmtInt(cats.size)} catalog${cats.size === 1 ? "" : "s"} (${top.slice(0, 4).map(([c, k]) => `${c} ${k}`).join(", ")}${top.length > 4 ? ", …" : ""}). `}</span>;
+      })}
+      {"The sizes run lists only what its account can read: give it READ VOLUME on those catalogs, then run --sizes-only. "}
+      <button type="button" className="link-btn" onClick={() => setOpen(!open)}>{open ? "Hide the names" : "Show the names"}</button>
+      {open && (
+        <div className="data-table-wrap" style={{ marginTop: 6, maxHeight: 260, overflowY: "auto" }}><table className="data">
+          <thead><tr><th>Volume</th><th>Why</th><th>Workspace</th></tr></thead>
+          <tbody>{vols.map((v) => <tr key={v.volume_full_name}><td className="mono">{v.volume_full_name}</td><td>{v.detail === "not listed" ? "not in the listing" : v.detail}</td><td>{v.workspace_name || "-"}</td></tr>)}</tbody>
+        </table></div>
+      )}
     </div>
   );
 }
