@@ -2216,8 +2216,11 @@ def read_volumes(workspace_scope: set[str] | None, tag_filter=None) -> dict:
         access = rows("SELECT workspace_id, volume_full_name, identity, reads, writes, last_read, last_write "
                       "FROM usage.volume_access") if accessed else []
         kept = _tag_kept_workspaces(con, tag_filter)
+        info_raw = con.execute("SELECT info FROM usage.workspace_activity_info LIMIT 1").fetchone() \
+            if ("usage", "workspace_activity_info") in have else None
     finally:
         con.close()
+    end = _seen_end(json.loads(info_raw[0]) if info_raw and info_raw[0] else None)
 
     def in_scope(ws: str | None) -> bool:
         if ws is None:
@@ -2245,12 +2248,20 @@ def read_volumes(workspace_scope: set[str] | None, tag_filter=None) -> dict:
         v["reads"] += int(a["reads"] or 0)
         v["writes"] += int(a["writes"] or 0)
         v["users"].add(a["identity"])
+        if a["reads"]:
+            v.setdefault("reader_set", set()).add(a["identity"])
+        if a["writes"]:
+            v.setdefault("writer_set", set()).add(a["identity"])
         v["last_read"] = max(filter(None, [v["last_read"], a["last_read"]]), default=None)
         v["last_write"] = max(filter(None, [v["last_write"], a["last_write"]]), default=None)
+    from app.core import usage
+
     out = []
     for v in by_vol.values():
         users = v.pop("users")
-        out.append({**v, "users": len(users)})
+        cls, _new = usage.usage_class(v["reads"], v["writes"], v["last_read"], v["last_write"], None, end)
+        readers, writers = len(v.pop("reader_set", ())), len(v.pop("writer_set", ()))
+        out.append({**v, "users": len(users), "readers": readers, "writers": writers, "usage_class": cls})
     out.sort(key=lambda v: (-(v["size_in_bytes"] or 0), v["volume_full_name"]))
     people: dict[str, dict] = {}
     for a in access:
@@ -2262,7 +2273,7 @@ def read_volumes(workspace_scope: set[str] | None, tag_filter=None) -> dict:
         p["last_access"] = max(filter(None, [p["last_access"], a["last_read"], a["last_write"]]), default=None)
     people_out = sorted(({**p, "volumes": len(p["volumes"])} for p in people.values()),
                         key=lambda p: (-(p["reads"] + p["writes"]), p["identity"]))
-    return {"outcome": "ok_rows" if out else "ok_empty", "listed": listed, "accessed": accessed,
+    return {"outcome": "ok_rows" if out else "ok_empty", "listed": listed, "accessed": accessed, "as_of": end.isoformat(),
             "volumes": out, "people": people_out[:500], "people_total": len(people_out)}
 
 
@@ -2345,6 +2356,7 @@ def read_tables(workspace_scope: set[str] | None, tag_filter=None, limit: int = 
     out.sort(key=lambda r: (usage.CLASS_RANK[r["usage_class"]], -(r["size_in_bytes"] or 0), r["table_full_name"]))
     counts = {k: sum(1 for r in out if r["usage_class"] == k) for k, _l, _m in usage.CLASSES}
     return {"outcome": "ok_rows" if out else "ok_empty", "total": len(out), "window_days": used or window,
+            "as_of": _seen_end(info).isoformat(),
             "classes": [{"key": k, "label": label, "meaning": meaning, "tables": counts[k],
                          "size_in_bytes": sum(r["size_in_bytes"] or 0 for r in out if r["usage_class"] == k)}
                         for k, label, meaning in usage.CLASSES],
@@ -2394,12 +2406,24 @@ def read_table(full_name: str, window: int = 30) -> dict:
         info_row = con.execute("SELECT info FROM usage.workspace_activity_info").fetchone() \
             if ("usage", "workspace_activity_info") in have else None
         sensitive = _sensitive(con, have).get(full_name, [])
-        cls = _table_classes(con, have, window, _seen_end(json.loads(info_row[0]) if info_row and info_row[0] else None)
-                             ).get(full_name)
+        every = _table_classes(con, have, window, _seen_end(json.loads(info_row[0]) if info_row and info_row[0] else None))
+        cls = every.get(full_name)
+        edges = ("usage", "table_edges") in have
+        upstream = rows("SELECT source AS name, events, last_event FROM usage.table_edges WHERE target = ? "
+                        "ORDER BY events DESC, source LIMIT 10", [full_name]) if edges else []
+        downstream = rows("SELECT target AS name, events, last_event FROM usage.table_edges WHERE source = ? "
+                          "ORDER BY events DESC, target LIMIT 10", [full_name]) if edges else []
+        grants = rows("SELECT grantee, privilege FROM usage.table_grants WHERE table_full_name = ? ORDER BY grantee",
+                      [full_name]) if ("usage", "table_grants") in have else None
     finally:
         con.close()
     f = facts[0] if facts else {}
     ws = home.get(str(f.get("table_catalog") or full_name.split(".")[0]))
+    for node in upstream + downstream:
+        node["usage_class"] = (every.get(node["name"]) or {}).get("usage_class")
+    readers = {u["identity"] for u in users if (u.get("reads") or 0) > 0}
+    unused_grants = None if grants is None else [g for g in grants if g["grantee"] not in readers]
+    rows_changed = _rows_changed(history, window, _seen_end(json.loads(info_row[0]) if info_row and info_row[0] else None))
     for u in users:
         u["kind"] = _identity_kind(u["identity"])
     return {"outcome": "ok_rows" if (facts or daily or history) else "ok_empty", "table_full_name": full_name,
@@ -2408,11 +2432,127 @@ def read_table(full_name: str, window: int = 30) -> dict:
             "usage_class": cls["usage_class"] if cls else None, "new": bool(cls and cls["new"]),
             "reads": cls["reads"] if cls else None, "writes": cls["writes"] if cls else None,
             "readers": cls["readers"] if cls else None, "writers": cls["writers"] if cls else None,
+            "reader_names": cls["reader_names"] if cls else None, "writer_names": cls["writer_names"] if cls else None,
+            "upstream": upstream, "downstream": downstream, "has_edges": edges, "grants": grants,
+            "unused_grants": unused_grants, "rows_changed": rows_changed,
+            "as_of": _seen_end(json.loads(info_row[0]) if info_row and info_row[0] else None).isoformat(),
             "lineage": ("usage", "table_daily") in have, "has_history": ("storage", "table_history") in have,
             "has_maintenance": ("usage", "table_maintenance") in have,
             "last_read": (access[0] if access else {}).get("last_read"),
             "last_write": (access[0] if access else {}).get("last_write"),
             "read_lookback_days": _lookback(info_row)}
+
+
+_ROW_KEYS = ("numTargetRowsInserted", "numTargetRowsUpdated", "numTargetRowsDeleted", "numDeletedRows")
+
+
+def _rows_changed(history: list[dict], window: int, end) -> int | None:
+    """Rows inserted, updated and deleted in the window, from DESCRIBE HISTORY's operation metrics."""
+    import datetime as _dt
+
+    if not history:
+        return None
+    since = (end - _dt.timedelta(days=window)).isoformat()
+    total = 0
+    for h in history:
+        if str(h.get("timestamp") or "")[:10] < since:
+            continue
+        m = dict(x.split("=", 1) for x in str(h.get("metrics") or "").split(", ") if "=" in x)
+        n = sum(int(m[k]) for k in _ROW_KEYS if str(m.get(k, "")).isdigit()) or \
+            (int(m["numOutputRows"]) if str(m.get("numOutputRows", "")).isdigit() else 0)
+        total += n
+    return total
+
+
+def read_people(window: int, workspace_scope: set[str] | None) -> dict:
+    """Everyone who queried, signed in or used a table: workspaces, queries, tables read and written,
+    reads and writes, tables they write that nobody reads, sensitive tables they touched, last seen;
+    and who has not been seen for 90+ days but still holds a direct SELECT."""
+    from app.core import usage
+
+    con = _connect()
+    try:
+        have = {(r[0], r[1]) for r in con.execute(
+            "SELECT table_schema, table_name FROM information_schema.tables WHERE table_catalog = current_database()"
+        ).fetchall()}
+        if ("usage", "user_access") not in have:
+            return {"outcome": "not_assessed", "people": [], "inactive": []}
+        info_raw = con.execute("SELECT info FROM usage.workspace_activity_info LIMIT 1").fetchone() \
+            if ("usage", "workspace_activity_info") in have else None
+        info = json.loads(info_raw[0]) if info_raw and info_raw[0] else None
+        end = _seen_end(info)
+        access = con.execute("SELECT workspace_id, identity, last_seen, queries, tables_read, tables_written "
+                             "FROM usage.user_access").fetchall()
+        used = con.execute("SELECT workspace_id, identity, table_full_name, reads, writes FROM usage.user_tables"
+                           ).fetchall() if ("usage", "user_tables") in have else []
+        seen = con.execute("SELECT workspace_id, identity, last_seen FROM usage.user_last_seen"
+                           ).fetchall() if ("usage", "user_last_seen") in have else []
+        grants = con.execute("SELECT grantee, table_full_name FROM usage.table_grants"
+                             ).fetchall() if ("usage", "table_grants") in have else None
+        classes = _table_classes(con, have, window, end)
+        sensitive = _sensitive(con, have)
+        _home, names, _envs = _home_and_names(con, have)
+    finally:
+        con.close()
+    keep = lambda ws: workspace_scope is None or str(ws) in workspace_scope  # noqa: E731
+    wo = {n for n, tb in classes.items() if tb["usage_class"] == "written_never_read"}
+    people: dict[str, dict] = {}
+
+    def person(who: str) -> dict:
+        return people.setdefault(who, {"identity": who, "kind": _identity_kind(who), "workspaces": set(), "queries": 0,
+                                       "tables_read": 0, "tables_written": 0, "reads": 0, "writes": 0,
+                                       "writes_nobody_reads": set(), "sensitive_tables": set(), "last_seen": None})
+    for ws, who, last, q, tr, tw in access:
+        if not who or not keep(ws):
+            continue
+        p = person(who)
+        p["workspaces"].add(names.get(str(ws), str(ws)))
+        p["queries"] += int(q or 0)
+        p["tables_read"] += int(tr or 0)
+        p["tables_written"] += int(tw or 0)
+        p["last_seen"] = max(filter(None, [p["last_seen"], last]), default=None)
+    for ws, who, name, r, w in used:
+        if not who or not keep(ws):
+            continue
+        p = person(who)
+        p["reads"] += int(r or 0)
+        p["writes"] += int(w or 0)
+        if w and name in wo:
+            p["writes_nobody_reads"].add(name)
+        if name in sensitive:
+            p["sensitive_tables"].add(name)
+    out = []
+    for p in people.values():
+        out.append({**p, "workspaces": sorted(p["workspaces"]), "writes_nobody_reads": sorted(p["writes_nobody_reads"]),
+                    "sensitive_tables": sorted(p["sensitive_tables"])})
+    out.sort(key=lambda p: (-p["writes"], -p["reads"], -p["queries"], p["identity"]))
+    # not seen for 90+ days: what they can still read directly, sensitive tables first
+    can = {}
+    for grantee, name in grants or []:
+        can.setdefault(str(grantee), []).append(name)
+    last: dict[tuple, str] = {}
+    for ws, who, when in seen:
+        if who and keep(ws) and _identity_kind(who) in ("Person", "Service principal"):
+            last[(str(ws), who)] = max(filter(None, [last.get((str(ws), who)), when]), default=None)
+    inactive = []
+    for (ws, who), when in last.items():
+        days = _days_since(when, end)
+        if days is None or days < INACTIVE_DAYS:
+            continue
+        tables = sorted(can.get(who, []), key=lambda n: (n not in sensitive, n))
+        inactive.append({"identity": who, "kind": _identity_kind(who), "workspace": names.get(ws, ws), "last_seen": when,
+                         "days": days, "can_read": tables[:10], "can_read_total": len(tables),
+                         "sensitive_can_read": [n for n in tables if n in sensitive]})
+    inactive.sort(key=lambda r: (-(r["days"] or 0), r["identity"]))
+    total_writes = sum(p["writes"] for p in out)
+    sp_writes = sum(p["writes"] for p in out if p["kind"] == "Service principal")
+    return {"outcome": "ok_rows" if out else "ok_empty", "people": out[:500], "total": len(out), "as_of": end.isoformat(),
+            "active_people": sum(1 for p in out if p["kind"] == "Person"),
+            "service_principals": sum(1 for p in out if p["kind"] == "Service principal"),
+            "sp_write_share": round(100 * sp_writes / total_writes, 1) if total_writes else None,
+            "touched_sensitive": sum(1 for p in out if p["sensitive_tables"]),
+            "inactive": inactive[:500], "inactive_days": INACTIVE_DAYS, "grants": grants is not None,
+            "classes": [k for k, _l, _m in usage.CLASSES]}
 
 
 def _discount() -> float:

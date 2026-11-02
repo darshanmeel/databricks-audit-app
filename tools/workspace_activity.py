@@ -14,6 +14,9 @@ belongs to, for Governance > Workspaces. Plain statements, not checks:
   the audit log's file-system events;
 - table_daily: per table and day, reads, writes and readers (lineage);
 - table_maintenance: predictive optimization runs per table (compaction, vacuum, clustering);
+- table_edges: which table feeds which (lineage source -> target), with events and the last one;
+- table_grants: who holds SELECT (or ALL PRIVILEGES) on a table directly, not through its schema,
+  catalog or a group;
 - sensitive_columns: columns that look sensitive (a tag, data classification or the column name),
   and whether a column mask covers them. Names and types only, never values.
 
@@ -78,6 +81,13 @@ LAST_SEEN_FILE = "user_last_seen.parquet"
 LAST_SEEN_DAYS = 365  # the audit log's retention
 LAST_SEEN_SCHEMA = pa.schema([
     ("workspace_id", pa.string()), ("identity", pa.string()), ("last_seen", pa.string()), ("last_login", pa.string()),
+])
+EDGES_FILE, GRANTS_FILE = "table_edges.parquet", "table_grants.parquet"
+EDGES_SCHEMA = pa.schema([
+    ("source", pa.string()), ("target", pa.string()), ("events", pa.int64()), ("last_event", pa.string()),
+])
+GRANTS_SCHEMA = pa.schema([
+    ("table_full_name", pa.string()), ("grantee", pa.string()), ("privilege", pa.string()),
 ])
 SENSITIVE_FILE = "sensitive_columns.parquet"
 SENSITIVE_SCHEMA = pa.schema([
@@ -364,6 +374,31 @@ GROUP BY 1, 2
 """
 
 
+def table_edges_sql(end: dt.date, days: int) -> str:
+    """Table to table lineage in the window: what each table is built from and what it feeds."""
+    e = f"DATE'{end.isoformat()}'"
+    return f"""
+SELECT source_table_full_name AS source, target_table_full_name AS target, COUNT(*) AS events,
+       CAST(MAX(event_time) AS STRING) AS last_event
+FROM system.access.table_lineage
+WHERE event_date >= date_sub({e}, {days}) AND event_date < {e}
+  AND source_table_full_name IS NOT NULL AND target_table_full_name IS NOT NULL
+  AND source_table_full_name <> target_table_full_name
+GROUP BY 1, 2
+"""
+
+
+def table_grants_sql() -> str:
+    """Direct SELECT grants on tables; grants on a schema, catalog or through a group aren't expanded."""
+    return """
+SELECT table_catalog || '.' || table_schema || '.' || table_name AS table_full_name, lower(grantee) AS grantee,
+       privilege_type AS privilege
+FROM system.information_schema.table_privileges
+WHERE privilege_type IN ('SELECT', 'ALL PRIVILEGES')
+  AND table_catalog NOT IN ('system', 'samples', '__databricks_internal') AND table_schema <> 'information_schema'
+"""
+
+
 def sensitive_columns_sql(classification: bool = True) -> str:
     """One row per sensitive-looking column: from a tag, data classification (HIGH confidence) or the
     column name, in that order of trust, and whether a column mask covers it."""
@@ -434,6 +469,8 @@ def export(connect_fn: Callable, out_dir: Path, *, end: dt.date, windows: list[i
             ("volume_access", volume_access_sql(end, max(windows)), VOLUME_ACCESS_FILE, VOLUME_ACCESS_SCHEMA),
             ("table_daily", table_daily_sql(end, max(windows)), TABLE_DAILY_FILE, TABLE_DAILY_SCHEMA),
             ("table_maintenance", maintenance_sql(end, max(windows)), MAINTENANCE_FILE, MAINTENANCE_SCHEMA),
+            ("table_edges", table_edges_sql(end, max(windows)), EDGES_FILE, EDGES_SCHEMA),
+            ("table_grants", table_grants_sql(), GRANTS_FILE, GRANTS_SCHEMA),
             ("sensitive_columns", sensitive_columns_sql(), SENSITIVE_FILE, SENSITIVE_SCHEMA),
         ):
             try:

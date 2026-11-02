@@ -33,7 +33,7 @@ export const ROLE_AREAS: Record<string, string[]> = {
   finops: ["actions", "cost", "waste", "mlai", "genie", "compute", "tags", "coverage"],
   data_engineer: reorderPriority(CONTENT_AREAS, ["actions", "jobs", "compute", "queries"]),
   cto: CONTENT_AREAS,
-  governance: ["actions", "governance", "tags"],
+  governance: ["actions", "usage", "governance", "tags"],
   // The CFO's own sidebar shows the Money page, not these areas (sidebarKeysForRole below) --
   // this list is still what "All findings" would scope to, were a CFO ever to open it.
   cfo: ["cost", "waste", "mlai"],

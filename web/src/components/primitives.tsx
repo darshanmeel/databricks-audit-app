@@ -825,7 +825,7 @@ export function AreaPage({
   // access_login_concentration, access_network_inbound_denials, access_admin_role_change_events,
   // po_maintenance_cost_by_table) -- "the workspace filter doesn't apply" was flatly wrong for
   // those, so their own scope line names the metastore instead of making that blanket claim.
-  const scopeText = (areaKey === "governance" || areaKey === "storage")
+  const scopeText = (areaKey === "governance" || areaKey === "storage" || areaKey === "usage")
     ? `Metastore ${metastoreText(meta)} · objects the export principal can see`
     : area.scope;
 

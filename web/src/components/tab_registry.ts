@@ -312,6 +312,14 @@ const STORAGE_SUBTABS: Subtab[] = [
   },
 ];
 
+// ─────────── Data usage ─────────── (workspaces · tables · volumes · people): usage classes,
+// reads and writes, sizes and sensitive columns (app/core/usage.py); no checks of its own.
+const USAGE_SUBTABS: Subtab[] = [
+  { key: "workspaces", label: "Workspaces", ids: [], refIds: [] },
+  { key: "tables", label: "Tables", ids: [], refIds: [] },
+  { key: "volumes", label: "Volumes", ids: [], refIds: [] },
+  { key: "people", label: "People", ids: [], refIds: [] },
+];
 // ─────────── Overview ─────────── -- a roll-up with no sub-tabs of its own (DEC-74): every id
 // here is a reference feed for its cards, never an individually-flagged check.
 export const OVERVIEW_IDS = [
@@ -349,6 +357,7 @@ export const AREA_REGISTRY: Record<string, Area> = {
   // AreaPage (primitives.tsx) shows the live version of this line, with the snapshot's actual
   // metastore -- this static text is only the fallback a caller with no `meta` (e.g. the Guide's
   // own per-check chip) reads.
+  usage: { label: "Data usage", scope: "Metastore-wide · objects the export principal can see", subtabs: USAGE_SUBTABS },
   governance: { label: "Governance & PII", scope: "Metastore-wide · objects the export principal can see", subtabs: GOVERNANCE_SUBTABS },
   storage: { label: "Storage", scope: "Metastore-wide · objects the export principal can see", subtabs: STORAGE_SUBTABS },
   tags: { label: "Tags", scope: "Mandatory tags · own tag, then job, compute, workspace", subtabs: [] },
@@ -359,7 +368,7 @@ export const AREA_REGISTRY: Record<string, Area> = {
     { key: "limits", label: "Known limitations", ids: [], refIds: [] },
   ] },
 };
-export const AREA_ORDER = ["overview", "actions", "cost", "waste", "mlai", "genie", "compute", "jobs", "queries", "governance", "storage", "tags", "findings", "coverage"];
+export const AREA_ORDER = ["overview", "actions", "cost", "waste", "mlai", "genie", "compute", "jobs", "queries", "usage", "governance", "storage", "tags", "findings", "coverage"];
 
 // T-68 (DEC-66.1): the list-price dollar column cost_dollarized_by_sku_day carries -- read at HEAD
 // rather than guessed, since Cost/ML & AI/Overview tiles all sum this same underlying finding.

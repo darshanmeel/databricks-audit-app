@@ -141,7 +141,9 @@ def add(db: Path) -> dict:
                            len(readers) if r_w else 0, len(set(writers)) if w_w else 0,
                            ", ".join(sorted(readers)[:3]) if r_w else None,
                            ", ".join(sorted(set(writers))[:3]) if w_w else None))
-        if written_only:
+        if written_only:  # its writer is a job's service principal
+            for who in writers:
+                user_tables.append((ws, who, full, 0, writes, last_write, "JOB"))
             continue
         if last < 30:
             for d in range(30):
@@ -219,6 +221,22 @@ def add(db: Path) -> dict:
     va.append(("2005", "analytics.ml.unlisted_models", "hana@acme.example", 12, 3, ts(4), ts(4)))
     put(con, "usage.volume_access", "workspace_id VARCHAR, volume_full_name VARCHAR, identity VARCHAR, reads BIGINT, "
         "writes BIGINT, last_read VARCHAR, last_write VARCHAR", va)
+    # usage.table_edges: what each table is built from; usage.table_grants: direct SELECT grants
+    put(con, "usage.table_edges", "source VARCHAR, target VARCHAR, events BIGINT, last_event VARCHAR", [
+        ("acme.raw.events", "acme.sales.orders", 49, ts(1)), ("acme.sales.orders", "acme.sales.daily", 30, ts(1)),
+        ("acme.sales.customers", "acme.sales.daily", 30, ts(1)), ("acme.sales.orders", "finance.reporting.monthly_pnl", 4, ts(5)),
+        ("acme.raw.clicks_raw", "acme.sales.returns", 20, ts(0)), ("acme.sales.customers", "sandbox.scratch.copy_customers", 1, ts(2)),
+        ("finance.ledger.gl_entries", "finance.reporting.monthly_pnl", 22, ts(2)), ("finance.ledger.fx_rates", "finance.ledger.gl_entries", 30, ts(1)),
+        ("analytics.web.pageviews", "analytics.web.sessions", 28, ts(1)), ("analytics.web.sessions", "analytics.ml.features", 12, ts(3)),
+        ("analytics.ml.features", "analytics.ml.scores", 12, ts(3)),
+    ] + [("lab.sales.clicks", f"lab.mart.t{i}", rnd.randint(2, 30), ts(rnd.randint(0, 20))) for i in range(12)])
+    put(con, "usage.table_grants", "table_full_name VARCHAR, grantee VARCHAR, privilege VARCHAR", [
+        ("acme.sales.customers", "ana@acme.example", "SELECT"), ("acme.sales.customers", "dora@acme.example", "SELECT"),
+        ("acme.sales.customers", "bi_readers", "SELECT"), ("acme.sales.orders", "dora@acme.example", "SELECT"),
+        ("acme.sales.orders", "chen@acme.example", "SELECT"), ("archive.y2024.orders_2024", "kim@acme.example", "SELECT"),
+        ("sandbox.scratch.copy_customers", "jo@acme.example", "ALL PRIVILEGES"), ("lab.sales.users", "eli@acme.example", "SELECT"),
+        ("finance.ledger.accounts", "gus@acme.example", "SELECT"), ("finance.ledger.accounts", "fay@acme.example", "SELECT"),
+    ])
     _warehouses(con, rnd)
     con.close()
     return {"tables": len(detail), "volumes": len(vols), "table_access": len(access), "users": len(users), "seen": len(seen)}
