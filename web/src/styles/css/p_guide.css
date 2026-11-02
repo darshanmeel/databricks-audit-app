@@ -174,9 +174,11 @@ a.gd-code:hover{ color: var(--link); text-decoration: underline; }
 .gd-nav-area-h{ font-weight: 600; color: var(--rail-strong); background: transparent; cursor: default; }
 .gd-nav-area-h:hover{ background: transparent; }
 .gd-nav-sub{ margin-left: 14px; padding-left: 10px; border-left: 1px solid var(--rail-border); border-radius: 0; font-size: 13px; }
+/* a group heading lines up with its checks: same indent, rail and size */
 .gd-nav-subh{
-  display: block; width: calc(100% - 24px); margin-left: 24px; font: inherit; font-size: 11px; color: var(--rail-muted);
-  padding: 6px 0 2px; background: none; border: none; text-align: left; cursor: pointer;
+  display: block; width: calc(100% - 14px); margin-left: 14px; font: inherit; font-size: 13px; font-weight: 600;
+  color: var(--rail-text); padding: 6px 8px 4px 10px; background: none; border: none;
+  border-left: 1px solid var(--rail-border); text-align: left; cursor: pointer;
 }
 .gd-nav-subh:hover{ color: var(--rail-strong); }
 .gd-nav-start{ display: flex; flex-direction: column; gap: 1px; }
@@ -428,7 +430,7 @@ a.gd-code:hover{ color: var(--link); text-decoration: underline; }
 .gd-nav-group, .gd-nav-area{ min-width: 0; }
 .gd-nav-item{ overflow-wrap: anywhere; }
 .gd-nav-item, .gd-nav-start summary{ column-gap: 4px; }
-.gd-sheet .gd-nav-subh{ font-size: 12.5px; color: var(--rail-text); }
+.gd-sheet .gd-nav-subh{ font-size: 13px; color: var(--rail-text); }
 .c-rail .gd-nav{ mask-image: linear-gradient(to bottom, #000 calc(100% - 24px), transparent); }
 
 /* Flag tables */
