@@ -2259,7 +2259,7 @@ def _home_and_names(con, have) -> tuple[dict, dict, dict]:
     return home, names, envs
 
 
-def read_tables(workspace_scope: set[str] | None, tag_filter=None, limit: int = 2000, window: int = 30) -> dict:
+def read_tables(workspace_scope: set[str] | None, tag_filter=None, limit: int = 1000, window: int = 30) -> dict:
     """Every table and view with its home workspace and env, size, files, reads and writes across
     workspaces in the window (lineage), readers, writers, usage class and sensitive columns, in
     attention order (class, then size); not_assessed without table sizes."""
@@ -2305,16 +2305,28 @@ def read_tables(workspace_scope: set[str] | None, tag_filter=None, limit: int = 
                     "sensitive": [c["pii_type"] for c in cols], "sensitive_masked": sum(1 for c in cols if c["masked"])})
     out.sort(key=lambda r: (usage.CLASS_RANK[r["usage_class"]], -(r["size_in_bytes"] or 0), r["table_full_name"]))
     counts = {k: sum(1 for r in out if r["usage_class"] == k) for k, _l, _m in usage.CLASSES}
+    sens = [r for r in out if r["sensitive"]]
+    # totals over every table; the list carries the biggest `limit` of each class, so no class is cut off
+    totals = {"tables": len(out), "size_in_bytes": sum(r["size_in_bytes"] or 0 for r in out),
+              "reads": sum(r["reads"] or 0 for r in out), "writes": sum(r["writes"] or 0 for r in out),
+              "sized": sum(1 for r in out if r["size_in_bytes"] is not None),
+              "sensitive_tables": len(sens),
+              "sensitive_unread": sum(1 for r in sens if r["usage_class"] in usage.UNREAD_CLASSES),
+              "sensitive_masked": sum(1 for r in sens if r["sensitive_masked"]),
+              "sensitive_outside_prod": sum(1 for r in sens if r["env"] and r["env"] not in ("prod", "unknown"))}
+    shown = [r for k, _l, _m in usage.CLASSES for r in [x for x in out if x["usage_class"] == k][:limit]]
+    largest = sorted((r for r in out if not r["view"] and r["size_in_bytes"]), key=lambda r: -r["size_in_bytes"])[:9]
     return {"outcome": "ok_rows" if out else "ok_empty", "total": len(out), "window_days": used or window,
-            "as_of": _seen_end(info).isoformat(),
+            "as_of": _seen_end(info).isoformat(), "totals": totals, "per_class_limit": limit,
             "classes": [{"key": k, "label": label, "meaning": meaning, "tables": counts[k],
                          "size_in_bytes": sum(r["size_in_bytes"] or 0 for r in out if r["usage_class"] == k)}
                         for k, label, meaning in usage.CLASSES],
-            "sensitive_tables": sum(1 for r in out if r["sensitive"]),
+            "sensitive_tables": len(sens),
             "clean_up_first": sorted((r for r in out if r["usage_class"] in usage.UNREAD_CLASSES and not r["view"]),
                                      key=usage.cleanup_order)[:6],
+            "largest": largest,
             "not_described": [{"table_catalog": c, "table_schema": s, "tables": n, "error": e} for c, s, n, e in unreadable],
-            "rows": out[:limit]}
+            "rows": shown}
 
 
 def read_table(full_name: str, window: int = 30) -> dict:

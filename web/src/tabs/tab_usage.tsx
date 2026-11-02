@@ -185,12 +185,13 @@ function UsageWorkspacesContent({ filters, goTo, onVerdict }: LooseProps) {
   const p = pp.phase === "ready" ? pp.data : null;
   if (t && t.as_of) asOf = t.as_of;
   const tables: any[] = t && t.outcome !== "not_assessed" ? (t.rows || []).filter((r: any) => !r.view) : [];
-  const size = tables.reduce((a, r) => a + (r.size_in_bytes || 0), 0);
-  const unread = tables.filter((r) => r.usage_class === "written_never_read" || r.usage_class === "idle_90d");
-  const unreadBytes = unread.reduce((a, r) => a + (r.size_in_bytes || 0), 0);
-  const woDaily = tables.filter((r) => r.usage_class === "written_never_read").length;
-  const verdict = tables.length
-    ? `${fmtInt(tables.length)} tables hold ${fmtBytes(size)}. ${fmtBytes(unreadBytes)} (${fmtPct(size ? (100 * unreadBytes) / size : 0, 0)}) is in tables nobody reads${woDaily ? `, and ${fmtInt(woDaily)} of them are still being written` : ""}.`
+  const tot = (t && t.totals) || {};
+  const cls = (k: string) => ((t && t.classes) || []).find((c: any) => c.key === k) || { tables: 0, size_in_bytes: 0 };
+  const size = tot.size_in_bytes || 0;
+  const unreadBytes = cls("written_never_read").size_in_bytes + cls("idle_90d").size_in_bytes;
+  const woDaily = cls("written_never_read").tables;
+  const verdict = t && t.total
+    ? `${fmtInt(t.total)} tables hold ${fmtBytes(size)}. ${fmtBytes(unreadBytes)} (${fmtPct(size ? (100 * unreadBytes) / size : 0, 0)}) is in tables nobody reads${woDaily ? `, and ${fmtInt(woDaily)} of them are still being written` : ""}.`
     : "Loading data usage...";
   React.useEffect(() => { if (onVerdict) onVerdict(verdict); }, [verdict, onVerdict]);
   if (ws.phase === "loading" || tb.phase === "loading") return <span className="muted">Loading data usage...</span>;
@@ -200,17 +201,10 @@ function UsageWorkspacesContent({ filters, goTo, onVerdict }: LooseProps) {
     Object.assign(handoff, { workspace: null, cls: null, table: null }, o);
     goTo({ tab: "usage", subtab: "tables" });
   };
-  const byClass = CLASS_ORDER.map((k) => {
-    const rows = tables.filter((r) => r.usage_class === k);
-    const bytes = rows.reduce((a, r) => a + (r.size_in_bytes || 0), 0);
-    return { k, rows, bytes };
-  });
-  const reads = tables.reduce((a, r) => a + (r.reads || 0), 0);
-  const writes = tables.reduce((a, r) => a + (r.writes || 0), 0);
+  const byClass = CLASS_ORDER.map((k) => ({ k, n: cls(k).tables, bytes: cls(k).size_in_bytes }));
+  const reads = tot.reads || 0;
+  const writes = tot.writes || 0;
   const sens = tables.filter((r) => r.sensitive && r.sensitive.length);
-  const sensUnread = sens.filter((r) => r.usage_class === "written_never_read" || r.usage_class === "idle_90d");
-  const sensOutside = sens.filter((r) => r.env && r.env !== "prod" && r.env !== "unknown");
-  const masked = sens.filter((r) => r.sensitive_masked > 0);
   const wrows: any[] = w && w.outcome !== "not_assessed" ? w.rows || [] : [];
   const sorted = [...wrows].sort((a, b) => sort.dir * ((a[sort.k] ?? -1) > (b[sort.k] ?? -1) ? 1 : (a[sort.k] ?? -1) < (b[sort.k] ?? -1) ? -1 : 0));
   const th = (label: string, k: string, num = true) => (
@@ -218,7 +212,7 @@ function UsageWorkspacesContent({ filters, goTo, onVerdict }: LooseProps) {
       {label}{sort.k === k ? (sort.dir < 0 ? " ▾" : " ▴") : ""}
     </th>
   );
-  const big = [...tables].sort((a, b) => (b.size_in_bytes || 0) - (a.size_in_bytes || 0)).slice(0, 9);
+  const big: any[] = t.largest || [];
   const bigMax = Math.max(1, ...big.map((r) => (r.reads || 0) + (r.writes || 0)));
   return (
     <div>
@@ -234,7 +228,7 @@ function UsageWorkspacesContent({ filters, goTo, onVerdict }: LooseProps) {
               style={{ textAlign: "left", cursor: "pointer", padding: 14, border: "1px solid var(--line, #E4E1D8)", borderTop: `4px solid ${CLASS_META[c.k].color}`, borderRadius: 10, background: "var(--card, #fff)" }}>
               <div style={{ fontWeight: 600 }}>{CLASS_META[c.k].label}</div>
               <div className="pqgs-card-value">{fmtBytes(c.bytes)}</div>
-              <div className="muted">{`${fmtInt(c.rows.length)} tables · ${fmtPct(size ? (100 * c.bytes) / size : 0, 0)}`}</div>
+              <div className="muted">{`${fmtInt(c.n)} tables · ${fmtPct(size ? (100 * c.bytes) / size : 0, 0)}`}</div>
               <div style={{ marginTop: 6, fontSize: 12.5, color: "var(--ink-2, #3D3B37)" }}>{(t.classes.find((x: any) => x.key === c.k) || {}).meaning}</div>
               <div style={{ marginTop: 6, fontSize: 12.5, color: "#1F4E99" }}>{`${CLASS_META[c.k].action} →`}</div>
             </button>
@@ -251,8 +245,8 @@ function UsageWorkspacesContent({ filters, goTo, onVerdict }: LooseProps) {
           <div className="pqgs-card-value">{p && p.outcome !== "not_assessed" ? `${fmtInt(p.active_people)} + ${fmtInt(p.service_principals)} SPs` : "-"}</div>
           <PqgsNote facts={[{ label: "Inactive 90d+", value: p && p.inactive ? fmtInt(p.inactive.length) : "-" }]} /></Card>
         <Card title="Tables with sensitive data">
-          <div className="pqgs-card-value" style={{ color: PII_INK }}>{fmtInt(sens.length)}</div>
-          <PqgsNote facts={[{ label: "Nobody reads", value: fmtInt(sensUnread.length), tone: sensUnread.length ? "warn" : "ok" }, { label: "Masked", value: fmtInt(masked.length) }]} /></Card>
+          <div className="pqgs-card-value" style={{ color: PII_INK }}>{fmtInt(tot.sensitive_tables || 0)}</div>
+          <PqgsNote facts={[{ label: "Nobody reads", value: fmtInt(tot.sensitive_unread || 0), tone: tot.sensitive_unread ? "warn" : "ok" }, { label: "Masked", value: fmtInt(tot.sensitive_masked || 0) }]} /></Card>
       </div>
 
       <Card title="Every workspace" right={<span className="muted">click one for its tables</span>}>
@@ -337,10 +331,10 @@ function UsageWorkspacesContent({ filters, goTo, onVerdict }: LooseProps) {
 
       <Card title="Sensitive data" right={<span className="muted">column tags, data classification and column names</span>}>
         <div className="pqgs-cards-grid">
-          <div><div className="pqgs-card-value" style={{ color: PII_INK }}>{fmtInt(sens.length)}</div><div className="muted">tables hold email, phone, address, IP, IBAN or similar columns</div></div>
-          <div><div className="pqgs-card-value">{fmtInt(sensUnread.length)}</div><div className="muted">{sensUnread.length ? `unread: ${sensUnread.slice(0, 4).map((r) => r.table_full_name.split(".").pop()).join(", ")}` : "unread"}</div></div>
-          <div><div className="pqgs-card-value">{fmtInt(sensOutside.length)}</div><div className="muted">{sensOutside.length ? `outside prod: ${sensOutside.slice(0, 3).map((r) => r.table_full_name).join(", ")}` : "outside prod"}</div></div>
-          <div><div className="pqgs-card-value">{fmtInt(masked.length)}</div><div className="muted">with a column mask</div></div>
+          <div><div className="pqgs-card-value" style={{ color: PII_INK }}>{fmtInt(tot.sensitive_tables || 0)}</div><div className="muted">tables hold email, phone, address, IP, IBAN or similar columns</div></div>
+          <div><div className="pqgs-card-value">{fmtInt(tot.sensitive_unread || 0)}</div><div className="muted">{`unread${sens.some((r) => r.usage_class === "written_never_read" || r.usage_class === "idle_90d") ? `: ${sens.filter((r) => r.usage_class === "written_never_read" || r.usage_class === "idle_90d").slice(0, 4).map((r) => r.table_full_name.split(".").pop()).join(", ")}` : ""}`}</div></div>
+          <div><div className="pqgs-card-value">{fmtInt(tot.sensitive_outside_prod || 0)}</div><div className="muted">outside prod</div></div>
+          <div><div className="pqgs-card-value">{fmtInt(tot.sensitive_masked || 0)}</div><div className="muted">with a column mask</div></div>
         </div>
       </Card>
     </div>
@@ -366,15 +360,18 @@ function UsageTablesContent({ filters, onVerdict }: LooseProps) {
   if (tb.phase === "loading") return <span className="muted">Loading tables...</span>;
   if (!t || t.outcome === "not_assessed") return <span className="muted">Table sizes are not in this export: export again.</span>;
   const inWs = all.filter((r) => !wsPick || r.workspace_id === wsPick);
-  const chips = [{ k: "all", label: "All", n: inWs.length }, ...CLASS_ORDER.map((k) => ({ k, label: CLASS_META[k].label, n: inWs.filter((r) => r.usage_class === k).length })),
-    { k: "sensitive", label: "Sensitive data", n: inWs.filter((r) => r.sensitive && r.sensitive.length).length }];
+  const clsOf = (k: string) => ((t.classes || []).find((c: any) => c.key === k) || { tables: 0 }).tables;
+  // with no workspace picked the counts cover every table; the list holds the biggest of each class
+  const chips = [{ k: "all", label: "All", n: wsPick ? inWs.length : t.total }, ...CLASS_ORDER.map((k) => ({ k, label: CLASS_META[k].label, n: wsPick ? inWs.filter((r) => r.usage_class === k).length : clsOf(k) })),
+    { k: "sensitive", label: "Sensitive data", n: wsPick ? inWs.filter((r) => r.sensitive && r.sensitive.length).length : (t.totals || {}).sensitive_tables || 0 }];
   const rows = inWs.filter((r) => (cls === "all" || (cls === "sensitive" ? r.sensitive && r.sensitive.length : r.usage_class === cls))
     && (!q || r.table_full_name.toLowerCase().includes(q.toLowerCase())));
   const max = Math.max(1, ...rows.map((r) => (r.reads || 0) + (r.writes || 0)));
   const wsOptions = Array.from(new Map(all.filter((r) => r.workspace_id).map((r) => [r.workspace_id, r.workspace_name])).entries());
   const shown = rows.slice(0, page * PAGE);
   const sum = (k: string) => rows.reduce((a, r) => a + (r[k] || 0), 0);
-  const totalSize = all.reduce((a, r) => a + (r.size_in_bytes || 0), 0);
+  const totalSize = (t.totals || {}).size_in_bytes || 0;
+  const cut = CLASS_ORDER.filter((k) => clsOf(k) > (t.per_class_limit || Infinity));
   return (
     <div>
       <div className="ws-actions" style={{ flexWrap: "wrap" }}>
@@ -389,7 +386,7 @@ function UsageTablesContent({ filters, onVerdict }: LooseProps) {
           ...rows.map((r) => [r.table_full_name, r.workspace_name, r.env, r.usage_class, r.size_in_bytes, r.reads, r.writes, r.last_read, r.last_write, r.readers, r.writers, (r.sensitive || []).join("; ")])])}>Export CSV</button>
       </div>
       <div className="pqgs-cards-grid">
-        <Card title="Showing"><div className="pqgs-card-value">{fmtInt(rows.length)}</div><PqgsNote facts={[{ label: "Of", value: `${fmtInt(all.length)} tables` }]} /></Card>
+        <Card title="Showing"><div className="pqgs-card-value">{fmtInt(rows.length)}</div><PqgsNote facts={[{ label: "Of", value: `${fmtInt(t.total)} tables` }]} /></Card>
         <Card title="Size"><div className="pqgs-card-value">{fmtBytes(sum("size_in_bytes"))}</div><PqgsNote facts={[{ label: "Of", value: fmtBytes(totalSize) }]} /></Card>
         <Card title={`Reads · ${t.window_days}d`}><div className="pqgs-card-value" style={{ color: READ }}>{fmtInt(sum("reads"))}</div><PqgsNote facts={[{ label: "From", value: "lineage read events" }]} /></Card>
         <Card title={`Writes · ${t.window_days}d`}><div className="pqgs-card-value" style={{ color: WRITE }}>{fmtInt(sum("writes"))}</div><PqgsNote facts={[{ label: "From", value: "inserts, merges, overwrites" }]} /></Card>
@@ -422,6 +419,7 @@ function UsageTablesContent({ filters, onVerdict }: LooseProps) {
         </div>
         {rows.length > shown.length && <button type="button" className="ov-link-btn" onClick={() => setPage(page + 1)}>{`Show ${Math.min(PAGE, rows.length - shown.length)} more of ${fmtInt(rows.length - shown.length)}`}</button>}
         <div className="metric-note">{"Reads and writes: lineage · last read and write look back 365 days · SP = service principal"}</div>
+        {cut.length ? <div className="metric-note">{`The list holds the biggest ${fmtInt(t.per_class_limit)} tables of ${cut.map((k) => `${CLASS_META[k].label.toLowerCase()} (${fmtInt(clsOf(k))})`).join(", ")}; the counts above cover them all. Search and the workspace pick look in the list.`}</div> : null}
         {(t.not_described || []).length ? (
           <div className="metric-note">{`Could not describe: ${t.not_described.slice(0, 5).map((f: any) => `${f.table_catalog}.${f.table_schema} (${fmtInt(f.tables)}, ${f.error})`).join(" · ")}`}</div>
         ) : null}
