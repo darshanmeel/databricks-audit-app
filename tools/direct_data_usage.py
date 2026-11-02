@@ -623,7 +623,10 @@ def people() -> Dataset:
         "wd_people", "People and service principals: what they read and write, last seen",
         [], [],
         f"""{_people_body()}
-SELECT * FROM people
+SELECT workspace, identity, kind, logins, queries, tables_read, tables_written, reads, writes, writes_nobody_reads,
+       sensitive_tables, direct_grants, sensitive_grants, last_seen, days_since, last_seen_band, inactive, active,
+       touched_sensitive, active_person, active_sp, identities
+FROM people
 ORDER BY writes DESC, reads DESC, queries DESC, identity""",
         "Everyone seen in a workspace over the last year or using its tables in the window: logins, queries, tables "
         "read and written (lineage), writes nobody reads, sensitive tables touched, direct grants, last seen.",
@@ -639,7 +642,10 @@ def inactive() -> Dataset:
         "wd_inactive", f"Not seen for {INACTIVE_DAYS}+ days, with direct grants",
         [], [],
         f"""{_people_body()}
-SELECT * FROM people
+SELECT workspace, identity, kind, logins, queries, tables_read, tables_written, reads, writes, writes_nobody_reads,
+       sensitive_tables, direct_grants, sensitive_grants, last_seen, days_since, last_seen_band, inactive, active,
+       touched_sensitive, active_person, active_sp, identities
+FROM people
 WHERE inactive = 1
 ORDER BY sensitive_grants DESC, direct_grants DESC, days_since DESC, identity""",
         f"People and service principals not seen in a workspace for {INACTIVE_DAYS}+ days within the last year, with "
@@ -789,18 +795,17 @@ def history() -> Dataset:
     return Dataset(
         "wd_history", "Change history per table",
         [], [],
-        f"""{_homes()}
-SELECT h.catalog || '.' || h.schema || '.' || h.table_name AS table_name, p.workspace, h.version,
+        f"""h AS (SELECT * FROM {_sized('table_history')})
+SELECT h.catalog || '.' || h.schema || '.' || h.table_name AS table_name, h.version,
        CAST(date_format(h.timestamp, 'yyyy-MM-dd HH:mm') AS STRING) AS changed_at, h.operation, h.user_name,
        h.rows_changed, ROUND(h.bytes_written / 1073741824.0, 3) AS gb_written
-FROM {_sized('table_history')} h
-LEFT JOIN place p ON p.catalog = h.catalog
+FROM h
 ORDER BY table_name, h.version DESC""",
         f"Each table's last {HISTORY_VERSIONS} versions from the sizes job's DESCRIBE HISTORY: when, what, who, rows "
         "changed, bytes written.",
         "Change history on Table detail.",
         "One row per table version, newest first.",
-        dict(_HOME_STEPS),
+        {"h": "The sizes job's DESCRIBE HISTORY rows."},
         head="All versions the job collected.",
         window=False,
     )
@@ -810,18 +815,15 @@ def columns() -> Dataset:
     return Dataset(
         "wd_columns", "Sensitive columns per table",
         [], [],
-        f"""{_homes()},
-{_sensitive()}
-SELECT s.full_name AS table_name, p.workspace, s.column_name, s.pii_type,
+        f"""{_sensitive()}
+SELECT s.full_name AS table_name, s.column_name, s.pii_type,
        CASE WHEN s.masked THEN 'masked' ELSE 'unmasked' END AS mask, CASE WHEN s.masked THEN 0 ELSE 1 END AS unmasked, 1 AS columns
 FROM sens_col s
-LEFT JOIN place p ON p.catalog = split(s.full_name, '[.]')[0]
 ORDER BY table_name, unmasked DESC, s.column_name""",
         "Every sensitive-looking column: a column tag, else the column name; and whether a column mask covers it.",
         "Sensitive columns on Table detail.",
         "One row per sensitive column.",
-        {**_HOME_STEPS,
-         "found": "Sensitive-looking columns: a column tag (pii, sensitive, gdpr, class.*), else the column name.",
+        {"found": "Sensitive-looking columns: a column tag (pii, sensitive, gdpr, class.*), else the column name.",
          "sens_col": "One row per sensitive column, the tag winning over the name, and whether a mask covers it.",
          "sens": "Per table: its sensitive columns."},
         head="Values are never read.",

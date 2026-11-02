@@ -469,34 +469,6 @@ const GUIDE_TABS: Record<string, GuideTabInfo> = {
       "Warehouse starts: STARTING→RUNNING from system.compute.warehouse_events (count, time, longest, aborted).",
     ] }],
   },
-  governance: {
-    lens: "Security · data governance",
-    card: "Grants, admin activity, sensitive-data reads, lineage and sharing.",
-    lede: "Grants, admin activity, sensitive-data reads, lineage and sharing across the metastore.",
-    questions: [
-      "Who has broad access?",
-      "Is sensitive data masked, and who read it unmasked?",
-      "Where does sensitive data spread or leave?",
-    ],
-    screen: [
-      { sub: "access", d: "Broad grants, grants inventory, run-as escalation, sign-ins, network denials, and activity by workspace (people, service principals, queries, last activity)." },
-      { sub: "admin", d: "Admin and permission changes, including who got token permission." },
-      { sub: "sensitive", d: "Classified columns, masks and unmasked reads." },
-      { sub: "lineage", d: "How far sensitive tables reach downstream." },
-      { sub: "sharing", d: "Delta Sharing recipients and exposure." },
-    ],
-    measure: "Grants, tags, masks and shares from information_schema; reads from lineage; events from the audit log.",
-    judge: "Broad grantees and sensitive reads flag against config/thresholds.yml.",
-    price: "Not priced; risks carry a severity.",
-    troubles: [
-      { see: "The workspace filter changes some panels but not others", why: "Grants, tags, masks, volumes, views and shares are metastore-wide; audit-log and lineage-event checks carry a workspace.", doit: "The page's scope note says which." },
-      { see: "Classification checks are empty", why: "Data classification isn't enabled.", doit: "Enable it in Catalog Explorer, then re-run." },
-      { see: "A masked column is still read", why: "Reads come from lineage whether or not the mask applied.", doit: "Use the masks inventory to confirm." },
-    ],
-    limits: [
-      "It sees only objects the export identity can see.",
-    ],
-  },
   usage: {
     lens: "Data governance · platform",
     card: "Which tables and volumes are read, written, idle or never read, who uses them, and where sensitive data sits.",
@@ -526,6 +498,34 @@ const GUIDE_TABS: Record<string, GuideTabInfo> = {
       "Indexes are relative to the workspaces shown: 100 is the largest of them.",
       "Only direct table grants show; access through a schema, catalog or group isn't expanded.",
       "Volume reads by Spark jobs on a cluster may not be in the audit log, so a volume can read unused when a job reads it.",
+    ],
+  },
+  governance: {
+    lens: "Security · data governance",
+    card: "Grants, admin activity, sensitive-data reads, lineage and sharing.",
+    lede: "Grants, admin activity, sensitive-data reads, lineage and sharing across the metastore.",
+    questions: [
+      "Who has broad access?",
+      "Is sensitive data masked, and who read it unmasked?",
+      "Where does sensitive data spread or leave?",
+    ],
+    screen: [
+      { sub: "access", d: "Broad grants, grants inventory, run-as escalation, sign-ins, network denials, and activity by workspace (people, service principals, queries, last activity)." },
+      { sub: "admin", d: "Admin and permission changes, including who got token permission." },
+      { sub: "sensitive", d: "Classified columns, masks and unmasked reads." },
+      { sub: "lineage", d: "How far sensitive tables reach downstream." },
+      { sub: "sharing", d: "Delta Sharing recipients and exposure." },
+    ],
+    measure: "Grants, tags, masks and shares from information_schema; reads from lineage; events from the audit log.",
+    judge: "Broad grantees and sensitive reads flag against config/thresholds.yml.",
+    price: "Not priced; risks carry a severity.",
+    troubles: [
+      { see: "The workspace filter changes some panels but not others", why: "Grants, tags, masks, volumes, views and shares are metastore-wide; audit-log and lineage-event checks carry a workspace.", doit: "The page's scope note says which." },
+      { see: "Classification checks are empty", why: "Data classification isn't enabled.", doit: "Enable it in Catalog Explorer, then re-run." },
+      { see: "A masked column is still read", why: "Reads come from lineage whether or not the mask applied.", doit: "Use the masks inventory to confirm." },
+    ],
+    limits: [
+      "It sees only objects the export identity can see.",
     ],
   },
   storage: {

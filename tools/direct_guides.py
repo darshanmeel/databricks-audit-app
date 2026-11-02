@@ -1120,6 +1120,61 @@ COLUMNS.update({
     "wd_grants": {"grantee": "Who holds the grant.", "used": "Whether the grantee read the table in the window."},
 })
 
+_DU = {
+    "workspace": "The workspace, by name: for a table or volume, the home workspace of its catalog.",
+    "catalog": "The catalog.", "schema_name": "The schema.", "schema_full": "catalog.schema.",
+    "table_name": "catalog.schema.table.", "volume": "catalog.schema.volume.", "identity": "The email, or a service principal's id.",
+    "kind": "Person or Service principal; for a table, Table or View.", "usage_class": _CLS["usage_class"],
+    "class_rank": "1 written never read, 2 idle, 3 cooling, 4 active: the clean-up order.",
+    "size_in_bytes": "Bytes, from DESCRIBE DETAIL or the volume listing (the sizes job).", "size_gb": "The same in GB.",
+    "gb_written_never_read": "size_gb when written never read, else 0.", "gb_idle": "size_gb when idle 90d+, else 0.",
+    "gb_cooling": "size_gb when cooling, else 0.", "gb_active": "size_gb when active, else 0.",
+    "unread_gb": "GB when written never read or idle 90d+.",
+    "reads": "Reads in the window (lineage; file reads for a volume).", "writes": "Writes in the window.",
+    "readers": "Distinct identities reading.", "writers": "Distinct identities writing.",
+    "last_read": f"The latest read over {wd.READ_LOOKBACK_DAYS} days.", "last_write": "The latest write, lineage or DESCRIBE HISTORY.",
+    "days_since_read": "Days from the end of the window to the last read.",
+    "last_change_op": "The last data change's operation, from DESCRIBE HISTORY.",
+    "last_maintenance": "The last OPTIMIZE, VACUUM or predictive optimization run.",
+    "rows_changed": "Rows changed in the window, from DESCRIBE HISTORY.", "gb_written": "GB written, from DESCRIBE HISTORY.",
+    "sensitive_columns": "Its sensitive columns.", "sensitive_types": "Their types.", "unmasked_columns": "Of them without a mask.",
+    "sensitive": "1 with a sensitive column.", "sensitive_unread": "1 when sensitive and unread.",
+    "has_unmasked": "1 with an unmasked sensitive column.", "owner": "The table owner.", "created": "When it was created.",
+    "volume_type": "managed or external.", "files": "Files, from the volume listing.", "volumes": "Volumes; 1 per volume row.",
+    "tables": "Tables.", "views": "Views.", "table_columns": "Columns of the tables.", "view_columns": "Columns of the views.",
+    "volume_files": "Files in its volumes.", "sensitive_tables": "Tables with a sensitive column.",
+    "tables_written_never_read": "Tables written in the window, not read.", "tables_idle": "Tables idle 90d+.",
+    "tables_cooling": "Tables cooling.", "tables_active": "Tables active.",
+    "logins": "Successful logins in the window.", "queries": "Queries in the window.",
+    "tables_read": "Tables read in the window.", "tables_written": "Tables written in the window.",
+    "writes_nobody_reads": "Tables it wrote that nobody read.", "direct_grants": "Tables it can read through a direct grant.",
+    "sensitive_grants": "Of them with sensitive columns.", "last_seen": "The latest audit event or query.",
+    "days_since": "Days since last seen.", "last_seen_band": "Under 30, 30-90, 90-180 or 180+ days.",
+    "inactive": f"1 when not seen for {wd.INACTIVE_DAYS}+ days.", "active": "1 when seen in the window.",
+    "touched_sensitive": "1 when it read or wrote a sensitive table.", "active_person": "1 for an active person.",
+    "active_sp": "1 for an active service principal.", "identities": "Always 1: counts people and service principals.",
+    "access": "Reads, Writes, or both.", "last_access": "The latest of them.", "pairs": "Always 1: counts identity-table pairs.",
+    "direction": "Reads or Writes; on lineage, Upstream or Downstream.", "events": "Lineage events.", "day": "The day.",
+    "other_table": "The table on the other end.", "other_class": "Its usage class.",
+    "grantee": "Who holds the grant.", "privilege": "SELECT or ALL PRIVILEGES.", "used": "Whether the grantee read it in the window.",
+    "unused": "1 when never read in the window.", "grants": "Always 1: counts grants.",
+    "version": "The table version.", "changed_at": "When.", "operation": "What changed.", "user_name": "Who.",
+    "column_name": "The column.", "pii_type": "What it holds: email, phone, IBAN, ...", "mask": "masked or unmasked.",
+    "unmasked": "1 when unmasked.", "columns": "Always 1: counts columns.",
+}
+for _key in ("wd_workspaces", "wd_tables", "wd_cleanup", "wd_largest", "wd_volumes", "wd_people", "wd_inactive", "wd_daily",
+             "wd_schemas", "wd_access", "wd_edges", "wd_history", "wd_columns", "wd_grants"):
+    COLUMNS[_key] = {**_DU, **COLUMNS.get(_key, {})}
+
+WHY.update({
+    "wd_cleanup": "The short list to act on: unread tables, sensitive ones first.",
+    "wd_largest": "Size is where the money is; reads say whether it earns it.",
+    "wd_inactive": "Access nobody uses is the easiest access to remove.",
+    "wd_schemas": "Whole schemas to clean up, not table by table.",
+    "wd_history": "What changed a table, when and who: before you drop it.",
+    "wd_columns": "Which columns need a mask.",
+})
+
 WHY.update({
     "wd_workspaces": "One row per workspace: how its data is used, what it holds and how much work happens there.",
     "wd_tables": "Size alone doesn't say if a table matters; reads do. The class says what to do with it.",

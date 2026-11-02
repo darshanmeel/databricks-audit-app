@@ -90,7 +90,8 @@ def test_read_workspaces_joins_activity_with_the_catalogs_each_workspace_holds(t
     # sales reads and writes mostly from workspace 1, so it is held there
     assert one["catalogs"] == ["sales"] and one["tables"] == 1 and one["views"] == 1 and one["size_in_bytes"] == 1000
     assert two["catalogs"] == ["sandbox"] and two["size_in_bytes"] == 10
-    assert one["usage_index"] == 100.0 and one["complexity_index"] == 100.0
+    # the largest on every input this export has; no active days (20%) and no volume files (10%) in it
+    assert one["usage_index"] == 80.0 and one["complexity_index"] == 90.0
     assert 0 < two["usage_index"] < one["usage_index"]
     assert got["rows"][0]["workspace_id"] == "1"  # most used first
 
@@ -114,7 +115,8 @@ def test_read_workspaces_is_not_assessed_without_activity(tmp_path, monkeypatch)
 
 
 def test_the_detail_statements_are_valid_databricks_sql():
-    for f in (wa.table_access_sql, wa.user_access_sql, wa.user_tables_sql):
+    sqlglot.parse_one(wa.table_access_sql(END, [7, 30, 90]), read="databricks")
+    for f in (wa.user_access_sql, wa.user_tables_sql):
         sqlglot.parse_one(f(END, 90), read="databricks")
     assert f"<= {wa.USER_TABLES_MAX}" in wa.user_tables_sql(END, 90)
 
