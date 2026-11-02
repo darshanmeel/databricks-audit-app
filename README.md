@@ -118,6 +118,19 @@ python tools/load_direct_results.py <folder>
 | `--only ID ...` | Only these checks. Skips the names and tag tables. |
 | `--domain NAME` | Only one group of checks, e.g. `cost` or `jobs_pipelines`. Skips the names and tag tables. |
 | `--mask-users` | Mask user emails, whatever `privacy.mask_user_identities` says. |
+| `--sizes-only` | Only table sizes, history and volume files (`storage/`), into `--out`; the rest of the folder stays. |
+| `--no-table-sizes` | No sizes this run; the `storage/` already in `--out` is kept. |
+| `--storage-from DIR` | No sizes this run; take `storage/` from a `--sizes-only` run's folder. |
+
+**Sizes as another account.** Sizes need an account that can read every catalog; the checks need
+one that reads `system.*`. Run them apart and they combine in one folder:
+
+```
+DATABRICKS_TOKEN=<storage account>  python tools/export_direct_results.py --sizes-only --out <folder>
+DATABRICKS_TOKEN=<system account>   python tools/export_direct_results.py --no-table-sizes --out <folder>
+```
+
+Or keep sizes in their own folder and add `--storage-from <sizes folder>` to the second run.
 
 `load_direct_results.py` with no folder loads the newest export in the data folder. `--db PATH`
 writes the database somewhere else.

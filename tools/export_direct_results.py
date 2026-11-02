@@ -21,6 +21,7 @@ import sys
 import threading
 import time
 from pathlib import Path
+from typing import Callable
 
 import pyarrow as pa
 import pyarrow.compute as pc
@@ -1097,6 +1098,7 @@ def run_export(
     tags_sql: dict[str, str] | None = None,
     include_today: bool = False,
     table_sizes: bool | None = None,
+    storage_from: Path | None = None,
 ) -> dict:
     """Run the export into out_dir (tests inject connect_fn/compile_fn/env/names_sql); built in a temp sibling folder, swapped into out_dir only on success."""
     direct_manifest_path = direct_manifest_path if direct_manifest_path is not None else DIRECT_MANIFEST_PATH
@@ -1206,7 +1208,7 @@ def run_export(
     dims_info, tags_info, policies_info = side["dims"], side["tags"], side.get("policies")
     # After the checks, not beside them: its own connections would slow them down.
     sizes_cfg = app_config.table_sizes()
-    sizes_on = sizes_cfg["enabled"] if table_sizes is None else table_sizes
+    sizes_on = (sizes_cfg["enabled"] if table_sizes is None else table_sizes) and storage_from is None
     detail_info = None
     if sizes_on and not partial:
         detail_info = table_detail.export(
@@ -1305,6 +1307,11 @@ def run_export(
         json.dumps(manifest_out, indent=2, sort_keys=False) + "\n", encoding="utf-8"
     )
 
+    # No sizes this run: keep the ones --sizes-only (maybe as another account) wrote, here or in storage_from.
+    kept = (storage_from or out_dir) / "storage"
+    if not (work_dir / "storage").exists() and kept.is_dir():
+        shutil.copytree(kept, work_dir / "storage")
+
     total_bytes = sum(p.stat().st_size for p in work_dir.rglob("*") if p.is_file())
 
     # The only step that touches the real out_dir: swap the finished folder in, keeping the
@@ -1327,6 +1334,44 @@ def run_export(
         "total_bytes": total_bytes,
         "out_dir": out_dir,
     }
+
+
+def export_sizes_only(out_dir: Path, *, connect_fn: Callable | None = None, env: dict | None = None) -> dict:
+    """Table sizes, history and volume files only, into out_dir/storage; the rest of out_dir stays."""
+    if datasource.inside_repo(out_dir):
+        raise ExportConfigError(
+            f"{out_dir} is inside the repository. This folder holds real-account Databricks "
+            "data; choose a folder outside the repo."
+        )
+    token = (env if env is not None else _preflight_env()).get(ENV_TOKEN)
+    connect = connect_fn or tools_snapshot.connect
+    redact = lambda text: _redact(text, token)  # noqa: E731
+    cfg = app_config.table_sizes()
+    work = out_dir.with_name(out_dir.name + ".sizes.tmp")
+    if work.exists():
+        shutil.rmtree(work)
+    detail = table_detail.export(connect, work, previous=out_dir / "storage" / table_detail.FILE,
+                                 threads=cfg["threads"], max_tables=cfg["max_tables"], redact=redact)
+    if not detail.get("exported"):
+        shutil.rmtree(work, ignore_errors=True)
+        raise ExportConfigError(f"table sizes not exported: {detail.get('error')}")
+    volumes = table_detail.export_volumes(connect, work, threads=cfg["threads"], redact=redact)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    old = out_dir / "storage.old"
+    if old.exists():
+        shutil.rmtree(old)
+    if (out_dir / "storage").exists():
+        os.rename(out_dir / "storage", old)
+    os.rename(work / "storage", out_dir / "storage")
+    shutil.rmtree(old, ignore_errors=True)
+    shutil.rmtree(work, ignore_errors=True)
+    # a full export's manifest in the same folder now describes these sizes
+    manifest_path = out_dir / "manifest.json"
+    if manifest_path.is_file():
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        manifest.update(table_detail=detail, volume_detail=volumes)
+        manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=False) + "\n", encoding="utf-8")
+    return {"table_detail": detail, "volume_detail": volumes, "out_dir": out_dir}
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -1354,8 +1399,14 @@ def build_parser() -> argparse.ArgumentParser:
     scope.add_argument("--domain", metavar="NAME", help="only this domain (skips the names and tags queries)")
     scope.add_argument("--tags", nargs="+", metavar="TABLE",
                        help="only these tag tables, e.g. tag_entity (no checks, no names); use a separate --out folder")
+    scope.add_argument("--sizes-only", action="store_true",
+                       help="only table sizes, history and volume files, into --out's storage/; the rest stays "
+                            "(run it as an account that can read every catalog)")
     ap.add_argument("--no-table-sizes", action="store_true",
-                    help="skip DESCRIBE DETAIL of every table (settings table_sizes.enabled)")
+                    help="skip DESCRIBE DETAIL of every table (settings table_sizes.enabled); "
+                         "the storage/ already in --out is kept")
+    ap.add_argument("--storage-from", metavar="DIR",
+                    help="no sizes this run: take storage/ from DIR, a --sizes-only run's --out")
     ap.add_argument("--mask-users", action="store_true",
                      help="mask user emails in person columns such as owner and run_as "
                           "(default: on when config/settings.yml's privacy.mask_user_identities is)")
@@ -1377,12 +1428,28 @@ def main(argv: list[str] | None = None) -> int:
         print("error: --threads must be a positive integer", file=sys.stderr)
         return 2
 
+    if args.storage_from and not (Path(args.storage_from) / "storage").is_dir():
+        print(f"error: no storage/ folder in {args.storage_from}; run --sizes-only --out {args.storage_from} first",
+              file=sys.stderr)
+        return 2
+    if args.sizes_only:
+        try:
+            done = export_sizes_only(out_dir)
+        except ExportConfigError as e:
+            print(f"error: {e}", file=sys.stderr)
+            return 2
+        d, v = done["table_detail"], done["volume_detail"]
+        print(f"table sizes: {d.get('tables')} tables, {d.get('described', 0)} described, "
+              f"{d.get('failed', 0)} failed; volumes: {v.get('volumes', 0)} -- {out_dir / 'storage'}")
+        return 0
+
     try:
         result = run_export(
             out_dir, max_rows=args.max_rows, windows=windows,
             threads=args.threads, only=args.only, domain=args.domain, tags=args.tags,
             mask_users=args.mask_users or masking_enabled(), include_today=_include_today(),
             table_sizes=False if args.no_table_sizes else None,
+            storage_from=Path(args.storage_from).resolve() if args.storage_from else None,
         )
     except ExportConfigError as e:
         print(f"error: {e}", file=sys.stderr)

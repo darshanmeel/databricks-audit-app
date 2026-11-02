@@ -813,3 +813,37 @@ def test_a_partial_export_or_one_with_table_sizes_off_skips_describe_detail(tmp_
         compile_fn=fake_compile, env=dict(FAKE_ENV), now=NOW, names_sql={}, tags_sql={},
     )
     assert calls == [] and result["manifest"]["table_detail"] is None
+
+
+def _fake_sizes(monkeypatch, marker: str):
+    def export(connect, out, **k):
+        (out / "storage").mkdir(parents=True, exist_ok=True)
+        (out / "storage" / "table_detail.parquet").write_text(marker, encoding="utf-8")
+        return {"exported": True, "tables": 1, "described": 1}
+    monkeypatch.setattr(edr.table_detail, "export", export)
+    monkeypatch.setattr(edr.table_detail, "export_volumes", lambda *a, **k: {"exported": True, "volumes": 0})
+
+
+def test_sizes_only_writes_storage_and_keeps_the_rest(tmp_path, monkeypatch):
+    out = tmp_path / "results"
+    (out / "findings").mkdir(parents=True)
+    (out / "manifest.json").write_text('{"table_detail": null}', encoding="utf-8")
+    _fake_sizes(monkeypatch, "B")
+    edr.export_sizes_only(out, connect_fn=lambda: None, env=dict(FAKE_ENV))
+    assert (out / "storage" / "table_detail.parquet").read_text(encoding="utf-8") == "B"
+    assert (out / "findings").is_dir()
+    assert json.loads((out / "manifest.json").read_text(encoding="utf-8"))["table_detail"]["described"] == 1
+
+
+def test_a_full_export_without_sizes_keeps_storage_or_takes_it_from_another_folder(tmp_path, monkeypatch):
+    _fake_sizes(monkeypatch, "B")
+    sizes = tmp_path / "sizes"
+    edr.export_sizes_only(sizes, connect_fn=lambda: None, env=dict(FAKE_ENV))
+    handler = marker_handler({"cost_by_job": _rows_table(1)})
+    run = dict(threads=1, connect_fn=make_connect_fn(handler), compile_fn=fake_compile, env=dict(FAKE_ENV),
+               now=NOW, names_sql={}, tags_sql={})
+    edr.run_export(tmp_path / "results", only=["cost_by_job"], storage_from=sizes, **run)
+    assert (tmp_path / "results" / "storage" / "table_detail.parquet").read_text(encoding="utf-8") == "B"
+    # the next run without sizes keeps them
+    edr.run_export(tmp_path / "results", only=["cost_by_job"], table_sizes=False, **run)
+    assert (tmp_path / "results" / "storage" / "table_detail.parquet").read_text(encoding="utf-8") == "B"
