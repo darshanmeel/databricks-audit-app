@@ -2298,7 +2298,12 @@ def read_activity(window: int, workspace_scope: set[str] | None, workspace_id: s
             per_day[i]["writes"] += int(w or 0)
     h = heat(lambda t: t if t in mine else None)
     out.update({"workspace_name": name(workspace_id), "classes": mix, "daily": per_day,
-                "bubbles": top_tables[:150], "people_unseen": len(a["people_all"] - a["people"]),
+                # every table of the workspace, idle ones too: big and unused is the point
+                "bubbles": sorted(({**(tbl.get((str(workspace_id), t)) or {"table_full_name": t, "reads": 0, "writes": 0, "people": 0}),
+                                    "size_in_bytes": (classes.get(t) or {}).get("size_in_bytes"),
+                                    "usage_class": (classes.get(t) or {}).get("usage_class")} for t in a["tables_all"]),
+                                  key=lambda x: (-(x["reads"] + x["writes"]), -(x["size_in_bytes"] or 0), x["table_full_name"]))[:200],
+                "people_unseen": len(a["people_all"] - a["people"]),
                 "heat": [{"key": t["table_full_name"], "label": t["table_full_name"], "cells": h.get(t["table_full_name"], [0] * window)}
                          for t in top_tables[:10]],
                 "volumes": sorted(({**v, "people": len(v["people"])} for v in vol.values()),

@@ -109,8 +109,8 @@ function envColors(rows: any[]): Record<string, string> {
   return Object.fromEntries(envs.map((e, i) => [e, paletteColor(i)]));
 }
 
-// Each workspace by complexity (x) and usage (y), bubble = data it holds, colour = env.
-function Scatter({ rows }: { rows: any[] }) {
+// Each workspace by complexity (x) and usage (y), bubble = data it holds, colour = env; a click picks it.
+export function Scatter({ rows, onPick }: { rows: any[]; onPick?: (workspaceId: string) => void }) {
   const W = 960, H = 320, P = 40;
   const colors = envColors(rows);
   const held = (r: any) => (r.size_in_bytes || 0) + (r.volume_bytes || 0);
@@ -132,7 +132,8 @@ function Scatter({ rows }: { rows: any[] }) {
         <text x={x(2)} y={y(4)} fontSize={10} fill="currentColor" opacity={0.5}>small, little used</text>
         {rows.map((r) => (
           <circle key={r.workspace_id} cx={x(r.complexity_index || 0)} cy={y(r.usage_index || 0)} r={rad(held(r))}
-            fill={colors[r.env || "unknown"]} fillOpacity={0.55} stroke={colors[r.env || "unknown"]}>
+            fill={colors[r.env || "unknown"]} fillOpacity={0.55} stroke={colors[r.env || "unknown"]}
+            style={onPick ? { cursor: "pointer" } : undefined} onClick={onPick ? () => onPick(String(r.workspace_id)) : undefined}>
             <title>{`${r.workspace_name}${r.env ? ` · ${r.env}` : ""}: complexity ${r.complexity_index ?? "-"}, usage ${r.usage_index}, ${fmtBytes(held(r))} in tables and volumes, ${r.signal}`}</title>
           </circle>
         ))}

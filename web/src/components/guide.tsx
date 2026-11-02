@@ -481,7 +481,7 @@ const GUIDE_TABS: Record<string, GuideTabInfo> = {
       "Where is sensitive data, and is it masked?",
     ],
     screen: [
-      { sub: "activity", d: "Active tables, people and volumes of all; the busiest workspaces, how much of each is in use, reads against writes, events per workspace per day, the most used tables and most active people. Pick a workspace for its tables by class, people seen, its tables as bubbles, events per day, busiest tables and volumes. Names open Tables, People or Volumes." },
+      { sub: "activity", d: "Active tables, people and volumes of all; the busiest workspaces, how much of each is in use, reads against writes, complexity against usage, events per workspace per day, the most used tables and most active people. One workspace in the top-bar filter (or a click on one) shows its tables by class, people seen, its tables by reads against writes and by size against activity, events per day, busiest tables and volumes. Names open Tables, People or Volumes." },
       { sub: "workspaces", d: "Data size split by usage class, reads and writes, people, sensitive tables; every workspace with its tables by class, unread size, complexity, usage and a signal; complexity against usage; clean up first; largest tables by reads and writes." },
       { sub: "tables", d: "Every table by class, with search, workspace filter and CSV. Pick a workspace for its schemas. Click a table for reads and writes per day, who uses it and how, unused direct grants, sensitive columns, upstream and downstream, what to do with SQL, history and maintenance." },
       { sub: "volumes", d: "Every volume: class, size, files, file reads and writes, readers and writers; click one for who used it. The volumes that could not be listed." },

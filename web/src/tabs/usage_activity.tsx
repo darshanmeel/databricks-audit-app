@@ -3,11 +3,11 @@
 import React from "react";
 
 import { Api } from "../api";
-import { fmtInt } from "../format";
+import { fmtBytes, fmtInt } from "../format";
 import { AreaContent, Card, PqgsNote } from "../components/primitives";
 import { Donut } from "../components/charts";
 import { Columns } from "../components/charts_more";
-import { CLASS_META, handoff } from "./tab_usage";
+import { CLASS_META, Scatter, handoff } from "./tab_usage";
 
 const READ = "#2456A6";
 const WRITE = "#D27A2C";
@@ -108,6 +108,19 @@ function Heat({ rows, days, open }: { rows: any[]; days: string[]; open?: (key: 
   );
 }
 
+// Labels for the biggest first, skipping any that would overlap one already placed.
+function placeLabels(items: { key: string; x: number; y: number; text: string }[]): Set<string> {
+  const placed: { x: number; y: number; w: number }[] = [];
+  const out = new Set<string>();
+  items.forEach((it) => {
+    const w = it.text.length * 6;
+    if (placed.some((p) => Math.abs(p.y - it.y) < 12 && it.x < p.x + p.w && p.x < it.x + w)) return;
+    placed.push({ x: it.x, y: it.y, w });
+    out.add(it.key);
+  });
+  return out;
+}
+
 // Read events across, write events up, bubble = people; a click opens it.
 function Bubbles({ rows, size, open }: { rows: { key: string; label: string; r: number; w: number; s: number }[]; size: string; open: (key: string) => void }) {
   if (!rows.length) return <span className="muted">Nothing read or written in the window.</span>;
@@ -115,7 +128,9 @@ function Bubbles({ rows, size, open }: { rows: { key: string; label: string; r: 
   const mx = Math.max(1, ...rows.map((x) => x.r)), my = Math.max(1, ...rows.map((x) => x.w)), ms = Math.max(1, ...rows.map((x) => x.s));
   const X = (v: number) => P + (v / mx) * (W - P - R), Y = (v: number) => H - P - (v / my) * (H - 2 * P);
   const rad = (s: number) => 4 + 14 * Math.sqrt(s / ms);
-  const labelled = new Set([...rows].sort((a, b) => b.r + b.w - (a.r + a.w)).slice(0, 12).map((x) => x.key));
+  const short = (t: string) => (t.length > 22 ? `${t.slice(0, 21)}…` : t);
+  const labelled = placeLabels([...rows].sort((a, b) => b.s - a.s || b.r + b.w - (a.r + a.w))
+    .map((x) => ({ key: x.key, x: X(x.r) + rad(x.s) + 3, y: Y(x.w), text: short(x.label) })));
   return (
     <div>
       <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ display: "block" }} role="img" aria-label={`Read against write events, bubble size = ${size}`}>
@@ -128,7 +143,7 @@ function Bubbles({ rows, size, open }: { rows: { key: string; label: string; r: 
             <circle cx={X(x.r)} cy={Y(x.w)} r={rad(x.s)} fill={READ} fillOpacity={0.3} stroke={READ}>
               <title>{`${x.label}: ${fmtInt(x.r)} reads, ${fmtInt(x.w)} writes, ${fmtInt(x.s)} ${size}`}</title>
             </circle>
-            {labelled.has(x.key) && <text x={X(x.r) + rad(x.s) + 3} y={Y(x.w) + 4} fontSize={10.5} fill="currentColor">{x.label.length > 22 ? `${x.label.slice(0, 21)}…` : x.label}</text>}
+            {labelled.has(x.key) && <text x={X(x.r) + rad(x.s) + 3} y={Y(x.w) + 4} fontSize={10.5} fill="currentColor">{short(x.label)}</text>}
           </g>
         ))}
       </svg>
@@ -137,16 +152,77 @@ function Bubbles({ rows, size, open }: { rows: { key: string; label: string; r: 
   );
 }
 
+// One workspace's tables: size (log scale) across, read and write events up, bubble = people, colour = usage class.
+function SizeBubbles({ rows, open }: { rows: any[]; open: (name: string) => void }) {
+  const sized = rows.filter((x) => (x.size_in_bytes || 0) > 0);
+  if (!sized.length) return <span className="muted">No table size in this export.</span>;
+  const W = 620, H = 280, P = 40, R = 110;
+  const lx = sized.map((x) => Math.log10(x.size_in_bytes)), lo = Math.min(...lx), hi = Math.max(lo + 1, ...lx);
+  const my = Math.max(1, ...sized.map((x) => x.reads + x.writes)), ms = Math.max(1, ...sized.map((x) => x.people));
+  const X = (b: number) => P + ((Math.log10(b) - lo) / (hi - lo)) * (W - P - R), Y = (v: number) => H - P - (v / my) * (H - 2 * P);
+  const rad = (s: number) => 4 + 14 * Math.sqrt(s / ms);
+  const name = (t: string) => t.split(".").slice(1).join(".");
+  const labelled = placeLabels([...sized].sort((a, b) => b.reads + b.writes - (a.reads + a.writes) || b.size_in_bytes - a.size_in_bytes)
+    .map((x) => ({ key: x.table_full_name, x: X(x.size_in_bytes) + rad(x.people) + 3, y: Y(x.reads + x.writes), text: name(x.table_full_name) })));
+  const classes = CLASS_ORDER.filter((k) => sized.some((x) => x.usage_class === k));
+  return (
+    <div>
+      <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ display: "block" }} role="img" aria-label="Table size against read and write events">
+        <line x1={P} y1={H - P} x2={W - 8} y2={H - P} stroke="currentColor" opacity={0.3} />
+        <line x1={P} y1={8} x2={P} y2={H - P} stroke="currentColor" opacity={0.3} />
+        <text x={P} y={H - 22} fontSize={10.5} fill="currentColor" opacity={0.6}>{fmtBytes(10 ** lo)}</text>
+        <text x={W - R} y={H - 22} textAnchor="end" fontSize={10.5} fill="currentColor" opacity={0.6}>{fmtBytes(10 ** hi)}</text>
+        <text x={W - 8} y={H - 8} textAnchor="end" fontSize={11} fill="currentColor" opacity={0.7}>Size</text>
+        <text x={8} y={18} fontSize={11} fill="currentColor" opacity={0.7}>Read and write events</text>
+        {[...sized].sort((a, b) => b.people - a.people).map((x) => {
+          const c = (CLASS_META[x.usage_class] || CLASS_META.idle_90d).color;
+          return (
+            <g key={x.table_full_name} style={{ cursor: "pointer" }} onClick={() => open(x.table_full_name)}>
+              <circle cx={X(x.size_in_bytes)} cy={Y(x.reads + x.writes)} r={rad(x.people)} fill={c} fillOpacity={0.45} stroke={c}>
+                <title>{`${x.table_full_name}: ${fmtBytes(x.size_in_bytes)}, ${fmtInt(x.reads)} reads, ${fmtInt(x.writes)} writes, ${fmtInt(x.people)} people, ${(CLASS_META[x.usage_class] || { label: "-" }).label}`}</title>
+              </circle>
+              {labelled.has(x.table_full_name) && <text x={X(x.size_in_bytes) + rad(x.people) + 3} y={Y(x.reads + x.writes) + 4} fontSize={10.5} fill="currentColor">{name(x.table_full_name)}</text>}
+            </g>
+          );
+        })}
+      </svg>
+      <div className="pqgs-card-note">
+        {classes.map((k, i) => <span key={k} style={{ marginLeft: i ? 12 : 0 }}><span className="legend-dot" style={{ background: CLASS_META[k].color }} />{` ${CLASS_META[k].label}`}</span>)}
+        <span style={{ marginLeft: 12 }}>Bubble = people. Right and low: big, little used.</span>
+      </div>
+    </div>
+  );
+}
+
 function Pct({ of }: { of: number }) {
   return <span className="muted" style={{ fontSize: 14, marginLeft: 6 }}>{`of ${fmtInt(of)}`}</span>;
 }
 
-function UsageActivityContent({ filters, goTo, onVerdict }: LooseProps) {
-  const [ws, setWs] = React.useState<string | null>(null);
-  const all = useActivity(filters.window, filters.workspaceIds, filters.envs, null);
-  const one = useActivity(filters.window, filters.workspaceIds, filters.envs, ws);
-  const d = ws ? (one.phase === "ready" ? one.data : null) : (all.phase === "ready" ? all.data : null);
-  const list: any[] = all.phase === "ready" && all.data ? all.data.workspaces || [] : [];
+// the top bar's workspaces before a workspace was picked here, so "All workspaces" can put them back
+let before: string[] | null = null;
+
+function UsageActivityContent({ filters, goTo, onVerdict, setManyWorkspaces }: LooseProps) {
+  // one workspace picked in the top bar = that workspace's view
+  const ws: string | null = filters.workspaceIds && filters.workspaceIds.length === 1 && filters.workspaceIdSet && filters.workspaceIdSet.size === 1
+    ? String(filters.workspaceIds[0]) : null;
+  const setWs = (id: string | null) => {
+    if (id) {
+      if (!ws) before = filters.workspaceIdSet ? Array.from(filters.workspaceIdSet) : null;
+      setManyWorkspaces([id]);
+    } else if (before) {
+      setManyWorkspaces(before);
+      before = null;
+    }
+  };
+  const st = useActivity(filters.window, filters.workspaceIds, filters.envs, ws);
+  const [use, setUse] = React.useState<any[]>([]);
+  React.useEffect(() => {
+    let live = true;
+    Api.workspaceUsage(filters.window, filters.workspaceIds, filters.envs)
+      .then((d: any) => { if (live) setUse(d && d.outcome !== "not_assessed" ? d.rows || [] : []); }).catch(() => { if (live) setUse([]); });
+    return () => { live = false; };
+  }, [JSON.stringify([filters.window, filters.workspaceIds, filters.envs])]); // eslint-disable-line react-hooks/exhaustive-deps
+  const d = st.phase === "ready" ? st.data : null;
   const t = d ? d.totals : null;
   const verdict = t
     ? `${ws ? d.workspace_name : "All workspaces"}: ${fmtInt(t.tables_active)} of ${fmtInt(t.tables)} tables, ${fmtInt(t.people_active)} of ${fmtInt(t.people)} people and ${fmtInt(t.volumes_active)} of ${fmtInt(t.volumes)} volumes were active in ${filters.window} days.`
@@ -155,16 +231,12 @@ function UsageActivityContent({ filters, goTo, onVerdict }: LooseProps) {
   const toTable = (name: string) => { Object.assign(handoff, { workspace: null, cls: null, table: name }); goTo({ tab: "usage", subtab: "tables" }); };
   const toPerson = (who: string) => { handoff.person = who; goTo({ tab: "usage", subtab: "people" }); };
   const toVolume = (name: string) => { handoff.volume = name; goTo({ tab: "usage", subtab: "volumes" }); };
-  if ((ws ? one : all).phase === "loading") return <span className="muted">Loading activity...</span>;
+  if (st.phase === "loading") return <span className="muted">Loading activity...</span>;
   if (!d || d.outcome === "not_assessed") return <span className="muted">Table reads and writes are not in this export: export again.</span>;
   const pick = (
     <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", marginBottom: 12 }}>
-      {ws ? <button type="button" className="ov-link-btn" onClick={() => setWs(null)}>← All workspaces</button> : null}
-      <select value={ws || ""} onChange={(e) => setWs(e.target.value || null)} aria-label="Workspace" style={{ padding: "6px 8px", borderRadius: 8 }}>
-        <option value="">All workspaces</option>
-        {list.map((r) => <option key={r.workspace_id} value={r.workspace_id}>{r.workspace_name}</option>)}
-      </select>
-      <span className="muted">{`Read and write events in the last ${filters.window} days, lineage and file events`}</span>
+      {ws && before ? <button type="button" className="ov-link-btn" onClick={() => setWs(null)}>← All workspaces</button> : null}
+      <span className="muted">{`${ws ? d.workspace_name : "Workspaces in the top-bar filter; pick one there or click one below"} · read and write events in the last ${filters.window} days`}</span>
     </div>
   );
   const cards = (
@@ -198,6 +270,11 @@ function UsageActivityContent({ filters, goTo, onVerdict }: LooseProps) {
             <Heat rows={(d.heat || []).slice(0, 15)} days={d.days} open={setWs} />
           </Card>
         </div>
+        {use.length > 1 && (
+          <Card title="Complexity against usage" right={<span className="muted">bubble = data held · right and low: built, little used · click one</span>}>
+            <Scatter rows={use} onPick={setWs} />
+          </Card>
+        )}
         <div className="grid-2">
           <Card title="Most used tables" right={<span className="muted">all workspaces · click one</span>}>
             <RWBars rows={(d.top_tables || []).map((x: any) => ({ key: `${x.workspace_id}|${x.table_full_name}`, label: x.table_full_name, sub: x.workspace_name, r: x.reads, w: x.writes, open: () => toTable(x.table_full_name) }))} />
@@ -218,22 +295,25 @@ function UsageActivityContent({ filters, goTo, onVerdict }: LooseProps) {
           <Donut segments={CLASS_ORDER.filter((k) => mix[k]).map((k) => ({ label: CLASS_META[k].label, value: mix[k], color: CLASS_META[k].color, display: fmtInt(mix[k]) }))}
             centerLabel={fmtInt(t.tables)} centerSub="tables" />
         </Card>
-        <Card title="People seen in this workspace">
-          <Donut segments={[{ label: "Active in the window", value: t.people_active, color: USERS, display: fmtInt(t.people_active) },
-            { label: "Not seen in the window", value: d.people_unseen, color: CLASS_META.written_never_read.color, display: fmtInt(d.people_unseen) }]}
+        <Card title="People seen in this workspace" right={<span className="muted">active or not seen in the window</span>}>
+          <Donut segments={[{ label: "active", value: t.people_active, color: USERS, display: fmtInt(t.people_active) },
+            { label: "not seen", value: d.people_unseen, color: CLASS_META.written_never_read.color, display: fmtInt(d.people_unseen) }]}
             centerLabel={fmtInt(t.people)} centerSub="people" />
         </Card>
       </div>
       <div className="grid-2">
         <Card title="Tables: reads against writes" right={<span className="muted">click a bubble</span>}>
-          <Bubbles rows={(d.bubbles || []).map((x: any) => ({ key: x.table_full_name, label: x.table_full_name.split(".").slice(1).join("."), r: x.reads, w: x.writes, s: x.people }))} size="people using it" open={toTable} />
+          <Bubbles rows={(d.bubbles || []).filter((x: any) => x.reads + x.writes).map((x: any) => ({ key: x.table_full_name, label: x.table_full_name.split(".").slice(1).join("."), r: x.reads, w: x.writes, s: x.people }))} size="people using it" open={toTable} />
         </Card>
-        <Card title="Read and write events per day" right={<span className="muted">tables this workspace uses most</span>}>
-          <Columns days={(d.daily || []).map((x: any) => x.day)} wide ariaLabel="Read and write events per day"
-            series={[{ name: "Reads", values: d.daily.map((x: any) => x.reads), color: READ }, { name: "Writes", values: d.daily.map((x: any) => x.writes), color: WRITE }]}
-            valueFmt={(v) => fmtInt(v)} unitLabel="events" />
+        <Card title="Tables: size against activity" right={<span className="muted">colour = usage class · click a bubble</span>}>
+          <SizeBubbles rows={d.bubbles || []} open={toTable} />
         </Card>
       </div>
+      <Card title="Read and write events per day" right={<span className="muted">tables this workspace uses most</span>}>
+        <Columns days={(d.daily || []).map((x: any) => x.day)} wide ariaLabel="Read and write events per day"
+          series={[{ name: "Reads", values: d.daily.map((x: any) => x.reads), color: READ }, { name: "Writes", values: d.daily.map((x: any) => x.writes), color: WRITE }]}
+          valueFmt={(v) => fmtInt(v)} unitLabel="events" />
+      </Card>
       <div className="grid-2">
         <Card title="Most used tables" right={<span className="muted">click one</span>}>
           <RWBars rows={(d.top_tables || []).map((x: any) => ({ key: x.table_full_name, label: x.table_full_name, sub: `${x.people} people`, r: x.reads, w: x.writes, open: () => toTable(x.table_full_name) }))} />
