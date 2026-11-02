@@ -14,7 +14,7 @@ import { countsForIds } from "../components/tab_registry";
 import { AreaContent, Card, NoDataBlock, PqgsNote } from "../components/primitives";
 import { ChartNote, Donut, HBarList, paletteColor } from "../components/charts";
 import { LastActivityCard } from "../components/last_activity";
-import { ActivityByWorkspacePanel } from "./tab_workspaces";
+import { ActivityByWorkspacePanel } from "./tab_usage";
 
 // A card's headline count: the finding's own row_count (an exact tally from the bulk /api/findings
 // list, service.list_findings), never rows.length off this tile's OWN fetch -- that fetch caps at

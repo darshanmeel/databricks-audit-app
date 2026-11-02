@@ -854,14 +854,14 @@ def get_workspace_usage(
     return app_core_data.read_workspaces(window, scope, _parse_tag_filter(None, None, tag))
 
 
-@app.get("/api/workspace_detail")
-def get_workspace_detail(workspace_id: str = Query(...)) -> dict:
-    return app_core_data.read_workspace_detail(workspace_id)
+@app.get("/api/workspace_schemas")
+def get_workspace_schemas(workspace_id: str = Query(...), window: int = Query(default=30)) -> dict:
+    return app_core_data.read_workspace_schemas(workspace_id, window)
 
 
-@app.get("/api/workspace_user_tables")
-def get_workspace_user_tables(workspace_id: str = Query(...), identity: str = Query(...)) -> dict:
-    return app_core_data.read_user_tables(workspace_id, identity)
+@app.get("/api/person_tables")
+def get_person_tables(identity: str = Query(...), window: int = Query(default=30)) -> dict:
+    return app_core_data.read_person_tables(identity, window)
 
 
 @app.get("/api/volumes")

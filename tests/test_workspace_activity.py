@@ -160,23 +160,15 @@ def _detail_db(tmp_path):
     return db
 
 
-def test_workspace_detail_lists_its_tables_with_reads_and_its_people(tmp_path, monkeypatch):
+def test_workspace_schemas_and_a_persons_tables(tmp_path, monkeypatch):
     monkeypatch.setenv("AUDIT_DB", str(_detail_db(tmp_path)))
     from app.core import data
 
-    got = data.read_workspace_detail("1")
-    assert got["catalogs"] == ["sales"] and got["lineage"] and got["sized"]
-    tables = {t["table_full_name"]: t for t in got["tables"]}
-    # the catalog's own tables, plus a table only used here
-    assert set(tables) == {"sales.work.a", "sales.work.v", "sales.locked.c", "shared.ref.codes"}
-    a = tables["sales.work.a"]
-    assert a["size_in_bytes"] == 1000 and a["reads"] == 7 and a["last_read"] == "2026-10-20" and a["readers"] == 3
-    assert tables["sales.work.v"]["view"] and tables["sales.locked.c"]["reads"] == 0
-    kinds = {u["identity"]: u["kind"] for u in got["users"]}
-    assert kinds == {"alice@example.com": "Person", "1b2c3d4e-0000-1111-2222-333344445555": "Service principal"}
-    assert got["not_described"] == [{"table_catalog": "sales", "table_schema": "locked", "tables": 1,
-                                     "error": "[PERMISSION_DENIED] no"}]
-    assert data.read_user_tables("1", "alice@example.com")["rows"][0]["table_full_name"] == "sales.work.a"
+    got = data.read_workspace_schemas("1")
+    assert got["catalogs"] == ["sales"]
+    assert {(r["table_schema"], r["tables"], r["views"]) for r in got["schemas"]} == {("work", 1, 1), ("locked", 1, 0)}
+    tables = data.read_person_tables("alice@example.com")["rows"]
+    assert tables[0]["table_full_name"] == "sales.work.a" and tables[0]["workspaces"] == ["analytics-prod"]
     assert data.read_table_sizes()["not_described"][0]["table_schema"] == "locked"
 
 
@@ -204,10 +196,6 @@ def test_last_seen_bands_and_inactive_people_overall_and_per_workspace(tmp_path,
     one = next(r for r in got["rows"] if r["workspace_id"] == "1")
     assert one["seen_bands"]["Under 30 days"] == 1 and one["seen_bands"]["90-180 days"] == 1
 
-    detail = data.read_workspace_detail("1")
-    assert [r["identity"] for r in detail["inactive"]] == ["1b2c3d4e-0000-1111-2222-333344445555", "bob@example.com"]
-    assert next(r for r in detail["inactive"] if r["identity"] == "bob@example.com")["days"] == 151
-
 
 def test_volumes_and_their_access_and_the_schemas_of_a_workspace(tmp_path, monkeypatch):
     db = _detail_db(tmp_path)
@@ -233,7 +221,7 @@ def test_volumes_and_their_access_and_the_schemas_of_a_workspace(tmp_path, monke
     assert data.read_volume_users("sales.work.raw")["rows"][0]["identity"] == "alice@example.com"
     assert [v["volume_full_name"] for v in data.read_volumes({"2"})["volumes"]] == []
 
-    work = next(s for s in data.read_workspace_detail("1")["schemas"] if s["table_schema"] == "work")
+    work = next(s for s in data.read_workspace_schemas("1")["schemas"] if s["table_schema"] == "work")
     assert (work["tables"], work["views"], work["table_columns"], work["view_columns"]) == (1, 1, 10, 5)
     assert (work["volumes"], work["volume_files"], work["volume_bytes"]) == (2, 12, 5070)
     one = next(r for r in data.read_workspaces(30, None)["rows"] if r["workspace_id"] == "1")
@@ -284,4 +272,4 @@ def test_catalogs_pinned_in_workspace_csv_win_over_lineage(tmp_path, monkeypatch
     rows = {r["workspace_id"]: r for r in data.read_workspaces(30, None)["rows"]}
     # sales is read mostly from workspace 1, but the file pins it to 2
     assert rows["2"]["catalogs"] == ["sales", "sandbox"] and rows["1"]["catalogs"] == []
-    assert data.read_workspace_detail("2")["catalogs"] == ["other", "sales", "sandbox"]
+    assert data.read_workspace_schemas("2")["catalogs"] == ["other", "sales", "sandbox"]

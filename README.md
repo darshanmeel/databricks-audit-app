@@ -462,7 +462,7 @@ value read from the bill is the tag most of its compute carries. On any cloud,
 (`config/workspace.example.csv` shows the shape). A workspace listed there takes its tags from
 the file for every date, and an empty cell is no tag. Workspaces not listed keep their tags from
 the bill. An optional `catalogs` column (names separated by `;`) is not a tag: it pins those
-catalogs to the workspace on Workspace table usage, in place of the workspace that reads and
+catalogs to the workspace on Data usage, in place of the workspace that reads and
 writes them most.
 After a change, run `python tools/load_direct_results.py`.
 

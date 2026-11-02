@@ -263,21 +263,6 @@ const GOVERNANCE_SUBTABS: Subtab[] = [
     refIds: ["access_views_inventory", "access_volumes_inventory"],
   },
   {
-    key: "workspaces", label: "Workspace table usage",
-    ids: [],
-    refIds: [],
-  },
-  {
-    key: "user_activity", label: "User activity",
-    ids: [],
-    refIds: [],
-  },
-  {
-    key: "volume_access", label: "Volume access",
-    ids: [],
-    refIds: [],
-  },
-  {
     key: "sharing", label: "Sharing",
     ids: ["access_delta_sharing_exposure"],
     refIds: [],
@@ -298,16 +283,6 @@ const STORAGE_SUBTABS: Subtab[] = [
       "po_clustering_column_churn", "po_data_skipping_backfill", "po_failure_reasons",
       "storage_po_coverage", "storage_small_files",
     ],
-    refIds: [],
-  },
-  {
-    key: "table_storage", label: "Workspace table usage",
-    ids: [],
-    refIds: [],
-  },
-  {
-    key: "volumes", label: "Volumes",
-    ids: [],
     refIds: [],
   },
 ];

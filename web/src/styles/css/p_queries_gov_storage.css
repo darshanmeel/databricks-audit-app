@@ -73,24 +73,8 @@
 .pqgs-rt-note { font-size: 12.5px; color: var(--text-2); line-height: 1.4; }
 .pqgs-rt-cols-4 { grid-template-columns: minmax(140px, 1.6fr) 100px 100px 78px; }
 .pqgs-rt-cols-5 { grid-template-columns: minmax(130px, 1.4fr) minmax(160px, 1.8fr) 90px 100px 78px; }
-.pqgs-rt-cols-act { grid-template-columns: minmax(160px, 1.6fr) 80px 130px 100px 110px; }
-.pqgs-rt-cols-ws { grid-template-columns: minmax(160px, 1.6fr) 70px 80px 90px 70px 90px 90px 70px; }
 .pqgs-rt-row.on { background: var(--surface-2, rgba(0,0,0,.04)); }
-.pqgs-rt-cols-tbl { grid-template-columns: minmax(180px, 2fr) 90px 80px 100px 100px 70px 70px; }
-.pqgs-rt-cols-usr { grid-template-columns: minmax(180px, 2fr) 120px 100px 70px 80px 90px 100px; }
-.pqgs-rt-cols-ut { grid-template-columns: minmax(180px, 2fr) 70px 70px 120px; }
-.pqgs-rt-cols-ppl { grid-template-columns: minmax(180px, 1.8fr) 120px minmax(140px, 1.4fr) 100px 70px 80px 90px; }
 .legend-dot { display: inline-block; width: 10px; height: 10px; border-radius: 2px; vertical-align: -1px; }
-.pqgs-rt-cols-in { grid-template-columns: minmax(200px, 2fr) 130px 110px 110px 70px; }
-.pqgs-rt-cols-inw { grid-template-columns: minmax(200px, 2fr) 130px minmax(140px, 1.4fr) 110px 110px 70px; }
-.pqgs-rt-cols-sch { grid-template-columns: minmax(170px, 1.6fr) 70px 80px 70px 100px 80px 100px 90px; }
-.pqgs-rt-cols-vol { grid-template-columns: minmax(200px, 2fr) 80px minmax(110px, 1fr) 80px 90px 100px 100px 60px; }
-.pqgs-rt-cols-vu { grid-template-columns: minmax(200px, 2fr) 120px 70px 70px 100px 100px; }
-.pqgs-rt-cols-vp { grid-template-columns: minmax(200px, 2fr) 120px 80px 80px 80px 110px; }
-.pqgs-rt-cols-all { grid-template-columns: minmax(200px, 2fr) minmax(120px, 1fr) 90px 80px 100px 100px 70px; }
-.pqgs-rt-cols-hist { grid-template-columns: 60px 130px 130px minmax(140px, 1fr) minmax(200px, 2fr); }
-.pqgs-rt-cols-mnt { grid-template-columns: 140px minmax(140px, 1fr) minmax(120px, 1fr) 110px; }
-.pqgs-rt-cols-tu { grid-template-columns: minmax(160px, 2fr) 60px 60px 90px; }
 .pqgs-rt-cols-nd { grid-template-columns: minmax(160px, 1.2fr) 70px minmax(200px, 2.4fr); }
 @media (max-width: 900px) {
   .pqgs-rt-head { display: none; }

@@ -7,6 +7,7 @@ import React from "react";
 import { Api } from "../api";
 import { fmtBytes, fmtDayShort, fmtInt, fmtPct } from "../format";
 import { AreaContent, Card, PqgsNote } from "../components/primitives";
+import { paletteColor } from "../components/charts";
 
 const READ = "#2456A6";
 const WRITE = "#D27A2C";
@@ -99,6 +100,77 @@ function csv(rows: any[][]): void {
   a.download = "tables.csv";
   a.click();
   URL.revokeObjectURL(a.href);
+}
+
+function envColors(rows: any[]): Record<string, string> {
+  const envs = Array.from(new Set(rows.map((r) => r.env || "unknown"))).sort();
+  return Object.fromEntries(envs.map((e, i) => [e, paletteColor(i)]));
+}
+
+// Each workspace by complexity (x) and usage (y), bubble = data it holds, colour = env.
+function Scatter({ rows }: { rows: any[] }) {
+  const W = 960, H = 320, P = 40;
+  const colors = envColors(rows);
+  const held = (r: any) => (r.size_in_bytes || 0) + (r.volume_bytes || 0);
+  const maxSize = Math.max(1, ...rows.map(held));
+  const x = (v: number) => P + (v / 100) * (W - 2 * P);
+  const y = (v: number) => H - P - (v / 100) * (H - 2 * P);
+  const rad = (s: number) => 4 + 18 * Math.sqrt((s || 0) / maxSize);
+  return (
+    <div style={{ overflowX: "auto" }}>
+      <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ maxWidth: W, display: "block" }} role="img" aria-label="Complexity against usage, bubble size = data size">
+        <line x1={x(50)} y1={y(0)} x2={x(50)} y2={y(100)} stroke="var(--line, #ddd)" strokeDasharray="4 4" />
+        <line x1={x(0)} y1={y(50)} x2={x(100)} y2={y(50)} stroke="var(--line, #ddd)" strokeDasharray="4 4" />
+        <line x1={x(0)} y1={y(0)} x2={x(100)} y2={y(0)} stroke="currentColor" opacity={0.4} />
+        <line x1={x(0)} y1={y(0)} x2={x(0)} y2={y(100)} stroke="currentColor" opacity={0.4} />
+        <text x={x(100)} y={H - 8} textAnchor="end" fontSize={11} fill="currentColor" opacity={0.7}>Complexity index</text>
+        <text x={8} y={P - 12} fontSize={11} fill="currentColor" opacity={0.7}>Usage index</text>
+        <text x={x(98)} y={y(96)} textAnchor="end" fontSize={10} fill="currentColor" opacity={0.5}>built and used</text>
+        <text x={x(98)} y={y(4)} textAnchor="end" fontSize={10} fill="currentColor" opacity={0.5}>built, little used</text>
+        <text x={x(2)} y={y(4)} fontSize={10} fill="currentColor" opacity={0.5}>small, little used</text>
+        {rows.map((r) => (
+          <circle key={r.workspace_id} cx={x(r.complexity_index || 0)} cy={y(r.usage_index || 0)} r={rad(held(r))}
+            fill={colors[r.env || "unknown"]} fillOpacity={0.55} stroke={colors[r.env || "unknown"]}>
+            <title>{`${r.workspace_name}${r.env ? ` · ${r.env}` : ""}: complexity ${r.complexity_index ?? "-"}, usage ${r.usage_index}, ${fmtBytes(held(r))} in tables and volumes, ${r.signal}`}</title>
+          </circle>
+        ))}
+      </svg>
+      <div className="pqgs-card-note" style={{ marginTop: 6 }}>
+        {Object.entries(colors).map(([env, c], k) => <span key={env} style={{ marginLeft: k ? 12 : 0 }}><span className="legend-dot" style={{ background: c }} />{` ${env}`}</span>)}
+      </div>
+    </div>
+  );
+}
+
+// Governance › Access: people, service principals and queries per workspace, from the same reader.
+export function ActivityByWorkspacePanel({ filters, maxCat }: LooseProps) {
+  const key = JSON.stringify([filters.window, filters.workspaceIds, filters.envs, Api.tagParams()]);
+  const ws = useApi(() => Api.workspaceUsage(filters.window, filters.workspaceIds, filters.envs), key);
+  const d = ws.phase === "ready" ? ws.data : null;
+  const rows: any[] = d && d.outcome !== "not_assessed" ? d.rows || [] : [];
+  const shown = [...rows].sort((a, b) => b.active_people - a.active_people || b.queries - a.queries).slice(0, Math.max(maxCat || 8, 10));
+  return (
+    <div className="chart-card" style={{ marginTop: 14 }}>
+      <div className="chart-card-title">{`Activity by workspace${d && d.window_days ? `, last ${d.window_days} days` : ""}`}</div>
+      {ws.phase === "loading" ? <span className="muted">Loading activity...</span>
+        : !rows.length ? <span className="muted">Activity per workspace is not in this export: export again.</span> : (
+        <React.Fragment>
+          <div className="data-table-wrap"><table className="data">
+            <thead><tr><th>Workspace</th><th className="num">People</th><th className="num">Service principals</th><th className="num">Queries</th><th>Last activity</th></tr></thead>
+            <tbody>{shown.map((r) => (
+              <tr key={r.workspace_id}><td title={`${r.workspace_name} (${r.workspace_id})`}>{r.workspace_name}</td>
+                <td className="num mono">{fmtInt(r.active_people)}</td><td className="num mono">{fmtInt(r.active_service_principals)}</td>
+                <td className="num mono">{fmtInt(r.queries)}</td><td>{r.last_activity ? String(r.last_activity).slice(0, 10) : "-"}</td></tr>
+            ))}</tbody>
+          </table></div>
+          <div className="pqgs-card-note" style={{ marginTop: 8 }}>
+            {rows.length > shown.length ? `${fmtInt(rows.length - shown.length)} more workspaces, and who reads and writes what: ` : "Who reads and writes what, and who stopped coming: "}
+            <a href={`#tab=usage&w=${filters.window}&subtab=people`}>Data usage › People</a>.
+          </div>
+        </React.Fragment>
+      )}
+    </div>
+  );
 }
 
 // ─────────── Workspaces ───────────
@@ -229,6 +301,12 @@ function UsageWorkspacesContent({ filters, goTo, onVerdict }: LooseProps) {
         <div className="metric-note">{"Reads and writes are table events in lineage. A table belongs to the workspace that reads and writes its catalog most. Unread = written-never-read + idle tables. Complexity: views, view columns, tables, columns, volume files and size; usage: people, service principals, queries and active days, each against the largest workspace shown."}</div>
       </Card>
 
+      {wrows.length > 1 && (
+        <Card title="Complexity against usage" right={<span className="muted">bubble = data held · right and low: built, little used</span>}>
+          <Scatter rows={wrows} />
+        </Card>
+      )}
+
       <div className="grid-2">
         <Card title="Clean up first" right={<span className="muted">sensitive and unread first, then class, then size</span>}>
           {(t.clean_up_first || []).length ? (
@@ -316,6 +394,7 @@ function UsageTablesContent({ filters, onVerdict }: LooseProps) {
         <Card title={`Reads · ${t.window_days}d`}><div className="pqgs-card-value" style={{ color: READ }}>{fmtInt(sum("reads"))}</div><PqgsNote facts={[{ label: "From", value: "lineage read events" }]} /></Card>
         <Card title={`Writes · ${t.window_days}d`}><div className="pqgs-card-value" style={{ color: WRITE }}>{fmtInt(sum("writes"))}</div><PqgsNote facts={[{ label: "From", value: "inserts, merges, overwrites" }]} /></Card>
       </div>
+      {wsPick && <SchemaBreakdown workspaceId={wsPick} name={(wsOptions.find(([id]) => id === wsPick) || [])[1] || wsPick} window={filters.window} />}
       <Card title="Tables" right={<span className="muted">click one for its detail</span>}>
         <div className="data-table-wrap">
           <table className="data">
@@ -348,6 +427,42 @@ function UsageTablesContent({ filters, onVerdict }: LooseProps) {
         ) : null}
       </Card>
     </div>
+  );
+}
+
+// One workspace's catalogs, schema by schema: what is built, what is served, and how it is used.
+function SchemaBreakdown({ workspaceId, name, window }: { workspaceId: string; name: string; window: number }) {
+  const st = useApi(() => Api.workspaceSchemas(workspaceId, window), `${workspaceId}|${window}`);
+  const d = st.phase === "ready" ? st.data : null;
+  const rows: any[] = d ? d.schemas || [] : [];
+  if (st.phase === "loading" || !rows.length) return null;
+  return (
+    <Card title={`${name} · by schema`} right={<span className="muted">{`catalogs it holds: ${d.catalogs.join(", ")}`}</span>}>
+      <ClassLegend />
+      <div className="data-table-wrap"><table className="data">
+        <thead><tr><th>Schema</th><th className="num">Tables</th><th>Tables by class</th><th className="num">Columns</th><th className="num">Views</th>
+          <th className="num">View columns</th><th className="num">Volumes</th><th className="num">Volume files</th><th className="num">Size</th></tr></thead>
+        <tbody>{rows.map((r) => {
+          const n = CLASS_ORDER.reduce((a, k) => a + (r.classes[k] || 0), 0);
+          return (
+            <tr key={`${r.table_catalog}.${r.table_schema}`}>
+              <td className="mono">{`${r.table_catalog}.${r.table_schema}`}</td>
+              <td className="num mono">{fmtInt(r.tables)}</td>
+              <td style={{ minWidth: 120 }}>{n ? <div style={{ display: "flex", height: 10, borderRadius: 3, overflow: "hidden" }} title={CLASS_ORDER.map((k) => `${CLASS_META[k].label}: ${r.classes[k] || 0}`).join(" · ")}>
+                {CLASS_ORDER.filter((k) => r.classes[k]).map((k) => <div key={k} style={{ width: `${(100 * r.classes[k]) / n}%`, background: CLASS_META[k].color }} />)}
+              </div> : <span className="muted">-</span>}</td>
+              <td className="num mono">{fmtInt(r.table_columns)}</td>
+              <td className="num mono">{fmtInt(r.views)}</td>
+              <td className="num mono">{fmtInt(r.view_columns)}</td>
+              <td className="num mono">{fmtInt(r.volumes)}</td>
+              <td className="num mono">{fmtInt(r.volume_files)}</td>
+              <td className="num mono">{fmtBytes(r.size_in_bytes + r.volume_bytes)}</td>
+            </tr>
+          );
+        })}</tbody>
+      </table></div>
+      <div className="metric-note">Views serve data from elsewhere; tables and volumes are built here. Size is tables plus volume files.</div>
+    </Card>
   );
 }
 
@@ -608,10 +723,11 @@ function VolumeDetail({ v, wsNames }: { v: any; wsNames: Map<string, string> }) 
 }
 
 // ─────────── People ───────────
-function UsagePeopleContent({ filters, onVerdict }: LooseProps) {
+function UsagePeopleContent({ filters, goTo, onVerdict }: LooseProps) {
   const key = JSON.stringify([filters.window, filters.workspaceIds, filters.envs]);
   const st = useApi(() => Api.people(filters.window, filters.workspaceIds, filters.envs), key);
   const [all, setAll] = React.useState(false);
+  const [open, setOpen] = React.useState<string | null>(null);
   const d = st.phase === "ready" ? st.data : null;
   const people: any[] = d && d.outcome !== "not_assessed" ? d.people || [] : [];
   if (d && d.as_of) asOf = d.as_of;
@@ -634,13 +750,15 @@ function UsagePeopleContent({ filters, onVerdict }: LooseProps) {
         <Card title={`Inactive ${d.inactive_days}d+`}><div className={`pqgs-card-value ${inactive.length ? "warn" : "ok"}`}>{fmtInt(inactive.length)}</div>
           <PqgsNote facts={[{ label: "Seen", value: "in the last year, not lately" }]} /></Card>
       </div>
-      <Card title="Who reads and who writes" right={<span className="muted">most table writes first, then reads</span>}>
+      <SeenBands bands={d.seen_bands || []} />
+      <Card title="Who reads and who writes" right={<span className="muted">most table writes first, then reads · click one for its tables</span>}>
         <div className="data-table-wrap"><table className="data">
           <thead><tr><th>Who</th><th>Workspaces</th><th className="num">Queries</th><th className="num">Tables read</th><th className="num">Tables written</th><th>Reads / writes</th>
             <th>Writes nobody reads</th><th>Sensitive tables</th><th>Last seen</th></tr></thead>
           <tbody>{shown.map((p) => (
-            <tr key={p.identity}>
-              <td>{p.identity}{p.kind === "Service principal" ? <span className="badge" style={{ marginLeft: 6 }}>SP</span> : null}</td>
+            <React.Fragment key={p.identity}>
+            <tr className={`ba-row${open === p.identity ? " on" : ""}`} style={{ cursor: "pointer" }} onClick={() => setOpen(open === p.identity ? null : p.identity)}>
+              <td><button type="button" className="ba-pick">{`${open === p.identity ? "▾" : "▸"} ${p.identity}`}</button>{p.kind === "Service principal" ? <span className="badge" style={{ marginLeft: 6 }}>SP</span> : null}</td>
               <td style={{ fontSize: 12.5 }}>{p.workspaces.join(", ")}</td>
               <td className="num mono">{fmtInt(p.queries)}</td>
               <td className="num mono">{fmtInt(p.tables_read)}</td>
@@ -650,6 +768,8 @@ function UsagePeopleContent({ filters, onVerdict }: LooseProps) {
               <td>{p.sensitive_tables.length ? <PiiChip text={`${p.sensitive_tables.length}: ${p.sensitive_tables.slice(0, 2).map((n: string) => n.split(".").pop()).join(", ")}${p.sensitive_tables.length > 2 ? "…" : ""}`} /> : "—"}</td>
               <td><When v={p.last_seen} /></td>
             </tr>
+            {open === p.identity && <tr><td colSpan={9} style={{ background: "var(--bg-2, #FAF9F6)" }}><PersonTables identity={p.identity} window={filters.window} goTo={goTo} /></td></tr>}
+            </React.Fragment>
           ))}</tbody>
         </table></div>
         {people.length > PAGE && <button type="button" className="ov-link-btn" onClick={() => setAll(!all)}>{all ? `Show the first ${PAGE}` : `Show all ${fmtInt(people.length)}`}</button>}
@@ -669,6 +789,56 @@ function UsagePeopleContent({ filters, onVerdict }: LooseProps) {
         {!d.grants ? <div className="metric-note">Direct grants are not in this export: export again.</div> : <div className="metric-note">Direct table grants only; access through a schema, catalog or group isn't expanded.</div>}
       </Card>
     </div>
+  );
+}
+
+const SEEN_COLORS: Record<string, string> = { "Under 30 days": "#2456A6", "30-90 days": "#E0A93B", "90-180 days": "#D27A2C", "180+ days": "#C2362B" };
+
+// Everyone seen in the last year, by when they were last seen anywhere.
+function SeenBands({ bands }: { bands: any[] }) {
+  const total = bands.reduce((a, b) => a + b.people + b.service_principals, 0);
+  if (!total) return null;
+  return (
+    <Card title="Everyone by last seen" right={<span className="muted">{`${fmtInt(total)} identities seen in the last year · audit log`}</span>}>
+      <div style={{ display: "flex", height: 22, borderRadius: 6, overflow: "hidden", margin: "4px 0 10px" }}>
+        {bands.filter((b) => b.people + b.service_principals).map((b) => (
+          <div key={b.band} title={`${b.band}: ${b.people} people, ${b.service_principals} SPs`} style={{ width: `${(100 * (b.people + b.service_principals)) / total}%`, background: SEEN_COLORS[b.band] }} />
+        ))}
+      </div>
+      <div className="pqgs-cards-grid">
+        {bands.map((b) => (
+          <div key={b.band}><div className="pqgs-card-value" style={{ color: SEEN_COLORS[b.band] }}>{fmtInt(b.people + b.service_principals)}</div>
+            <div className="muted">{`last seen ${b.band.toLowerCase()} ago · ${fmtInt(b.people)} people, ${fmtInt(b.service_principals)} SPs`}</div></div>
+        ))}
+      </div>
+    </Card>
+  );
+}
+
+// The tables one person or service principal used, across workspaces; a name opens its detail.
+function PersonTables({ identity, window, goTo }: { identity: string; window: number; goTo: any }) {
+  const st = useApi(() => Api.personTables(identity, window), `${identity}|${window}`);
+  const rows: any[] = st.phase === "ready" && st.data ? st.data.rows || [] : [];
+  if (st.phase === "loading") return <span className="muted">Loading tables...</span>;
+  if (!rows.length) return <span className="muted">No table read or written in the window (lineage).</span>;
+  const max = Math.max(1, ...rows.map((r) => r.reads + r.writes));
+  const toTable = (name: string) => { Object.assign(handoff, { workspace: null, cls: null, table: name }); goTo({ tab: "usage", subtab: "tables" }); };
+  return (
+    <table className="data">
+      <thead><tr><th>Table</th><th>Class</th><th className="num">Reads</th><th className="num">Writes</th><th>Reads / writes</th><th>Last used</th><th>Workspaces</th><th>Sensitive</th></tr></thead>
+      <tbody>{rows.map((r) => (
+        <tr key={r.table_full_name}>
+          <td><button type="button" className="ba-pick" onClick={(e) => { e.stopPropagation(); toTable(r.table_full_name); }}>{r.table_full_name}</button></td>
+          <td><ClassChip cls={r.usage_class} /></td>
+          <td className="num mono" style={{ color: READ }}>{fmtInt(r.reads)}</td>
+          <td className="num mono" style={{ color: WRITE }}>{fmtInt(r.writes)}</td>
+          <td><RWBar r={r.reads} w={r.writes} max={max} /></td>
+          <td><When v={r.last_access} /></td>
+          <td style={{ fontSize: 12.5 }}>{r.workspaces.join(", ")}</td>
+          <td>{r.sensitive.length ? <PiiChip text={r.sensitive.join(", ")} /> : "—"}</td>
+        </tr>
+      ))}</tbody>
+    </table>
   );
 }
 
