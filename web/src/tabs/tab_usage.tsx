@@ -81,6 +81,39 @@ function RWBar({ r, w, max }: { r: number; w: number; max: number }) {
   );
 }
 
+// The tables, volumes or people with the most read and write events, reads and writes stacked; a name opens it.
+function MostUsed({ rows, open }: { rows: { name: string; reads: number; writes: number; sub: string }[]; open: (name: string) => void }) {
+  if (!rows.length) return <span className="muted">Nothing read or written in the window.</span>;
+  const max = Math.max(1, ...rows.map((r) => (r.reads || 0) + (r.writes || 0)));
+  return (
+    <div>
+      {rows.map((r) => (
+        <div key={r.name} style={{ display: "grid", gridTemplateColumns: "minmax(140px, 30%) 1fr 110px 150px", gap: 10, alignItems: "center", margin: "5px 0", fontSize: 13 }}>
+          <div style={{ minWidth: 0, overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis" }}>
+            <button type="button" className="ba-pick" title={r.name} onClick={() => open(r.name)}>{r.name}</button>
+          </div>
+          <div style={{ display: "flex", height: 14, borderRadius: 3, overflow: "hidden", background: "var(--panel-2, #eee)" }} title={`${fmtInt(r.reads)} reads · ${fmtInt(r.writes)} writes`}>
+            <div style={{ width: `${(100 * (r.reads || 0)) / max}%`, background: READ }} /><div style={{ width: `${(100 * (r.writes || 0)) / max}%`, background: WRITE }} />
+          </div>
+          <span className="mono" style={{ textAlign: "right", fontSize: 12 }}><span style={{ color: READ }}>{fmtInt(r.reads)}</span>{" · "}<span style={{ color: WRITE }}>{fmtInt(r.writes)}</span></span>
+          <span className="muted" style={{ fontSize: 12 }}>{r.sub}</span>
+        </div>
+      ))}
+      <div className="pqgs-card-note" style={{ marginTop: 6 }}>
+        <span><span className="legend-dot" style={{ background: READ }} /> Read events</span>
+        <span style={{ marginLeft: 12 }}><span className="legend-dot" style={{ background: WRITE }} /> Write events</span>
+      </div>
+    </div>
+  );
+}
+
+function topUsed(list: any[], name: (r: any) => string, sub: (r: any) => string) {
+  return list.filter((r) => (r.reads || 0) + (r.writes || 0)).sort((a, b) => (b.reads || 0) + (b.writes || 0) - (a.reads || 0) - (a.writes || 0))
+    .slice(0, 10).map((r) => ({ name: name(r), reads: r.reads || 0, writes: r.writes || 0, sub: sub(r) }));
+}
+const count = (n: number, one: string) => `${fmtInt(n)} ${one}${n === 1 ? "" : "s"}`;
+const rwSub = (r: any) => `${count(r.readers || 0, "reader")} · ${count(r.writers || 0, "writer")}`;
+
 function names(n: number | null | undefined, list: string | null | undefined) {
   if (!n) return "0";
   const shown = (list || "").split(", ").filter(Boolean);
@@ -407,6 +440,9 @@ function UsageTablesContent({ filters, onVerdict }: LooseProps) {
           </Card>
         </div>
       )}
+      <Card title={`Most active tables · ${t.window_days}d`} right={<span className="muted">{wsPick || cls !== "all" || q ? "the tables shown below · click one" : "every table · click one"}</span>}>
+        <MostUsed open={setOpen} rows={topUsed(wsPick || cls !== "all" || q ? rows : t.most_used || [], (r) => r.table_full_name, rwSub)} />
+      </Card>
       <SchemaBreakdown workspaceId={wsPick} name={(wsOptions.find(([id]) => id === wsPick) || [])[1] || wsPick} window={filters.window} />
       <Card title="Tables" right={<span className="muted">click one for its detail</span>}>
         <div className="data-table-wrap">
@@ -676,6 +712,9 @@ function UsageVolumesContent({ filters, onVerdict }: LooseProps) {
         <Card title="Not read"><div className={`pqgs-card-value ${idle.length ? "warn" : "ok"}`}>{fmtInt(idle.length)}</div>
           <PqgsNote facts={[{ label: "Size", value: fmtBytes(idle.reduce((a, v) => a + (v.size_in_bytes || 0), 0)) }]} /></Card>
       </div>
+      <Card title="Most active volumes" right={<span className="muted">file events · click one</span>}>
+        <MostUsed open={setOpen} rows={topUsed(vols, (v) => v.volume_full_name, rwSub)} />
+      </Card>
       <Card title="Every volume" right={<span className="muted">click one for who used it</span>}>
         <div className="data-table-wrap">
           <table className="data">
@@ -799,6 +838,9 @@ function UsagePeopleContent({ filters, goTo, onVerdict }: LooseProps) {
           <PqgsNote facts={[{ label: "Seen", value: "in the last year, not lately" }]} /></Card>
       </div>
       <SeenBands bands={d.seen_bands || []} />
+      <Card title="Most active people" right={<span className="muted">table events · click one for their tables</span>}>
+        <MostUsed open={setOpen} rows={topUsed(people, (p) => p.identity, (p) => `${count(p.tables_read || 0, "table")} read · ${fmtInt(p.tables_written || 0)} written`)} />
+      </Card>
       <Card title="Who reads and who writes" right={<span className="muted">most table writes first, then reads · click one for its tables</span>}>
         <div className="data-table-wrap"><table className="data">
           <thead><tr><th>Who</th><th>Workspaces</th><th className="num">Queries</th><th className="num">Tables read</th><th className="num">Tables written</th><th>Reads / writes</th>

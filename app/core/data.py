@@ -2506,6 +2506,7 @@ def read_tables(workspace_scope: set[str] | None, tag_filter=None, limit: int = 
             "clean_up_first": sorted((r for r in out if r["usage_class"] in usage.UNREAD_CLASSES and not r["view"]),
                                      key=usage.cleanup_order)[:6],
             "largest": largest,
+            "most_used": sorted((r for r in out if r["reads"] + r["writes"]), key=lambda r: (-(r["reads"] + r["writes"]), r["table_full_name"]))[:10],
             "not_described": [{"table_catalog": c, "table_schema": s, "tables": n, "error": e} for c, s, n, e in unreadable],
             "rows": shown}
 
