@@ -2137,6 +2137,175 @@ def read_person_tables(identity: str, window: int = 30) -> dict:
     return {"outcome": "ok_rows" if rows else "ok_empty", "rows": rows, "as_of": end.isoformat()}
 
 
+def read_activity(window: int, workspace_scope: set[str] | None, workspace_id: str | None = None) -> dict:
+    """Read and write events in the window, and how much is active: per workspace (or, with
+    workspace_id, inside one) active tables, people and volumes of all, events per day, the most
+    used tables and the most active people. Events count where they happened; a table's daily
+    events go to the workspace that used it most. A person's counts cover the export's longest
+    window (usage.user_tables), kept when they used a table inside this one."""
+    import datetime as _dt
+
+    con = _connect()
+    try:
+        have = {(r[0], r[1]) for r in con.execute(
+            "SELECT table_schema, table_name FROM information_schema.tables WHERE table_catalog = current_database()"
+        ).fetchall()}
+        src, _used = _table_access(con, have, window)
+        if not src:
+            return {"outcome": "not_assessed"}
+        info_raw = con.execute("SELECT info FROM usage.workspace_activity_info LIMIT 1").fetchone() \
+            if ("usage", "workspace_activity_info") in have else None
+        info = json.loads(info_raw[0]) if info_raw and info_raw[0] else None
+        end = _seen_end(info)
+        since = (end - _dt.timedelta(days=window)).isoformat()
+
+        def q(sql: str, ok: bool = True) -> list:
+            return con.execute(sql).fetchall() if ok else []
+        access = q(f"SELECT workspace_id, table_full_name, SUM(reads), SUM(writes), SUM(readers), SUM(writers) FROM {src} "
+                   "GROUP BY 1, 2 HAVING SUM(reads) + SUM(writes) > 0")
+        held = q("SELECT table_catalog, table_catalog || '.' || table_schema || '.' || table_name FROM storage.table_detail "
+                 "WHERE detail IS DISTINCT FROM 'view'", ("storage", "table_detail") in have)
+        vols = q("SELECT volume_catalog, volume_catalog || '.' || volume_schema || '.' || volume_name FROM storage.volume_detail",
+                 ("storage", "volume_detail") in have)
+        vol_use = q("SELECT workspace_id, volume_full_name, identity, reads, writes, GREATEST(last_read, last_write) "
+                    "FROM usage.volume_access", ("usage", "volume_access") in have)
+        seen = q("SELECT workspace_id, identity, last_seen FROM usage.user_last_seen", ("usage", "user_last_seen") in have) \
+            + q("SELECT workspace_id, identity, last_seen FROM usage.user_access", ("usage", "user_access") in have)
+        used = q("SELECT workspace_id, identity, table_full_name, reads, writes, last_access FROM usage.user_tables",
+                 ("usage", "user_tables") in have)
+        daily = q(f"SELECT table_full_name, day, reads, writes FROM usage.table_daily WHERE day >= '{since}' AND day < '{end}'",
+                  ("usage", "table_daily") in have)
+        classes = _table_classes(con, have, window, end) if workspace_id else {}
+        home, names, _envs = _home_and_names(con, have)
+    finally:
+        con.close()
+
+    def keep(ws) -> bool:
+        return ws is not None and (workspace_scope is None or str(ws) in workspace_scope) \
+            and (workspace_id is None or str(ws) == str(workspace_id))
+
+    def name(ws) -> str:
+        return names.get(str(ws), str(ws))
+
+    def blank() -> dict:
+        return {"reads": 0, "writes": 0, "tables": set(), "tables_all": set(), "people": set(), "people_all": set(),
+                "volumes": set(), "volumes_all": set(), "file_reads": 0, "file_writes": 0}
+    ws_: dict[str, dict] = {}
+
+    def at(ws) -> dict:
+        return ws_.setdefault(str(ws), blank())
+    tbl: dict[tuple, dict] = {}
+    best: dict[str, tuple] = {}  # table -> (events, workspace) of the workspace that used it most
+    for ws, t, r, w, rd, wt in access:
+        ev = int(r or 0) + int(w or 0)
+        if ev > best.get(t, (0, None))[0]:
+            best[t] = (ev, str(ws))
+        if not keep(ws):
+            continue
+        a = at(ws)
+        a["reads"] += int(r or 0)
+        a["writes"] += int(w or 0)
+        a["tables"].add(t)
+        a["tables_all"].add(t)
+        tbl[(str(ws), t)] = {"table_full_name": t, "workspace_id": str(ws), "workspace_name": name(ws), "reads": int(r or 0),
+                             "writes": int(w or 0), "people": int(rd or 0) + int(wt or 0)}
+    for cat, t in held:
+        if keep(home.get(cat)):
+            at(home[cat])["tables_all"].add(t)
+    for cat, v in vols:
+        if keep(home.get(cat)):
+            at(home[cat])["volumes_all"].add(v)
+    vol: dict[str, dict] = {}
+    for ws, v, who, r, w, last in vol_use:
+        if not keep(ws):
+            continue
+        a = at(ws)
+        a["volumes_all"].add(v)
+        if last and str(last)[:10] >= since:
+            a["volumes"].add(v)
+            a["file_reads"] += int(r or 0)
+            a["file_writes"] += int(w or 0)
+            x = vol.setdefault(v, {"volume_full_name": v, "reads": 0, "writes": 0, "people": set()})
+            x["reads"] += int(r or 0)
+            x["writes"] += int(w or 0)
+            x["people"].add(who)
+    last_seen: dict[tuple, str | None] = {}
+    for ws, who, last in seen:
+        if who and keep(ws) and _identity_kind(who) in ("Person", "Service principal"):
+            day = str(last)[:10] if last else None
+            last_seen[(str(ws), who)] = max(filter(None, [last_seen.get((str(ws), who)), day]), default=None)
+    for (ws, who), last in last_seen.items():
+        at(ws)["people_all"].add(who)
+        if last and last >= since:
+            at(ws)["people"].add(who)
+    ppl: dict[str, dict] = {}
+    for ws, who, t, r, w, last in used:
+        if not who or not keep(ws) or not last or str(last)[:10] < since:
+            continue
+        p = ppl.setdefault(who, {"identity": who, "kind": _identity_kind(who), "reads": 0, "writes": 0, "tables": set(),
+                                 "workspaces": set()})
+        p["reads"] += int(r or 0)
+        p["writes"] += int(w or 0)
+        p["tables"].add(t)
+        p["workspaces"].add(name(ws))
+        at(ws)["people"].add(who)
+        at(ws)["people_all"].add(who)
+    days = [(end - _dt.timedelta(days=window - i)).isoformat() for i in range(window)]
+    pos = {d: i for i, d in enumerate(days)}
+
+    def heat(key_of) -> dict:
+        out: dict[str, list] = {}
+        for t, day, r, w in daily:
+            k, i = key_of(t), pos.get(str(day)[:10])
+            if k is not None and i is not None:
+                out.setdefault(k, [0] * window)[i] += int(r or 0) + int(w or 0)
+        return out
+
+    top_tables = sorted(tbl.values(), key=lambda x: (-(x["reads"] + x["writes"]), x["table_full_name"]))
+    top_people = sorted(({**p, "tables": len(p["tables"]), "workspaces": sorted(p["workspaces"])} for p in ppl.values()),
+                        key=lambda p: (-(p["reads"] + p["writes"]), p["identity"]))
+    rows = sorted(({"workspace_id": ws, "workspace_name": name(ws), "reads": a["reads"], "writes": a["writes"],
+                    "file_reads": a["file_reads"], "file_writes": a["file_writes"],
+                    "tables_active": len(a["tables"]), "tables": len(a["tables_all"]), "people_active": len(a["people"]),
+                    "people": len(a["people_all"]), "volumes_active": len(a["volumes"]), "volumes": len(a["volumes_all"])}
+                   for ws, a in ws_.items()),
+                  key=lambda r: (-(r["reads"] + r["writes"] + r["file_reads"] + r["file_writes"]), r["workspace_name"]))
+
+    def every(k: str) -> int:
+        return len(set().union(*[a[k] for a in ws_.values()])) if ws_ else 0
+    out = {"outcome": "ok_rows" if rows else "ok_empty", "as_of": end.isoformat(), "window": window, "days": days,
+           "totals": {"reads": sum(r["reads"] for r in rows), "writes": sum(r["writes"] for r in rows),
+                      "tables_active": every("tables"), "tables": every("tables_all"), "people_active": every("people"),
+                      "people": every("people_all"), "volumes_active": every("volumes"), "volumes": every("volumes_all")},
+           "workspaces": rows, "top_tables": top_tables[:10], "top_people": top_people[:10],
+           "people_days": max((info or {}).get("windows") or [window])}
+    if workspace_id is None:
+        h = heat(lambda t: best.get(t, (0, None))[1])
+        out["heat"] = [{"key": r["workspace_id"], "label": r["workspace_name"], "cells": h.get(r["workspace_id"], [0] * window)}
+                       for r in rows]
+        return out
+    a = ws_.get(str(workspace_id)) or blank()
+    mix: dict[str, int] = {}
+    for t in a["tables_all"]:
+        c = (classes.get(t) or {}).get("usage_class") or "idle_90d"
+        mix[c] = mix.get(c, 0) + 1
+    mine = {t for t, (_e, ws) in best.items() if ws == str(workspace_id)}
+    per_day = [{"day": d, "reads": 0, "writes": 0} for d in days]
+    for t, day, r, w in daily:
+        i = pos.get(str(day)[:10])
+        if t in mine and i is not None:
+            per_day[i]["reads"] += int(r or 0)
+            per_day[i]["writes"] += int(w or 0)
+    h = heat(lambda t: t if t in mine else None)
+    out.update({"workspace_name": name(workspace_id), "classes": mix, "daily": per_day,
+                "bubbles": top_tables[:150], "people_unseen": len(a["people_all"] - a["people"]),
+                "heat": [{"key": t["table_full_name"], "label": t["table_full_name"], "cells": h.get(t["table_full_name"], [0] * window)}
+                         for t in top_tables[:10]],
+                "volumes": sorted(({**v, "people": len(v["people"])} for v in vol.values()),
+                                  key=lambda v: (-(v["reads"] + v["writes"]), v["volume_full_name"]))[:10]})
+    return out
+
+
 def read_volumes(workspace_scope: set[str] | None, tag_filter=None) -> dict:
     """Every volume (storage.volume_detail) with its home workspace, files and size, and who read and
     wrote files in it (usage.volume_access), plus everyone who used a volume; not_assessed when

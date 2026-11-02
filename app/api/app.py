@@ -859,6 +859,19 @@ def get_workspace_schemas(workspace_id: str | None = Query(default=None), window
     return app_core_data.read_workspace_schemas(workspace_id, window)
 
 
+@app.get("/api/activity")
+def get_activity(
+    request: Request,
+    window: int = Query(default=30),
+    workspace_ids: list[str] = Query(default=[]),
+    env: list[str] = Query(default=[]),
+    workspace_id: str | None = Query(default=None),
+) -> dict:
+    attributes = _read_attribute_filters(request, _canonical_keys()) or None
+    scope = app_rollup._resolve_workspace_scope(workspace_ids or None, env or None, attributes)
+    return app_core_data.read_activity(window, scope, workspace_id)
+
+
 @app.get("/api/person_tables")
 def get_person_tables(identity: str = Query(...), window: int = Query(default=30)) -> dict:
     return app_core_data.read_person_tables(identity, window)

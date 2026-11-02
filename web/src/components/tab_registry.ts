@@ -287,9 +287,10 @@ const STORAGE_SUBTABS: Subtab[] = [
   },
 ];
 
-// ─────────── Data usage ─────────── (workspaces · tables · volumes · people): usage classes,
+// ─────────── Data usage ─────────── (activity · workspaces · tables · volumes · people): usage classes,
 // reads and writes, sizes and sensitive columns (app/core/usage.py); no checks of its own.
 const USAGE_SUBTABS: Subtab[] = [
+  { key: "activity", label: "Activity", ids: [], refIds: [] },
   { key: "workspaces", label: "Workspaces", ids: [], refIds: [] },
   { key: "tables", label: "Tables", ids: [], refIds: [] },
   { key: "volumes", label: "Volumes", ids: [], refIds: [] },

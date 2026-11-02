@@ -474,12 +474,14 @@ const GUIDE_TABS: Record<string, GuideTabInfo> = {
     card: "Which tables and volumes are read, written, idle or never read, who uses them, and where sensitive data sits.",
     lede: "Every table and volume in one usage class, per workspace, with who reads and writes it and what to clean up first.",
     questions: [
+      "Which workspaces, tables and people are most active, and how much of each workspace is used?",
       "How much data sits in tables nobody reads, and which are still being written?",
       "Which workspaces are built but little used?",
       "Who reads and writes what, and who still has access but stopped coming?",
       "Where is sensitive data, and is it masked?",
     ],
     screen: [
+      { sub: "activity", d: "Active tables, people and volumes of all; the busiest workspaces, how much of each is in use, reads against writes, events per workspace per day, the most used tables and most active people. Pick a workspace for its tables by class, people seen, its tables as bubbles, events per day, busiest tables and volumes. Names open Tables, People or Volumes." },
       { sub: "workspaces", d: "Data size split by usage class, reads and writes, people, sensitive tables; every workspace with its tables by class, unread size, complexity, usage and a signal; complexity against usage; clean up first; largest tables by reads and writes." },
       { sub: "tables", d: "Every table by class, with search, workspace filter and CSV. Pick a workspace for its schemas. Click a table for reads and writes per day, who uses it and how, unused direct grants, sensitive columns, upstream and downstream, what to do with SQL, history and maintenance." },
       { sub: "volumes", d: "Every volume: class, size, files, file reads and writes, readers and writers; click one for who used it. The volumes that could not be listed." },

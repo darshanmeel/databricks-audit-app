@@ -23,8 +23,9 @@ export const CLASS_META: Record<string, { label: string; color: string; bg: stri
 const CLASS_ORDER = ["written_never_read", "idle_90d", "cooling", "active"];
 const PAGE = 50;
 
-// Sub-tab to sub-tab hand-off: a workspace or class picked on Workspaces opens Tables filtered by it.
-const handoff: { workspace?: string | null; cls?: string | null; table?: string | null } = {};
+// Sub-tab to sub-tab hand-off: a workspace or class picked on Workspaces opens Tables filtered by it;
+// a person or volume picked on Activity opens it on People or Volumes.
+export const handoff: { workspace?: string | null; cls?: string | null; table?: string | null; person?: string | null; volume?: string | null } = {};
 
 function useApi(fn: () => Promise<any>, key: string) {
   const [state, setState] = React.useState<{ phase: string; data: any }>({ phase: "loading", data: null });
@@ -645,7 +646,8 @@ function TableDetail({ name, window, onBack }: { name: string; window: number; o
 function UsageVolumesContent({ filters, onVerdict }: LooseProps) {
   const key = JSON.stringify([filters.workspaceIds, filters.envs, Api.tagParams()]);
   const st = useApi(() => Api.volumes(filters.workspaceIds, filters.envs), key);
-  const [open, setOpen] = React.useState<string | null>(null);
+  const [open, setOpen] = React.useState<string | null>(handoff.volume || null);
+  React.useEffect(() => { handoff.volume = null; }, []);
   const d = st.phase === "ready" ? st.data : null;
   const vols: any[] = d && d.outcome !== "not_assessed" ? d.volumes || [] : [];
   if (d && d.as_of) asOf = d.as_of;
@@ -770,8 +772,9 @@ function VolumeDetail({ v, wsNames }: { v: any; wsNames: Map<string, string> }) 
 function UsagePeopleContent({ filters, goTo, onVerdict }: LooseProps) {
   const key = JSON.stringify([filters.window, filters.workspaceIds, filters.envs]);
   const st = useApi(() => Api.people(filters.window, filters.workspaceIds, filters.envs), key);
+  const [open, setOpen] = React.useState<string | null>(handoff.person || null);
   const [all, setAll] = React.useState(false);
-  const [open, setOpen] = React.useState<string | null>(null);
+  React.useEffect(() => { handoff.person = null; }, []);
   const d = st.phase === "ready" ? st.data : null;
   const people: any[] = d && d.outcome !== "not_assessed" ? d.people || [] : [];
   if (d && d.as_of) asOf = d.as_of;
@@ -783,7 +786,7 @@ function UsagePeopleContent({ filters, goTo, onVerdict }: LooseProps) {
   if (st.phase === "loading") return <span className="muted">Loading people...</span>;
   if (!people.length) return <span className="muted">{!d || d.outcome === "not_assessed" ? "Activity is not in this export: export again." : "Nobody active in the workspaces shown."}</span>;
   const max = Math.max(1, ...people.map((p) => (p.reads || 0) + (p.writes || 0)));
-  const shown = all ? people : people.slice(0, PAGE);
+  const shown = all ? people : people.slice(0, PAGE).concat(people.slice(PAGE).filter((p) => p.identity === open));
   return (
     <div>
       <div className="pqgs-cards-grid">
