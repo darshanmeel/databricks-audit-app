@@ -855,7 +855,7 @@ def get_workspace_usage(
 
 
 @app.get("/api/workspace_schemas")
-def get_workspace_schemas(workspace_id: str = Query(...), window: int = Query(default=30)) -> dict:
+def get_workspace_schemas(workspace_id: str | None = Query(default=None), window: int = Query(default=30)) -> dict:
     return app_core_data.read_workspace_schemas(workspace_id, window)
 
 

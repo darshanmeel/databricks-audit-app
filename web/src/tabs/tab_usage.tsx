@@ -7,7 +7,8 @@ import React from "react";
 import { Api } from "../api";
 import { fmtBytes, fmtDayShort, fmtInt, fmtPct } from "../format";
 import { AreaContent, Card, PqgsNote } from "../components/primitives";
-import { paletteColor } from "../components/charts";
+import { HBarList, paletteColor } from "../components/charts";
+import { Columns } from "../components/charts_more";
 
 const READ = "#2456A6";
 const WRITE = "#D27A2C";
@@ -391,7 +392,20 @@ function UsageTablesContent({ filters, onVerdict }: LooseProps) {
         <Card title={`Reads · ${t.window_days}d`}><div className="pqgs-card-value" style={{ color: READ }}>{fmtInt(sum("reads"))}</div><PqgsNote facts={[{ label: "From", value: "lineage read events" }]} /></Card>
         <Card title={`Writes · ${t.window_days}d`}><div className="pqgs-card-value" style={{ color: WRITE }}>{fmtInt(sum("writes"))}</div><PqgsNote facts={[{ label: "From", value: "inserts, merges, overwrites" }]} /></Card>
       </div>
-      {wsPick && <SchemaBreakdown workspaceId={wsPick} name={(wsOptions.find(([id]) => id === wsPick) || [])[1] || wsPick} window={filters.window} />}
+      {!wsPick && (
+        <div className="grid-2">
+          <Card title="Tables by class" right={<span className="muted">every table, not only the list below</span>}>
+            <HBarList items={CLASS_ORDER.map((k) => ({ name: CLASS_META[k].label, value: clsOf(k), color: CLASS_META[k].color }))}
+              valueFmt={(v) => `${fmtInt(v)} tables`} />
+            <div className="metric-note">{`${fmtBytes((t.totals || {}).size_in_bytes || 0)} measured in ${fmtInt((t.totals || {}).sized || 0)} of ${fmtInt(t.total)} tables; the rest weren't described.`}</div>
+          </Card>
+          <Card title="Largest tables" right={<span className="muted">colour = class</span>}>
+            {(t.largest || []).length ? <HBarList items={(t.largest || []).map((r: any) => ({ name: r.table_full_name, value: r.size_in_bytes || 0, color: CLASS_META[r.usage_class].color }))}
+              valueFmt={(v) => fmtBytes(v)} /> : <span className="muted">No table sizes in this export: run the sizes step.</span>}
+          </Card>
+        </div>
+      )}
+      <SchemaBreakdown workspaceId={wsPick} name={(wsOptions.find(([id]) => id === wsPick) || [])[1] || wsPick} window={filters.window} />
       <Card title="Tables" right={<span className="muted">click one for its detail</span>}>
         <div className="data-table-wrap">
           <table className="data">
@@ -428,23 +442,26 @@ function UsageTablesContent({ filters, onVerdict }: LooseProps) {
   );
 }
 
-// One workspace's catalogs, schema by schema: what is built, what is served, and how it is used.
+// Schema by schema, for one workspace or the biggest of every workspace: what is built, what is served, how it is used.
 function SchemaBreakdown({ workspaceId, name, window }: { workspaceId: string; name: string; window: number }) {
   const st = useApi(() => Api.workspaceSchemas(workspaceId, window), `${workspaceId}|${window}`);
   const d = st.phase === "ready" ? st.data : null;
   const rows: any[] = d ? d.schemas || [] : [];
   if (st.phase === "loading" || !rows.length) return null;
+  const all = !workspaceId;
   return (
-    <Card title={`${name} · by schema`} right={<span className="muted">{`catalogs it holds: ${d.catalogs.join(", ")}`}</span>}>
+    <Card title={all ? `The biggest ${fmtInt(rows.length)} of ${fmtInt(d.total)} schemas, every workspace` : `${name} · by schema`}
+      right={<span className="muted">{all ? "pick a workspace for all its schemas" : `catalogs it holds: ${d.catalogs.join(", ")}`}</span>}>
       <ClassLegend />
-      <div className="data-table-wrap"><table className="data">
-        <thead><tr><th>Schema</th><th className="num">Tables</th><th>Tables by class</th><th className="num">Columns</th><th className="num">Views</th>
+      <div className="data-table-wrap" style={{ maxHeight: 420, overflowY: "auto" }}><table className="data">
+        <thead><tr><th>Schema</th>{all ? <th>Workspace</th> : null}<th className="num">Tables</th><th>Tables by class</th><th className="num">Columns</th><th className="num">Views</th>
           <th className="num">View columns</th><th className="num">Volumes</th><th className="num">Volume files</th><th className="num">Size</th></tr></thead>
         <tbody>{rows.map((r) => {
           const n = CLASS_ORDER.reduce((a, k) => a + (r.classes[k] || 0), 0);
           return (
             <tr key={`${r.table_catalog}.${r.table_schema}`}>
               <td className="mono">{`${r.table_catalog}.${r.table_schema}`}</td>
+              {all ? <td>{r.workspace_name || "-"}</td> : null}
               <td className="num mono">{fmtInt(r.tables)}</td>
               <td style={{ minWidth: 120 }}>{n ? <div style={{ display: "flex", height: 10, borderRadius: 3, overflow: "hidden" }} title={CLASS_ORDER.map((k) => `${CLASS_META[k].label}: ${r.classes[k] || 0}`).join(" · ")}>
                 {CLASS_ORDER.filter((k) => r.classes[k]).map((k) => <div key={k} style={{ width: `${(100 * r.classes[k]) / n}%`, background: CLASS_META[k].color }} />)}
@@ -465,28 +482,26 @@ function SchemaBreakdown({ workspaceId, name, window }: { workspaceId: string; n
 }
 
 // ─────────── Table detail ───────────
-function Mirror({ daily }: { daily: any[] }) {
-  if (!daily.length) return <span className="muted">No read or write in the window.</span>;
-  const W = 1200, H = 200, mid = H / 2;
-  const max = Math.max(1, ...daily.map((d) => Math.max(d.reads || 0, d.writes || 0)));
-  const bw = W / daily.length;
+// every day of the window up to the export's last day; lineage only has the days with an event
+function windowDays(daily: any[], window: number): any[] {
+  const byDay = new Map(daily.map((d) => [String(d.day).slice(0, 10), d]));
+  const end = new Date(String(asOf || (daily.length ? daily[daily.length - 1].day : new Date().toISOString())).slice(0, 10) + "T00:00:00Z");
+  return Array.from({ length: window }, (_, i) => {
+    const day = new Date(end.getTime() - (window - 1 - i) * 86400000).toISOString().slice(0, 10);
+    const d: any = byDay.get(day) || {};
+    return { day, reads: d.reads || 0, writes: d.writes || 0 };
+  });
+}
+
+function Mirror({ daily, window }: { daily: any[]; window: number }) {
+  const last = windowDays(daily, window);
+  if (!last.some((d) => d.reads + d.writes)) return <span className="muted">{`No read or write in the last ${fmtInt(window)} days.`}</span>;
+  const reads = last.reduce((a, d) => a + (d.reads || 0), 0), writes = last.reduce((a, d) => a + (d.writes || 0), 0);
   return (
-    <svg viewBox={`0 0 ${W} ${H + 18}`} style={{ width: "100%", height: "auto" }} role="img" aria-label="Reads and writes per day">
-      <line x1={0} x2={W} y1={mid} y2={mid} stroke="#E4E1D8" />
-      {daily.map((d, i) => {
-        const r = ((d.reads || 0) / max) * (mid - 4), w = ((d.writes || 0) / max) * (mid - 4);
-        return (
-          <g key={d.day}>
-            <title>{`${d.day}: ${fmtInt(d.reads)} reads · ${fmtInt(d.writes)} writes`}</title>
-            <rect x={i * bw + 1} y={mid - r} width={Math.max(1, bw - 2)} height={r} fill={READ} />
-            <rect x={i * bw + 1} y={mid} width={Math.max(1, bw - 2)} height={w} fill={WRITE} />
-          </g>
-        );
-      })}
-      {[0, Math.floor(daily.length / 2), daily.length - 1].map((i) => (
-        <text key={i} x={Math.min(W - 50, i * bw)} y={H + 14} fontSize={12} fill="#625F59">{fmtDayShort(daily[i].day)}</text>
-      ))}
-    </svg>
+    <Columns days={last.map((d) => d.day)} wide={last.length <= 31} ariaLabel="Reads and writes per day"
+      series={[{ name: "Reads", values: last.map((d) => d.reads || 0), color: READ }, { name: "Writes", values: last.map((d) => d.writes || 0), color: WRITE }]}
+      valueFmt={(v) => fmtInt(v)} unitLabel="events"
+      note={`${fmtInt(reads)} reads and ${fmtInt(writes)} writes in ${fmtInt(last.length)} days${reads ? "" : ": nobody read it in the window"}.`} />
   );
 }
 
@@ -547,8 +562,8 @@ function TableDetail({ name, window, onBack }: { name: string; window: number; o
         <Card title="Last write"><div className="pqgs-card-value"><When v={d.last_write} /></div><PqgsNote facts={[{ label: "Who", value: lastWriter ? lastWriter.identity : "-" }]} /></Card>
         <Card title="Rows changed"><div className="pqgs-card-value">{d.rows_changed == null ? "-" : fmtInt(d.rows_changed)}</div><PqgsNote facts={[{ label: "From", value: "DESCRIBE HISTORY", detail: `last ${window} days` }]} /></Card>
       </div>
-      <Card title="Reads and writes per day" right={<span className="muted"><span style={{ color: READ }}>■ reads (up)</span>{"  "}<span style={{ color: WRITE }}>■ writes (down)</span></span>}>
-        {d.lineage ? <Mirror daily={d.daily || []} /> : <span className="muted">Lineage is not in this export.</span>}
+      <Card title="Reads and writes per day" right={<span className="muted">lineage events, stacked</span>}>
+        {d.lineage ? <Mirror daily={d.daily || []} window={window} /> : <span className="muted">Lineage is not in this export.</span>}
       </Card>
       <div className="grid-2">
         <Card title="Who reads and writes it">

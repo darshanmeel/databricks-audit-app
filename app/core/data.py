@@ -2048,9 +2048,10 @@ def _identity_kind(who: str | None) -> str:
     return "Person" if "@" in who else "Other"
 
 
-def read_workspace_schemas(workspace_id: str, window: int = 30) -> dict:
-    """Each schema of the catalogs one workspace holds: tables, views and their columns, volumes and
-    their files, size, and its tables by usage class; not_assessed without table sizes."""
+def read_workspace_schemas(workspace_id: str | None, window: int = 30, top: int = 50) -> dict:
+    """Each schema of the catalogs one workspace holds (every workspace when None, the biggest `top`):
+    tables, views and their columns, volumes and their files, size, and its tables by usage class;
+    not_assessed without table sizes."""
     from app.core import usage
 
     con = _connect()
@@ -2063,7 +2064,9 @@ def read_workspace_schemas(workspace_id: str, window: int = 30) -> dict:
         info_raw = con.execute("SELECT info FROM usage.workspace_activity_info LIMIT 1").fetchone() \
             if ("usage", "workspace_activity_info") in have else None
         end = _seen_end(json.loads(info_raw[0]) if info_raw and info_raw[0] else None)
-        catalogs = sorted(c for c, (ws, _s) in _catalog_homes(con, have).items() if ws == str(workspace_id))
+        homes = {c: ws for c, (ws, _s) in _catalog_homes(con, have).items()}
+        catalogs = sorted(c for c, ws in homes.items() if workspace_id is None or ws == str(workspace_id))
+        _home, names, _envs = _home_and_names(con, have)
         tbl = con.execute(
             "SELECT table_catalog, table_schema, COUNT(*) FILTER (WHERE detail IS DISTINCT FROM 'view'), "
             "COUNT(*) FILTER (WHERE detail = 'view'), SUM(column_count) FILTER (WHERE detail IS DISTINCT FROM 'view'), "
@@ -2090,9 +2093,13 @@ def read_workspace_schemas(workspace_id: str, window: int = 30) -> dict:
         if len(parts) == 3 and (parts[0], parts[1]) in by and not t["view"]:
             mix = by[(parts[0], parts[1])].setdefault("classes", {})
             mix[t["usage_class"]] = mix.get(t["usage_class"], 0) + 1
-    schemas = [{"table_catalog": c, "table_schema": s, "classes": {}, **r} for (c, s), r in by.items()]
+    schemas = [{"table_catalog": c, "table_schema": s, "classes": {}, "workspace_name": names.get(homes.get(c), homes.get(c)), **r}
+               for (c, s), r in by.items()]
     schemas.sort(key=lambda r: (-(r["size_in_bytes"] + r["volume_bytes"]), r["table_catalog"], r["table_schema"]))
-    return {"outcome": "ok_rows" if schemas else "ok_empty", "catalogs": catalogs, "schemas": schemas,
+    total = len(schemas)
+    if workspace_id is None:
+        schemas = schemas[:top]
+    return {"outcome": "ok_rows" if schemas else "ok_empty", "catalogs": catalogs, "schemas": schemas, "total": total,
             "classes": [k for k, _l, _m in usage.CLASSES]}
 
 
