@@ -939,8 +939,8 @@ def _links(w: dict, *fields: str) -> dict:
     return w
 
 
-CLASS_NOTE = (f"{WNR}: writes, no read in the window. {IDLE}: no read or write in {rules.IDLE_DAYS} days. "
-              f"{COOLING}: no read in the window. {ACTIVE}: read in the window.")
+CLASS_NOTE = (f"{WNR}: written in the Time Window, not read in it. {IDLE}: no read or write in the last {rules.IDLE_DAYS} days, whatever the Time Window. "
+              f"{COOLING}: not read in the Time Window, used within {rules.IDLE_DAYS} days. {ACTIVE}: read in the Time Window.")
 SIGNAL_COLORS = [("Retire candidate", "#C2362B"), ("Review", "#E0A93B"), ("Light", "#8E8B84"), ("Healthy", "#2456A6")]
 
 WS_COLS = [("workspace", "Workspace", "text"), ("workspace_link", "Open", "text"),

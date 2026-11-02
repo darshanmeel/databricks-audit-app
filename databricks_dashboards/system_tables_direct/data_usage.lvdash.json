@@ -2733,7 +2733,7 @@
               "frame": {
                 "title": "GB by class",
                 "showTitle": true,
-                "description": "Written, never read: writes, no read in the window. Idle 90d+: no read or write in 90 days. Cooling: no read in the window. Active: read in the window.",
+                "description": "Written, never read: written in the Time Window, not read in it. Idle 90d+: no read or write in the last 90 days, whatever the Time Window. Cooling: not read in the Time Window, used within 90 days. Active: read in the Time Window.",
                 "showDescription": true
               }
             }
@@ -3077,7 +3077,7 @@
               "frame": {
                 "title": "Where the data sits, by workspace",
                 "showTitle": true,
-                "description": "Written, never read: writes, no read in the window. Idle 90d+: no read or write in 90 days. Cooling: no read in the window. Active: read in the window.",
+                "description": "Written, never read: written in the Time Window, not read in it. Idle 90d+: no read or write in the last 90 days, whatever the Time Window. Cooling: not read in the Time Window, used within 90 days. Active: read in the Time Window.",
                 "showDescription": true
               },
               "mark": {
@@ -3712,7 +3712,7 @@
             "multilineTextboxSpec": {
               "lines": [
                 "### How it is measured\n",
-                "- **Classes:** Written, never read: writes, no read in the window. Idle 90d+: no read or write in 90 days. Cooling: no read in the window. Active: read in the window. A table created in the last 7 days counts as active.\n",
+                "- **Classes:** Written, never read: written in the Time Window, not read in it. Idle 90d+: no read or write in the last 90 days, whatever the Time Window. Cooling: not read in the Time Window, used within 90 days. Active: read in the Time Window. A table created in the last 7 days counts as active.\n",
                 "- **Complexity (0-100):** each input log-scaled against the largest workspace shown, `100 · ln(1+x) / ln(1+max)`: views 20%, view columns 15%, tables 20%, table columns 15%, volume files 10%, table size 20%.\n",
                 "- **Usage (0-100):** active people 35%, active service principals 15%, queries 30% (log-scaled); active days ÷ window days 20%.\n",
                 "- **Signal:** usage under 10 = Retire candidate; complexity 50+ and usage under 50 = Review; complexity under 50 = Light; else Healthy.\n",
@@ -6620,7 +6620,7 @@
               "frame": {
                 "title": "GB by class, per schema",
                 "showTitle": true,
-                "description": "Written, never read: writes, no read in the window. Idle 90d+: no read or write in 90 days. Cooling: no read in the window. Active: read in the window.",
+                "description": "Written, never read: written in the Time Window, not read in it. Idle 90d+: no read or write in the last 90 days, whatever the Time Window. Cooling: not read in the Time Window, used within 90 days. Active: read in the Time Window.",
                 "showDescription": true
               },
               "mark": {
@@ -12008,7 +12008,7 @@
               "frame": {
                 "title": "GB by class, by workspace",
                 "showTitle": true,
-                "description": "Written, never read: writes, no read in the window. Idle 90d+: no read or write in 90 days. Cooling: no read in the window. Active: read in the window.",
+                "description": "Written, never read: written in the Time Window, not read in it. Idle 90d+: no read or write in the last 90 days, whatever the Time Window. Cooling: not read in the Time Window, used within 90 days. Active: read in the Time Window.",
                 "showDescription": true
               },
               "mark": {
