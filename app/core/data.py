@@ -1744,18 +1744,22 @@ def _columns(con, schema: str, table: str) -> set[str]:
         "AND table_schema = ? AND table_name = ?", [schema, table]).fetchall()}
 
 
-def _table_access(con, have, window: int | None) -> tuple[str | None, int | None]:
-    """usage.table_access for one window (the smallest exported one covering `window`; None = the
-    largest), as a FROM clause; an export from before windows has one set of rows."""
-    if ("usage", "table_access") not in have:
+def _windowed(con, have, table: str, window: int | None) -> tuple[str | None, int | None]:
+    """usage.<table> for one window (the smallest exported one covering `window`; None = the largest),
+    as a FROM clause; an export from before windows has one set of rows."""
+    if ("usage", table) not in have:
         return None, None
-    if "window_days" not in _columns(con, "usage", "table_access"):
-        return "usage.table_access", None
-    got = [r[0] for r in con.execute("SELECT DISTINCT window_days FROM usage.table_access ORDER BY 1").fetchall()]
+    if "window_days" not in _columns(con, "usage", table):
+        return f"usage.{table}", None
+    got = [r[0] for r in con.execute(f"SELECT DISTINCT window_days FROM usage.{table} ORDER BY 1").fetchall()]
     if not got:
-        return "usage.table_access", None
+        return f"usage.{table}", None
     used = max(got) if window is None else min((w for w in got if w >= window), default=max(got))
-    return f"(SELECT * FROM usage.table_access WHERE window_days = {int(used)})", used
+    return f"(SELECT * FROM usage.{table} WHERE window_days = {int(used)})", used
+
+
+def _table_access(con, have, window: int | None) -> tuple[str | None, int | None]:
+    return _windowed(con, have, "table_access", window)
 
 
 def _table_classes(con, have, window: int, end) -> dict[str, dict]:
@@ -2116,7 +2120,8 @@ def read_person_tables(identity: str, window: int = 30) -> dict:
         info_raw = con.execute("SELECT info FROM usage.workspace_activity_info LIMIT 1").fetchone() \
             if ("usage", "workspace_activity_info") in have else None
         end = _seen_end(json.loads(info_raw[0]) if info_raw and info_raw[0] else None)
-        used = con.execute("SELECT table_full_name, workspace_id, reads, writes, last_access FROM usage.user_tables "
+        ut, _w = _windowed(con, have, "user_tables", window)
+        used = con.execute(f"SELECT table_full_name, workspace_id, reads, writes, last_access FROM {ut} "
                            "WHERE identity = ?", [identity]).fetchall()
         classes = _table_classes(con, have, window, end)
         sensitive = _sensitive(con, have)
@@ -2141,8 +2146,7 @@ def read_activity(window: int, workspace_scope: set[str] | None, workspace_id: s
     """Read and write events in the window, and how much is active: per workspace (or, with
     workspace_id, inside one) active tables, people and volumes of all, events per day, the most
     used tables and the most active people. Events count where they happened; a table's daily
-    events go to the workspace that used it most. A person's counts cover the export's longest
-    window (usage.user_tables), kept when they used a table inside this one."""
+    events go to the workspace that used it most when the export has no workspace per day."""
     import datetime as _dt
 
     con = _connect()
@@ -2167,14 +2171,17 @@ def read_activity(window: int, workspace_scope: set[str] | None, workspace_id: s
                  "WHERE detail IS DISTINCT FROM 'view'", ("storage", "table_detail") in have)
         vols = q("SELECT volume_catalog, volume_catalog || '.' || volume_schema || '.' || volume_name FROM storage.volume_detail",
                  ("storage", "volume_detail") in have)
-        vol_use = q("SELECT workspace_id, volume_full_name, identity, reads, writes, GREATEST(last_read, last_write) "
-                    "FROM usage.volume_access", ("usage", "volume_access") in have)
+        va, _w = _windowed(con, have, "volume_access", window)
+        vol_use = q(f"SELECT workspace_id, volume_full_name, identity, reads, writes, GREATEST(last_read, last_write) "
+                    f"FROM {va}", va is not None)
         seen = q("SELECT workspace_id, identity, last_seen FROM usage.user_last_seen", ("usage", "user_last_seen") in have) \
             + q("SELECT workspace_id, identity, last_seen FROM usage.user_access", ("usage", "user_access") in have)
-        used = q("SELECT workspace_id, identity, table_full_name, reads, writes, last_access FROM usage.user_tables",
-                 ("usage", "user_tables") in have)
-        daily = q(f"SELECT table_full_name, day, reads, writes FROM usage.table_daily WHERE day >= '{since}' AND day < '{end}'",
-                  ("usage", "table_daily") in have)
+        ut, _w = _windowed(con, have, "user_tables", window)
+        used = q(f"SELECT workspace_id, identity, table_full_name, reads, writes, last_access FROM {ut}", ut is not None)
+        # per workspace when the export has it, else one row per table
+        has_ws = ("usage", "table_daily") in have and "workspace_id" in _columns(con, "usage", "table_daily")
+        daily = q(f"SELECT table_full_name, {'workspace_id' if has_ws else 'NULL'}, day, reads, writes FROM usage.table_daily "
+                  f"WHERE day >= '{since}' AND day < '{end}'", ("usage", "table_daily") in have)
         classes = _table_classes(con, have, window, end) if workspace_id else {}
         home, names, _envs = _home_and_names(con, have)
     finally:
@@ -2253,10 +2260,14 @@ def read_activity(window: int, workspace_scope: set[str] | None, workspace_id: s
     days = [(end - _dt.timedelta(days=window - i)).isoformat() for i in range(window)]
     pos = {d: i for i, d in enumerate(days)}
 
+    def where(t, ws) -> str | None:
+        """The workspace a daily row counts for: its own, else the one that used the table most."""
+        return str(ws) if ws is not None else best.get(t, (0, None))[1]
+
     def heat(key_of) -> dict:
         out: dict[str, list] = {}
-        for t, day, r, w in daily:
-            k, i = key_of(t), pos.get(str(day)[:10])
+        for t, ws, day, r, w in daily:
+            k, i = key_of(t, where(t, ws)), pos.get(str(day)[:10])
             if k is not None and i is not None:
                 out.setdefault(k, [0] * window)[i] += int(r or 0) + int(w or 0)
         return out
@@ -2277,10 +2288,9 @@ def read_activity(window: int, workspace_scope: set[str] | None, workspace_id: s
            "totals": {"reads": sum(r["reads"] for r in rows), "writes": sum(r["writes"] for r in rows),
                       "tables_active": every("tables"), "tables": every("tables_all"), "people_active": every("people"),
                       "people": every("people_all"), "volumes_active": every("volumes"), "volumes": every("volumes_all")},
-           "workspaces": rows, "top_tables": top_tables[:10], "top_people": top_people[:10],
-           "people_days": max((info or {}).get("windows") or [window])}
+           "workspaces": rows, "top_tables": top_tables[:10], "top_people": top_people[:10]}
     if workspace_id is None:
-        h = heat(lambda t: best.get(t, (0, None))[1])
+        h = heat(lambda t, ws: ws)
         out["heat"] = [{"key": r["workspace_id"], "label": r["workspace_name"], "cells": h.get(r["workspace_id"], [0] * window)}
                        for r in rows]
         return out
@@ -2289,14 +2299,13 @@ def read_activity(window: int, workspace_scope: set[str] | None, workspace_id: s
     for t in a["tables_all"]:
         c = (classes.get(t) or {}).get("usage_class") or "idle_90d"
         mix[c] = mix.get(c, 0) + 1
-    mine = {t for t, (_e, ws) in best.items() if ws == str(workspace_id)}
     per_day = [{"day": d, "reads": 0, "writes": 0} for d in days]
-    for t, day, r, w in daily:
+    for t, ws, day, r, w in daily:
         i = pos.get(str(day)[:10])
-        if t in mine and i is not None:
+        if where(t, ws) == str(workspace_id) and i is not None:
             per_day[i]["reads"] += int(r or 0)
             per_day[i]["writes"] += int(w or 0)
-    h = heat(lambda t: t if t in mine else None)
+    h = heat(lambda t, ws: t if ws == str(workspace_id) else None)
     out.update({"workspace_name": name(workspace_id), "classes": mix, "daily": per_day,
                 # every table of the workspace, idle ones too: big and unused is the point
                 "bubbles": sorted(({**(tbl.get((str(workspace_id), t)) or {"table_full_name": t, "reads": 0, "writes": 0, "people": 0}),
@@ -2311,7 +2320,7 @@ def read_activity(window: int, workspace_scope: set[str] | None, workspace_id: s
     return out
 
 
-def read_volumes(workspace_scope: set[str] | None, tag_filter=None) -> dict:
+def read_volumes(workspace_scope: set[str] | None, tag_filter=None, window: int = 30) -> dict:
     """Every volume (storage.volume_detail) with its home workspace, files and size, and who read and
     wrote files in it (usage.volume_access), plus everyone who used a volume; not_assessed when
     this export has neither."""
@@ -2341,8 +2350,14 @@ def read_volumes(workspace_scope: set[str] | None, tag_filter=None) -> dict:
                 names[str(wid)], envs[str(wid)] = name, env
         vols = rows("SELECT volume_catalog || '.' || volume_schema || '.' || volume_name AS volume_full_name, volume_catalog, "
                     "volume_type, files, size_in_bytes, truncated, detail FROM storage.volume_detail") if listed else []
+        longest, _w = _windowed(con, have, "volume_access", None)
+        picked, _w = _windowed(con, have, "volume_access", window)
         access = rows("SELECT workspace_id, volume_full_name, identity, reads, writes, last_read, last_write "
-                      "FROM usage.volume_access") if accessed else []
+                      f"FROM {longest}") if accessed else []
+        counts = {(str(r[0]), r[1], r[2]): (r[3], r[4]) for r in con.execute(
+            f"SELECT workspace_id, volume_full_name, identity, reads, writes FROM {picked}").fetchall()} if accessed else {}
+        for a in access:
+            a["reads"], a["writes"] = counts.get((str(a["workspace_id"]), a["volume_full_name"], a["identity"]), (0, 0))
         kept = _tag_kept_workspaces(con, tag_filter)
         info_raw = con.execute("SELECT info FROM usage.workspace_activity_info LIMIT 1").fetchone() \
             if ("usage", "workspace_activity_info") in have else None
@@ -2378,7 +2393,8 @@ def read_volumes(workspace_scope: set[str] | None, tag_filter=None) -> dict:
                 "reads": 0, "writes": 0, "users": set(), "last_read": None, "last_write": None})
         v["reads"] += int(a["reads"] or 0)
         v["writes"] += int(a["writes"] or 0)
-        v["users"].add(a["identity"])
+        if (a["reads"] or 0) + (a["writes"] or 0):  # a user in the window; older use only dates the class
+            v["users"].add(a["identity"])
         if a["reads"]:
             v.setdefault("reader_set", set()).add(a["identity"])
         if a["writes"]:
@@ -2396,6 +2412,8 @@ def read_volumes(workspace_scope: set[str] | None, tag_filter=None) -> dict:
     out.sort(key=lambda v: (-(v["size_in_bytes"] or 0), v["volume_full_name"]))
     people: dict[str, dict] = {}
     for a in access:
+        if not (a["reads"] or 0) + (a["writes"] or 0):
+            continue
         p = people.setdefault(a["identity"], {"identity": a["identity"], "kind": _identity_kind(a["identity"]),
                                               "volumes": set(), "reads": 0, "writes": 0, "last_access": None})
         p["volumes"].add(a["volume_full_name"])
@@ -2408,15 +2426,19 @@ def read_volumes(workspace_scope: set[str] | None, tag_filter=None) -> dict:
             "volumes": out, "people": people_out[:500], "people_total": len(people_out)}
 
 
-def read_volume_users(volume_full_name: str) -> dict:
-    """Who read or wrote files in one volume, by workspace."""
+def read_volume_users(volume_full_name: str, window: int = 30) -> dict:
+    """Who read or wrote files in one volume in the window, by workspace."""
     con = _connect()
     try:
-        if not con.execute("SELECT 1 FROM information_schema.tables WHERE table_catalog = current_database() "
-                           "AND table_schema = 'usage' AND table_name = 'volume_access'").fetchone():
+        have = {(r[0], r[1]) for r in con.execute(
+            "SELECT table_schema, table_name FROM information_schema.tables WHERE table_catalog = current_database()"
+        ).fetchall()}
+        src, _w = _windowed(con, have, "volume_access", window)
+        if src is None:
             return {"outcome": "not_assessed", "rows": []}
-        cur = con.execute("SELECT identity, workspace_id, reads, writes, last_read, last_write FROM usage.volume_access "
-                          "WHERE volume_full_name = ? ORDER BY reads + writes DESC, identity", [volume_full_name])
+        cur = con.execute(f"SELECT identity, workspace_id, reads, writes, last_read, last_write FROM {src} "
+                          "WHERE volume_full_name = ? AND reads + writes > 0 ORDER BY reads + writes DESC, identity",
+                          [volume_full_name])
         cols = [d[0] for d in cur.description]
         out = [dict(zip(cols, r)) for r in cur.fetchall()]
     finally:
@@ -2498,6 +2520,7 @@ def read_tables(workspace_scope: set[str] | None, tag_filter=None, limit: int = 
     shown = [r for k, _l, _m in usage.CLASSES for r in [x for x in out if x["usage_class"] == k][:limit]]
     largest = sorted((r for r in out if not r["view"] and r["size_in_bytes"]), key=lambda r: -r["size_in_bytes"])[:9]
     return {"outcome": "ok_rows" if out else "ok_empty", "total": len(out), "window_days": used or window,
+            "sensitive_assessed": ("usage", "sensitive_columns") in have,
             "as_of": _seen_end(info).isoformat(), "totals": totals, "per_class_limit": limit,
             "classes": [{"key": k, "label": label, "meaning": meaning, "tables": counts[k],
                          "size_in_bytes": sum(r["size_in_bytes"] or 0 for r in out if r["usage_class"] == k)}
@@ -2532,13 +2555,20 @@ def read_table(full_name: str, window: int = 30) -> dict:
                      "WHERE table_catalog || '.' || table_schema || '.' || table_name = ?", [full_name]
                      ) if ("storage", "table_detail") in have else []
         home, names, envs = _home_and_names(con, have)
-        daily = rows("SELECT day, reads, writes, readers, writers FROM usage.table_daily WHERE table_full_name = ? ORDER BY day",
+        # readers and writers add up over workspaces: one person on two workspaces the same day counts twice
+        daily = rows("SELECT day, SUM(reads) AS reads, SUM(writes) AS writes, SUM(readers) AS readers, SUM(writers) AS writers "
+                     "FROM usage.table_daily WHERE table_full_name = ? GROUP BY day ORDER BY day",
                      [full_name]) if ("usage", "table_daily") in have else []
+        ut, _w = _windowed(con, have, "user_tables", window)
+        # a grant is unused only when its holder read nothing in the longest window
+        longest, _w = _windowed(con, have, "user_tables", None)
+        ever = {r[0] for r in con.execute(f"SELECT DISTINCT identity FROM {longest} WHERE table_full_name = ? AND reads > 0",
+                                          [full_name]).fetchall()} if longest else set()
         via = "string_agg(DISTINCT via, ', ')" if ("usage", "user_tables") in have \
             and "via" in _columns(con, "usage", "user_tables") else "NULL"
         users = rows("SELECT identity, SUM(reads) AS reads, SUM(writes) AS writes, MAX(last_access) AS last_access, "
-                     f"{via} AS via FROM usage.user_tables WHERE table_full_name = ? GROUP BY 1 ORDER BY 2 + 3 DESC",
-                     [full_name]) if ("usage", "user_tables") in have else []
+                     f"{via} AS via FROM {ut} WHERE table_full_name = ? GROUP BY 1 ORDER BY 2 + 3 DESC",
+                     [full_name]) if ut else []
         history = rows("SELECT version, timestamp, operation, user_name, metrics FROM storage.table_history "
                        "WHERE table_full_name = ? ORDER BY version DESC", [full_name]
                        ) if ("storage", "table_history") in have else []
@@ -2565,8 +2595,7 @@ def read_table(full_name: str, window: int = 30) -> dict:
     ws = home.get(str(f.get("table_catalog") or full_name.split(".")[0]))
     for node in upstream + downstream:
         node["usage_class"] = (every.get(node["name"]) or {}).get("usage_class")
-    readers = {u["identity"] for u in users if (u.get("reads") or 0) > 0}
-    unused_grants = None if grants is None else [g for g in grants if g["grantee"] not in readers]
+    unused_grants = None if grants is None else [g for g in grants if g["grantee"] not in ever]
     rows_changed = _rows_changed(history, window, _seen_end(json.loads(info_row[0]) if info_row and info_row[0] else None))
     for u in users:
         u["kind"] = _identity_kind(u["identity"])
@@ -2627,8 +2656,8 @@ def read_people(window: int, workspace_scope: set[str] | None) -> dict:
         end = _seen_end(info)
         access = con.execute("SELECT workspace_id, identity, last_seen, queries, tables_read, tables_written "
                              "FROM usage.user_access").fetchall()
-        used = con.execute("SELECT workspace_id, identity, table_full_name, reads, writes FROM usage.user_tables"
-                           ).fetchall() if ("usage", "user_tables") in have else []
+        ut, _w = _windowed(con, have, "user_tables", window)
+        used = con.execute(f"SELECT workspace_id, identity, table_full_name, reads, writes FROM {ut}").fetchall() if ut else []
         seen = con.execute("SELECT workspace_id, identity, last_seen FROM usage.user_last_seen"
                            ).fetchall() if ("usage", "user_last_seen") in have else []
         grants = con.execute("SELECT grantee, table_full_name FROM usage.table_grants"

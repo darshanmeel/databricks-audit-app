@@ -226,7 +226,11 @@ function UsageWorkspacesContent({ filters, goTo, onVerdict }: LooseProps) {
   const size = tot.size_in_bytes || 0;
   const unreadBytes = cls("written_never_read").size_in_bytes + cls("idle_90d").size_in_bytes;
   const woDaily = cls("written_never_read").tables;
-  const verdict = t && t.total
+  const noSizes = !!t && !((t.totals || {}).sized);
+  const noPii = !!t && t.sensitive_assessed === false;
+  const verdict = t && t.total && noSizes
+    ? `${fmtInt(t.total)} tables; their sizes are not in this export (Guide › Data usage › Sizes and volume files).`
+    : t && t.total
     ? `${fmtInt(t.total)} tables hold ${fmtBytes(size)}. ${fmtBytes(unreadBytes)} (${fmtPct(size ? (100 * unreadBytes) / size : 0, 0)}) is in tables nobody reads${woDaily ? `, and ${fmtInt(woDaily)} of them are still being written` : ""}.`
     : "Loading data usage...";
   React.useEffect(() => { if (onVerdict) onVerdict(verdict); }, [verdict, onVerdict]);
@@ -281,8 +285,9 @@ function UsageWorkspacesContent({ filters, goTo, onVerdict }: LooseProps) {
           <div className="pqgs-card-value">{p && p.outcome !== "not_assessed" ? `${fmtInt(p.active_people)} + ${fmtInt(p.service_principals)} SPs` : "-"}</div>
           <PqgsNote facts={[{ label: "Inactive 90d+", value: p && p.inactive ? fmtInt(p.inactive.length) : "-" }]} /></Card>
         <Card title="Tables with sensitive data">
-          <div className="pqgs-card-value" style={{ color: PII_INK }}>{fmtInt(tot.sensitive_tables || 0)}</div>
-          <PqgsNote facts={[{ label: "Nobody reads", value: fmtInt(tot.sensitive_unread || 0), tone: tot.sensitive_unread ? "warn" : "ok" }, { label: "Masked", value: fmtInt(tot.sensitive_masked || 0) }]} /></Card>
+          <div className="pqgs-card-value" style={{ color: PII_INK }}>{noPii ? "-" : fmtInt(tot.sensitive_tables || 0)}</div>
+          {noPii ? <div className="muted">Sensitive columns are not in this export: export again.</div>
+            : <PqgsNote facts={[{ label: "Nobody reads", value: fmtInt(tot.sensitive_unread || 0), tone: tot.sensitive_unread ? "warn" : "ok" }, { label: "Masked", value: fmtInt(tot.sensitive_masked || 0) }]} />}</Card>
       </div>
 
       {wrows.length > 1 && (
@@ -366,12 +371,12 @@ function UsageWorkspacesContent({ filters, goTo, onVerdict }: LooseProps) {
       </div>
 
       <Card title="Sensitive data" right={<span className="muted">column tags, data classification and column names</span>}>
-        <div className="pqgs-cards-grid">
+        {t.sensitive_assessed === false ? <span className="muted">Sensitive columns are not in this export: export again.</span> : <div className="pqgs-cards-grid">
           <div><div className="pqgs-card-value" style={{ color: PII_INK }}>{fmtInt(tot.sensitive_tables || 0)}</div><div className="muted">tables hold email, phone, address, IP, IBAN or similar columns</div></div>
           <div><div className="pqgs-card-value">{fmtInt(tot.sensitive_unread || 0)}</div><div className="muted">{`unread${sens.some((r) => r.usage_class === "written_never_read" || r.usage_class === "idle_90d") ? `: ${sens.filter((r) => r.usage_class === "written_never_read" || r.usage_class === "idle_90d").slice(0, 4).map((r) => r.table_full_name.split(".").pop()).join(", ")}` : ""}`}</div></div>
           <div><div className="pqgs-card-value">{fmtInt(tot.sensitive_outside_prod || 0)}</div><div className="muted">outside prod</div></div>
           <div><div className="pqgs-card-value">{fmtInt(tot.sensitive_masked || 0)}</div><div className="muted">with a column mask</div></div>
-        </div>
+        </div>}
       </Card>
     </div>
   );
@@ -423,7 +428,8 @@ function UsageTablesContent({ filters, onVerdict }: LooseProps) {
       </div>
       <div className="pqgs-cards-grid">
         <Card title="Showing"><div className="pqgs-card-value">{fmtInt(rows.length)}</div><PqgsNote facts={[{ label: "Of", value: `${fmtInt(t.total)} tables` }]} /></Card>
-        <Card title="Size"><div className="pqgs-card-value">{fmtBytes(sum("size_in_bytes"))}</div><PqgsNote facts={[{ label: "Of", value: fmtBytes(totalSize) }]} /></Card>
+        <Card title="Size">{(t.totals || {}).sized ? <React.Fragment><div className="pqgs-card-value">{fmtBytes(sum("size_in_bytes"))}</div><PqgsNote facts={[{ label: "Of", value: fmtBytes(totalSize) }]} /></React.Fragment>
+          : <React.Fragment><div className="pqgs-card-value">-</div><div className="muted">Not in this export: Guide › Data usage › Sizes and volume files.</div></React.Fragment>}</Card>
         <Card title={`Reads · ${t.window_days}d`}><div className="pqgs-card-value" style={{ color: READ }}>{fmtInt(sum("reads"))}</div><PqgsNote facts={[{ label: "From", value: "lineage read events" }]} /></Card>
         <Card title={`Writes · ${t.window_days}d`}><div className="pqgs-card-value" style={{ color: WRITE }}>{fmtInt(sum("writes"))}</div><PqgsNote facts={[{ label: "From", value: "inserts, merges, overwrites" }]} /></Card>
       </div>
@@ -573,7 +579,7 @@ function TableDetail({ name, window, onBack }: { name: string; window: number; o
   const todo: { text: string; sql: string }[] = [];
   if (unmasked.length) todo.push({ text: `Add column masks on ${unmasked.map((s) => s.column_name).join(", ")}: ${fmtInt(readers.length)} readers, none needs raw values to count rows.`,
     sql: unmasked.map((s) => `ALTER TABLE ${name} ALTER COLUMN ${s.column_name} SET MASK <your_mask_function>;`).join("\n") });
-  if ((d.unused_grants || []).length) todo.push({ text: `Revoke SELECT from ${d.unused_grants.map((g: any) => g.grantee).join(", ")}: no reads in the window.`,
+  if ((d.unused_grants || []).length) todo.push({ text: `Revoke SELECT from ${d.unused_grants.map((g: any) => g.grantee).join(", ")}: no reads in the longest exported window.`,
     sql: d.unused_grants.map((g: any) => `REVOKE SELECT ON TABLE ${name} FROM \`${g.grantee}\`;`).join("\n") });
   if (d.usage_class === "written_never_read") todo.push({ text: `Pause the writer: ${writers.map((u) => u.identity).join(", ") || "its job"} writes it and nobody reads it.`, sql: `-- pause the job or pipeline that writes ${name}` });
   if (d.usage_class === "idle_90d") todo.push({ text: "Archive or drop it: no read and no write in 90 days.", sql: `-- after checking with the owner:\n-- DROP TABLE ${name};` });
@@ -681,8 +687,8 @@ function TableDetail({ name, window, onBack }: { name: string; window: number; o
 
 // ─────────── Volumes ───────────
 function UsageVolumesContent({ filters, onVerdict }: LooseProps) {
-  const key = JSON.stringify([filters.workspaceIds, filters.envs, Api.tagParams()]);
-  const st = useApi(() => Api.volumes(filters.workspaceIds, filters.envs), key);
+  const key = JSON.stringify([filters.window, filters.workspaceIds, filters.envs, Api.tagParams()]);
+  const st = useApi(() => Api.volumes(filters.workspaceIds, filters.envs, filters.window), key);
   const [open, setOpen] = React.useState<string | null>(handoff.volume || null);
   React.useEffect(() => { handoff.volume = null; }, []);
   const d = st.phase === "ready" ? st.data : null;
@@ -737,7 +743,7 @@ function UsageVolumesContent({ filters, onVerdict }: LooseProps) {
         </div>
         {notListed.length ? <NotListed vols={notListed} /> : null}
       </Card>
-      {sel && <VolumeDetail v={sel} wsNames={new Map(vols.filter((x) => x.workspace_id).map((x) => [String(x.workspace_id), x.workspace_name]))} />}
+      {sel && <VolumeDetail v={sel} window={filters.window} wsNames={new Map(vols.filter((x) => x.workspace_id).map((x) => [String(x.workspace_id), x.workspace_name]))} />}
       <Card title="File reads and writes by workspace">
         {Array.from(byWs.entries()).sort((a, b) => b[1].r + b[1].w - (a[1].r + a[1].w)).map(([n, x]) => (
           <div key={n} style={{ display: "grid", gridTemplateColumns: "minmax(110px, 180px) 1fr 110px", gap: 10, alignItems: "center", margin: "6px 0", fontSize: 13 }}>
@@ -784,8 +790,8 @@ function NotListed({ vols }: { vols: any[] }) {
   );
 }
 
-function VolumeDetail({ v, wsNames }: { v: any; wsNames: Map<string, string> }) {
-  const st = useApi(() => Api.volumeUsers(v.volume_full_name), v.volume_full_name);
+function VolumeDetail({ v, wsNames, window }: { v: any; wsNames: Map<string, string>; window: number }) {
+  const st = useApi(() => Api.volumeUsers(v.volume_full_name, window), `${v.volume_full_name}|${window}`);
   const rows: any[] = st.phase === "ready" && st.data ? st.data.rows || [] : [];
   return (
     <Card title={`${v.volume_full_name}: who used it`} right={<ClassChip cls={v.usage_class} />}>

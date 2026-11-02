@@ -880,18 +880,19 @@ def get_person_tables(identity: str = Query(...), window: int = Query(default=30
 @app.get("/api/volumes")
 def get_volumes(
     request: Request,
+    window: int = Query(default=30),
     workspace_ids: list[str] = Query(default=[]),
     env: list[str] = Query(default=[]),
     tag: list[str] = Query(default=[]),
 ) -> dict:
     attributes = _read_attribute_filters(request, _canonical_keys()) or None
     scope = app_rollup._resolve_workspace_scope(workspace_ids or None, env or None, attributes)
-    return app_core_data.read_volumes(scope, _parse_tag_filter(None, None, tag))
+    return app_core_data.read_volumes(scope, _parse_tag_filter(None, None, tag), window)
 
 
 @app.get("/api/volume_users")
-def get_volume_users(volume: str = Query(...)) -> dict:
-    return app_core_data.read_volume_users(volume)
+def get_volume_users(volume: str = Query(...), window: int = Query(default=30)) -> dict:
+    return app_core_data.read_volume_users(volume, window)
 
 
 @app.get("/api/tables")

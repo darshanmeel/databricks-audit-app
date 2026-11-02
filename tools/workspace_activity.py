@@ -7,12 +7,12 @@ belongs to, for Governance > Workspaces. Plain statements, not checks:
   that reads and writes it most);
 - table_access: per window, workspace and table, last read and write, reads, writes, readers and writers;
 - user_access: per workspace and identity, last seen, logins, queries, tables read and written;
-- user_tables: per workspace and identity, the 50 tables it used most and when;
+- user_tables: per window, workspace and identity, the 50 tables it used most and when;
 - user_last_seen: per workspace and identity, its last audit event and last login over a year,
   so people who stopped coming show up as inactive;
-- volume_access: per workspace, volume and identity, reads and writes of files under /Volumes from
-  the audit log's file-system events;
-- table_daily: per table and day, reads, writes and readers (lineage);
+- volume_access: per window, workspace, volume and identity, reads and writes of files under /Volumes
+  from the audit log's file-system events;
+- table_daily: per table, workspace and day, reads, writes and readers (lineage);
 - table_maintenance: predictive optimization runs per table (compaction, vacuum, clustering);
 - table_edges: which table feeds which (lineage source -> target), with events and the last one;
 - table_grants: who holds SELECT (or ALL PRIVILEGES) on a table directly, not through its schema,
@@ -58,18 +58,18 @@ USER_SCHEMA = pa.schema([
     ("queries", pa.int64()), ("last_query", pa.string()), ("tables_read", pa.int64()), ("tables_written", pa.int64()),
 ])
 USER_TABLES_SCHEMA = pa.schema([
-    ("workspace_id", pa.string()), ("identity", pa.string()), ("table_full_name", pa.string()),
+    ("window_days", pa.int64()), ("workspace_id", pa.string()), ("identity", pa.string()), ("table_full_name", pa.string()),
     ("reads", pa.int64()), ("writes", pa.int64()), ("last_access", pa.string()), ("via", pa.string()),
 ])
-USER_TABLES_MAX = 50  # per workspace and identity
+USER_TABLES_MAX = 50  # per window, workspace and identity
 VOLUME_ACCESS_FILE = "volume_access.parquet"
 VOLUME_ACCESS_SCHEMA = pa.schema([
-    ("workspace_id", pa.string()), ("volume_full_name", pa.string()), ("identity", pa.string()),
+    ("window_days", pa.int64()), ("workspace_id", pa.string()), ("volume_full_name", pa.string()), ("identity", pa.string()),
     ("reads", pa.int64()), ("writes", pa.int64()), ("last_read", pa.string()), ("last_write", pa.string()),
 ])
 TABLE_DAILY_FILE = "table_daily.parquet"
 TABLE_DAILY_SCHEMA = pa.schema([
-    ("table_full_name", pa.string()), ("day", pa.string()), ("reads", pa.int64()), ("writes", pa.int64()),
+    ("table_full_name", pa.string()), ("workspace_id", pa.string()), ("day", pa.string()), ("reads", pa.int64()), ("writes", pa.int64()),
     ("readers", pa.int64()), ("writers", pa.int64()),
 ])
 MAINTENANCE_FILE = "table_maintenance.parquet"
@@ -289,28 +289,40 @@ WHERE k.workspace_id IS NOT NULL AND k.who IS NOT NULL
 """
 
 
-def user_tables_sql(end: dt.date, days: int) -> str:
+def _windows(windows: list[int] | int) -> list[int]:
+    return sorted({int(x) for x in ([windows] if isinstance(windows, int) else windows)})
+
+
+def user_tables_sql(end: dt.date, windows: list[int] | int) -> str:
+    """Per window, workspace and identity: the tables it used most, its reads and writes of each."""
     e = f"DATE'{end.isoformat()}'"
+    ws = _windows(windows)
     return f"""
-WITH {_lineage(e, days)},
+WITH {_lineage(e, max(ws))},
+w AS (SELECT explode(array({", ".join(map(str, ws))})) AS days),
 per AS (
-  SELECT workspace_id, who, table_full_name, COUNT(DISTINCT CASE WHEN is_read = 1 THEN k END) AS reads,
-         COUNT(DISTINCT CASE WHEN is_write = 1 THEN k END) AS writes, MAX(event_time) AS last_access,
-         concat_ws(', ', array_sort(collect_set(entity_type))) AS via
-  FROM lin WHERE workspace_id IS NOT NULL AND who IS NOT NULL
-  GROUP BY 1, 2, 3
+  SELECT w.days, l.workspace_id, l.who, l.table_full_name, COUNT(DISTINCT CASE WHEN l.is_read = 1 THEN l.k END) AS reads,
+         COUNT(DISTINCT CASE WHEN l.is_write = 1 THEN l.k END) AS writes, MAX(l.event_time) AS last_access,
+         concat_ws(', ', array_sort(collect_set(l.entity_type))) AS via
+  FROM lin l JOIN w ON l.event_time >= date_sub({e}, w.days)
+  WHERE l.workspace_id IS NOT NULL AND l.who IS NOT NULL
+  GROUP BY 1, 2, 3, 4
 )
-SELECT workspace_id, who AS identity, table_full_name, reads, writes, CAST(last_access AS STRING) AS last_access, via
+SELECT days AS window_days, workspace_id, who AS identity, table_full_name, reads, writes,
+       CAST(last_access AS STRING) AS last_access, via
 FROM per
-QUALIFY ROW_NUMBER() OVER (PARTITION BY workspace_id, who ORDER BY reads + writes DESC, table_full_name) <= {USER_TABLES_MAX}
+QUALIFY ROW_NUMBER() OVER (PARTITION BY days, workspace_id, who ORDER BY reads + writes DESC, table_full_name) <= {USER_TABLES_MAX}
 """
 
 
-def volume_access_sql(end: dt.date, days: int) -> str:
-    """Files read and written under /Volumes per workspace, volume and identity (file-system events)."""
+def volume_access_sql(end: dt.date, windows: list[int] | int) -> str:
+    """Files read and written under /Volumes per window, workspace, volume and identity (file-system events)."""
     e = f"DATE'{end.isoformat()}'"
+    ws = _windows(windows)
+    days = max(ws)
     return f"""
-WITH ev AS (
+WITH w AS (SELECT explode(array({", ".join(map(str, ws))})) AS days),
+ev AS (
   SELECT CAST(workspace_id AS STRING) AS workspace_id, event_time,
          lower(COALESCE(user_identity.email, user_identity.subject_name)) AS identity,
          COALESCE(request_params['path'], request_params['file_path'], request_params['directory_path']) AS path,
@@ -319,29 +331,30 @@ WITH ev AS (
   WHERE event_date >= date_sub({e}, {days}) AND event_date < {e}
     AND service_name = 'filesystem' AND response.status_code = 200 AND workspace_id IS NOT NULL
 )
-SELECT workspace_id, regexp_extract(path, '^/Volumes/([^/]+)/([^/]+)/([^/]+)', 1) || '.' ||
+SELECT w.days AS window_days, ev.workspace_id,
+       regexp_extract(path, '^/Volumes/([^/]+)/([^/]+)/([^/]+)', 1) || '.' ||
          regexp_extract(path, '^/Volumes/([^/]+)/([^/]+)/([^/]+)', 2) || '.' ||
          regexp_extract(path, '^/Volumes/([^/]+)/([^/]+)/([^/]+)', 3) AS volume_full_name,
        identity, COUNT_IF(NOT is_write) AS reads, COUNT_IF(is_write) AS writes,
        CAST(MAX(CASE WHEN NOT is_write THEN event_time END) AS STRING) AS last_read,
        CAST(MAX(CASE WHEN is_write THEN event_time END) AS STRING) AS last_write
-FROM ev
+FROM ev JOIN w ON ev.event_time >= date_sub({e}, w.days)
 WHERE path RLIKE '^/Volumes/[^/]+/[^/]+/[^/]+'
-GROUP BY 1, 2, 3
+GROUP BY 1, 2, 3, 4
 """
 
 
 def table_daily_sql(end: dt.date, days: int) -> str:
-    """Reads and writes per table and day, and how many identities did each."""
+    """Reads and writes per table, workspace and day, and how many identities did each."""
     e = f"DATE'{end.isoformat()}'"
     return f"""
 WITH {_lineage(e, days)}
-SELECT table_full_name, CAST(CAST(event_time AS DATE) AS STRING) AS day,
+SELECT table_full_name, workspace_id, CAST(CAST(event_time AS DATE) AS STRING) AS day,
        COUNT(DISTINCT CASE WHEN is_read = 1 THEN k END) AS reads, COUNT(DISTINCT CASE WHEN is_write = 1 THEN k END) AS writes,
        COUNT(DISTINCT CASE WHEN is_read = 1 THEN who END) AS readers,
        COUNT(DISTINCT CASE WHEN is_write = 1 THEN who END) AS writers
 FROM lin
-GROUP BY 1, 2
+GROUP BY 1, 2, 3
 """
 
 
@@ -464,9 +477,9 @@ def export(connect_fn: Callable, out_dir: Path, *, end: dt.date, windows: list[i
             ("catalogs", catalog_sql(end, max(windows)), CATALOG_FILE, CATALOG_SCHEMA),
             ("tables", table_access_sql(end, windows), TABLE_FILE, TABLE_SCHEMA),
             ("users", user_access_sql(end, max(windows)), USER_FILE, USER_SCHEMA),
-            ("user_tables", user_tables_sql(end, max(windows)), USER_TABLES_FILE, USER_TABLES_SCHEMA),
+            ("user_tables", user_tables_sql(end, windows), USER_TABLES_FILE, USER_TABLES_SCHEMA),
             ("last_seen", last_seen_sql(end), LAST_SEEN_FILE, LAST_SEEN_SCHEMA),
-            ("volume_access", volume_access_sql(end, max(windows)), VOLUME_ACCESS_FILE, VOLUME_ACCESS_SCHEMA),
+            ("volume_access", volume_access_sql(end, windows), VOLUME_ACCESS_FILE, VOLUME_ACCESS_SCHEMA),
             ("table_daily", table_daily_sql(end, max(windows)), TABLE_DAILY_FILE, TABLE_DAILY_SCHEMA),
             ("table_maintenance", maintenance_sql(end, max(windows)), MAINTENANCE_FILE, MAINTENANCE_SCHEMA),
             ("table_edges", table_edges_sql(end, max(windows)), EDGES_FILE, EDGES_SCHEMA),

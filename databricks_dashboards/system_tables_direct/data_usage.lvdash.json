@@ -4386,11 +4386,20 @@
                   "displayName": "Read and write events",
                   "scale": {
                     "type": "quantitative",
+                    "domain": {
+                      "min": 0
+                    },
                     "colorRamp": {
-                      "mode": "scheme",
-                      "scheme": "blues"
+                      "mode": "custom-sequential",
+                      "colors": {
+                        "start": "#EFF3FF",
+                        "end": "#2456A6"
+                      }
                     }
                   }
+                },
+                "label": {
+                  "show": false
                 }
               },
               "frame": {
@@ -9357,11 +9366,20 @@
                   "displayName": "Read and write events",
                   "scale": {
                     "type": "quantitative",
+                    "domain": {
+                      "min": 0
+                    },
                     "colorRamp": {
-                      "mode": "scheme",
-                      "scheme": "blues"
+                      "mode": "custom-sequential",
+                      "colors": {
+                        "start": "#EFF3FF",
+                        "end": "#2456A6"
+                      }
                     }
                   }
+                },
+                "label": {
+                  "show": false
                 }
               },
               "frame": {

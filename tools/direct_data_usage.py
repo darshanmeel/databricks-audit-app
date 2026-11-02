@@ -979,7 +979,8 @@ def _heat(key: str, d: Dataset, row: str, row_title: str, title: str, desc: str)
             "x": {"fieldName": "day", "displayName": "Day", "scale": {"type": "categorical"}},
             "y": {"fieldName": row, "displayName": row_title, "scale": {"type": "categorical"}},
             "color": {"fieldName": "sum(events)", "displayName": "Read and write events",
-                      "scale": {"type": "quantitative", "colorRamp": {"mode": "scheme", "scheme": "blues"}}},
+                      "scale": {"type": "quantitative", "domain": {"min": 0},
+                      "colorRamp": {"mode": "custom-sequential", "colors": {"start": "#EFF3FF", "end": "#2456A6"}}}}, "label": {"show": False},
         },
         "frame": {"title": title, "showTitle": True, "showDescription": True, "description": desc},
     }}}

@@ -248,7 +248,6 @@ function UsageActivityContent({ filters, goTo, onVerdict, setManyWorkspaces }: L
     </div>
   );
   const people = (d.top_people || []).map((p: any) => ({ key: p.identity, label: p.identity, sub: `${p.tables} tables${ws ? "" : ` · ${p.workspaces.length} ws`}`, r: p.reads, w: p.writes, open: () => toPerson(p.identity) }));
-  const peopleNote = d.people_days > filters.window ? `Counts over ${d.people_days} days for people who used a table in the window` : "";
   if (!ws) {
     const rows: any[] = d.workspaces || [];
     return (
@@ -279,7 +278,7 @@ function UsageActivityContent({ filters, goTo, onVerdict, setManyWorkspaces }: L
           <Card title="Most used tables" right={<span className="muted">all workspaces · click one</span>}>
             <RWBars rows={(d.top_tables || []).map((x: any) => ({ key: `${x.workspace_id}|${x.table_full_name}`, label: x.table_full_name, sub: x.workspace_name, r: x.reads, w: x.writes, open: () => toTable(x.table_full_name) }))} />
           </Card>
-          <Card title="Most active people" right={<span className="muted">{peopleNote || "all workspaces · click one"}</span>}>
+          <Card title="Most active people" right={<span className="muted">all workspaces · click one</span>}>
             <RWBars rows={people} />
           </Card>
         </div>
@@ -318,7 +317,7 @@ function UsageActivityContent({ filters, goTo, onVerdict, setManyWorkspaces }: L
         <Card title="Most used tables" right={<span className="muted">click one</span>}>
           <RWBars rows={(d.top_tables || []).map((x: any) => ({ key: x.table_full_name, label: x.table_full_name, sub: `${x.people} people`, r: x.reads, w: x.writes, open: () => toTable(x.table_full_name) }))} />
         </Card>
-        <Card title="Most active people" right={<span className="muted">{peopleNote || "click one"}</span>}>
+        <Card title="Most active people" right={<span className="muted">click one</span>}>
           <RWBars rows={people} />
         </Card>
       </div>

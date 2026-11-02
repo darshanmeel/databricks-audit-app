@@ -143,15 +143,18 @@ def add(db: Path) -> dict:
                            ", ".join(sorted(set(writers))[:3]) if w_w else None))
         if written_only:  # its writer is a job's service principal
             for who in writers:
-                user_tables.append((ws, who, full, 0, writes, last_write, "JOB"))
+                for w in WINDOWS:
+                    user_tables.append((w, ws, who, full, 0, max(1, writes * w // 90), last_write, "JOB"))
             continue
         if last < 30:
             for d in range(30):
                 r = rnd.randint(0, reads // 20 + 1)
-                daily.append((full, (END - timedelta(days=d)).isoformat(), r, 0 if view else rnd.randint(0, 3), min(r, 4), 0 if view else 1))
+                daily.append((full, ws, (END - timedelta(days=d)).isoformat(), r, 0 if view else rnd.randint(0, 3), min(r, 4), 0 if view else 1))
         for who in rnd.sample(PEOPLE[ws], k=min(2, len(PEOPLE[ws]))):
-            user_tables.append((ws, who, full, rnd.randint(1, reads), rnd.randint(0, writes), ts(last),
-                                rnd.choice(["DBSQL_QUERY", "NOTEBOOK", "DASHBOARD", "JOB, NOTEBOOK"])))
+            r, wr, via = rnd.randint(1, reads), rnd.randint(0, writes), rnd.choice(["DBSQL_QUERY", "NOTEBOOK", "DASHBOARD", "JOB, NOTEBOOK"])
+            for w in WINDOWS:  # in a window only when last used inside it
+                if last < w:
+                    user_tables.append((w, ws, who, full, max(1, r * w // 90), wr * w // 90, ts(last), via))
         if not view and rnd.random() < 0.4:
             maint.append((full, ts(rnd.randint(1, 20), 3), rnd.choice(["COMPACTION", "VACUUM", "ANALYZE"]), "SUCCESSFUL",
                           round(rnd.uniform(0.1, 4.0), 2), "ESTIMATED_DBU"))
@@ -162,8 +165,8 @@ def add(db: Path) -> dict:
     put(con, "usage.table_access", "window_days BIGINT, workspace_id VARCHAR, table_full_name VARCHAR, last_read VARCHAR, "
         "last_write VARCHAR, reads BIGINT, writes BIGINT, readers BIGINT, writers BIGINT, reader_names VARCHAR, "
         "writer_names VARCHAR", access)
-    put(con, "usage.table_daily", "table_full_name VARCHAR, day VARCHAR, reads BIGINT, writes BIGINT, readers BIGINT, writers BIGINT", daily)
-    put(con, "usage.user_tables", "workspace_id VARCHAR, identity VARCHAR, table_full_name VARCHAR, reads BIGINT, writes BIGINT, "
+    put(con, "usage.table_daily", "table_full_name VARCHAR, workspace_id VARCHAR, day VARCHAR, reads BIGINT, writes BIGINT, readers BIGINT, writers BIGINT", daily)
+    put(con, "usage.user_tables", "window_days BIGINT, workspace_id VARCHAR, identity VARCHAR, table_full_name VARCHAR, reads BIGINT, writes BIGINT, "
         "last_access VARCHAR, via VARCHAR", user_tables)
     put(con, "usage.table_maintenance", "table_full_name VARCHAR, start_time VARCHAR, operation_type VARCHAR, "
         "operation_status VARCHAR, usage_quantity DOUBLE, usage_unit VARCHAR", maint)
@@ -217,9 +220,13 @@ def add(db: Path) -> dict:
         ws = CATALOGS[cat][0]
         for who in rnd.sample(PEOPLE[ws], k=min(2, len(PEOPLE[ws]))):
             last = rnd.choice([0, 3, 15, 50])
-            va.append((ws, f"{cat}.{sch}.{name}", who, rnd.randint(1, 400), rnd.randint(0, 80), ts(last), ts(last + 2)))
-    va.append(("2005", "analytics.ml.unlisted_models", "hana@acme.example", 12, 3, ts(4), ts(4)))
-    put(con, "usage.volume_access", "workspace_id VARCHAR, volume_full_name VARCHAR, identity VARCHAR, reads BIGINT, "
+            r, wr = rnd.randint(1, 400), rnd.randint(0, 80)
+            for w in WINDOWS:  # in a window only when last used inside it
+                if last < w:
+                    va.append((w, ws, f"{cat}.{sch}.{name}", who, max(1, r * w // 90), wr * w // 90, ts(last), ts(last + 2)))
+    for w in WINDOWS:
+        va.append((w, "2005", "analytics.ml.unlisted_models", "hana@acme.example", max(1, 12 * w // 90), 3 * w // 90, ts(4), ts(4)))
+    put(con, "usage.volume_access", "window_days BIGINT, workspace_id VARCHAR, volume_full_name VARCHAR, identity VARCHAR, reads BIGINT, "
         "writes BIGINT, last_read VARCHAR, last_write VARCHAR", va)
     # usage.table_edges: what each table is built from; usage.table_grants: direct SELECT grants
     put(con, "usage.table_edges", "source VARCHAR, target VARCHAR, events BIGINT, last_event VARCHAR", [
