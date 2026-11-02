@@ -4,6 +4,7 @@
 // AreaPage renders this once, above the reference-only checks table (OVERVIEW_IDS).
 
 import React from "react";
+import { TONE_DAYS, toneColors, trendTones } from "../components/trend_tone";
 
 import { Api } from "../api";
 import { estLabel, fmtChangeVs, fmtDayShort, fmtDbu, fmtInt, fmtMoney, fmtMoneyShort, fmtPct } from "../format";
@@ -982,6 +983,7 @@ function SpendOverviewContent({ filters, dims, meta, goTo, setVerdict, allFindin
                       <Columns
                         days={dailyDays}
                         series={[{ name: "Spend", values: dailyValues }]}
+                        tones={toneColors(trendTones(dailyValues, TONE_DAYS, dailyValues.map((_: any, i: number) => i === dailyValues.length - 1 && !!(meta && meta.direct_export && meta.direct_export.includes_today))))}
                         markers={markers}
                         partial={meta && meta.direct_export && meta.direct_export.includes_today ? [dailyDays[dailyDays.length - 1]] : null}
                         valueFmt={(v) => fmtMoney(v, 0)}

@@ -4,6 +4,7 @@
 // owns the cards and panels in between. Old strip/SubTabNav body fully replaced.
 
 import React from "react";
+import { TONE_COLOR, TONE_DAYS, toneColors, trendTones } from "../components/trend_tone";
 
 import { Api } from "../api";
 import { estLabel, fmtChange, fmtDate, fmtDayMonth, fmtDayShort, fmtDbu, fmtInt, fmtMoney, fmtMoneyShort, fmtPct } from "../format";
@@ -57,16 +58,16 @@ function costGridMax(grid: number[][] | null): number {
 // -- "steady" (3 full priors, within +-15%) reads --c1, same as before; a month with fewer than 3
 // full priors carries no tone at all and must never reuse that same blue, or it silently reads as
 // a verdict ("steady") this app never actually reached.
-const MONTH_TONE_VAR: Record<string, string> = { crit: "var(--st-crit)", warn: "var(--st-warn)", calm: "var(--st-ok)", steady: "var(--c1)" };
+const MONTH_TONE_VAR: Record<string, string> = TONE_COLOR;
 function monthToneColor(tone: string | null): string { return MONTH_TONE_VAR[String(tone)] || "var(--c-other)"; }
 
 // MonthBarLegend -- the one key Cost's "By calendar month" and Money's month chart show beside
 // buildMonthBars' bars, so the colour rule reads the same everywhere.
 const MONTH_LEGEND: [string | null, string][] = [
-  ["crit", "Up 30% or more"],
-  ["warn", "Up 15% or more"],
-  ["steady", "Steady"],
-  ["calm", "Down 15% or more"],
+  ["crit", "30%+ over"],
+  ["warn", "15-30% over"],
+  ["calm", "30%+ under"],
+  ["steady", "No run yet; in between keeps the colour before"],
   [null, "Under 3 months of history"],
 ];
 function MonthBarLegend() {
@@ -435,6 +436,7 @@ function CostTrendContent({ findings, filters, meta, maxCat, onVerdict }: TabPro
           <Columns
             days={dailyShown.map((d) => d.day)}
             series={[{ name: "$ per day", values: dailyShown.map((d) => d.value) }]}
+            tones={toneColors(trendTones(dailyShown.map((d) => d.value), TONE_DAYS, dailyShown.map((d, i) => i === dailyShown.length - 1 && !!(meta && meta.direct_export && meta.direct_export.includes_today))))}
             markers={markers}
             partial={meta && meta.direct_export && meta.direct_export.includes_today && dailyShown.length ? [dailyShown[dailyShown.length - 1].day] : null}
             valueFmt={(v) => fmtMoneyShort(v)}

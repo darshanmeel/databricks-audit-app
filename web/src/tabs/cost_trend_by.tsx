@@ -1,6 +1,7 @@
 // Cost > Trend: spend by workspace, warehouse or SKU, by day or by month. The chart stacks the top 5,
 // the table lists every one, and the picked one gets its own daily and monthly bars.
 import React from "react";
+import { TONE_DAYS, TONE_MONTHS, toneColors, trendTones } from "../components/trend_tone";
 
 import { estLabel, fmtDayShort, fmtInt, fmtMoney, fmtMoneyShort } from "../format";
 import { useNames, wsPhrase } from "../components/names";
@@ -271,12 +272,12 @@ export function TrendItemCard({ name, byDay, days, byMonth, months, monthNote, o
       <div className="grid-2">
         <div>
           <div className="chart-card-title">By day</div>
-          <Columns days={dKeys} series={[{ name: "$ per day", values: dVals }]} valueFmt={(v) => fmtMoneyShort(v)} unitLabel="$" dollarAxis partial={[partDay]} note={dayNote} ariaLabel={`${name} by day`} />
+          <Columns days={dKeys} series={[{ name: "$ per day", values: dVals }]} tones={toneColors(trendTones(dVals, TONE_DAYS, dKeys.map((k) => k === partDay)))} valueFmt={(v) => fmtMoneyShort(v)} unitLabel="$" dollarAxis partial={[partDay]} note={dayNote} ariaLabel={`${name} by day`} />
         </div>
         <div>
           <div className="chart-card-title">By month</div>
           {mKeys.length > 1
-            ? <Columns days={mKeys} series={[{ name: "$ per month", values: mVals }]} valueFmt={(v) => fmtMoneyShort(v)} unitLabel="$" dollarAxis xFmt={(k) => fmtMonth(k)} xName="Month" partial={mKeys.filter((k) => !isFull(k))}
+            ? <Columns days={mKeys} series={[{ name: "$ per month", values: mVals }]} tones={toneColors(trendTones(mVals, TONE_MONTHS, mKeys.map((k) => !isFull(k))))} valueFmt={(v) => fmtMoneyShort(v)} unitLabel="$" dollarAxis xFmt={(k) => fmtMonth(k)} xName="Month" partial={mKeys.filter((k) => !isFull(k))}
                 note={`${monthParts.join(" · ")}${monthParts.length ? ". " : ""}${monthNote}`} ariaLabel={`${name} by month`} />
             : <div className="muted">{`Only ${mKeys.length ? fmtMonth(mKeys[0]) : "one month"} in this window: pick a longer window for a monthly trend.`}</div>}
         </div>

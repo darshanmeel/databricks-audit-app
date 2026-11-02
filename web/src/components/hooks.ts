@@ -7,6 +7,8 @@
 // unchanged for ChartNote to render.
 
 import React from "react";
+import { TONE_MONTHS, nextTone } from "./trend_tone";
+import type { Tone } from "./trend_tone";
 
 import { Api, type AggOptions } from "../api";
 import type {
@@ -519,23 +521,20 @@ export function buildMonthBars(groups: AggGroup[] | null, discountPct: number | 
       }
     }
   });
+  let run: Tone | null = null;
   const withTone = all.map((m, i, arr): MonthBar => {
     let tone: MonthBar["tone"] = null, changePct: number | null = null;
     if (!m.partial) {
-      const prior3 = arr.slice(Math.max(0, i - 3), i).filter((p) => !p.partial);
-      if (prior3.length === 3) {
-        const avg3 = prior3.reduce((s, p) => s + p.total, 0) / 3;
+      const prior3 = arr.slice(Math.max(0, i - TONE_MONTHS), i).filter((p) => !p.partial);
+      if (prior3.length === TONE_MONTHS) {
+        const avg3 = prior3.reduce((s, p) => s + p.total, 0) / TONE_MONTHS;
         if (avg3 > 0) {
           changePct = ((m.total - avg3) / avg3) * 100;
-          if (changePct >= 30) tone = "crit";
-          else if (changePct >= 15) tone = "warn";
-          else if (changePct <= -15) tone = "calm";
-          else tone = "steady";
-        } else if (m.total > 0) {
-          tone = "crit"; // real spend where the trailing 3 months were flat $0
+          run = nextTone(changePct, run);
         } else {
-          tone = "steady";
+          run = m.total > 0 ? "crit" : run || "steady"; // real spend where the trailing 3 months were flat $0
         }
+        tone = run;
       }
     }
     const d = new Date(`${m.key}T00:00:00Z`);

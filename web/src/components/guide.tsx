@@ -285,7 +285,7 @@ const GUIDE_TABS: Record<string, GuideTabInfo> = {
       { sub: "pricing", d: "Usage-policy and tag coverage, effective price by SKU, restatements, egress and cloud infra." },
     ],
     measure: "Usage rows joined to the list price valid for that SKU and time.",
-    judge: "Spend cuts are Ranked; coverage and spike checks flag against config/thresholds.yml.",
+    judge: "Spend cuts are Ranked; coverage and spike checks flag against config/thresholds.yml. Spend bars by day or month are coloured against the average of the 7 days (or 3 months) before: 30%+ under turns green, 15-30% over orange, 30%+ over red; anything in between keeps the colour before, so a green or red run lasts until spend moves again. Today and the month so far don't count.",
     price: "Usage × list price (effective); unpriced SKU-days are listed, never added.",
     troubles: [
       { see: "Most spend is untagged", why: "Compute was created without the cost-center tag; account-level SKUs carry no workspace.", doit: "Enforce the tag with a cluster or budget policy." },

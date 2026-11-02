@@ -15,6 +15,7 @@ import { fmtDayShort } from "../format";
 import { CHART_OTHER_COLOR, CHART_UNTAGGED_BG, CHART_UNTAGGED_LINE, ChartFrame, HatchDef, RoundRect, chartLabel, foldTopNOther, inkForFill, niceTicks, paletteColor, tipText, useChartWidth, useHatchId, useThemeVersion } from "./charts";
 import type { ChartTable, LegendItem } from "./charts";
 import type { Entry } from "../types";
+import { TONE_LEGEND } from "./trend_tone";
 
 type ValueFmt = (v: number) => string;
 /** Ranked bars may show a formatted cell (e.g. a missing-value tip), not only text. */
@@ -187,12 +188,13 @@ export function RankedBars({
 
 // ─────────── Columns -- daily columns stacked by series (fold at 5 + Other, colours never cycle),
 // with optional marker days (e.g. a cost spike). `partial` keys (today, the month so far) draw
-// hatched, faded and outlined, and their axis label gets a "½". ───────────
-export function Columns({ days, series, markers, valueFmt, unitLabel, width = 760, height = 220, n = 5, note, ariaLabel, dollarAxis, xFmt, xName = "Day", wide, partial }: {
+// hatched, faded and outlined, and their axis label gets a "½". `tones` recolours a single series'
+// bars one by one (components/trend_tone.ts). ───────────
+export function Columns({ days, series, markers, valueFmt, unitLabel, width = 760, height = 220, n = 5, note, ariaLabel, dollarAxis, xFmt, xName = "Day", wide, partial, tones }: {
   days: string[] | null; series: ColumnSeries[] | null; markers?: { day: string; label?: string }[] | null;
   valueFmt?: ValueFmt; unitLabel?: string; width?: number; height?: number; n?: number; note?: React.ReactNode;
   ariaLabel?: string; dollarAxis?: boolean; xFmt?: (key: string) => string; xName?: string; wide?: boolean;
-  partial?: (string | null | undefined)[] | null;
+  partial?: (string | null | undefined)[] | null; tones?: (string | null)[] | null;
 }) {
   const hatchId = useHatchId();
   const [measureRef, W] = useChartWidth(width);
@@ -242,8 +244,10 @@ export function Columns({ days, series, markers, valueFmt, unitLabel, width = 76
   const seriesLegend = plotSeries.length >= 2
     ? plotSeries.map((s) => ({ label: s.name, color: s.hatch ? CHART_UNTAGGED_LINE : s.color, hatch: !!s.hatch, bg: CHART_UNTAGGED_BG }))
     : null;
-  const legend = partialSet.size
-    ? [...(seriesLegend || []), { label: "partial", color: CHART_UNTAGGED_LINE, hatch: true, bg: CHART_UNTAGGED_BG }]
+  const toned = plotSeries.length === 1 && tones && tones.some(Boolean) ? tones : null;
+  const toneLegend = toned ? [{ label: "near the average before", color: plotSeries[0].color }, ...TONE_LEGEND.filter((t) => toned.includes(t.color))] : [];
+  const legend = partialSet.size || toned
+    ? [...(seriesLegend || []), ...toneLegend, ...(partialSet.size ? [{ label: "partial", color: CHART_UNTAGGED_LINE, hatch: true, bg: CHART_UNTAGGED_BG }] : [])]
     : seriesLegend;
   const table: ChartTable = {
     columns: [{ key: "day", label: xName }, ...plotSeries.map((s, i) => ({ key: `s${i}`, label: s.name, align: "right" }))],
@@ -284,7 +288,7 @@ export function Columns({ days, series, markers, valueFmt, unitLabel, width = 76
                   const y0 = yOf(acc), y1 = yOf(acc + v);
                   acc += v;
                   const isTop = si === plotSeries.length - 1 || plotSeries.slice(si + 1).every((later) => !(Number(later.values[di]) > 0));
-                  const fill = s.hatch ? `url(#${hatchId})` : s.color;
+                  const fill = s.hatch ? `url(#${hatchId})` : (toned && toned[di]) || s.color;
                   return (
                     <RoundRect
                       key={si} x={x} y={y1} w={barW} h={Math.max(0, y0 - y1)} r={isTop ? 4 : 0}
