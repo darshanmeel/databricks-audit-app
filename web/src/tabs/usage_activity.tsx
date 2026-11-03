@@ -7,7 +7,7 @@ import { fmtBytes, fmtInt } from "../format";
 import { AreaContent, Card, PqgsNote } from "../components/primitives";
 import { Donut } from "../components/charts";
 import { Columns } from "../components/charts_more";
-import { CLASS_META, Scatter, handoff } from "./tab_usage";
+import { CLASS_META, Scatter, envColors, handoff } from "./tab_usage";
 
 const READ = "#2456A6";
 const WRITE = "#D27A2C";
@@ -27,6 +27,11 @@ function useActivity(window: number, ids: string[] | null, envs: string[] | null
   return st.key === key ? st : { phase: "loading", data: null, key };
 }
 
+// 530,950 -> 531k, so a count never wraps
+function short(n: number): string {
+  return n >= 1e6 ? `${(n / 1e6).toFixed(n >= 1e7 ? 0 : 1)}M` : n >= 1e4 ? `${Math.round(n / 1e3)}k` : fmtInt(n);
+}
+
 function Link({ text, onClick }: { text: string; onClick: () => void }) {
   return <button type="button" className="ba-pick" title={text} onClick={onClick}
     style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "100%", textAlign: "left" }}>{text}</button>;
@@ -39,7 +44,7 @@ function RWBars({ rows }: { rows: { key: string; label: string; sub?: string; r:
   return (
     <div>
       {rows.map((x) => (
-        <div key={x.key} style={{ display: "grid", gridTemplateColumns: "minmax(120px, 34%) 1fr 92px", gap: 10, alignItems: "center", margin: "5px 0", fontSize: 13 }}>
+        <div key={x.key} style={{ display: "grid", gridTemplateColumns: "minmax(120px, 34%) 1fr 104px", gap: 10, alignItems: "center", margin: "5px 0", fontSize: 13 }}>
           <div style={{ minWidth: 0, overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis" }}>
             {x.open ? <Link text={x.label} onClick={x.open} /> : x.label}
             {x.sub ? <span className="muted" style={{ fontSize: 11.5, marginLeft: 6 }}>{x.sub}</span> : null}
@@ -47,7 +52,7 @@ function RWBars({ rows }: { rows: { key: string; label: string; sub?: string; r:
           <div style={{ display: "flex", height: 14, borderRadius: 3, overflow: "hidden", background: "var(--panel-2, #eee)" }} title={`${fmtInt(x.r)} reads · ${fmtInt(x.w)} writes`}>
             <div style={{ width: `${(100 * x.r) / max}%`, background: READ }} /><div style={{ width: `${(100 * x.w) / max}%`, background: WRITE }} />
           </div>
-          <span className="mono muted" style={{ textAlign: "right", fontSize: 12 }}>{`${fmtInt(x.r)} · ${fmtInt(x.w)}`}</span>
+          <span className="mono muted" style={{ textAlign: "right", fontSize: 12, whiteSpace: "nowrap" }} title={`${fmtInt(x.r)} reads · ${fmtInt(x.w)} writes`}>{`${short(x.r)} · ${short(x.w)}`}</span>
         </div>
       ))}
       <Legend />
@@ -67,12 +72,12 @@ function Legend() {
 // Active of all, per workspace: tables, people with access, volumes.
 function InUse({ rows, open }: { rows: any[]; open: (id: string) => void }) {
   const bar = (a: number, of: number, c: string) => (
-    <div style={{ display: "grid", gridTemplateColumns: "1fr 52px", gap: 6, alignItems: "center" }} title={`${a} of ${of}`}>
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 76px", gap: 6, alignItems: "center", minWidth: 0 }} title={`${fmtInt(a)} of ${fmtInt(of)}`}>
       <div style={{ height: 12, borderRadius: 3, overflow: "hidden", background: "var(--panel-2, #eee)" }}><div style={{ height: "100%", width: `${of ? (100 * a) / of : 0}%`, background: c }} /></div>
-      <span className="mono muted" style={{ fontSize: 11.5 }}>{`${a}/${of}`}</span>
+      <span className="mono muted" style={{ fontSize: 11.5, whiteSpace: "nowrap" }}>{`${short(a)}/${short(of)}`}</span>
     </div>
   );
-  const grid = { display: "grid", gridTemplateColumns: "minmax(110px, 24%) 1fr 1fr 1fr", gap: 10, alignItems: "center", margin: "5px 0", fontSize: 13 } as const;
+  const grid = { display: "grid", gridTemplateColumns: "minmax(110px, 24%) repeat(3, minmax(0, 1fr))", gap: 10, alignItems: "center", margin: "5px 0", fontSize: 13 } as const;
   return (
     <div>
       <div className="muted" style={{ ...grid, fontSize: 12 }}><span /><span>Tables</span><span>People</span><span>Volumes</span></div>
@@ -122,7 +127,8 @@ function placeLabels(items: { key: string; x: number; y: number; text: string }[
 }
 
 // Read events across, write events up, bubble = people; a click opens it.
-function Bubbles({ rows, size, open }: { rows: { key: string; label: string; r: number; w: number; s: number }[]; size: string; open: (key: string) => void }) {
+function Bubbles({ rows, size, open, legend }: { rows: { key: string; label: string; r: number; w: number; s: number; c?: string }[]; size: string;
+  open: (key: string) => void; legend?: [string, string][] }) {
   if (!rows.length) return <span className="muted">Nothing read or written in the window.</span>;
   const W = 620, H = 280, P = 36, R = 110;
   const mx = Math.max(1, ...rows.map((x) => x.r)), my = Math.max(1, ...rows.map((x) => x.w)), ms = Math.max(1, ...rows.map((x) => x.s));
@@ -140,14 +146,17 @@ function Bubbles({ rows, size, open }: { rows: { key: string; label: string; r: 
         <text x={8} y={18} fontSize={11} fill="currentColor" opacity={0.7}>Write events</text>
         {[...rows].sort((a, b) => b.s - a.s).map((x) => (
           <g key={x.key} style={{ cursor: "pointer" }} onClick={() => open(x.key)}>
-            <circle cx={X(x.r)} cy={Y(x.w)} r={rad(x.s)} fill={READ} fillOpacity={0.3} stroke={READ}>
+            <circle cx={X(x.r)} cy={Y(x.w)} r={rad(x.s)} fill={x.c || READ} fillOpacity={0.45} stroke={x.c || READ}>
               <title>{`${x.label}: ${fmtInt(x.r)} reads, ${fmtInt(x.w)} writes, ${fmtInt(x.s)} ${size}`}</title>
             </circle>
             {labelled.has(x.key) && <text x={X(x.r) + rad(x.s) + 3} y={Y(x.w) + 4} fontSize={10.5} fill="currentColor">{short(x.label)}</text>}
           </g>
         ))}
       </svg>
-      <div className="pqgs-card-note">{`Bubble = ${size}. Bottom right: read, rarely written. Top left: written, rarely read.`}</div>
+      <div className="pqgs-card-note">
+        {(legend || []).map(([l, c]) => <span key={l} style={{ marginRight: 12 }}><span className="legend-dot" style={{ background: c }} />{` ${l}`}</span>)}
+        {`Bubble = ${size}. Bottom right: read, rarely written. Top left: written, rarely read.`}
+      </div>
     </div>
   );
 }
@@ -250,6 +259,7 @@ function UsageActivityContent({ filters, goTo, onVerdict, setManyWorkspaces }: L
   const people = (d.top_people || []).map((p: any) => ({ key: p.identity, label: p.identity, sub: `${p.tables} tables${ws ? "" : ` · ${p.workspaces.length} ws`}`, r: p.reads, w: p.writes, open: () => toPerson(p.identity) }));
   if (!ws) {
     const rows: any[] = d.workspaces || [];
+    const envs = envColors(rows);
     return (
       <div>
         {pick}{cards}
@@ -262,8 +272,9 @@ function UsageActivityContent({ filters, goTo, onVerdict, setManyWorkspaces }: L
           </Card>
         </div>
         <div className="grid-2">
-          <Card title="Workspaces: reads against writes" right={<span className="muted">click a bubble</span>}>
-            <Bubbles rows={rows.filter((r) => r.reads + r.writes).map((r) => ({ key: r.workspace_id, label: r.workspace_name, r: r.reads, w: r.writes, s: r.people_active }))} size="active people" open={setWs} />
+          <Card title="Workspaces: reads against writes" right={<span className="muted">colour = env · click a bubble</span>}>
+            <Bubbles rows={rows.filter((r) => r.reads + r.writes).map((r) => ({ key: r.workspace_id, label: r.workspace_name, r: r.reads, w: r.writes, s: r.people_active, c: envs[r.env || "unknown"] }))}
+              size="active people" open={setWs} legend={Object.entries(envs)} />
           </Card>
           <Card title="Activity per workspace per day" right={<span className="muted">a table counts in the workspace using it most</span>}>
             <Heat rows={(d.heat || []).slice(0, 15)} days={d.days} open={setWs} />
@@ -301,8 +312,10 @@ function UsageActivityContent({ filters, goTo, onVerdict, setManyWorkspaces }: L
         </Card>
       </div>
       <div className="grid-2">
-        <Card title="Tables: reads against writes" right={<span className="muted">click a bubble</span>}>
-          <Bubbles rows={(d.bubbles || []).filter((x: any) => x.reads + x.writes).map((x: any) => ({ key: x.table_full_name, label: x.table_full_name.split(".").slice(1).join("."), r: x.reads, w: x.writes, s: x.people }))} size="people using it" open={toTable} />
+        <Card title="Tables: reads against writes" right={<span className="muted">colour = usage class · click a bubble</span>}>
+          <Bubbles rows={(d.bubbles || []).filter((x: any) => x.reads + x.writes).map((x: any) => ({ key: x.table_full_name, label: x.table_full_name.split(".").slice(1).join("."), r: x.reads, w: x.writes, s: x.people,
+            c: (CLASS_META[x.usage_class] || CLASS_META.idle_90d).color }))} size="people using it" open={toTable}
+            legend={CLASS_ORDER.filter((k) => (d.bubbles || []).some((x: any) => x.usage_class === k && x.reads + x.writes)).map((k) => [CLASS_META[k].label, CLASS_META[k].color] as [string, string])} />
         </Card>
         <Card title="Tables: size against activity" right={<span className="muted">colour = usage class · click a bubble</span>}>
           <SizeBubbles rows={d.bubbles || []} open={toTable} />

@@ -137,7 +137,7 @@ function csv(rows: any[][]): void {
   URL.revokeObjectURL(a.href);
 }
 
-function envColors(rows: any[]): Record<string, string> {
+export function envColors(rows: any[]): Record<string, string> {
   const envs = Array.from(new Set(rows.map((r) => r.env || "unknown"))).sort();
   return Object.fromEntries(envs.map((e, i) => [e, paletteColor(i)]));
 }
@@ -211,10 +211,13 @@ export function ActivityByWorkspacePanel({ filters, maxCat }: LooseProps) {
 
 // ─────────── Workspaces ───────────
 function UsageWorkspacesContent({ filters, goTo, onVerdict }: LooseProps) {
+  const [pick, setPick] = React.useState("");
+  const ids = pick ? [pick] : filters.workspaceIds;
   const key = JSON.stringify([filters.window, filters.workspaceIds, filters.envs, Api.tagParams()]);
+  const picked = JSON.stringify([key, pick]);
   const ws = useApi(() => Api.workspaceUsage(filters.window, filters.workspaceIds, filters.envs), key);
-  const tb = useApi(() => Api.tables(filters.workspaceIds, filters.envs, filters.window), key);
-  const pp = useApi(() => Api.people(filters.window, filters.workspaceIds, filters.envs), key);
+  const tb = useApi(() => Api.tables(ids, filters.envs, filters.window), picked);
+  const pp = useApi(() => Api.people(filters.window, ids, filters.envs), picked);
   const [sort, setSort] = React.useState<{ k: string; dir: number }>({ k: "unread_bytes", dir: -1 });
   const w = ws.phase === "ready" ? ws.data : null;
   const t = tb.phase === "ready" ? tb.data : null;
@@ -245,7 +248,8 @@ function UsageWorkspacesContent({ filters, goTo, onVerdict }: LooseProps) {
   const reads = tot.reads || 0;
   const writes = tot.writes || 0;
   const sens = tables.filter((r) => r.sensitive && r.sensitive.length);
-  const wrows: any[] = w && w.outcome !== "not_assessed" ? w.rows || [] : [];
+  const allWs: any[] = w && w.outcome !== "not_assessed" ? w.rows || [] : [];
+  const wrows = pick ? allWs.filter((r) => String(r.workspace_id) === pick) : allWs;
   const sorted = [...wrows].sort((a, b) => sort.dir * ((a[sort.k] ?? -1) > (b[sort.k] ?? -1) ? 1 : (a[sort.k] ?? -1) < (b[sort.k] ?? -1) ? -1 : 0));
   const th = (label: string, k: string, num = true) => (
     <th className={num ? "num" : ""} style={{ cursor: "pointer", whiteSpace: "nowrap" }} onClick={() => setSort({ k, dir: sort.k === k ? -sort.dir : -1 })}>
@@ -254,12 +258,22 @@ function UsageWorkspacesContent({ filters, goTo, onVerdict }: LooseProps) {
   );
   const big: any[] = t.largest || [];
   const bigMax = Math.max(1, ...big.map((r) => (r.reads || 0) + (r.writes || 0)));
+  // without sizes the split is by table count
+  const share = (c: { n: number; bytes: number }) => (noSizes ? (t.total ? (100 * c.n) / t.total : 0) : size ? (100 * c.bytes) / size : 0);
   return (
     <div>
-      <Card title={`Where the ${fmtBytes(size)} sits, by how it is used`} right={<span className="muted">every table in exactly one class · size from DESCRIBE DETAIL</span>}>
+      <div className="ws-actions" style={{ flexWrap: "wrap" }}>
+        <select value={pick} onChange={(e) => setPick(e.target.value)} aria-label="Workspace" style={{ padding: "6px 8px", borderRadius: 8 }}>
+          <option value="">Workspace: all</option>
+          {[...allWs].sort((a, b) => String(a.workspace_name).localeCompare(String(b.workspace_name)))
+            .map((r) => <option key={r.workspace_id} value={String(r.workspace_id)}>{r.workspace_name}{r.env ? ` · ${r.env}` : ""}</option>)}
+        </select>
+      </div>
+      <Card title={noSizes ? "Where the tables sit, by how they are used" : `Where the ${fmtBytes(size)} sits, by how it is used`}
+        right={<span className="muted">{noSizes ? "every table in exactly one class · sizes not in this export" : "every table in exactly one class · size from DESCRIBE DETAIL"}</span>}>
         <div style={{ display: "flex", height: 26, borderRadius: 6, overflow: "hidden", margin: "4px 0 14px" }}>
-          {byClass.filter((c) => c.bytes > 0).map((c) => (
-            <div key={c.k} title={`${CLASS_META[c.k].label}: ${fmtBytes(c.bytes)}`} style={{ width: `${(100 * c.bytes) / (size || 1)}%`, background: CLASS_META[c.k].color }} />
+          {byClass.filter((c) => share(c) > 0).map((c) => (
+            <div key={c.k} title={`${CLASS_META[c.k].label}: ${noSizes ? `${fmtInt(c.n)} tables` : fmtBytes(c.bytes)}`} style={{ width: `${share(c)}%`, background: CLASS_META[c.k].color }} />
           ))}
         </div>
         <div className="pqgs-cards-grid">
@@ -267,8 +281,8 @@ function UsageWorkspacesContent({ filters, goTo, onVerdict }: LooseProps) {
             <button key={c.k} type="button" className="card" onClick={() => toTables({ cls: c.k })}
               style={{ textAlign: "left", cursor: "pointer", padding: 14, border: "1px solid var(--line, #E4E1D8)", borderTop: `4px solid ${CLASS_META[c.k].color}`, borderRadius: 10, background: "var(--card, #fff)" }}>
               <div style={{ fontWeight: 600 }}>{CLASS_META[c.k].label}</div>
-              <div className="pqgs-card-value">{fmtBytes(c.bytes)}</div>
-              <div className="muted">{`${fmtInt(c.n)} tables · ${fmtPct(size ? (100 * c.bytes) / size : 0, 0)}`}</div>
+              <div className="pqgs-card-value">{noSizes ? fmtInt(c.n) : fmtBytes(c.bytes)}</div>
+              <div className="muted">{noSizes ? `tables · ${fmtPct(share(c), 0)} of tables` : `${fmtInt(c.n)} tables · ${fmtPct(share(c), 0)}`}</div>
               <div style={{ marginTop: 6, fontSize: 12.5, color: "var(--ink-2, #3D3B37)" }}>{(t.classes.find((x: any) => x.key === c.k) || {}).meaning}</div>
               <div style={{ marginTop: 6, fontSize: 12.5, color: "#1F4E99" }}>{`${CLASS_META[c.k].action} →`}</div>
             </button>

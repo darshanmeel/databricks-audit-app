@@ -2183,7 +2183,7 @@ def read_activity(window: int, workspace_scope: set[str] | None, workspace_id: s
         daily = q(f"SELECT table_full_name, {'workspace_id' if has_ws else 'NULL'}, day, reads, writes FROM usage.table_daily "
                   f"WHERE day >= '{since}' AND day < '{end}'", ("usage", "table_daily") in have)
         classes = _table_classes(con, have, window, end) if workspace_id else {}
-        home, names, _envs = _home_and_names(con, have)
+        home, names, envs = _home_and_names(con, have)
     finally:
         con.close()
 
@@ -2275,7 +2275,7 @@ def read_activity(window: int, workspace_scope: set[str] | None, workspace_id: s
     top_tables = sorted(tbl.values(), key=lambda x: (-(x["reads"] + x["writes"]), x["table_full_name"]))
     top_people = sorted(({**p, "tables": len(p["tables"]), "workspaces": sorted(p["workspaces"])} for p in ppl.values()),
                         key=lambda p: (-(p["reads"] + p["writes"]), p["identity"]))
-    rows = sorted(({"workspace_id": ws, "workspace_name": name(ws), "reads": a["reads"], "writes": a["writes"],
+    rows = sorted(({"workspace_id": ws, "workspace_name": name(ws), "env": envs.get(ws), "reads": a["reads"], "writes": a["writes"],
                     "file_reads": a["file_reads"], "file_writes": a["file_writes"],
                     "tables_active": len(a["tables"]), "tables": len(a["tables_all"]), "people_active": len(a["people"]),
                     "people": len(a["people_all"]), "volumes_active": len(a["volumes"]), "volumes": len(a["volumes_all"])}
