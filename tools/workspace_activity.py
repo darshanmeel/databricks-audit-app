@@ -15,6 +15,8 @@ belongs to, for Governance > Workspaces. Plain statements, not checks:
 - table_daily: per table, workspace and day, reads, writes and readers (lineage);
 - table_maintenance: predictive optimization runs per table (compaction, vacuum, clustering) and their metrics;
 - table_queries: per window and table, its 10 slowest queries (query history joined to lineage by statement);
+- table_other_access: per window and table, reads and writes with no query in query history (jobs,
+  notebooks and pipelines on classic compute), by identity and through what, the 10 biggest;
 - table_query_daily: per table and day, queries reading it, their time, files read and pruned, and how
   many read without pruning a file;
 - table_edges: which table feeds which (lineage source -> target), with events and the last one;
@@ -89,6 +91,11 @@ TABLE_QUERIES_SCHEMA = pa.schema([
     ("status", pa.string()), ("total_ms", pa.int64()), ("read_bytes", pa.int64()), ("read_files", pa.int64()),
     ("pruned_files", pa.int64()), ("read_rows", pa.int64()), ("produced_rows", pa.int64()), ("warehouse_id", pa.string()),
     ("text", pa.string()),
+])
+TABLE_OTHER_FILE = "table_other_access.parquet"
+TABLE_OTHER_SCHEMA = pa.schema([
+    ("window_days", pa.int64()), ("table_full_name", pa.string()), ("access", pa.string()), ("via", pa.string()),
+    ("identity", pa.string()), ("events", pa.int64()), ("last_event", pa.string()), ("table_events", pa.int64()),
 ])
 TABLE_QUERY_DAILY_FILE = "table_query_daily.parquet"
 TABLE_QUERY_DAILY_SCHEMA = pa.schema([
@@ -432,6 +439,44 @@ QUALIFY ROW_NUMBER() OVER (PARTITION BY w.days, st.table_full_name ORDER BY q.to
 """
 
 
+def table_other_sql(end: dt.date, windows: list[int] | int) -> str:
+    """Per window and table, lineage reads and writes whose statement is not in query history: who,
+    through what (JOB, NOTEBOOK, PIPELINE...), how many; table_events is all of them for the table."""
+    e = f"DATE'{end.isoformat()}'"
+    ws = _windows(windows)
+    days = max(ws)
+    key = ("concat_ws('|', COALESCE(CAST(entity_run_id AS STRING), CAST(entity_id AS STRING), ''), "
+           "COALESCE(created_by, ''), CAST(event_time AS STRING))")
+    return f"""
+WITH w AS (SELECT explode(array({", ".join(map(str, ws))})) AS days),
+lin AS (
+  SELECT statement_id, source_table_full_name AS t, 'read' AS access, entity_type, lower(created_by) AS who, event_time, {key} AS k
+  FROM system.access.table_lineage
+  WHERE event_date >= date_sub({e}, {days}) AND event_date < {e} AND source_table_full_name IS NOT NULL
+  UNION ALL
+  SELECT statement_id, target_table_full_name, 'write', entity_type, lower(created_by), event_time, {key}
+  FROM system.access.table_lineage
+  WHERE event_date >= date_sub({e}, {days}) AND event_date < {e} AND target_table_full_name IS NOT NULL
+),
+qs AS (
+  SELECT DISTINCT statement_id FROM system.query.history
+  WHERE start_time >= date_sub({e}, {days}) AND start_time < {e}
+),
+per AS (
+  SELECT w.days, l.t, l.access, COALESCE(l.entity_type, 'unknown') AS via, l.who, COUNT(DISTINCT l.k) AS events,
+         MAX(l.event_time) AS last_event
+  FROM lin l JOIN w ON l.event_time >= date_sub({e}, w.days)
+  LEFT JOIN qs ON qs.statement_id = l.statement_id
+  WHERE qs.statement_id IS NULL
+  GROUP BY 1, 2, 3, 4, 5
+)
+SELECT days AS window_days, t AS table_full_name, access, via, who AS identity, events, CAST(last_event AS STRING) AS last_event,
+       SUM(events) OVER (PARTITION BY days, t) AS table_events
+FROM per
+QUALIFY ROW_NUMBER() OVER (PARTITION BY days, t ORDER BY events DESC, who, access, via) <= {TABLE_QUERIES_MAX}
+"""
+
+
 def table_query_daily_sql(end: dt.date, days: int) -> str:
     """Per table and day: queries reading it, their time, bytes and files read and pruned, and how
     many pruned nothing out of FULL_SCAN_FILES or more files."""
@@ -562,6 +607,7 @@ def export(connect_fn: Callable, out_dir: Path, *, end: dt.date, windows: list[i
             ("table_maintenance", maintenance_sql(end, max(windows)), MAINTENANCE_FILE, MAINTENANCE_SCHEMA),
             ("table_queries", table_queries_sql(end, windows), TABLE_QUERIES_FILE, TABLE_QUERIES_SCHEMA),
             ("table_query_daily", table_query_daily_sql(end, max(windows)), TABLE_QUERY_DAILY_FILE, TABLE_QUERY_DAILY_SCHEMA),
+            ("table_other_access", table_other_sql(end, windows), TABLE_OTHER_FILE, TABLE_OTHER_SCHEMA),
             ("table_edges", table_edges_sql(end, max(windows)), EDGES_FILE, EDGES_SCHEMA),
             ("table_grants", table_grants_sql(), GRANTS_FILE, GRANTS_SCHEMA),
             ("sensitive_columns", sensitive_columns_sql(), SENSITIVE_FILE, SENSITIVE_SCHEMA),

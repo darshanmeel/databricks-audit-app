@@ -504,6 +504,7 @@ const GUIDE_TABS: Record<string, GuideTabInfo> = {
       "Changes and maintenance hold each table's last 100 DESCRIBE HISTORY operations and run with the sizes; without them only predictive optimization shows.",
       "Reads before and after a compaction compare 7 days each side and need 3+ reads on both; other changes in that time count too.",
       "Slowest queries come from query history (SQL warehouses and serverless only), matched to the table through lineage; a join's bytes and files show on each table it reads.",
+      "Jobs, notebooks and pipelines on classic compute show under Not in query history with who, how often and when; their time, bytes and files are not available.",
     ],
     extra: [
       { h: "Sizes and volume files (storage)", items: [

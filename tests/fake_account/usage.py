@@ -304,6 +304,16 @@ def _table_queries(con, daily: list[tuple]) -> None:
         "statement_id VARCHAR, identity VARCHAR, start_time VARCHAR, statement_type VARCHAR, status VARCHAR, total_ms BIGINT, "
         "read_bytes BIGINT, read_files BIGINT, pruned_files BIGINT, read_rows BIGINT, produced_rows BIGINT, warehouse_id VARCHAR, "
         "text VARCHAR", rows)
+    # jobs and notebooks on classic compute: in lineage, not in query history
+    other = []
+    for t in tables:
+        ws = CATALOGS[t.split(".")[0]][0]
+        picks = [("write", "JOB", SPS.get(ws, PEOPLE[ws])[0], rnd.randint(20, 90), 1), ("read", "NOTEBOOK", rnd.choice(PEOPLE[ws]), rnd.randint(1, 40), 3)]
+        for w in WINDOWS:
+            mine = [(w, t, a, via, who, max(1, n * w // 90), ts(last, 4)) for a, via, who, n, last in picks]
+            other += [m + (sum(x[5] for x in mine),) for m in mine]
+    put(con, "usage.table_other_access", "window_days BIGINT, table_full_name VARCHAR, access VARCHAR, via VARCHAR, identity VARCHAR, "
+        "events BIGINT, last_event VARCHAR, table_events BIGINT", other)
     put(con, "usage.table_query_daily", "table_full_name VARCHAR, day VARCHAR, queries BIGINT, total_ms BIGINT, read_bytes BIGINT, "
         "read_files BIGINT, pruned_files BIGINT, full_scans BIGINT", per_day)
 

@@ -2580,6 +2580,9 @@ def read_table(full_name: str, window: int = 30) -> dict:
         tq, _w = _windowed(con, have, "table_queries", window)
         queries = rows(f"SELECT * EXCLUDE (window_days, table_full_name) FROM {tq} WHERE table_full_name = ? "
                        "ORDER BY total_ms DESC, statement_id LIMIT 10", [full_name]) if tq else []
+        to, _w = _windowed(con, have, "table_other_access", window)
+        other = rows(f"SELECT access, via, identity, events, last_event, table_events FROM {to} WHERE table_full_name = ? "
+                     "ORDER BY events DESC, identity", [full_name]) if to else []
         query_daily = rows("SELECT day, queries, total_ms, read_bytes, read_files, pruned_files, full_scans "
                            "FROM usage.table_query_daily WHERE table_full_name = ? ORDER BY day", [full_name]
                            ) if ("usage", "table_query_daily") in have else []
@@ -2615,7 +2618,8 @@ def read_table(full_name: str, window: int = 30) -> dict:
     timeline = _timeline(history, maint, query_daily)
     return {"outcome": "ok_rows" if (facts or daily or history) else "ok_empty", "table_full_name": full_name,
             "timeline": timeline, "upkeep": _upkeep(timeline, window, end),
-            "queries": queries, "scans": _scans(query_daily, window, end),
+            "queries": queries, "scans": _scans(query_daily, window, end), "other": other,
+            "other_events": other[0]["table_events"] if other else 0, "has_other": to is not None,
             "has_queries": ("usage", "table_query_daily") in have,
             "facts": f, "workspace_name": names.get(ws, ws) if ws else None, "env": envs.get(ws) if ws else None,
             "daily": daily, "users": users, "history": history, "maintenance": maint, "sensitive": sensitive,

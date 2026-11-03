@@ -605,7 +605,7 @@ function Upkeep({ d, window }: { d: any; window: number }) {
         <Card title={`Writes and merges · ${window}d`}><div className="pqgs-card-value">{fmtInt(u.writes || 0)}</div>
           <PqgsNote facts={[{ label: "Predictive optimization", value: u.dbu ? `${u.dbu} DBU (est.)` : "-" }]} /></Card>
       </div>
-      {u.history_since && u.history_since > since ? <div className="metric-note">{`History holds the last ${fmtInt(u.history_ops)} operations, back to ${fmtDayShort(u.history_since)}: older ones in the window are not counted.`}</div> : null}
+      {u.history_since && u.history_since > since ? <div className="metric-note">{`History reaches back to ${fmtDayShort(u.history_since)} only: changes before it in the window are not available.`}</div> : null}
       {tl.length ? (
         <React.Fragment>
           <div className="ws-actions" style={{ margin: "10px 0 6px" }}>
@@ -627,7 +627,12 @@ function Upkeep({ d, window }: { d: any; window: number }) {
             ))}</tbody>
           </table></div>
           {shown.length > 30 && !all ? <button type="button" className="ov-link-btn" onClick={() => setAll(true)}>{`Show all ${fmtInt(shown.length)}`}</button> : null}
-          <div className="metric-note">OPTIMIZE frees no storage by itself: the merged files go when VACUUM runs. Reads before and after cover 7 days each side and are an indication: other changes count too.</div>
+          <ul className="metric-note" style={{ margin: "8px 0 0", paddingLeft: 18 }}>
+            <li>{`DESCRIBE HISTORY keeps the last 100 operations per table${u.history_since ? `, here back to ${fmtDayShort(u.history_since)}` : ""}; older ones are not available.`}</li>
+            <li>OPTIMIZE frees no storage by itself: the merged files go when VACUUM runs. Bytes freed come from VACUUM's own metrics.</li>
+            <li>Reads before and after: 7 days each side, 3+ reads on both, only reads in query history. An indication: other changes count too.</li>
+            <li>Predictive optimization DBUs are its own estimate, not billed figures.</li>
+          </ul>
         </React.Fragment>
       ) : <span className="muted">No write, merge or maintenance run in this export.</span>}
     </Card>
@@ -639,9 +644,11 @@ function TableQueries({ d, window }: { d: any; window: number }) {
   const qs: any[] = d.queries || [];
   const sc = d.scans;
   const full = (q: any) => q.access === "read" && !q.pruned_files && (q.read_files || 0) >= 50;
+  const other: any[] = d.other || [];
+  const na = <span className="muted">not available</span>;
   return (
     <Card title={`Slowest queries · ${window}d`} right={<span className="muted">query history joined to lineage by statement</span>}>
-      {!d.has_queries ? <span className="muted">Queries per table are not in this export: export again.</span> : !qs.length ? <span className="muted">No query on SQL warehouses or serverless read or wrote it in the window.</span> : (
+      {!d.has_queries ? <span className="muted">Queries per table are not in this export: export again.</span> : !qs.length ? <span className="muted">No query in query history read or wrote it in the window.</span> : (
         <React.Fragment>
           {sc ? <div style={{ marginBottom: 8 }}>{`${fmtInt(sc.queries)} reads, ${fmtDurationMs(sc.avg_ms)} on average, ${fmtBytes(sc.read_bytes)} read. `}
             <span style={{ color: sc.full_scans ? "#9F1D14" : undefined, fontWeight: sc.full_scans ? 600 : undefined }}>{`${fmtInt(sc.full_scans)} pruned no file`}</span>
@@ -661,9 +668,28 @@ function TableQueries({ d, window }: { d: any; window: number }) {
               </tr>
             ))}</tbody>
           </table></div>
-          <div className="metric-note">Only queries on SQL warehouses and serverless are in query history. Bytes and files are the whole query's: a join shows them on each table it reads. Full scan: 50+ files read, none pruned; filter on a clustering or partition column.</div>
         </React.Fragment>
       )}
+      {d.has_other ? (
+        <div style={{ marginTop: 14 }}>
+          <div style={{ fontWeight: 600, marginBottom: 4 }}>{`Not in query history · ${fmtInt(d.other_events || 0)} reads and writes`}</div>
+          {other.length ? (
+            <div className="data-table-wrap"><table className="data">
+              <thead><tr><th>Who</th><th>Through</th><th>Access</th><th className="num">Events</th><th>Last</th><th>Time, bytes, files</th></tr></thead>
+              <tbody>{other.map((o, i) => (
+                <tr key={i}><td style={{ fontSize: 12.5 }}>{o.identity || "-"}</td><td>{o.via}</td><td>{o.access === "write" ? "Writes" : "Reads"}</td>
+                  <td className="num mono">{fmtInt(o.events)}</td><td><When v={o.last_event} /></td><td>{na}</td></tr>
+              ))}</tbody>
+            </table></div>
+          ) : <span className="muted">None: every read and write in the window is in query history.</span>}
+        </div>
+      ) : null}
+      <ul className="metric-note" style={{ margin: "8px 0 0", paddingLeft: 18 }}>
+        <li>Query history has SQL warehouses and serverless only. Jobs, notebooks and pipelines on classic compute are in lineage with who and when; their time, bytes and files are not available.</li>
+        <li>The 10 slowest per window; bytes and files are the whole query's, so a join shows them on each table it reads.</li>
+        <li>Full scan: 50+ files read and none pruned. Filter on a clustering or partition column.</li>
+        <li>Reads that never reach Unity Catalog lineage (paths, external engines) are not counted.</li>
+      </ul>
     </Card>
   );
 }
