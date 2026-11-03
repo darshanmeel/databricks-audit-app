@@ -136,7 +136,7 @@ Or keep sizes in their own folder and add `--storage-from <sizes folder>` to the
 **Table and volume sizes (storage).** No system table holds sizes reliably, so the export measures them:
 
 - **Tables:** `DESCRIBE DETAIL` on every Delta table it can read, `threads` at a time (16), for size, files and
-  columns; `DESCRIBE HISTORY` in the same pass for the last 30 changes. Tables unchanged since the last
+  columns; `DESCRIBE HISTORY` in the same pass for the last 100 changes. Tables unchanged since the last
   export keep its figures.
 - **Volumes:** each volume is listed, up to `volume_max_entries` (50,000) files and folders. One listed in the
   last `volume_full_days` (7) with no file write in the audit log since keeps its counts.

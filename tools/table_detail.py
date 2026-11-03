@@ -5,7 +5,7 @@ DETAIL per Delta table, many at once (one connection per thread), because thousa
 one take hours. Tables that haven't changed since the last export keep last run's figures.
 system.storage.table_metrics_history would give the same per day, but it is often empty.
 
-Each table described also gets DESCRIBE HISTORY (its last 30 writes, merges, deletes, OPTIMIZE and
+Each table described also gets DESCRIBE HISTORY (its last 100 writes, merges, deletes, OPTIMIZE and
 VACUUM runs, who ran them and when) in the same pass.
 
 Called by tools/export_direct_results.py after the checks; writes storage/table_detail.parquet and
@@ -36,24 +36,26 @@ SCHEMA = pa.schema([
 # (over max_tables) | failed: <first line of the error>
 
 HISTORY_FILE = "table_history.parquet"
-HISTORY_LIMIT = 30  # the most recent operations kept per table
+HISTORY_LIMIT = 100  # the most recent operations kept per table
 HISTORY_SCHEMA = pa.schema([
     ("table_full_name", pa.string()), ("version", pa.int64()), ("timestamp", pa.string()),
     ("operation", pa.string()), ("user_name", pa.string()), ("metrics", pa.string()),
 ])
-# the operation metrics worth a glance, in this order
+# the operation metrics worth a glance, in this order; files and bytes give what OPTIMIZE and VACUUM did
 _METRIC_KEYS = ("numOutputRows", "numTargetRowsInserted", "numTargetRowsUpdated", "numTargetRowsDeleted",
                 "numDeletedRows", "numAddedFiles", "numRemovedFiles", "numFilesAdded", "numFilesRemoved",
-                "numDeletedFiles", "sizeOfDataToDelete", "numOutputBytes")
+                "numTargetFilesAdded", "numTargetFilesRemoved", "numFiles", "numDeletedFiles", "numFilesToDelete",
+                "sizeOfDataToDelete", "numAddedBytes", "numRemovedBytes", "numTargetBytesAdded", "numTargetBytesRemoved",
+                "numOutputBytes")
 
 
 def _metrics(m) -> str | None:
     if not m:
         return None
     if isinstance(m, str):
-        return m[:300]
+        return m[:600]
     items = dict(m) if not isinstance(m, list) else dict(m)
-    return ", ".join(f"{k}={items[k]}" for k in _METRIC_KEYS if items.get(k) not in (None, "", "0"))[:300] or None
+    return ", ".join(f"{k}={items[k]}" for k in _METRIC_KEYS if items.get(k) not in (None, "", "0"))[:600] or None
 
 
 def _previous_history(path: Path | None) -> dict[str, list[dict]]:

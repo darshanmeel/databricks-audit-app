@@ -2535,8 +2535,9 @@ def read_tables(workspace_scope: set[str] | None, tag_filter=None, limit: int = 
 
 
 def read_table(full_name: str, window: int = 30) -> dict:
-    """One table: its facts, reads and writes per day, who used it, its change history (DESCRIBE
-    HISTORY) and the predictive optimization runs on it."""
+    """One table: its facts, reads and writes per day, who used it, its changes and maintenance
+    (DESCRIBE HISTORY and predictive optimization) with what they freed and how reads changed after
+    a compaction, and its slowest queries."""
     con = _connect()
     try:
         have = {(r[0], r[1]) for r in con.execute(
@@ -2572,9 +2573,17 @@ def read_table(full_name: str, window: int = 30) -> dict:
         history = rows("SELECT version, timestamp, operation, user_name, metrics FROM storage.table_history "
                        "WHERE table_full_name = ? ORDER BY version DESC", [full_name]
                        ) if ("storage", "table_history") in have else []
-        maint = rows("SELECT start_time, operation_type, operation_status, usage_quantity, usage_unit FROM usage.table_maintenance "
-                     "WHERE table_full_name = ? ORDER BY start_time DESC", [full_name]
+        po_metrics = "metrics" if ("usage", "table_maintenance") in have and "metrics" in _columns(con, "usage", "table_maintenance") else "NULL AS metrics"
+        maint = rows("SELECT start_time, operation_type, operation_status, usage_quantity, usage_unit, "
+                     f"{po_metrics} FROM usage.table_maintenance WHERE table_full_name = ? ORDER BY start_time DESC", [full_name]
                      ) if ("usage", "table_maintenance") in have else []
+        tq, _w = _windowed(con, have, "table_queries", window)
+        queries = rows(f"SELECT * EXCLUDE (window_days, table_full_name) FROM {tq} WHERE table_full_name = ? "
+                       "ORDER BY total_ms DESC, statement_id LIMIT 10", [full_name]) if tq else []
+        query_daily = rows("SELECT day, queries, total_ms, read_bytes, read_files, pruned_files, full_scans "
+                           "FROM usage.table_query_daily WHERE table_full_name = ? ORDER BY day", [full_name]
+                           ) if ("usage", "table_query_daily") in have else []
+        wh_names = dict(con.execute("SELECT warehouse_id, warehouse_name FROM dims.dim_warehouse").fetchall())             if queries and ("dims", "dim_warehouse") in have else {}
         access = rows("SELECT MAX(last_read) AS last_read, MAX(last_write) AS last_write FROM usage.table_access "
                       "WHERE table_full_name = ?", [full_name]) if ("usage", "table_access") in have else []
         info_row = con.execute("SELECT info FROM usage.workspace_activity_info").fetchone() \
@@ -2599,7 +2608,15 @@ def read_table(full_name: str, window: int = 30) -> dict:
     rows_changed = _rows_changed(history, window, _seen_end(json.loads(info_row[0]) if info_row and info_row[0] else None))
     for u in users:
         u["kind"] = _identity_kind(u["identity"])
+    for q in queries:
+        q["workspace_name"] = names.get(str(q["workspace_id"]), q["workspace_id"])
+        q["warehouse_name"] = wh_names.get(q["warehouse_id"]) or q["warehouse_id"]
+    end = _seen_end(json.loads(info_row[0]) if info_row and info_row[0] else None)
+    timeline = _timeline(history, maint, query_daily)
     return {"outcome": "ok_rows" if (facts or daily or history) else "ok_empty", "table_full_name": full_name,
+            "timeline": timeline, "upkeep": _upkeep(timeline, window, end),
+            "queries": queries, "scans": _scans(query_daily, window, end),
+            "has_queries": ("usage", "table_query_daily") in have,
             "facts": f, "workspace_name": names.get(ws, ws) if ws else None, "env": envs.get(ws) if ws else None,
             "daily": daily, "users": users, "history": history, "maintenance": maint, "sensitive": sensitive,
             "usage_class": cls["usage_class"] if cls else None, "new": bool(cls and cls["new"]),
@@ -2617,6 +2634,111 @@ def read_table(full_name: str, window: int = 30) -> dict:
 
 
 _ROW_KEYS = ("numTargetRowsInserted", "numTargetRowsUpdated", "numTargetRowsDeleted", "numDeletedRows")
+# operations that rewrite small files into big ones: Delta's OPTIMIZE (also ZORDER and liquid
+# clustering), predictive optimization's compaction and clustering
+_COMPACT = ("OPTIMIZE", "COMPACTION", "CLUSTERING")
+
+
+def _first(m: dict, keys: tuple) -> int | None:
+    for k in keys:
+        v = str(m.get(k, "")).strip()
+        if v.isdigit():
+            return int(v)
+    return None
+
+
+def _timeline(history: list[dict], maint: list[dict], query_daily: list[dict]) -> list[dict]:
+    """DESCRIBE HISTORY and predictive optimization runs as one list, newest first, each with the
+    files and bytes it added and removed, and, after a compaction, reads in the 7 days before and after."""
+    out = []
+    for h in history:
+        m = dict(x.split("=", 1) for x in str(h.get("metrics") or "").split(", ") if "=" in x)
+        op = str(h.get("operation") or "")
+        out.append({"when": h.get("timestamp"), "operation": op, "by": "delta", "who": h.get("user_name"),
+                    "version": h.get("version"), "status": None, "metrics": h.get("metrics"),
+                    "rows": _first(m, ("numOutputRows",)) or (sum(int(m[k]) for k in _ROW_KEYS if str(m.get(k, "")).isdigit()) or None),
+                    "files_added": _first(m, ("numAddedFiles", "numFilesAdded", "numTargetFilesAdded", "numFiles")),
+                    "files_removed": _first(m, ("numRemovedFiles", "numFilesRemoved", "numTargetFilesRemoved", "numDeletedFiles", "numFilesToDelete")),
+                    "bytes_added": _first(m, ("numAddedBytes", "numTargetBytesAdded", "numOutputBytes")),
+                    "bytes_removed": _first(m, ("numRemovedBytes", "numTargetBytesRemoved")),
+                    "freed_bytes": _first(m, ("sizeOfDataToDelete",)) if op.startswith("VACUUM") else None, "dbu": None})
+    for p in maint:
+        try:
+            m = json.loads(p["metrics"]) if p.get("metrics") else {}
+        except (TypeError, ValueError):
+            m = {}
+        op = str(p.get("operation_type") or "")
+        out.append({"when": p.get("start_time"), "operation": op, "by": "predictive", "who": "predictive optimization",
+                    "version": None, "status": p.get("operation_status"),
+                    "metrics": ", ".join(f"{k}={v}" for k, v in m.items()) or None, "rows": None,
+                    "files_added": _first(m, ("number_of_output_files", "number_of_added_files")),
+                    "files_removed": _first(m, ("number_of_compacted_files", "number_of_removed_files", "number_of_clustered_files", "number_of_deleted_files")),
+                    "bytes_added": _first(m, ("amount_of_output_data_bytes",)),
+                    "bytes_removed": _first(m, ("amount_of_data_compacted_bytes", "amount_of_data_removed_bytes")),
+                    "freed_bytes": _first(m, ("amount_of_data_deleted_bytes",)),
+                    "dbu": p.get("usage_quantity") if p.get("usage_unit") in (None, "ESTIMATED_DBU") else None})
+    out.sort(key=lambda e: str(e["when"] or ""), reverse=True)
+    for e in out:
+        if any(e["operation"].upper().startswith(c) for c in _COMPACT) and (e["status"] in (None, "SUCCESSFUL")):
+            e["effect"] = _effect(query_daily, str(e["when"] or "")[:10])
+    return out
+
+
+def _effect(query_daily: list[dict], day: str) -> dict | None:
+    """Reads of the table in the 7 days before a compaction against the 7 days after it (its own day
+    left out); None with fewer than 3 reads on either side. An indication: other changes count too."""
+    import datetime as _dt
+
+    if not day or not query_daily:
+        return None
+    d0 = _dt.date.fromisoformat(day)
+
+    def side(lo: int, hi: int) -> dict | None:
+        got = [r for r in query_daily if lo <= (_dt.date.fromisoformat(str(r["day"])[:10]) - d0).days <= hi]
+        n = sum(r["queries"] or 0 for r in got)
+        if n < 3:
+            return None
+        return {"queries": n, "avg_ms": sum(r["total_ms"] or 0 for r in got) / n,
+                "files_per_read": sum(r["read_files"] or 0 for r in got) / n,
+                "full_scans": sum(r["full_scans"] or 0 for r in got)}
+    before, after = side(-7, -1), side(1, 7)
+    return {"before": before, "after": after} if before and after else None
+
+
+def _upkeep(timeline: list[dict], window: int, end) -> dict:
+    """In the window: compactions and the files they merged, vacuums and the bytes they deleted,
+    predictive optimization's DBUs, and how far back the history reaches."""
+    import datetime as _dt
+
+    since = (end - _dt.timedelta(days=window)).isoformat()
+    inside = [e for e in timeline if str(e["when"] or "")[:10] >= since]
+    comp = [e for e in inside if any(e["operation"].upper().startswith(c) for c in _COMPACT)]
+    vac = [e for e in inside if e["operation"].upper().startswith("VACUUM")]
+    delta = [e for e in timeline if e["by"] == "delta"]
+    return {"compactions": len(comp), "files_merged": sum(e["files_removed"] or 0 for e in comp),
+            "files_after": sum(e["files_added"] or 0 for e in comp),
+            "vacuums": len({str(e["when"])[:10] for e in vac}), "freed_bytes": sum(e["freed_bytes"] or 0 for e in vac),
+            "files_deleted": sum(e["files_removed"] or 0 for e in vac if e["operation"].upper() in ("VACUUM END", "VACUUM")),
+            "writes": sum(1 for e in inside if e["operation"].upper() in ("WRITE", "MERGE", "UPDATE", "DELETE", "STREAMING UPDATE",
+                                                                             "CREATE OR REPLACE TABLE AS SELECT", "REPLACE TABLE AS SELECT")),
+            "dbu": round(sum(e["dbu"] or 0 for e in inside), 2),
+            "history_since": min((str(e["when"])[:10] for e in delta if e["when"]), default=None),
+            "history_ops": len(delta)}
+
+
+def _scans(query_daily: list[dict], window: int, end) -> dict | None:
+    """Reads in the window: how many, their time, and how many pruned no file."""
+    import datetime as _dt
+
+    since = (end - _dt.timedelta(days=window)).isoformat()
+    got = [r for r in query_daily if str(r["day"])[:10] >= since]
+    n = sum(r["queries"] or 0 for r in got)
+    if not n:
+        return None
+    files, pruned = sum(r["read_files"] or 0 for r in got), sum(r["pruned_files"] or 0 for r in got)
+    return {"queries": n, "avg_ms": sum(r["total_ms"] or 0 for r in got) / n, "read_bytes": sum(r["read_bytes"] or 0 for r in got),
+            "full_scans": sum(r["full_scans"] or 0 for r in got),
+            "pruned_share": round(100 * pruned / (files + pruned), 1) if files + pruned else None}
 
 
 def _rows_changed(history: list[dict], window: int, end) -> int | None:

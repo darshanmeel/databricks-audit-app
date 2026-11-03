@@ -483,11 +483,11 @@ const GUIDE_TABS: Record<string, GuideTabInfo> = {
     screen: [
       { sub: "activity", d: "Active tables, people and volumes of all; the busiest workspaces, how much of each is in use, reads against writes, complexity against usage, events per workspace per day, the most used tables and most active people. One workspace in the top-bar filter (or a click on one) shows its tables by class, people seen, its tables by reads against writes and by size against activity, events per day, busiest tables and volumes. Names open Tables, People or Volumes." },
       { sub: "workspaces", d: "Data size split by usage class, reads and writes, people, sensitive tables; every workspace with its tables by class, unread size, complexity, usage and a signal; complexity against usage; clean up first; largest tables by reads and writes." },
-      { sub: "tables", d: "The most active tables by read and write events. Every table by class, with search, workspace filter and CSV. Pick a workspace for its schemas. Click a table for reads and writes per day, who uses it and how, unused direct grants, sensitive columns, upstream and downstream, what to do with SQL, history and maintenance." },
+      { sub: "tables", d: "The most active tables by read and write events. Every table by class, with search, workspace filter and CSV. Pick a workspace for its schemas. Click a table for reads and writes per day, who uses it and how, unused direct grants, sensitive columns, upstream and downstream, what to do with SQL, changes and maintenance (writes, merges, OPTIMIZE, VACUUM, predictive optimization: files merged, bytes freed, reads before and after a compaction) and its slowest queries (full scans flagged)." },
       { sub: "volumes", d: "The most active volumes by file reads and writes. Every volume: class, size, files, file reads and writes, readers and writers; click one for who used it. The volumes that could not be listed." },
       { sub: "people", d: "Everyone by last seen; the most active people by table reads and writes; who reads and writes, tables they write that nobody reads, sensitive tables they touched; click one for its tables. Inactive 90+ days with a direct grant." },
     ],
-    measure: "Reads and writes are table events in lineage; volume use is the audit log's file events; size from DESCRIBE DETAIL and volume listings; sensitive columns from tags, data classification and column names; grants from information_schema. A catalog belongs to the workspace that reads and writes it most.",
+    measure: "Reads and writes are table events in lineage; queries per table are query history joined to lineage by statement_id; volume use is the audit log's file events; size from DESCRIBE DETAIL and volume listings; sensitive columns from tags, data classification and column names; grants from information_schema. A catalog belongs to the workspace that reads and writes it most.",
     judge: "Written never read: writes, no read. Idle 90d+: no read or write in 90 days. Cooling: no read in 30 days. Active: the rest. A table created in the last 7 days counts as active.",
     price: "Not priced: storage bills on your cloud.",
     troubles: [
@@ -501,11 +501,14 @@ const GUIDE_TABS: Record<string, GuideTabInfo> = {
       "Only direct table grants show; access through a schema, catalog or group isn't expanded.",
       "Volume reads by Spark jobs on a cluster may not be in the audit log, so a volume can read unused when a job reads it.",
       "Sizes are from the last export, not the Time Window; reads and writes are from the Time Window.",
+      "Changes and maintenance hold each table's last 100 DESCRIBE HISTORY operations and run with the sizes; without them only predictive optimization shows.",
+      "Reads before and after a compaction compare 7 days each side and need 3+ reads on both; other changes in that time count too.",
+      "Slowest queries come from query history (SQL warehouses and serverless only), matched to the table through lineage; a join's bytes and files show on each table it reads.",
     ],
     extra: [
       { h: "Sizes and volume files (storage)", items: [
         "No system table holds table sizes reliably (table_metrics_history is often empty), so the export measures them itself.",
-        "Tables: DESCRIBE DETAIL on every Delta table it can read, 16 at a time, for size, files and columns; DESCRIBE HISTORY in the same pass for the last 30 changes. Unchanged tables keep the last export's figures.",
+        "Tables: DESCRIBE DETAIL on every Delta table it can read, 16 at a time, for size, files and columns; DESCRIBE HISTORY in the same pass for the last 100 changes. Unchanged tables keep the last export's figures.",
         "Volumes: each volume is listed, up to 50,000 files and folders. One listed in the last 7 days with no file write since keeps its counts.",
         "Files: storage/table_detail.parquet, table_history.parquet and volume_detail.parquet in the export folder, loaded as storage.table_detail, storage.table_history and storage.volume_detail.",
         "Grants for the export identity: USE CATALOG and USE SCHEMA, SELECT on the tables, READ VOLUME on the volumes. BROWSE isn't enough.",

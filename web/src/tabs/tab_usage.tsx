@@ -5,7 +5,7 @@
 import React from "react";
 
 import { Api } from "../api";
-import { fmtBytes, fmtDayShort, fmtInt, fmtPct } from "../format";
+import { fmtBytes, fmtDayShort, fmtDurationMs, fmtInt, fmtPct } from "../format";
 import { AreaContent, Card, PqgsNote } from "../components/primitives";
 import { HBarList, paletteColor } from "../components/charts";
 import { Columns } from "../components/charts_more";
@@ -573,6 +573,101 @@ function Node({ n, here }: { n: any; here?: boolean }) {
   );
 }
 
+// how much faster reads got after a compaction: 44.6 s -> 4.1 s (-91%)
+function Change({ a, b, fmt }: { a: number; b: number; fmt: (v: number) => string }) {
+  const pct = a ? Math.round((100 * (b - a)) / a) : 0;
+  return <span>{`${fmt(a)} → ${fmt(b)} `}<span style={{ color: pct < 0 ? "#1D7A46" : pct > 0 ? "#9F1D14" : undefined }}>{`(${pct > 0 ? "+" : ""}${pct}%)`}</span></span>;
+}
+
+const MAINT_OPS = /^(OPTIMIZE|VACUUM|COMPACTION|CLUSTERING|ANALYZE|AUTO_CLUSTERING|REORG|FSCK)/i;
+
+// Changes and maintenance: DESCRIBE HISTORY and predictive optimization as one list, what OPTIMIZE
+// and VACUUM did, and reads before and after each compaction.
+function Upkeep({ d, window }: { d: any; window: number }) {
+  const [only, setOnly] = React.useState("all");
+  const [all, setAll] = React.useState(false);
+  const tl: any[] = d.timeline || [];
+  const u = d.upkeep || {};
+  const shown = tl.filter((e) => only === "all" || (only === "maint" ? MAINT_OPS.test(e.operation) : !MAINT_OPS.test(e.operation)));
+  const effect = tl.find((e) => e.effect);
+  const since = new Date(Date.parse(String(d.as_of || "")) - window * 864e5).toISOString().slice(0, 10);
+  return (
+    <Card title="Changes and maintenance" right={<span className="muted">DESCRIBE HISTORY and predictive optimization · newest first</span>}>
+      {!d.has_history ? <div className="muted" style={{ marginBottom: 8 }}>Writes, merges, OPTIMIZE and VACUUM come from DESCRIBE HISTORY, which runs with the sizes: not in this export (Guide › Data usage › Sizes and volume files).</div> : null}
+      <div className="pqgs-cards-grid">
+        <Card title={`Compactions · ${window}d`}><div className="pqgs-card-value">{fmtInt(u.compactions || 0)}</div>
+          <PqgsNote facts={[{ label: "Files", value: u.files_merged ? `${fmtInt(u.files_merged)} → ${fmtInt(u.files_after)}` : "-" }]} /></Card>
+        <Card title={`Freed by VACUUM · ${window}d`}><div className="pqgs-card-value">{u.freed_bytes ? fmtBytes(u.freed_bytes) : "-"}</div>
+          <PqgsNote facts={[{ label: "Runs", value: fmtInt(u.vacuums || 0) }, { label: "Files deleted", value: u.files_deleted ? fmtInt(u.files_deleted) : "-" }]} /></Card>
+        <Card title="Reads after the last compaction"><div className="pqgs-card-value">{effect ? <Change a={effect.effect.before.avg_ms} b={effect.effect.after.avg_ms} fmt={(v) => fmtDurationMs(v)} /> : "-"}</div>
+          <PqgsNote facts={effect ? [{ label: "Files per read", value: `${fmtInt(Math.round(effect.effect.before.files_per_read))} → ${fmtInt(Math.round(effect.effect.after.files_per_read))}` }]
+            : [{ label: "Needs", value: "3+ reads in the 7 days before and after" }]} /></Card>
+        <Card title={`Writes and merges · ${window}d`}><div className="pqgs-card-value">{fmtInt(u.writes || 0)}</div>
+          <PqgsNote facts={[{ label: "Predictive optimization", value: u.dbu ? `${u.dbu} DBU (est.)` : "-" }]} /></Card>
+      </div>
+      {u.history_since && u.history_since > since ? <div className="metric-note">{`History holds the last ${fmtInt(u.history_ops)} operations, back to ${fmtDayShort(u.history_since)}: older ones in the window are not counted.`}</div> : null}
+      {tl.length ? (
+        <React.Fragment>
+          <div className="ws-actions" style={{ margin: "10px 0 6px" }}>
+            {[["all", "All"], ["maint", "Maintenance"], ["changes", "Writes and merges"]].map(([k, l]) => (
+              <button key={k} type="button" className={only === k ? "on" : ""} onClick={() => setOnly(k)}>{l}</button>))}
+          </div>
+          <div className="data-table-wrap"><table className="data">
+            <thead><tr><th>When</th><th>Operation</th><th>Who</th><th className="num">Files</th><th className="num">Bytes</th><th className="num">Rows</th><th>Reads before → after</th></tr></thead>
+            <tbody>{shown.slice(0, all ? shown.length : 30).map((e, i) => (
+              <tr key={i} title={e.metrics || ""}>
+                <td>{String(e.when || "").slice(0, 16)}</td>
+                <td>{e.operation}{e.by === "predictive" ? <span className="muted" style={{ fontSize: 12 }}> · predictive{e.status && e.status !== "SUCCESSFUL" ? ` · ${e.status.toLowerCase()}` : ""}</span> : null}</td>
+                <td style={{ fontSize: 12.5 }}>{e.by === "predictive" ? (e.dbu != null ? `${Number(e.dbu).toFixed(2)} DBU (est.)` : "-") : e.who || "-"}</td>
+                <td className="num mono">{e.files_added == null && e.files_removed == null ? "-" : `+${fmtInt(e.files_added || 0)} −${fmtInt(e.files_removed || 0)}`}</td>
+                <td className="num mono">{e.freed_bytes ? `${fmtBytes(e.freed_bytes)} freed` : e.bytes_added == null && e.bytes_removed == null ? "-" : `+${fmtBytes(e.bytes_added || 0)} −${fmtBytes(e.bytes_removed || 0)}`}</td>
+                <td className="num mono">{e.rows == null ? "-" : fmtInt(e.rows)}</td>
+                <td style={{ fontSize: 12.5 }}>{e.effect ? <span><Change a={e.effect.before.avg_ms} b={e.effect.after.avg_ms} fmt={(v) => fmtDurationMs(v)} />{` · files ${fmtInt(Math.round(e.effect.before.files_per_read))} → ${fmtInt(Math.round(e.effect.after.files_per_read))}`}</span> : ""}</td>
+              </tr>
+            ))}</tbody>
+          </table></div>
+          {shown.length > 30 && !all ? <button type="button" className="ov-link-btn" onClick={() => setAll(true)}>{`Show all ${fmtInt(shown.length)}`}</button> : null}
+          <div className="metric-note">OPTIMIZE frees no storage by itself: the merged files go when VACUUM runs. Reads before and after cover 7 days each side and are an indication: other changes count too.</div>
+        </React.Fragment>
+      ) : <span className="muted">No write, merge or maintenance run in this export.</span>}
+    </Card>
+  );
+}
+
+// The slowest queries on the table in the window, and reads that pruned no file.
+function TableQueries({ d, window }: { d: any; window: number }) {
+  const qs: any[] = d.queries || [];
+  const sc = d.scans;
+  const full = (q: any) => q.access === "read" && !q.pruned_files && (q.read_files || 0) >= 50;
+  return (
+    <Card title={`Slowest queries · ${window}d`} right={<span className="muted">query history joined to lineage by statement</span>}>
+      {!d.has_queries ? <span className="muted">Queries per table are not in this export: export again.</span> : !qs.length ? <span className="muted">No query on SQL warehouses or serverless read or wrote it in the window.</span> : (
+        <React.Fragment>
+          {sc ? <div style={{ marginBottom: 8 }}>{`${fmtInt(sc.queries)} reads, ${fmtDurationMs(sc.avg_ms)} on average, ${fmtBytes(sc.read_bytes)} read. `}
+            <span style={{ color: sc.full_scans ? "#9F1D14" : undefined, fontWeight: sc.full_scans ? 600 : undefined }}>{`${fmtInt(sc.full_scans)} pruned no file`}</span>
+            {sc.pruned_share != null ? `; ${fmtPct(sc.pruned_share, 0)} of files skipped overall.` : "."}</div> : null}
+          <div className="data-table-wrap"><table className="data">
+            <thead><tr><th>When</th><th>Who</th><th>Type</th><th className="num">Time</th><th className="num">Read</th><th className="num">Files read</th><th className="num">Pruned</th><th>Query</th></tr></thead>
+            <tbody>{qs.map((q) => (
+              <tr key={q.statement_id}>
+                <td>{String(q.start_time || "").slice(0, 16)}<div className="muted" style={{ fontSize: 12 }}>{[q.workspace_name, q.warehouse_name].filter(Boolean).join(" · ")}</div></td>
+                <td style={{ fontSize: 12.5 }}>{q.identity}</td>
+                <td>{q.statement_type}{q.access === "write" ? <span className="muted"> · writes it</span> : null}{q.status && q.status !== "FINISHED" ? <span className="muted">{` · ${String(q.status).toLowerCase()}`}</span> : null}</td>
+                <td className="num mono">{fmtDurationMs(q.total_ms)}</td>
+                <td className="num mono">{q.read_bytes == null ? "-" : fmtBytes(q.read_bytes)}</td>
+                <td className="num mono">{q.read_files == null ? "-" : fmtInt(q.read_files)}</td>
+                <td className="num mono">{full(q) ? <span className="badge" style={{ color: "#9F1D14" }}>none · full scan</span> : q.pruned_files == null ? "-" : fmtInt(q.pruned_files)}</td>
+                <td className="mono" style={{ fontSize: 12, maxWidth: 360, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={q.text || ""}>{q.text || "-"}</td>
+              </tr>
+            ))}</tbody>
+          </table></div>
+          <div className="metric-note">Only queries on SQL warehouses and serverless are in query history. Bytes and files are the whole query's: a join shows them on each table it reads. Full scan: 50+ files read, none pruned; filter on a clustering or partition column.</div>
+        </React.Fragment>
+      )}
+    </Card>
+  );
+}
+
 // a person's row on People, opened
 function toPerson(goTo: any, who: string) {
   handoff.person = who;
@@ -603,6 +698,9 @@ function TableDetail({ name, window, goTo, onBack }: { name: string; window: num
     sql: d.unused_grants.map((g: any) => `REVOKE SELECT ON TABLE ${name} FROM \`${g.grantee}\`;`).join("\n") });
   if (d.usage_class === "written_never_read") todo.push({ text: `Pause the writer: ${writers.map((u) => u.identity).join(", ") || "its job"} writes it and nobody reads it.`, sql: `-- pause the job or pipeline that writes ${name}` });
   if (d.usage_class === "idle_90d") todo.push({ text: "Archive or drop it: no read and no write in 90 days.", sql: `-- after checking with the owner:\n-- DROP TABLE ${name};` });
+  const sc = d.scans;
+  if (sc && sc.full_scans >= 5 && sc.full_scans >= sc.queries / 5) todo.push({ text: `Cluster it by the columns its reads filter on: ${fmtInt(sc.full_scans)} of ${fmtInt(sc.queries)} reads in ${window} days pruned no file.`,
+    sql: `ALTER TABLE ${name} CLUSTER BY (<columns the reads filter on>);\nOPTIMIZE ${name};` });
   if (filesPerGb > 200 && f.num_files > 50 && !optimized) todo.push({ text: `Run OPTIMIZE: ${fmtInt(f.num_files)} files for ${fmtBytes(f.size_in_bytes)}, never optimized or vacuumed.`, sql: `OPTIMIZE ${name};` });
   const copy = () => { navigator.clipboard?.writeText(todo.map((x) => x.sql).join("\n\n")); setCopied(true); };
   const [cat, sch] = name.split(".");
@@ -683,26 +781,8 @@ function TableDetail({ name, window, goTo, onBack }: { name: string; window: num
           </React.Fragment>
         ) : <span className="muted">Nothing to fix: it is read, masked where needed and not fragmented.</span>}
       </Card>
-      {(d.history || []).length ? (
-        <Card title="Change history" right={<span className="muted">DESCRIBE HISTORY, newest first</span>}>
-          <div className="data-table-wrap"><table className="data">
-            <thead><tr><th className="num">Version</th><th>When</th><th>Operation</th><th>Who</th><th>Metrics</th></tr></thead>
-            <tbody>{d.history.slice(0, 30).map((h: any) => (
-              <tr key={h.version}><td className="num mono">{h.version}</td><td>{String(h.timestamp || "").slice(0, 16)}</td><td>{h.operation}</td><td>{h.user_name}</td><td className="mono" style={{ fontSize: 12 }}>{h.metrics || "-"}</td></tr>
-            ))}</tbody>
-          </table></div>
-        </Card>
-      ) : null}
-      {(d.maintenance || []).length ? (
-        <Card title="Predictive optimization runs">
-          <div className="data-table-wrap"><table className="data">
-            <thead><tr><th>When</th><th>Operation</th><th>Status</th><th className="num">Usage</th></tr></thead>
-            <tbody>{d.maintenance.map((m: any, i: number) => (
-              <tr key={i}><td>{String(m.start_time || "").slice(0, 16)}</td><td>{m.operation_type}</td><td>{m.operation_status}</td><td className="num mono">{m.usage_quantity == null ? "-" : `${Number(m.usage_quantity).toFixed(3)} ${m.usage_unit === "ESTIMATED_DBU" ? "DBU (est.)" : m.usage_unit || ""}`}</td></tr>
-            ))}</tbody>
-          </table></div>
-        </Card>
-      ) : null}
+      <Upkeep d={d} window={window} />
+      <TableQueries d={d} window={window} />
     </div>
   );
 }

@@ -773,7 +773,7 @@ def _load_root(root: Path, db_path: Path, *, zip_as_of: str | None = None) -> di
                             [json.dumps(activity_info)])
             for name in ("workspace_activity", "catalog_workspace", "table_access", "user_access", "user_tables",
                          "user_last_seen", "volume_access", "table_daily", "table_maintenance", "sensitive_columns",
-                         "table_edges", "table_grants"):
+                         "table_edges", "table_grants", "table_queries", "table_query_daily"):
                 path = _find_data_file(usage_dir, name) if usage_dir.is_dir() else None
                 if path is None:
                     continue

@@ -13,7 +13,10 @@ belongs to, for Governance > Workspaces. Plain statements, not checks:
 - volume_access: per window, workspace, volume and identity, reads and writes of files under /Volumes
   from the audit log's file-system events;
 - table_daily: per table, workspace and day, reads, writes and readers (lineage);
-- table_maintenance: predictive optimization runs per table (compaction, vacuum, clustering);
+- table_maintenance: predictive optimization runs per table (compaction, vacuum, clustering) and their metrics;
+- table_queries: per window and table, its 10 slowest queries (query history joined to lineage by statement);
+- table_query_daily: per table and day, queries reading it, their time, files read and pruned, and how
+  many read without pruning a file;
 - table_edges: which table feeds which (lineage source -> target), with events and the last one;
 - table_grants: who holds SELECT (or ALL PRIVILEGES) on a table directly, not through its schema,
   catalog or a group;
@@ -76,7 +79,26 @@ MAINTENANCE_FILE = "table_maintenance.parquet"
 MAINTENANCE_SCHEMA = pa.schema([
     ("table_full_name", pa.string()), ("start_time", pa.string()), ("operation_type", pa.string()),
     ("operation_status", pa.string()), ("usage_quantity", pa.float64()), ("usage_unit", pa.string()),
+    ("metrics", pa.string()),
 ])
+TABLE_QUERIES_FILE = "table_queries.parquet"
+TABLE_QUERIES_MAX = 10  # per window and table
+TABLE_QUERIES_SCHEMA = pa.schema([
+    ("window_days", pa.int64()), ("table_full_name", pa.string()), ("access", pa.string()), ("workspace_id", pa.string()),
+    ("statement_id", pa.string()), ("identity", pa.string()), ("start_time", pa.string()), ("statement_type", pa.string()),
+    ("status", pa.string()), ("total_ms", pa.int64()), ("read_bytes", pa.int64()), ("read_files", pa.int64()),
+    ("pruned_files", pa.int64()), ("read_rows", pa.int64()), ("produced_rows", pa.int64()), ("warehouse_id", pa.string()),
+    ("text", pa.string()),
+])
+TABLE_QUERY_DAILY_FILE = "table_query_daily.parquet"
+TABLE_QUERY_DAILY_SCHEMA = pa.schema([
+    ("table_full_name", pa.string()), ("day", pa.string()), ("queries", pa.int64()), ("total_ms", pa.int64()),
+    ("read_bytes", pa.int64()), ("read_files", pa.int64()), ("pruned_files", pa.int64()), ("full_scans", pa.int64()),
+])
+# a read that pruned no file out of at least this many read the whole table: no filter on a
+# partition or clustering column, or none that data skipping could use
+FULL_SCAN_FILES = 50
+QUERY_TEXT_CHARS = 300
 LAST_SEEN_FILE = "user_last_seen.parquet"
 LAST_SEEN_DAYS = 365  # the audit log's retention
 LAST_SEEN_SCHEMA = pa.schema([
@@ -364,9 +386,65 @@ def maintenance_sql(end: dt.date, days: int) -> str:
     return f"""
 SELECT catalog_name || '.' || schema_name || '.' || table_name AS table_full_name,
        CAST(start_time AS STRING) AS start_time, operation_type, operation_status,
-       CAST(usage_quantity AS DOUBLE) AS usage_quantity, usage_unit
+       CAST(usage_quantity AS DOUBLE) AS usage_quantity, usage_unit, to_json(operation_metrics) AS metrics
 FROM system.storage.predictive_optimization_operations_history
 WHERE start_time >= date_sub({e}, {days}) AND start_time < {e} AND table_name IS NOT NULL
+"""
+
+
+def _statements(e: str, days: int) -> str:
+    """Each query statement in the window and the tables it read or wrote (lineage by statement_id);
+    a statement that reads and writes a table counts as a write."""
+    return f"""st AS (
+  SELECT statement_id, table_full_name, CASE WHEN MAX(is_write) = 1 THEN 'write' ELSE 'read' END AS access
+  FROM (
+    SELECT statement_id, source_table_full_name AS table_full_name, 0 AS is_write FROM system.access.table_lineage
+    WHERE event_date >= date_sub({e}, {days}) AND event_date < {e} AND statement_id IS NOT NULL AND source_table_full_name IS NOT NULL
+    UNION ALL
+    SELECT statement_id, target_table_full_name, 1 FROM system.access.table_lineage
+    WHERE event_date >= date_sub({e}, {days}) AND event_date < {e} AND statement_id IS NOT NULL AND target_table_full_name IS NOT NULL
+  ) x
+  GROUP BY 1, 2
+),
+q AS (
+  SELECT statement_id, CAST(workspace_id AS STRING) AS workspace_id, lower(executed_by) AS who, start_time, statement_type,
+         execution_status, COALESCE(total_duration_ms, 0) AS total_ms, read_bytes, read_files, pruned_files, read_rows,
+         produced_rows, compute.warehouse_id AS warehouse_id, statement_text
+  FROM system.query.history
+  WHERE start_time >= date_sub({e}, {days}) AND start_time < {e}
+)"""
+
+
+def table_queries_sql(end: dt.date, windows: list[int] | int) -> str:
+    """Per window and table, the slowest queries that read or wrote it. Their bytes and files are the
+    whole statement's: a join reading three tables shows the same figures on each."""
+    e = f"DATE'{end.isoformat()}'"
+    ws = _windows(windows)
+    return f"""
+WITH {_statements(e, max(ws))},
+w AS (SELECT explode(array({", ".join(map(str, ws))})) AS days)
+SELECT w.days AS window_days, st.table_full_name, st.access, q.workspace_id, q.statement_id, q.who AS identity,
+       CAST(q.start_time AS STRING) AS start_time, q.statement_type, q.execution_status AS status, q.total_ms,
+       q.read_bytes, q.read_files, q.pruned_files, q.read_rows, q.produced_rows, q.warehouse_id,
+       left(regexp_replace(q.statement_text, '\\s+', ' '), {QUERY_TEXT_CHARS}) AS text
+FROM st JOIN q ON q.statement_id = st.statement_id JOIN w ON q.start_time >= date_sub({e}, w.days)
+QUALIFY ROW_NUMBER() OVER (PARTITION BY w.days, st.table_full_name ORDER BY q.total_ms DESC, q.statement_id) <= {TABLE_QUERIES_MAX}
+"""
+
+
+def table_query_daily_sql(end: dt.date, days: int) -> str:
+    """Per table and day: queries reading it, their time, bytes and files read and pruned, and how
+    many pruned nothing out of FULL_SCAN_FILES or more files."""
+    e = f"DATE'{end.isoformat()}'"
+    return f"""
+WITH {_statements(e, days)}
+SELECT st.table_full_name, CAST(CAST(q.start_time AS DATE) AS STRING) AS day, COUNT(*) AS queries,
+       SUM(q.total_ms) AS total_ms, SUM(COALESCE(q.read_bytes, 0)) AS read_bytes, SUM(COALESCE(q.read_files, 0)) AS read_files,
+       SUM(COALESCE(q.pruned_files, 0)) AS pruned_files,
+       COUNT_IF(COALESCE(q.pruned_files, 0) = 0 AND COALESCE(q.read_files, 0) >= {FULL_SCAN_FILES}) AS full_scans
+FROM st JOIN q ON q.statement_id = st.statement_id
+WHERE st.access = 'read'
+GROUP BY 1, 2
 """
 
 
@@ -482,6 +560,8 @@ def export(connect_fn: Callable, out_dir: Path, *, end: dt.date, windows: list[i
             ("volume_access", volume_access_sql(end, windows), VOLUME_ACCESS_FILE, VOLUME_ACCESS_SCHEMA),
             ("table_daily", table_daily_sql(end, max(windows)), TABLE_DAILY_FILE, TABLE_DAILY_SCHEMA),
             ("table_maintenance", maintenance_sql(end, max(windows)), MAINTENANCE_FILE, MAINTENANCE_SCHEMA),
+            ("table_queries", table_queries_sql(end, windows), TABLE_QUERIES_FILE, TABLE_QUERIES_SCHEMA),
+            ("table_query_daily", table_query_daily_sql(end, max(windows)), TABLE_QUERY_DAILY_FILE, TABLE_QUERY_DAILY_SCHEMA),
             ("table_edges", table_edges_sql(end, max(windows)), EDGES_FILE, EDGES_SCHEMA),
             ("table_grants", table_grants_sql(), GRANTS_FILE, GRANTS_SCHEMA),
             ("sensitive_columns", sensitive_columns_sql(), SENSITIVE_FILE, SENSITIVE_SCHEMA),

@@ -96,6 +96,18 @@ def add(db: Path) -> dict:
     put(con, "storage.table_detail", "table_catalog VARCHAR, table_schema VARCHAR, table_name VARCHAR, table_type VARCHAR, "
         "data_source_format VARCHAR, last_altered VARCHAR, column_count BIGINT, size_in_bytes BIGINT, num_files BIGINT, "
         "last_modified VARCHAR, detail VARCHAR, created VARCHAR, owner VARCHAR", detail)
+    r2 = random.Random(11)
+    for i, h in enumerate(history):
+        if h[3] == "OPTIMIZE":
+            removed = r2.randint(200, 4000)
+            size = r2.randint(5, 400) * 1_000_000_000
+            history[i] = h[:5] + (f"numAddedFiles={max(1, removed // 60)}, numRemovedFiles={removed}, "
+                                  f"numAddedBytes={size}, numRemovedBytes={int(size * 1.04)}",)
+        elif h[3] == "VACUUM END":
+            history[i] = h[:5] + (f"numDeletedFiles={r2.randint(300, 9000)}, sizeOfDataToDelete={r2.randint(2, 300) * 1_000_000_000}",)
+    # acme.sales.orders: compacted 10 days ago, its reads got faster
+    history.append(("acme.sales.orders", 1, ts(10, 2), "OPTIMIZE", "ana@acme.example",
+                    "numAddedFiles=40, numRemovedFiles=3100, numAddedBytes=212000000000, numRemovedBytes=220000000000"))
     put(con, "storage.table_history", "table_full_name VARCHAR, version BIGINT, timestamp VARCHAR, operation VARCHAR, "
         "user_name VARCHAR, metrics VARCHAR", history)
     described = sum(1 for d in detail if d[-1] == "described")
@@ -168,8 +180,15 @@ def add(db: Path) -> dict:
     put(con, "usage.table_daily", "table_full_name VARCHAR, workspace_id VARCHAR, day VARCHAR, reads BIGINT, writes BIGINT, readers BIGINT, writers BIGINT", daily)
     put(con, "usage.user_tables", "window_days BIGINT, workspace_id VARCHAR, identity VARCHAR, table_full_name VARCHAR, reads BIGINT, writes BIGINT, "
         "last_access VARCHAR, via VARCHAR", user_tables)
+    r3 = random.Random(12)
+    po = {"COMPACTION": lambda: {"number_of_compacted_files": str(r3.randint(50, 900)), "number_of_output_files": str(r3.randint(1, 20)),
+                                 "amount_of_data_compacted_bytes": str(r3.randint(1, 90) * 1_000_000_000)},
+          "VACUUM": lambda: {"number_of_deleted_files": str(r3.randint(100, 5000)), "amount_of_data_deleted_bytes": str(r3.randint(1, 60) * 1_000_000_000)},
+          "ANALYZE": lambda: {}}
+    maint = [m + (json.dumps(po[m[2]]()) if m[2] in po else None,) for m in maint]
     put(con, "usage.table_maintenance", "table_full_name VARCHAR, start_time VARCHAR, operation_type VARCHAR, "
-        "operation_status VARCHAR, usage_quantity DOUBLE, usage_unit VARCHAR", maint)
+        "operation_status VARCHAR, usage_quantity DOUBLE, usage_unit VARCHAR, metrics VARCHAR", maint)
+    _table_queries(con, daily)
 
     # usage.user_access / user_last_seen: who works where, and when they were last seen
     users, seen = [], []
@@ -247,6 +266,46 @@ def add(db: Path) -> dict:
     _warehouses(con, rnd)
     con.close()
     return {"tables": len(detail), "volumes": len(vols), "table_access": len(access), "users": len(users), "seen": len(seen)}
+
+
+def _table_queries(con, daily: list[tuple]) -> None:
+    """usage.table_queries and table_query_daily: queries on the tables read in the last 30 days.
+    acme.sales.orders reads whole files before its OPTIMIZE 10 days ago and prunes after it."""
+    rnd = random.Random(13)
+    tables = sorted({d[0] for d in daily if d[3]})
+    per_day, top = [], []
+    for t in tables:
+        ws = CATALOGS[t.split(".")[0]][0]
+        scans = t in ("acme.sales.orders", "analytics.web.pageviews")
+        for d in range(30):
+            n = rnd.randint(0, 12)
+            if not n:
+                continue
+            before = t == "acme.sales.orders" and d > 10
+            files = rnd.randint(800, 3000) if before or (scans and t != "acme.sales.orders") else rnd.randint(5, 60)
+            pruned = 0 if files >= 800 else files * rnd.randint(5, 40)
+            ms = (rnd.randint(20000, 90000) if files >= 800 else rnd.randint(800, 6000)) * n
+            per_day.append((t, (END - timedelta(days=d)).isoformat(), n, ms, files * n * 30_000_000, files * n, pruned * n,
+                            n if pruned == 0 and files >= 50 else 0))
+            for k in range(min(n, 2)):
+                who = rnd.choice(PEOPLE[ws])
+                text = f"SELECT * FROM {t}" if files >= 800 else f"SELECT region, SUM(amount) FROM {t} WHERE order_date >= '2026-09-01' GROUP BY region"
+                top.append((t, "read", ws, f"ac_tq_{len(top)}", who, ts(d, 8 + k), "SELECT", "FINISHED", ms // n,
+                            files * 30_000_000, files, pruned, files * 400_000, rnd.randint(1, 5000), "ac_wh_bi", text, d))
+        top.append((t, "write", ws, f"ac_tq_{len(top)}", SPS.get(ws, PEOPLE[ws])[0], ts(1, 2), "MERGE", "FINISHED",
+                    rnd.randint(30000, 400000), 10_000_000_000, 400, 0, 9_000_000, 120_000, "ac_wh_etl",
+                    f"MERGE INTO {t} t USING updates u ON t.id = u.id WHEN MATCHED THEN UPDATE SET *", 1))
+    rows = []
+    for w in WINDOWS:
+        for t in tables:
+            mine = sorted((r for r in top if r[0] == t and r[-1] < w), key=lambda r: (-r[8], r[3]))[:10]
+            rows += [(w,) + r[:-1] for r in mine]
+    put(con, "usage.table_queries", "window_days BIGINT, table_full_name VARCHAR, access VARCHAR, workspace_id VARCHAR, "
+        "statement_id VARCHAR, identity VARCHAR, start_time VARCHAR, statement_type VARCHAR, status VARCHAR, total_ms BIGINT, "
+        "read_bytes BIGINT, read_files BIGINT, pruned_files BIGINT, read_rows BIGINT, produced_rows BIGINT, warehouse_id VARCHAR, "
+        "text VARCHAR", rows)
+    put(con, "usage.table_query_daily", "table_full_name VARCHAR, day VARCHAR, queries BIGINT, total_ms BIGINT, read_bytes BIGINT, "
+        "read_files BIGINT, pruned_files BIGINT, full_scans BIGINT", per_day)
 
 
 # warehouse -> (workspace, $ per up hour, typical up hours a day, share of up time busy)
