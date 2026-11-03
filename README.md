@@ -688,3 +688,8 @@ After changing the UI in `web/`, rebuild it with `cd web && npm ci && npm run bu
 `app/web/dist` with it; a test fails when the two differ. `npm run dev` serves the UI with live
 reload and sends `/api` to the running app (port `AUDIT_API_PORT`, default 8000). This needs
 Node and git.
+
+## License
+
+Dual-licensed under either of [MIT](LICENSE-MIT) or [Apache-2.0](LICENSE-APACHE), at your option.
+Unless you say otherwise, any contribution you submit is licensed the same way, with no extra terms.
