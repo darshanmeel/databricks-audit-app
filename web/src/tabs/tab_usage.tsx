@@ -397,7 +397,7 @@ function UsageWorkspacesContent({ filters, goTo, onVerdict }: LooseProps) {
 }
 
 // ─────────── Tables ───────────
-function UsageTablesContent({ filters, onVerdict }: LooseProps) {
+function UsageTablesContent({ filters, goTo, onVerdict }: LooseProps) {
   const key = JSON.stringify([filters.window, filters.workspaceIds, filters.envs, Api.tagParams()]);
   const tb = useApi(() => Api.tables(filters.workspaceIds, filters.envs, filters.window), key);
   const [cls, setCls] = React.useState<string>(handoff.cls || "all");
@@ -411,7 +411,7 @@ function UsageTablesContent({ filters, onVerdict }: LooseProps) {
   if (t && t.as_of) asOf = t.as_of;
   const verdict = all.length ? "Sorted by what needs attention: written but never read first, then idle, then cooling. Click a table for who reads and writes it." : "Loading tables...";
   React.useEffect(() => { if (onVerdict) onVerdict(verdict); }, [verdict, onVerdict]);
-  if (open) return <TableDetail name={open} window={filters.window} onBack={() => setOpen(null)} />;
+  if (open) return <TableDetail name={open} window={filters.window} goTo={goTo} onBack={() => setOpen(null)} />;
   if (tb.phase === "loading") return <span className="muted">Loading tables...</span>;
   if (!t || t.outcome === "not_assessed") return <span className="muted">Table sizes are not in this export: export again.</span>;
   const inWs = all.filter((r) => !wsPick || r.workspace_id === wsPick);
@@ -573,7 +573,13 @@ function Node({ n, here }: { n: any; here?: boolean }) {
   );
 }
 
-function TableDetail({ name, window, onBack }: { name: string; window: number; onBack: () => void }) {
+// a person's row on People, opened
+function toPerson(goTo: any, who: string) {
+  handoff.person = who;
+  goTo({ tab: "usage", subtab: "people" });
+}
+
+function TableDetail({ name, window, goTo, onBack }: { name: string; window: number; goTo: any; onBack: () => void }) {
   const st = useApi(() => Api.table(name, window), `${name}|${window}`);
   const [copied, setCopied] = React.useState(false);
   if (st.phase === "loading") return <span className="muted">Loading the table...</span>;
@@ -624,7 +630,9 @@ function TableDetail({ name, window, onBack }: { name: string; window: number; o
         {d.lineage ? <Mirror daily={d.daily || []} window={window} /> : <span className="muted">Lineage is not in this export.</span>}
       </Card>
       <div className="grid-2">
-        <Card title="Who reads and writes it">
+        <Card title="Who reads and writes it" right={<span className="muted">most active first · click one</span>}>
+          {users.length ? <div style={{ marginBottom: 10 }}><MostUsed rows={users.slice(0, 10).map((u) => ({ name: u.identity, reads: u.reads, writes: u.writes, sub: u.kind }))}
+            open={(who) => toPerson(goTo, who)} /></div> : null}
           {users.length ? (
             <div className="data-table-wrap"><table className="data">
               <thead><tr><th>Who</th><th>Access</th><th className="num">Reads</th><th className="num">Writes</th><th>Last used</th><th>Via</th></tr></thead>
@@ -690,7 +698,7 @@ function TableDetail({ name, window, onBack }: { name: string; window: number; o
           <div className="data-table-wrap"><table className="data">
             <thead><tr><th>When</th><th>Operation</th><th>Status</th><th className="num">Usage</th></tr></thead>
             <tbody>{d.maintenance.map((m: any, i: number) => (
-              <tr key={i}><td>{String(m.start_time || "").slice(0, 16)}</td><td>{m.operation_type}</td><td>{m.operation_status}</td><td className="num mono">{`${m.usage_quantity} ${m.usage_unit || ""}`}</td></tr>
+              <tr key={i}><td>{String(m.start_time || "").slice(0, 16)}</td><td>{m.operation_type}</td><td>{m.operation_status}</td><td className="num mono">{m.usage_quantity == null ? "-" : `${Number(m.usage_quantity).toFixed(3)} ${m.usage_unit === "ESTIMATED_DBU" ? "DBU (est.)" : m.usage_unit || ""}`}</td></tr>
             ))}</tbody>
           </table></div>
         </Card>
@@ -700,7 +708,7 @@ function TableDetail({ name, window, onBack }: { name: string; window: number; o
 }
 
 // ─────────── Volumes ───────────
-function UsageVolumesContent({ filters, onVerdict }: LooseProps) {
+function UsageVolumesContent({ filters, goTo, onVerdict }: LooseProps) {
   const key = JSON.stringify([filters.window, filters.workspaceIds, filters.envs, Api.tagParams()]);
   const st = useApi(() => Api.volumes(filters.workspaceIds, filters.envs, filters.window), key);
   const [open, setOpen] = React.useState<string | null>(handoff.volume || null);
@@ -757,7 +765,7 @@ function UsageVolumesContent({ filters, onVerdict }: LooseProps) {
         </div>
         {notListed.length ? <NotListed vols={notListed} /> : null}
       </Card>
-      {sel && <VolumeDetail v={sel} window={filters.window} wsNames={new Map(vols.filter((x) => x.workspace_id).map((x) => [String(x.workspace_id), x.workspace_name]))} />}
+      {sel && <VolumeDetail v={sel} window={filters.window} goTo={goTo} wsNames={new Map(vols.filter((x) => x.workspace_id).map((x) => [String(x.workspace_id), x.workspace_name]))} />}
       <Card title="File reads and writes by workspace">
         {Array.from(byWs.entries()).sort((a, b) => b[1].r + b[1].w - (a[1].r + a[1].w)).map(([n, x]) => (
           <div key={n} style={{ display: "grid", gridTemplateColumns: "minmax(110px, 180px) 1fr 110px", gap: 10, alignItems: "center", margin: "6px 0", fontSize: 13 }}>
@@ -804,7 +812,7 @@ function NotListed({ vols }: { vols: any[] }) {
   );
 }
 
-function VolumeDetail({ v, wsNames, window }: { v: any; wsNames: Map<string, string>; window: number }) {
+function VolumeDetail({ v, wsNames, window, goTo }: { v: any; wsNames: Map<string, string>; window: number; goTo: any }) {
   const st = useApi(() => Api.volumeUsers(v.volume_full_name, window), `${v.volume_full_name}|${window}`);
   const rows: any[] = st.phase === "ready" && st.data ? st.data.rows || [] : [];
   return (
@@ -814,6 +822,11 @@ function VolumeDetail({ v, wsNames, window }: { v: any; wsNames: Map<string, str
           v.files != null ? `${fmtInt(v.files)}${v.truncated ? "+" : ""} files` : null, v.detail && v.detail !== "listed" ? v.detail : null].filter(Boolean)
           .map((x) => <span key={String(x)} className="badge">{x}</span>)}
       </div>
+      {rows.length ? <div style={{ marginBottom: 10 }}><MostUsed rows={Array.from(rows.reduce((m, r) => {
+        const a = m.get(r.identity) || { name: r.identity, reads: 0, writes: 0, sub: r.kind };
+        a.reads += r.reads || 0; a.writes += r.writes || 0;
+        return m.set(r.identity, a);
+      }, new Map<string, any>()).values() as Iterable<any>).sort((a: any, b: any) => b.reads + b.writes - (a.reads + a.writes)).slice(0, 10)} open={(who) => toPerson(goTo, who)} /></div> : null}
       {st.phase === "loading" ? <span className="muted">Loading...</span> : rows.length ? (
         <div className="data-table-wrap"><table className="data">
           <thead><tr><th>Who</th><th>Kind</th><th>Workspace</th><th className="num">Reads</th><th className="num">Writes</th><th>Last read</th><th>Last write</th></tr></thead>
@@ -934,6 +947,8 @@ function PersonTables({ identity, window, goTo }: { identity: string; window: nu
   const max = Math.max(1, ...rows.map((r) => r.reads + r.writes));
   const toTable = (name: string) => { Object.assign(handoff, { workspace: null, cls: null, table: name }); goTo({ tab: "usage", subtab: "tables" }); };
   return (
+    <React.Fragment>
+    <div style={{ margin: "4px 0 10px" }}><MostUsed rows={rows.slice(0, 10).map((r) => ({ name: r.table_full_name, reads: r.reads, writes: r.writes, sub: r.workspaces.join(", ") }))} open={toTable} /></div>
     <table className="data">
       <thead><tr><th>Table</th><th>Class</th><th className="num">Reads</th><th className="num">Writes</th><th>Reads / writes</th><th>Last used</th><th>Workspaces</th><th>Sensitive</th></tr></thead>
       <tbody>{rows.map((r) => (
@@ -949,6 +964,7 @@ function PersonTables({ identity, window, goTo }: { identity: string; window: nu
         </tr>
       ))}</tbody>
     </table>
+    </React.Fragment>
   );
 }
 
