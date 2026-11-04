@@ -29,6 +29,12 @@ Filters; default the last 30 days, excluding today).
   - The job needs `USE CATALOG`, `USE SCHEMA`, `SELECT` and `READ VOLUME` on the catalogs (`BROWSE` isn't
     enough) and `CREATE TABLE`, `MODIFY` on that schema.
   - A catalog counts for its home workspace: the one that reads and writes it most in lineage.
+  - `table_history` keeps the last 100 versions per table with the files and bytes each added and removed:
+    Table detail's changes and maintenance and its reads before and after a compaction. After an upgrade, run
+    the job once before opening the dashboard: those widgets read the new columns.
+- **Data usage queries per table:** Table detail joins `system.query.history` to lineage by `statement_id` for
+  the slowest queries and full scans. Query history has SQL warehouses and serverless only; jobs and
+  notebooks on classic compute show under Not in query history, their time, bytes and files not available.
 - For the bundle in `databricks-observability`: build with its tags and classes into a scratch
   folder, then copy the `.lvdash.json` to its `src/` and the `.html` to its `docs/queries/`.
 - Import: **Dashboards** › **Import dashboard from file**, then pick a SQL warehouse.

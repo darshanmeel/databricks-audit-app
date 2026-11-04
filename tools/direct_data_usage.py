@@ -791,23 +791,221 @@ FROM e LEFT JOIN c ON c.full_name = e.dst""",
     )
 
 
+# Delta's OPTIMIZE (also ZORDER and liquid clustering), predictive optimization's compaction and clustering
+COMPACT_OPS = "^(OPTIMIZE|COMPACTION|CLUSTERING)"
+FULL_SCAN_FILES = 50  # a read that pruned none of at least this many files read the whole table
+QUERY_TEXT_CHARS = 300
+_GB = "1073741824.0"
+
+
+def _po_metric(*keys: str) -> str:
+    return "COALESCE(" + ", ".join(f"try_cast(operation_metrics['{k}'] AS BIGINT)" for k in keys) + ")"
+
+
 def history() -> Dataset:
     return Dataset(
-        "wd_history", "Change history per table",
+        "wd_changes", "Changes and maintenance per table",
         [], [],
-        f"""h AS (SELECT * FROM {_sized('table_history')})
-SELECT h.catalog || '.' || h.schema || '.' || h.table_name AS table_name, h.version,
-       CAST(date_format(h.timestamp, 'yyyy-MM-dd HH:mm') AS STRING) AS changed_at, h.operation, h.user_name,
-       h.rows_changed, ROUND(h.bytes_written / 1073741824.0, 3) AS gb_written
-FROM h
-ORDER BY table_name, h.version DESC""",
-        f"Each table's last {HISTORY_VERSIONS} versions from the sizes job's DESCRIBE HISTORY: when, what, who, rows "
-        "changed, bytes written.",
-        "Change history on Table detail.",
-        "One row per table version, newest first.",
-        {"h": "The sizes job's DESCRIBE HISTORY rows."},
-        head="All versions the job collected.",
-        window=False,
+        f"""h AS (
+  SELECT catalog || '.' || schema || '.' || table_name AS table_name, timestamp AS ts, operation, 'Delta' AS source,
+         user_name AS who, rows_changed, files_added, files_removed, bytes_added, bytes_removed, freed_bytes,
+         CAST(NULL AS DOUBLE) AS dbu, CAST(NULL AS STRING) AS status
+  FROM {_sized('table_history')}
+  WHERE timestamp >= {START} AND timestamp < {END}
+),
+po AS (
+  SELECT catalog_name || '.' || schema_name || '.' || table_name, start_time, operation_type, 'Predictive optimization',
+         'predictive optimization', CAST(NULL AS BIGINT),
+         {_po_metric('number_of_output_files', 'number_of_added_files')},
+         {_po_metric('number_of_compacted_files', 'number_of_removed_files', 'number_of_clustered_files', 'number_of_deleted_files')},
+         {_po_metric('amount_of_output_data_bytes')},
+         {_po_metric('amount_of_data_compacted_bytes', 'amount_of_data_removed_bytes')},
+         {_po_metric('amount_of_data_deleted_bytes')},
+         CASE WHEN usage_unit = 'ESTIMATED_DBU' THEN CAST(usage_quantity AS DOUBLE) END, operation_status
+  FROM system.storage.predictive_optimization_operations_history
+  WHERE start_time >= {START} AND start_time < {END} AND table_name IS NOT NULL
+),
+a AS (SELECT * FROM h UNION ALL SELECT * FROM po)
+SELECT table_name, CAST(date_format(ts, 'yyyy-MM-dd HH:mm') AS STRING) AS changed_at, operation, source, who,
+       COALESCE(status, '') AS status, rows_changed, files_added, files_removed,
+       ROUND(bytes_added / {_GB}, 3) AS gb_added, ROUND(bytes_removed / {_GB}, 3) AS gb_removed,
+       ROUND(freed_bytes / {_GB}, 3) AS gb_freed, ROUND(dbu, 3) AS dbu,
+       CASE WHEN upper(operation) RLIKE '{COMPACT_OPS}' THEN 1 ELSE 0 END AS compactions,
+       CASE WHEN upper(operation) RLIKE '{COMPACT_OPS}' THEN files_removed END AS files_merged,
+       CASE WHEN upper(operation) RLIKE '{COMPACT_OPS}' THEN files_added END AS files_after
+FROM a
+ORDER BY table_name, ts DESC""",
+        f"Every write, merge, OPTIMIZE and VACUUM (the sizes job's DESCRIBE HISTORY, last {HISTORY_VERSIONS} per table) "
+        "and every predictive optimization run in the window: who, rows, files and bytes added and removed, "
+        "bytes VACUUM freed, predictive optimization's DBUs.",
+        "Changes and maintenance, and the compaction counters, on Table detail.",
+        "One row per operation, newest first.",
+        {"h": "The sizes job's DESCRIBE HISTORY rows in the window.",
+         "po": "Predictive optimization's runs in the window, with the files and bytes from its metrics.",
+         "a": "Both in one list."},
+        head="Dates from the Time Window. History only as far back as its last 100 versions.",
+    )
+
+
+def _statements(lo: str) -> str:
+    """Query statements from lo to the window's end and the tables each read or wrote (lineage by
+    statement_id); a statement that reads and writes a table counts as a write."""
+    return f"""st AS (
+  SELECT statement_id, table_name, CASE WHEN MAX(is_write) = 1 THEN 'Writes' ELSE 'Reads' END AS access
+  FROM (
+    SELECT statement_id, source_table_full_name AS table_name, 0 AS is_write FROM system.access.table_lineage
+    WHERE event_date >= {lo} AND event_date < {END} AND statement_id IS NOT NULL AND source_table_full_name IS NOT NULL
+    UNION ALL
+    SELECT statement_id, target_table_full_name, 1 FROM system.access.table_lineage
+    WHERE event_date >= {lo} AND event_date < {END} AND statement_id IS NOT NULL AND target_table_full_name IS NOT NULL
+  ) x
+  GROUP BY 1, 2
+),
+q AS (
+  SELECT statement_id, CAST(workspace_id AS STRING) AS workspace_id, lower(executed_by) AS who, start_time, statement_type,
+         COALESCE(total_duration_ms, 0) AS ms, read_bytes, read_files, pruned_files, compute.warehouse_id AS warehouse_id,
+         statement_text
+  FROM system.query.history
+  WHERE start_time >= {lo} AND start_time < {END}
+)"""
+
+
+_STMT_STEPS = {"st": "Each query statement and the tables it read or wrote (lineage rows with a statement_id).",
+               "q": "Query history: who, when, time, bytes and files read and pruned."}
+
+
+def table_queries() -> Dataset:
+    return Dataset(
+        "wd_table_queries", "Each table's slowest queries",
+        [], [],
+        f"""{_statements(START)},
+wsl AS (SELECT CAST(workspace_id AS STRING) AS workspace_id, workspace_name FROM system.access.workspaces_latest),
+r AS (
+  SELECT st.table_name, st.access, q.*, ROW_NUMBER() OVER (PARTITION BY st.table_name ORDER BY q.ms DESC, q.statement_id) AS rnk
+  FROM st JOIN q ON q.statement_id = st.statement_id
+)
+SELECT r.table_name, CAST(date_format(r.start_time, 'yyyy-MM-dd HH:mm') AS STRING) AS started, r.who, r.statement_type, r.access,
+       ROUND(r.ms / 1000.0, 1) AS seconds, ROUND(r.read_bytes / {_GB}, 2) AS gb_read, r.read_files AS files_read,
+       r.pruned_files AS files_pruned,
+       CASE WHEN r.access = 'Reads' AND COALESCE(r.pruned_files, 0) = 0 AND COALESCE(r.read_files, 0) >= {FULL_SCAN_FILES}
+            THEN 'Full scan' ELSE '' END AS scan,
+       COALESCE(w.workspace_name, r.workspace_id) AS workspace, r.warehouse_id,
+       left(regexp_replace(r.statement_text, '\\s+', ' '), {QUERY_TEXT_CHARS}) AS query
+FROM r LEFT JOIN wsl w ON w.workspace_id = r.workspace_id
+WHERE r.rnk <= 10
+ORDER BY r.table_name, r.ms DESC""",
+        f"Per table, the 10 slowest queries in the window that read or wrote it: who, time, bytes, files read and "
+        f"pruned. Full scan: {FULL_SCAN_FILES}+ files read, none pruned. Bytes and files are the whole query's.",
+        "Slowest queries on Table detail.",
+        "Up to 10 rows per table.",
+        {**_STMT_STEPS, "wsl": "Workspace names.", "r": "Each table's queries, slowest first."},
+        head="Dates from the Time Window.",
+    )
+
+
+def table_scans() -> Dataset:
+    return Dataset(
+        "wd_table_scans", "Each table's reads in query history",
+        [], [],
+        f"""{_statements(START)}
+SELECT st.table_name, COUNT(*) AS reads, ROUND(AVG(q.ms) / 1000.0, 1) AS avg_seconds,
+       ROUND(SUM(COALESCE(q.read_bytes, 0)) / {_GB}, 1) AS gb_read,
+       COUNT_IF(COALESCE(q.pruned_files, 0) = 0 AND COALESCE(q.read_files, 0) >= {FULL_SCAN_FILES}) AS full_scans,
+       ROUND(100 * SUM(COALESCE(q.pruned_files, 0)) / NULLIF(SUM(COALESCE(q.read_files, 0)) + SUM(COALESCE(q.pruned_files, 0)), 0), 0) AS pruned_pct
+FROM st JOIN q ON q.statement_id = st.statement_id
+WHERE st.access = 'Reads'
+GROUP BY st.table_name""",
+        "Per table, its reads in query history in the window: how many, average time, bytes, how many pruned no "
+        "file, and the share of files skipped.",
+        "The query counters on Table detail.",
+        "One row per table read.",
+        dict(_STMT_STEPS),
+        head="Dates from the Time Window.",
+    )
+
+
+def table_other() -> Dataset:
+    key = ("concat_ws('|', COALESCE(CAST(entity_run_id AS STRING), CAST(entity_id AS STRING), ''), "
+           "COALESCE(created_by, ''), CAST(event_time AS STRING))")
+    return Dataset(
+        "wd_table_other", "Reads and writes not in query history",
+        [], [],
+        f"""lin AS (
+  SELECT statement_id, source_table_full_name AS table_name, 'Reads' AS access, entity_type, lower(created_by) AS who,
+         event_time, {key} AS k
+  FROM system.access.table_lineage
+  WHERE event_date >= {START} AND event_date < {END} AND source_table_full_name IS NOT NULL
+  UNION ALL
+  SELECT statement_id, target_table_full_name, 'Writes', entity_type, lower(created_by), event_time, {key}
+  FROM system.access.table_lineage
+  WHERE event_date >= {START} AND event_date < {END} AND target_table_full_name IS NOT NULL
+),
+qs AS (SELECT DISTINCT statement_id FROM system.query.history WHERE start_time >= {START} AND start_time < {END}),
+per AS (
+  SELECT l.table_name, l.who, COALESCE(l.entity_type, 'unknown') AS via, l.access, COUNT(DISTINCT l.k) AS events,
+         MAX(l.event_time) AS last_event
+  FROM lin l LEFT JOIN qs ON qs.statement_id = l.statement_id
+  WHERE qs.statement_id IS NULL
+  GROUP BY 1, 2, 3, 4
+)
+SELECT table_name, who, via, access, events, CAST(date_format(last_event, 'yyyy-MM-dd') AS STRING) AS last_event,
+       'not available' AS time_bytes_files
+FROM per
+QUALIFY ROW_NUMBER() OVER (PARTITION BY table_name ORDER BY events DESC, who, access, via) <= 10
+ORDER BY table_name, events DESC""",
+        "Per table, the reads and writes in lineage whose statement is not in query history: jobs, notebooks and "
+        "pipelines on classic compute. Who, through what, how many and when; their time, bytes and files are "
+        "not available.",
+        "Not in query history on Table detail.",
+        "Up to 10 rows per table.",
+        {"lin": "Every lineage read and write in the window, with its statement_id.",
+         "qs": "The statements query history has.",
+         "per": "Lineage events with no statement in query history, per table, identity, entity type and access."},
+        head="Dates from the Time Window.",
+    )
+
+
+def compaction_effect() -> Dataset:
+    return Dataset(
+        "wd_compaction_effect", "Reads before and after each compaction",
+        [], [],
+        f"""{_statements(f"date_sub({START}, 7)")},
+ev AS (
+  SELECT catalog || '.' || schema || '.' || table_name AS table_name, timestamp AS ts, operation
+  FROM {_sized('table_history')}
+  WHERE timestamp >= {START} AND timestamp < {END} AND upper(operation) RLIKE '{COMPACT_OPS}'
+  UNION ALL
+  SELECT catalog_name || '.' || schema_name || '.' || table_name, start_time, operation_type
+  FROM system.storage.predictive_optimization_operations_history
+  WHERE start_time >= {START} AND start_time < {END} AND operation_status = 'SUCCESSFUL'
+    AND upper(operation_type) RLIKE '{COMPACT_OPS}'
+),
+r AS (SELECT st.table_name, q.start_time, q.ms, q.read_files FROM st JOIN q ON q.statement_id = st.statement_id WHERE st.access = 'Reads'),
+b AS (
+  SELECT ev.table_name, ev.ts, ev.operation,
+         COUNT_IF(r.start_time < ev.ts) AS reads_before, COUNT_IF(r.start_time > ev.ts) AS reads_after,
+         AVG(CASE WHEN r.start_time < ev.ts THEN r.ms END) AS ms_before, AVG(CASE WHEN r.start_time > ev.ts THEN r.ms END) AS ms_after,
+         AVG(CASE WHEN r.start_time < ev.ts THEN r.read_files END) AS files_before,
+         AVG(CASE WHEN r.start_time > ev.ts THEN r.read_files END) AS files_after
+  FROM ev JOIN r ON r.table_name = ev.table_name
+   AND r.start_time >= ev.ts - INTERVAL 7 DAYS AND r.start_time < ev.ts + INTERVAL 7 DAYS
+  GROUP BY ev.table_name, ev.ts, ev.operation
+)
+SELECT table_name, CAST(date_format(ts, 'yyyy-MM-dd HH:mm') AS STRING) AS compacted_at, operation, reads_before, reads_after,
+       ROUND(ms_before / 1000.0, 1) AS seconds_before, ROUND(ms_after / 1000.0, 1) AS seconds_after,
+       ROUND(100 * (ms_after - ms_before) / NULLIF(ms_before, 0), 0) AS time_change_pct,
+       ROUND(files_before, 0) AS files_per_read_before, ROUND(files_after, 0) AS files_per_read_after
+FROM b
+WHERE reads_before >= 3 AND reads_after >= 3
+ORDER BY table_name, ts DESC""",
+        "Per compaction in the window (OPTIMIZE, predictive compaction or clustering), the table's reads in query "
+        "history in the 7 days before and after: average time and files per read. Needs 3+ reads on each side; "
+        "an indication, other changes count too.",
+        "Reads before and after a compaction on Table detail.",
+        "One row per compaction with enough reads.",
+        {**_STMT_STEPS, "ev": "Compactions in the window: the sizes job's history and predictive optimization.",
+         "r": "Reads of each table in query history.", "b": "Reads in the 7 days before and after each compaction."},
+        head="Dates from the Time Window; reads from 7 days before it.",
     )
 
 
@@ -857,11 +1055,13 @@ ORDER BY unused DESC, table_name, grantee""",
     )
 
 
-def _ranked(base: Dataset, key: str, title: str, name: str, top: int, per_workspace: bool, extra: str = "") -> Dataset:
+def _ranked(base: Dataset, key: str, title: str, name: str, top: int, per_workspace: bool | str, extra: str = "") -> Dataset:
     """base's rows with the most read and write events, one row per direction: base's own steps and final
-    SELECT (step b), ranked (step r). per_workspace: the top of each workspace, for the pages that pick one."""
+    SELECT (step b), ranked (step r). per_workspace: the top of each workspace, for the pages that pick one;
+    a column name: the top per value of that column."""
     at = base.body.rfind("\nSELECT ")
-    over = "PARTITION BY workspace " if per_workspace else ""
+    per = "workspace" if per_workspace is True else per_workspace or None
+    over = f"PARTITION BY {per} " if per else ""
     keep = f"workspace, {name} AS name{extra}"
     return Dataset(
         key, title, [], [],
@@ -875,12 +1075,12 @@ r AS (
 SELECT {keep}, 'Reads' AS direction, reads AS events FROM r WHERE rnk <= {top}
 UNION ALL
 SELECT {keep}, 'Writes' AS direction, writes AS events FROM r WHERE rnk <= {top}""",
-        f"The {top} with the most read and write events in the window{' in each workspace' if per_workspace else ''}, "
+        f"The {top} with the most read and write events in the window{f' per {per}' if per else ''}, "
         f"from {base.key}: one row per direction.",
         "The most active charts.",
-        f"Up to {2 * top} rows{' per workspace' if per_workspace else ''}.",
+        f"Up to {2 * top} rows{f' per {per}' if per else ''}.",
         {**base.steps, "b": f"Every row of {base.key}.",
-         "r": "Ranked by read plus write events" + (", within each workspace." if per_workspace else ".")},
+         "r": "Ranked by read plus write events" + (f", within each {per}." if per else ".")},
         head=base.head,
     )
 
@@ -918,7 +1118,9 @@ def _all() -> list[Dataset]:
             _ranked(people(), "wd_top_people", "The most active people", "identity", 15, False, ", kind"),
             _ranked(people(), "wd_top_people_ws", "Each workspace's most active people", "identity", 10, True, ", kind"),
             _ranked(volumes(), "wd_top_volumes_ws", "Each workspace's most active volumes", "volume", 10, True, ", usage_class"),
-            busiest_days()]
+            busiest_days(), table_queries(), table_scans(), table_other(), compaction_effect(),
+            _ranked(access(), "wd_table_people", "Each table's most active people", "identity", 10, "table_name", ", table_name, kind"),
+            _ranked(access(), "wd_person_tables", "Each person's most used tables", "table_name", 10, "identity", ", identity")]
 
 
 DATASETS: list[Dataset] = _all()
@@ -1086,7 +1288,14 @@ TABLE_NOTES = {
     "Who can read it (direct grants)": "Never read in the window: a grant to remove. A group's grant reads never used: lineage records people.",
     "Sensitive columns": "A column tag, else the column name. Unmasked: add a column mask.",
     "Where it comes from, where it goes": "A downstream nobody reads: the job building it can stop.",
-    "Change history (DESCRIBE HISTORY)": "Its last versions from the sizes job: what changed, when, who.",
+    "Changes and maintenance": "The sizes job's DESCRIBE HISTORY (last 100 versions, so older ones are not available) "
+                               "and predictive optimization in the window. OPTIMIZE frees no storage: VACUUM does. "
+                               "DBUs are predictive optimization's own estimate.",
+    "Reads before and after a compaction": "Reads in query history 7 days each side, 3+ on both. An indication: other changes count too.",
+    "Slowest queries": "Query history: SQL warehouses and serverless only. Bytes and files are the whole query's: a join "
+                       f"shows them on each table. Full scan: {FULL_SCAN_FILES}+ files read, none pruned: filter on a clustering column.",
+    "Not in query history": "Jobs, notebooks and pipelines on classic compute: in lineage with who and when; time, bytes "
+                            "and files are not available.",
     "Every volume, clean-up order": "Spark jobs reading a volume on a cluster may not be in the audit log: check before you drop.",
     "Who reads and who writes": "Most table writes first. Writes nobody reads: tables they wrote that nobody read.",
     f"Not seen for {INACTIVE_DAYS}+ days, still with access (direct grants)": "Remove from the workspace or its groups; sensitive first.",
@@ -1096,7 +1305,7 @@ TABLE_NOTES = {
 
 
 def dashboard() -> dict:
-    W, T, C, L, V, U, I, D, S, A, E, H, K, G, TW, TT, TTW, TP, TPW, TVW, DT = DATASETS
+    W, T, C, L, V, U, I, D, S, A, E, H, K, G, TW, TT, TTW, TP, TPW, TVW, DT, TQ, TS, TO, EF, TPP, PT = DATASETS
     rw = lambda key, d, cat_t, title, desc: _colored(  # noqa: E731
         bar(key, d, "name", cat_t, "events", "Events", title, desc, money=False, color="direction"),
         [("Reads", "#2456A6"), ("Writes", "#D27A2C")])
@@ -1242,16 +1451,25 @@ def dashboard() -> dict:
     table_detail = place([
         (2, [header("du:td:head", "Table detail",
                     "Pick one table: its reads and writes per day, who reads and writes it, who can read it but "
-                    "doesn't, its sensitive columns, where it comes from and goes, and its change history.")]),
-        (1, [time_window("du:td:time", [T, D, A, E, G]), _pick("du:td:t", "table_name", "Table", [T, D, A, E, H, K, G])]),
+                    "doesn't, its sensitive columns, where it comes from and goes, its changes and maintenance, and "
+                    "its slowest queries.")]),
+        (1, [time_window("du:td:time", [T, D, A, E, G, H, TQ, TS, TO, EF, TPP]),
+             _pick("du:td:t", "table_name", "Table", [T, D, A, E, H, K, G, TQ, TS, TO, EF, TPP])]),
         (3, [_counter("du:td:gb", T, "size_gb", "Size · GB", "From DESCRIBE DETAIL"),
              _counter("du:td:reads", T, "reads", "Reads", "In the window", "#2456A6"),
              _counter("du:td:writes", T, "writes", "Writes", "In the window", "#D27A2C"),
              _counter("du:td:readers", T, "readers", "Readers", "Distinct, in the window"),
              _counter("du:td:writers", T, "writers", "Writers", "Distinct, in the window"),
              _counter("du:td:unused", G, "unused", "Unused grants", "Can read it, never did in the window", "#C2362B")]),
+        (3, [_counter("du:td:comp", H, "compactions", "Compactions", "OPTIMIZE and predictive, in the window"),
+             _counter("du:td:merged", H, "files_merged", "Files merged", "By those compactions"),
+             _counter("du:td:freed", H, "gb_freed", "GB freed by VACUUM", "In the window", "#1D7A46"),
+             _counter("du:td:q", TS, "reads", "Reads in query history", "SQL warehouses and serverless"),
+             _counter("du:td:sec", TS, "avg_seconds", "Seconds per read", "Average"),
+             _counter("du:td:scan", TS, "full_scans", "Full scans", f"{FULL_SCAN_FILES}+ files read, none pruned", "#C2362B")]),
         (4, [_links(table("du:td:facts", T, TABLE_COLS, "The table"), "table_link")]),
         (7, [_daily("du:td:daily", D, "Reads and writes per day", "Lineage events")]),
+        (8, [rw("du:td:top", TPP, "Who", "Most active people", "Its 10 people and service principals with the most read and write events")]),
         (8, [table("du:td:who", A, ACCESS_COLS, "Who reads and writes it"),
              table("du:td:grants", G, [("grantee", "Grantee", "text"), ("kind", "Kind", "text"),
                                         ("privilege", "Privilege", "text"), ("used", "Used", "text")],
@@ -1261,10 +1479,29 @@ def dashboard() -> dict:
              table("du:td:edges", E, [("direction", "Direction", "text"), ("other_table", "Table", "text"),
                                       ("other_class", "Its class", "text"), ("events", "Events", "int")],
                    "Where it comes from, where it goes")]),
-        (8, [table("du:td:history", H, [("version", "Version", "int"), ("changed_at", "When", "text"),
-                                         ("operation", "Operation", "text"), ("user_name", "Who", "text"),
-                                         ("rows_changed", "Rows changed", "int"), ("gb_written", "GB written", "num")],
-                   "Change history (DESCRIBE HISTORY)")]),
+        (9, [table("du:td:changes", H, [("changed_at", "When", "text"), ("operation", "Operation", "text"),
+                                         ("source", "Source", "text"), ("who", "Who", "text"), ("status", "Status", "text"),
+                                         ("rows_changed", "Rows", "int"), ("files_added", "Files added", "int"),
+                                         ("files_removed", "Files removed", "int"), ("gb_added", "GB added", "num"),
+                                         ("gb_removed", "GB removed", "num"), ("gb_freed", "GB freed", "num"),
+                                         ("dbu", "DBU (est.)", "num")],
+                   "Changes and maintenance")]),
+        (6, [table("du:td:effect", EF, [("compacted_at", "Compacted", "text"), ("operation", "Operation", "text"),
+                                         ("reads_before", "Reads before", "int"), ("reads_after", "Reads after", "int"),
+                                         ("seconds_before", "Seconds before", "num"), ("seconds_after", "Seconds after", "num"),
+                                         ("time_change_pct", "Time change %", "int"),
+                                         ("files_per_read_before", "Files per read before", "int"),
+                                         ("files_per_read_after", "Files per read after", "int")],
+                   "Reads before and after a compaction")]),
+        (10, [table("du:td:queries", TQ, [("started", "When", "text"), ("who", "Who", "text"), ("statement_type", "Type", "text"),
+                                           ("access", "Access", "text"), ("seconds", "Seconds", "num"), ("gb_read", "GB read", "num"),
+                                           ("files_read", "Files read", "int"), ("files_pruned", "Pruned", "int"),
+                                           ("scan", "Scan", "text"), ("workspace", "Workspace", "text"), ("query", "Query", "text")],
+                    "Slowest queries")]),
+        (7, [table("du:td:other", TO, [("who", "Who", "text"), ("via", "Through", "text"), ("access", "Access", "text"),
+                                        ("events", "Events", "int"), ("last_event", "Last", "text"),
+                                        ("time_bytes_files", "Time, bytes, files", "text")],
+                   "Not in query history")]),
     ])
     volumes_page = place([
         (2, [header("du:vol:head", "Volumes",
@@ -1312,7 +1549,7 @@ def dashboard() -> dict:
     person_detail = place([
         (2, [header("du:pd:head", "Person detail",
                     "Pick one person or service principal: where they work, and every table they read or wrote.")]),
-        (1, [time_window("du:pd:time", [U, A]), _pick("du:pd:who", "identity", "Who", [U, A])]),
+        (1, [time_window("du:pd:time", [U, A, PT]), _pick("du:pd:who", "identity", "Who", [U, A, PT])]),
         (3, [_counter("du:pd:queries", U, "queries", "Queries", "In the window"),
              _counter("du:pd:read", U, "tables_read", "Tables read", "In the window", "#2456A6"),
              _counter("du:pd:written", U, "tables_written", "Tables written", "In the window", "#D27A2C"),
@@ -1322,6 +1559,7 @@ def dashboard() -> dict:
         (6, [table("du:pd:where", U, [("workspace", "Workspace", "text"), ("logins", "Logins", "int"),
                                        ("queries", "Queries", "int"), ("last_seen", "Last seen", "text"),
                                        ("days_since", "Days since", "int")], "Where they work")]),
+        (8, [rw("du:pd:top", PT, "Table", "Most used tables", "Their 10 tables with the most read and write events")]),
         (10, [table("du:pd:tables", A, ACCESS_COLS, "The tables they read or wrote")]),
     ])
     for layout in (workspaces_page, ws_detail, tables_page, table_detail, volumes_page, people_page, person_detail):
@@ -1401,8 +1639,14 @@ def describe(t):
         for h in spark.sql(f"DESCRIBE HISTORY {{name}} LIMIT {HISTORY_VERSIONS}").collect():
             m = {{k: int(v) for k, v in (h.operationMetrics or {{}}).items() if str(v).isdigit()}}
             changed = sum(m.get(k, 0) for k in ROW_KEYS) or m.get("numOutputRows", 0)
+            first = lambda *ks: next((m[k] for k in ks if k in m), None)  # noqa: E731
             history_rows.append((t.table_catalog, t.table_schema, t.table_name, h.version, h.timestamp, h.operation,
-                                 h.userName, changed, m.get("numOutputBytes", 0)))
+                                 h.userName, changed, m.get("numOutputBytes", 0),
+                                 first("numAddedFiles", "numFilesAdded", "numTargetFilesAdded", "numFiles"),
+                                 first("numRemovedFiles", "numFilesRemoved", "numTargetFilesRemoved", "numDeletedFiles", "numFilesToDelete"),
+                                 first("numAddedBytes", "numTargetBytesAdded", "numOutputBytes"),
+                                 first("numRemovedBytes", "numTargetBytesRemoved"),
+                                 m.get("sizeOfDataToDelete") if str(h.operation).startswith("VACUUM") else None))
     except Exception:  # the size is still worth keeping
         pass
     return (t.table_catalog, t.table_schema, t.table_name, d.sizeInBytes, d.numFiles, str(d.lastModified), "described", now)
@@ -1413,7 +1657,9 @@ with ThreadPoolExecutor(threads) as pool:
                              "last_modified string, detail string, collected_at timestamp")
       .write.mode("overwrite").option("overwriteSchema", "true").saveAsTable(f"{{out}}.table_sizes"))
 (spark.createDataFrame(history_rows, "catalog string, schema string, table_name string, version bigint, timestamp timestamp, "
-                                     "operation string, user_name string, rows_changed bigint, bytes_written bigint")
+                                     "operation string, user_name string, rows_changed bigint, bytes_written bigint, "
+                                     "files_added bigint, files_removed bigint, bytes_added bigint, bytes_removed bigint, "
+                                     "freed_bytes bigint")
       .write.mode("overwrite").option("overwriteSchema", "true").saveAsTable(f"{{out}}.table_history"))
 print(f"{{len(rows)}} tables, {{sum(1 for r in rows if r[6] == 'described')}} described, {{len(history_rows)}} history rows")
 

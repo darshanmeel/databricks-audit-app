@@ -1162,10 +1162,25 @@ _DU = {
     "column_name": "The column.", "pii_type": "What it holds: email, phone, IBAN, ...", "mask": "masked or unmasked.",
     "unmasked": "1 when unmasked.", "columns": "Always 1: counts columns.",
     "name": "The workspace, table, person or volume ranked.",
+    "source": "Delta (DESCRIBE HISTORY) or Predictive optimization.", "who": "Who ran it.", "status": "Predictive optimization's status.",
+    "files_added": "Files written.", "files_removed": "Files removed (merged by OPTIMIZE, deleted by VACUUM).",
+    "gb_added": "GB written.", "gb_removed": "GB removed from the table.", "gb_freed": "GB VACUUM deleted from storage.",
+    "dbu": "Predictive optimization's estimated DBUs.", "compactions": "1 for OPTIMIZE, compaction or clustering.",
+    "files_merged": "Files a compaction merged.", "files_after": "Files it wrote.",
+    "started": "When the query started.", "statement_type": "SELECT, MERGE, INSERT...", "seconds": "Total time.",
+    "gb_read": "GB the whole query read.", "files_read": "Files the whole query read.", "files_pruned": "Files skipped.",
+    "scan": "Full scan when 50+ files were read and none pruned.", "warehouse_id": "The warehouse.", "query": "The first 300 characters.",
+    "avg_seconds": "Average time per read.", "full_scans": "Reads that pruned no file.", "pruned_pct": "Share of files skipped.",
+    "via": "JOB, NOTEBOOK, PIPELINE...", "events": "Read or write events.", "last_event": "The last one.",
+    "time_bytes_files": "Always not available: not in query history.",
+    "compacted_at": "When the compaction ran.", "reads_before": "Reads in the 7 days before.", "reads_after": "Reads in the 7 days after.",
+    "seconds_before": "Average seconds per read before.", "seconds_after": "After.", "time_change_pct": "Change in time per read.",
+    "files_per_read_before": "Average files per read before.", "files_per_read_after": "After.",
 }
 for _key in ("wd_workspaces", "wd_tables", "wd_cleanup", "wd_largest", "wd_volumes", "wd_people", "wd_inactive", "wd_daily",
-             "wd_schemas", "wd_access", "wd_edges", "wd_history", "wd_columns", "wd_grants", "wd_top_workspaces",
-             "wd_top_tables", "wd_top_tables_ws", "wd_top_people", "wd_top_people_ws", "wd_top_volumes_ws", "wd_daily_top"):
+             "wd_schemas", "wd_access", "wd_edges", "wd_changes", "wd_columns", "wd_grants", "wd_top_workspaces",
+             "wd_top_tables", "wd_top_tables_ws", "wd_top_people", "wd_top_people_ws", "wd_top_volumes_ws", "wd_daily_top",
+             "wd_table_queries", "wd_table_scans", "wd_table_other", "wd_compaction_effect", "wd_table_people", "wd_person_tables"):
     COLUMNS[_key] = {**_DU, **COLUMNS.get(_key, {})}
 
 WHY.update({
@@ -1180,7 +1195,13 @@ WHY.update({
     "wd_largest": "Size is where the money is; reads say whether it earns it.",
     "wd_inactive": "Access nobody uses is the easiest access to remove.",
     "wd_schemas": "Whole schemas to clean up, not table by table.",
-    "wd_history": "What changed a table, when and who: before you drop it.",
+    "wd_changes": "What changed a table, when and who, and whether its upkeep runs: OPTIMIZE merges small files, VACUUM frees storage.",
+    "wd_table_queries": "The queries that cost the most time on a table; a full scan is the one to fix first.",
+    "wd_table_scans": "How often a table is read, how long it takes and how many reads skip nothing.",
+    "wd_table_other": "Jobs and notebooks on classic compute use the table too: who and how often, even without query details.",
+    "wd_compaction_effect": "Whether compacting a table made its reads faster.",
+    "wd_table_people": "Who to ask before you change or drop a table.",
+    "wd_person_tables": "What one person depends on.",
     "wd_columns": "Which columns need a mask.",
 })
 

@@ -599,7 +599,7 @@ function Upkeep({ d, window }: { d: any; window: number }) {
           <PqgsNote facts={[{ label: "Files", value: u.files_merged ? `${fmtInt(u.files_merged)} → ${fmtInt(u.files_after)}` : "-" }]} /></Card>
         <Card title={`Freed by VACUUM · ${window}d`}><div className="pqgs-card-value">{u.freed_bytes ? fmtBytes(u.freed_bytes) : "-"}</div>
           <PqgsNote facts={[{ label: "Runs", value: fmtInt(u.vacuums || 0) }, { label: "Files deleted", value: u.files_deleted ? fmtInt(u.files_deleted) : "-" }]} /></Card>
-        <Card title="Reads after the last compaction"><div className="pqgs-card-value">{effect ? <Change a={effect.effect.before.avg_ms} b={effect.effect.after.avg_ms} fmt={(v) => fmtDurationMs(v)} /> : "-"}</div>
+        <Card title="Reads after the last compaction"><div className="pqgs-card-value" style={{ fontSize: 22, whiteSpace: "nowrap" }}>{effect ? <Change a={effect.effect.before.avg_ms} b={effect.effect.after.avg_ms} fmt={(v) => fmtDurationMs(v)} /> : "-"}</div>
           <PqgsNote facts={effect ? [{ label: "Files per read", value: `${fmtInt(Math.round(effect.effect.before.files_per_read))} → ${fmtInt(Math.round(effect.effect.after.files_per_read))}` }]
             : [{ label: "Needs", value: "3+ reads in the 7 days before and after" }]} /></Card>
         <Card title={`Writes and merges · ${window}d`}><div className="pqgs-card-value">{fmtInt(u.writes || 0)}</div>

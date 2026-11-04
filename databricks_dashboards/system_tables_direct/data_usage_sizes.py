@@ -51,8 +51,14 @@ def describe(t):
         for h in spark.sql(f"DESCRIBE HISTORY {name} LIMIT 100").collect():
             m = {k: int(v) for k, v in (h.operationMetrics or {}).items() if str(v).isdigit()}
             changed = sum(m.get(k, 0) for k in ROW_KEYS) or m.get("numOutputRows", 0)
+            first = lambda *ks: next((m[k] for k in ks if k in m), None)  # noqa: E731
             history_rows.append((t.table_catalog, t.table_schema, t.table_name, h.version, h.timestamp, h.operation,
-                                 h.userName, changed, m.get("numOutputBytes", 0)))
+                                 h.userName, changed, m.get("numOutputBytes", 0),
+                                 first("numAddedFiles", "numFilesAdded", "numTargetFilesAdded", "numFiles"),
+                                 first("numRemovedFiles", "numFilesRemoved", "numTargetFilesRemoved", "numDeletedFiles", "numFilesToDelete"),
+                                 first("numAddedBytes", "numTargetBytesAdded", "numOutputBytes"),
+                                 first("numRemovedBytes", "numTargetBytesRemoved"),
+                                 m.get("sizeOfDataToDelete") if str(h.operation).startswith("VACUUM") else None))
     except Exception:  # the size is still worth keeping
         pass
     return (t.table_catalog, t.table_schema, t.table_name, d.sizeInBytes, d.numFiles, str(d.lastModified), "described", now)
@@ -63,7 +69,9 @@ with ThreadPoolExecutor(threads) as pool:
                              "last_modified string, detail string, collected_at timestamp")
       .write.mode("overwrite").option("overwriteSchema", "true").saveAsTable(f"{out}.table_sizes"))
 (spark.createDataFrame(history_rows, "catalog string, schema string, table_name string, version bigint, timestamp timestamp, "
-                                     "operation string, user_name string, rows_changed bigint, bytes_written bigint")
+                                     "operation string, user_name string, rows_changed bigint, bytes_written bigint, "
+                                     "files_added bigint, files_removed bigint, bytes_added bigint, bytes_removed bigint, "
+                                     "freed_bytes bigint")
       .write.mode("overwrite").option("overwriteSchema", "true").saveAsTable(f"{out}.table_history"))
 print(f"{len(rows)} tables, {sum(1 for r in rows if r[6] == 'described')} described, {len(history_rows)} history rows")
 
