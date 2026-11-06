@@ -925,6 +925,7 @@ def dashboards() -> list[tuple[str, str, object, list[Dataset]]]:
             ("workspace_usage", gov.USAGE_TITLE, gov.usage_dashboard, gov.USAGE_DATASETS),
             ("broad_grants", gov.GRANTS_TITLE, gov.grants_dashboard, gov.GRANTS_DATASETS),
             ("admin_changes", gov.ADMIN_TITLE, gov.admin_dashboard, gov.ADMIN_DATASETS),
+            ("governance", gov.GOV_TITLE, gov.governance_dashboard, gov.GOV_DATASETS),
             ("data_usage", wdata.TITLE, wdata.dashboard, wdata.DATASETS)]
 
 
