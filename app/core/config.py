@@ -279,8 +279,14 @@ def map_sources(sql: str, sources: dict) -> str:
     """`sql` with every mapped system table swapped for its target; unmapped ones stay."""
     if not sources:
         return sql
-    return SYSTEM_TABLE_RE.sub(
-        lambda m: sources.get(f"system.{m.group(1).lower()}.{m.group(2).lower()}", m.group(0)), sql)
+    def swap(m: re.Match) -> str:
+        target = sources.get(f"system.{m.group(1).lower()}.{m.group(2).lower()}")
+        if target is None:
+            return m.group(0)
+        # `system.query.history` in a dashboard's text keeps its backticks
+        return f"`{target}`" if re.fullmatch(r"`system\.\w+\.\w+`", m.group(0)) else target
+
+    return SYSTEM_TABLE_RE.sub(swap, sql)
 
 
 def _validate_contract(contract) -> dict | None:
