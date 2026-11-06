@@ -423,6 +423,43 @@ overwrites it, and its values win over `settings.yml`.
 - A bad value stops the app with a screen that names the setting and its line.
 - Masking cannot be undone for data loaded while it was on. Turn it on before you export.
 
+### Read from your own views and tables
+
+Nothing below is needed by default: the app and the dashboards read `system.*` and describe tables themselves.
+
+**System tables from views elsewhere** (`sources`). Each line swaps one name; the view needs the
+same columns. The export and every dashboard and notebook the builders write use it.
+
+```yaml
+sources:
+  system.query.history: my_catalog.platform.query_history
+  system.access.audit: my_catalog.platform.audit
+```
+
+**Where the dashboards' own tables live** (`dashboards`). The Lakehouse Health snapshot and the Data
+usage sizes job write here; their dashboards read here.
+
+```yaml
+dashboards:
+  snapshot_catalog: main                       # a hyphen needs no backticks
+  snapshot_schema: databricks_audit_dashboard
+  sizes_schema: main.data_usage
+  sizes_tables: {table_sizes: table_sizes, table_history: table_history, volume_sizes: volume_sizes}
+```
+
+**Table sizes without DESCRIBE** (`table_sizes.source`). When the Data usage sizes job already runs,
+the export can read its three tables instead of describing every table and listing every volume.
+Sizes are then as of the job's last run; the export needs `SELECT` on `sizes_schema`.
+
+```yaml
+table_sizes:
+  source: stored          # describe (default) runs DESCRIBE itself
+  tables_from: my_catalog.platform.tables      # optional: the table list from a view
+```
+
+After a change: the next export for the app; for the dashboards, rebuild them
+(`python tools/build_databricks_dashboards.py`, `python tools/build_direct_dashboards.py`) and import again.
+
 **Other files you can edit:**
 
 | File | What it holds | After a change |
