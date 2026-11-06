@@ -130,6 +130,21 @@ _STORED_METRICS = (("rows_changed", "numOutputRows"), ("files_added", "numAddedF
                    ("bytes_written", "numOutputBytes"))
 
 
+def check_stored(cur, volumes: bool) -> None:
+    """With source: stored, raise unless the sizes job's tables can be read: old sizes must not pass as new."""
+    stored = _stored()
+    if stored is None:
+        return
+    for key in ("table_sizes", "volume_sizes") if volumes else ("table_sizes",):
+        try:
+            cur.execute(f"SELECT 1 FROM {stored[key]} LIMIT 1")
+            cur.fetchall()
+        except Exception as exc:  # noqa: BLE001 -- re-raised with the setting that points there
+            raise RuntimeError(f"settings table_sizes source: stored, but {stored[key]} can't be read "
+                               f"(dashboards sizes_schema, sizes_tables; run the Data usage sizes job first): "
+                               + (str(exc).splitlines() or [""])[0][:300]) from exc
+
+
 def _stored_history(h: dict) -> dict:
     metrics = ", ".join(f"{key}={h[col]}" for col, key in _STORED_METRICS if h.get(col) not in (None, 0))
     return {"table_full_name": f"{h['catalog']}.{h['schema']}.{h['table_name']}", "version": h.get("version"),
@@ -182,7 +197,13 @@ def export(connect_fn: Callable, out_dir: Path, *, previous: Path | None = None,
         tables = [r for r in _rows(cur, _LIST_SQL.format(**_list_from())) if not skipped(r["table_catalog"])]
         if stored is not None:
             sizes = {(r["catalog"], r["schema"], r["table_name"]): r for r in _rows(cur, _STORED_SIZES_SQL.format(**stored))}
-            hist = [_stored_history(h) for h in _rows(cur, _STORED_HISTORY_SQL.format(**stored))] if history else []
+            hist = []
+            if history:
+                try:
+                    hist = [_stored_history(h) for h in _rows(cur, _STORED_HISTORY_SQL.format(**stored))]
+                except Exception as exc:  # noqa: BLE001 -- no history is fine; the sizes still count
+                    log(f"table history: not read from {stored['table_history']}: "
+                        + (redact(str(exc)).splitlines() or [""])[0][:200])
     except Exception as exc:  # noqa: BLE001
         return {"exported": False, "error": redact(str(exc))}
     finally:

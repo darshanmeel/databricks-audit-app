@@ -1190,6 +1190,14 @@ def run_export(
         probe = connect()
     except tools_snapshot.SnapshotConfigError as exc:
         raise ExportConfigError(str(exc)) from exc
+    sizes_cfg = app_config.table_sizes()
+    sizes_on = (sizes_cfg["enabled"] if table_sizes is None else table_sizes) and storage_from is None
+    if sizes_on and not partial:
+        try:
+            table_detail.check_stored(probe.conn.cursor(), sizes_cfg["volumes"] if volumes is None else volumes)
+        except RuntimeError as exc:
+            probe.conn.close()
+            raise ExportConfigError(_redact(str(exc), token)) from exc
     optional_missing = _substitute_optional_check_sources(probe.conn.cursor(), compiled_by_days)
     tasks, compile_errors = build_tasks(scope_ids, sources, compiled_by_days, days)
     side_thread = threading.Thread(target=names_and_tags, daemon=True)
@@ -1209,8 +1217,6 @@ def run_export(
         raise side["error"]
     dims_info, tags_info, policies_info = side["dims"], side["tags"], side.get("policies")
     # After the checks, not beside them: its own connections would slow them down.
-    sizes_cfg = app_config.table_sizes()
-    sizes_on = (sizes_cfg["enabled"] if table_sizes is None else table_sizes) and storage_from is None
     detail_info = None
     if sizes_on and not partial:
         detail_info = table_detail.export(
@@ -1381,6 +1387,9 @@ def export_sizes_only(out_dir: Path, *, connect_fn: Callable | None = None, env:
         raise ExportConfigError(f"table sizes not exported: {detail.get('error')}")
     vol_info = _export_volumes(connect, work, out_dir, cfg, token) \
         if (cfg["volumes"] if volumes is None else volumes) else None
+    if vol_info and not vol_info.get("exported") and cfg["source"] == "stored":
+        shutil.rmtree(work, ignore_errors=True)
+        raise ExportConfigError(f"volume sizes not exported: {vol_info.get('error')}")
     _keep_storage(out_dir / "storage", work / "storage")
     out_dir.mkdir(parents=True, exist_ok=True)
     old = out_dir / "storage.old"
