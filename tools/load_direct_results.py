@@ -754,6 +754,10 @@ def _load_root(root: Path, db_path: Path, *, zip_as_of: str | None = None) -> di
                 except Exception as exc:  # noqa: BLE001
                     print(f"warning: could not read {hist_path} ({exc}) -- storage.table_history not built", file=sys.stderr)
             vol_path = _find_data_file(root / "storage", "volume_detail") if (root / "storage").is_dir() else None
+            if vol_path is None and manifest.get("volume_detail"):  # not taken: keep why, for the Storage tab
+                con.execute("CREATE SCHEMA IF NOT EXISTS storage")
+                con.execute("CREATE OR REPLACE TABLE storage.volume_detail_info AS SELECT ? AS info",
+                            [json.dumps(manifest["volume_detail"])])
             if vol_path is not None:
                 try:
                     con.execute("CREATE SCHEMA IF NOT EXISTS storage")

@@ -1192,12 +1192,6 @@ def run_export(
         raise ExportConfigError(str(exc)) from exc
     sizes_cfg = app_config.table_sizes()
     sizes_on = (sizes_cfg["enabled"] if table_sizes is None else table_sizes) and storage_from is None
-    if sizes_on and not partial:
-        try:
-            table_detail.check_stored(probe.conn.cursor(), sizes_cfg["volumes"] if volumes is None else volumes)
-        except RuntimeError as exc:
-            probe.conn.close()
-            raise ExportConfigError(_redact(str(exc), token)) from exc
     optional_missing = _substitute_optional_check_sources(probe.conn.cursor(), compiled_by_days)
     tasks, compile_errors = build_tasks(scope_ids, sources, compiled_by_days, days)
     side_thread = threading.Thread(target=names_and_tags, daemon=True)

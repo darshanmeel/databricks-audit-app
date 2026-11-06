@@ -1672,7 +1672,9 @@ def read_table_sizes(top: int = 100) -> dict:
             raw = con.execute("SELECT info FROM storage.table_detail_info LIMIT 1").fetchone()
             info = json.loads(raw[0]) if raw and raw[0] else None
         if "table_detail" not in have:
-            return {"outcome": "not_assessed", "info": info}
+            vi = con.execute("SELECT info FROM storage.volume_detail_info LIMIT 1").fetchone() \
+                if "volume_detail_info" in have else None
+            return {"outcome": "not_assessed", "info": info, "volume_info": json.loads(vi[0]) if vi and vi[0] else None}
 
         def rows(sql: str) -> list[dict]:
             cur = con.execute(sql)
@@ -1707,9 +1709,13 @@ def read_table_sizes(top: int = 100) -> dict:
             f"ORDER BY num_files DESC LIMIT {int(top)}")
     finally:
         con.close()
-    vol = None
+    vol = vol_info = None
     con = _connect()
     try:
+        if con.execute("SELECT 1 FROM information_schema.tables WHERE table_catalog = current_database() "
+                       "AND table_schema = 'storage' AND table_name = 'volume_detail_info'").fetchone():
+            raw = con.execute("SELECT info FROM storage.volume_detail_info LIMIT 1").fetchone()
+            vol_info = json.loads(raw[0]) if raw and raw[0] else None
         if con.execute("SELECT 1 FROM information_schema.tables WHERE table_catalog = current_database() "
                        "AND table_schema = 'storage' AND table_name = 'volume_detail'").fetchone():
             r = con.execute("SELECT COUNT(*), SUM(files), SUM(size_in_bytes), COUNT(*) FILTER (WHERE detail LIKE 'failed%'), "
@@ -1718,6 +1724,7 @@ def read_table_sizes(top: int = 100) -> dict:
     finally:
         con.close()
     return {"outcome": "ok_rows" if totals["tables"] else "ok_empty", "info": info, "totals": totals, "volumes": vol,
+            "volume_info": vol_info,
             "by_schema": by_schema, "biggest": biggest, "small_files": small, "not_described": failed}
 
 

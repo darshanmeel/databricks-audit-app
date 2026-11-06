@@ -312,15 +312,31 @@ function useTableSizes() {
 // What the export did, in one line: what a missing size can mean.
 function tableSizesScope(info: any) {
   if (!info) return "Not in this export: export again to get table sizes (settings table_sizes).";
-  if (!info.exported) return "Not measured: the export could not list the tables.";
+  const stored = info.source === "stored";
+  if (!info.exported) {
+    return stored
+      ? `Not read this export from ${info.stored_from}: ${info.error}. Run the Data usage sizes job, or fix settings dashboards sizes_schema / sizes_tables; figures shown are from an earlier export.`
+      : `Not measured this export: the table list could not be read (${info.error}). Check access to settings table_sizes tables_from.`;
+  }
   const parts = [
-    `${fmtInt(numOrZero(info.described))} described this export`,
+    stored ? `${fmtInt(numOrZero(info.described))} read from ${info.stored_from}, as of ${info.collected_at || "unknown"}`
+      : `${fmtInt(numOrZero(info.described))} described this export`,
     info.reused ? `${fmtInt(info.reused)} unchanged, last export's figure` : null,
     info.failed ? `${fmtInt(info.failed)} could not be read` : null,
-    info.not_asked ? `${fmtInt(info.not_asked)} not asked (over ${fmtInt(info.max_tables)})` : null,
+    info.not_asked ? (stored ? `${fmtInt(info.not_asked)} not in the sizes job's table (new since its run, or over its max_tables)`
+      : `${fmtInt(info.not_asked)} not asked (over ${fmtInt(info.max_tables)})`) : null,
     info.not_delta ? `${fmtInt(info.not_delta)} not Delta, no size` : null,
+    info.history_error ? `history not read from ${info.history_from}: ${info.history_error}` : null,
   ].filter(Boolean);
   return `${parts.join("; ")}.`;
+}
+
+// Volumes not taken this export: why, and what to do.
+function volumeScope(info: any) {
+  if (!info || info.exported !== false) return "";
+  return info.source === "stored"
+    ? ` Volumes not read from ${info.stored_from}: ${info.error}. Run the Data usage sizes job, or fix settings dashboards sizes_tables volume_sizes.`
+    : ` Volumes not listed this export: ${info.error}.`;
 }
 
 function TableSizesPanel({ maxCat }: LooseProps) {
@@ -336,11 +352,11 @@ function TableSizesPanel({ maxCat }: LooseProps) {
     <div className="chart-card" style={{ marginTop: 14 }}>
       <div className="chart-card-title">Table sizes</div>
       {sizes.phase === "loading" ? <span className="muted">Loading table sizes...</span>
-        : !ok ? <span className="muted">{tableSizesScope(d && d.info)}</span> : (
+        : !ok ? <span className="muted">{tableSizesScope(d && d.info)}{volumeScope(d && d.volume_info)}</span> : (
         <React.Fragment>
           <div className="metric-note">
             {`${fmtInt(t.tables)} tables and ${fmtInt(t.views)} views; ${fmtInt(t.sized)} with a size: ${fmtBytes(numOrZero(t.size_in_bytes))} in ${fmtInt(numOrZero(t.num_files))} files. ${tableSizesScope(d.info)}`}
-            {d.volumes ? ` Volumes: ${fmtInt(d.volumes.volumes)}, ${fmtInt(d.volumes.files)} files, ${fmtBytes(d.volumes.size_in_bytes)}${d.volumes.failed ? `; ${fmtInt(d.volumes.failed)} could not be listed` : ""}${d.volumes.truncated ? `; ${fmtInt(d.volumes.truncated)} too big to list fully` : ""}.` : ""}
+            {d.volumes ? ` Volumes: ${fmtInt(d.volumes.volumes)}, ${fmtInt(d.volumes.files)} files, ${fmtBytes(d.volumes.size_in_bytes)}${d.volumes.failed ? `; ${fmtInt(d.volumes.failed)} could not be listed` : ""}${d.volumes.truncated ? `; ${fmtInt(d.volumes.truncated)} too big to list fully` : ""}.` : ""}{volumeScope(d.volume_info)}
           </div>
           <div className="grid-2">
             <div>

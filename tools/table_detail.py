@@ -130,21 +130,6 @@ _STORED_METRICS = (("rows_changed", "numOutputRows"), ("files_added", "numAddedF
                    ("bytes_written", "numOutputBytes"))
 
 
-def check_stored(cur, volumes: bool) -> None:
-    """With source: stored, raise unless the sizes job's tables can be read: old sizes must not pass as new."""
-    stored = _stored()
-    if stored is None:
-        return
-    for key in ("table_sizes", "volume_sizes") if volumes else ("table_sizes",):
-        try:
-            cur.execute(f"SELECT 1 FROM {stored[key]} LIMIT 1")
-            cur.fetchall()
-        except Exception as exc:  # noqa: BLE001 -- re-raised with the setting that points there
-            raise RuntimeError(f"settings table_sizes source: stored, but {stored[key]} can't be read "
-                               f"(dashboards sizes_schema, sizes_tables; run the Data usage sizes job first): "
-                               + (str(exc).splitlines() or [""])[0][:300]) from exc
-
-
 def _stored_history(h: dict) -> dict:
     metrics = ", ".join(f"{key}={h[col]}" for col, key in _STORED_METRICS if h.get(col) not in (None, 0))
     return {"table_full_name": f"{h['catalog']}.{h['schema']}.{h['table_name']}", "version": h.get("version"),
@@ -187,25 +172,27 @@ def export(connect_fn: Callable, out_dir: Path, *, previous: Path | None = None,
     """List every table, DESCRIBE DETAIL the changed Delta ones `threads` at a time, write
     out_dir/storage/table_detail.parquet; returns what it did for the manifest."""
     t0 = time.perf_counter()
+    stored = _stored()
+    source = {"source": "describe" if stored is None else "stored",
+              "stored_from": stored and stored["table_sizes"]}
     try:
         lister = connect_fn()
     except Exception as exc:  # noqa: BLE001 -- table sizes are a side table; the export goes on
-        return {"exported": False, "error": redact(str(exc))}
-    stored = _stored()
+        return {"exported": False, "error": redact(str(exc)), **source}
     try:
         cur = lister.conn.cursor()
         tables = [r for r in _rows(cur, _LIST_SQL.format(**_list_from())) if not skipped(r["table_catalog"])]
         if stored is not None:
             sizes = {(r["catalog"], r["schema"], r["table_name"]): r for r in _rows(cur, _STORED_SIZES_SQL.format(**stored))}
-            hist = []
+            hist, history_error = [], None
             if history:
                 try:
                     hist = [_stored_history(h) for h in _rows(cur, _STORED_HISTORY_SQL.format(**stored))]
                 except Exception as exc:  # noqa: BLE001 -- no history is fine; the sizes still count
-                    log(f"table history: not read from {stored['table_history']}: "
-                        + (redact(str(exc)).splitlines() or [""])[0][:200])
+                    history_error = (redact(str(exc)).splitlines() or [""])[0][:200]
+                    log(f"table history: not read from {stored['table_history']}: {history_error}")
     except Exception as exc:  # noqa: BLE001
-        return {"exported": False, "error": redact(str(exc))}
+        return {"exported": False, "error": redact(str(exc)), **source}
     finally:
         try:
             lister.conn.close()
@@ -229,8 +216,8 @@ def export(connect_fn: Callable, out_dir: Path, *, previous: Path | None = None,
             out.append(row)
         collected = max((s["collected_at"] for s in sizes.values() if s.get("collected_at")), default=None)
         log(f"table sizes: {len(tables)} tables, read from {stored['table_sizes']} (collected {collected})")
-        return _write_tables(out, hist, out_dir, source="stored", stored_from=stored["table_sizes"],
-                             collected_at=collected, seconds=round(time.perf_counter() - t0, 1))
+        return _write_tables(out, hist, out_dir, **source, collected_at=collected, history_error=history_error,
+                             history_from=stored["table_history"], seconds=round(time.perf_counter() - t0, 1))
 
     prev = _previous(previous)
     prev_hist = _previous_history(previous.with_name(HISTORY_FILE) if previous else None)
@@ -483,15 +470,16 @@ def export_volumes(connect_fn: Callable, out_dir: Path, *, threads: int = 16,
 def _stored_volumes(connect_fn: Callable, out_dir: Path, stored: dict[str, str], *,
                     redact: Callable[[str], str], log: Callable[[str], None], t0: float) -> dict:
     """settings table_sizes source: stored. The sizes job's volume_sizes as volume_detail.parquet; nothing is listed."""
+    source = {"source": "stored", "stored_from": stored["volume_sizes"]}
     try:
         conn = connect_fn()
     except Exception as exc:  # noqa: BLE001 -- a side table; the export goes on
-        return {"exported": False, "error": redact(str(exc))}
+        return {"exported": False, "error": redact(str(exc)), **source}
     try:
         sql = _STORED_VOLUMES_SQL.format(volumes_from=_list_from()["volumes_from"], **stored)
         out = [r for r in _rows(conn.conn.cursor(), sql) if not skipped(r["volume_catalog"])]
     except Exception as exc:  # noqa: BLE001
-        return {"exported": False, "error": redact(str(exc))}
+        return {"exported": False, "error": redact(str(exc)), **source}
     finally:
         try:
             conn.conn.close()
@@ -508,6 +496,5 @@ def _stored_volumes(connect_fn: Callable, out_dir: Path, stored: dict[str, str],
     log(f"volume files: {len(out)} volumes, read from {stored['volume_sizes']} (collected {collected})")
     return {"exported": True, "error": None, "volumes": len(out), "listed": len(out) - len(failed),
             "failed": len(failed), "truncated": sum(1 for r in out if r["truncated"]),
-            "first_error": failed[0]["detail"][8:] if failed else None, "source": "stored",
-            "stored_from": stored["volume_sizes"], "collected_at": collected,
+            "first_error": failed[0]["detail"][8:] if failed else None, **source, "collected_at": collected,
             "seconds": round(time.perf_counter() - t0, 1)}
