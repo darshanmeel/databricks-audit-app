@@ -133,6 +133,22 @@ DATABRICKS_TOKEN=<system account>   python tools/export_direct_results.py --no-t
 
 Or keep sizes in their own folder and add `--storage-from <sizes folder>` to the second run.
 
+**Many catalogs: run the sizes as a Databricks job (recommended).** From your machine every
+`DESCRIBE` and every volume folder is one round trip to the warehouse, so on a large account the
+storage part takes long, the volume listing most. On a cluster the same statements are local calls.
+
+1. Create the schema for the results, e.g. `main.data_usage`.
+2. Import `databricks_dashboards/system_tables_direct/data_usage_sizes.py` and schedule it daily as a
+   job. Set its `sizes_schema` widget to that schema. Run it as an identity that reads every catalog
+   (grants: [that folder's README](databricks_dashboards/system_tables_direct/README.md)).
+3. In `config/settings.local.yml`:
+   ```yaml
+   table_sizes: {source: stored}
+   dashboards: {sizes_schema: main.data_usage}
+   ```
+4. Export as usual (`first_run.py` or Refresh): no `DESCRIBE`, no listing, three `SELECT`s. Sizes are
+   as of the job's last run; the Storage tab says when, and what to do if a table is missing.
+
 **Table and volume sizes (storage).** No system table holds sizes reliably, so the export measures them:
 
 - **Tables:** `DESCRIBE DETAIL` on every Delta table it can read, `threads` at a time (16), for size, files and
