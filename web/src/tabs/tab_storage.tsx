@@ -310,12 +310,12 @@ function useTableSizes() {
 }
 
 // What the export did, in one line: what a missing size can mean.
-function tableSizesScope(info: any) {
+function tableSizesScope(info: any, earlier = false) {
   if (!info) return "Not in this export: export again to get table sizes (settings table_sizes).";
   const stored = info.source === "stored";
   if (!info.exported) {
     return stored
-      ? `Not read this export from ${info.stored_from}: ${info.error}. Run the Data usage sizes job, or fix settings dashboards sizes_schema / sizes_tables; figures shown are from an earlier export.`
+      ? `Not read this export from ${info.stored_from}: ${info.error}. Run the Data usage sizes job, or fix settings dashboards sizes_schema / sizes_tables${earlier ? "; figures shown are from an earlier export" : ""}.`
       : `Not measured this export: the table list could not be read (${info.error}). Check access to settings table_sizes tables_from.`;
   }
   const parts = [
@@ -355,7 +355,7 @@ function TableSizesPanel({ maxCat }: LooseProps) {
         : !ok ? <span className="muted">{tableSizesScope(d && d.info)}{volumeScope(d && d.volume_info)}</span> : (
         <React.Fragment>
           <div className="metric-note">
-            {`${fmtInt(t.tables)} tables and ${fmtInt(t.views)} views; ${fmtInt(t.sized)} with a size: ${fmtBytes(numOrZero(t.size_in_bytes))} in ${fmtInt(numOrZero(t.num_files))} files. ${tableSizesScope(d.info)}`}
+            {`${fmtInt(t.tables)} tables and ${fmtInt(t.views)} views; ${fmtInt(t.sized)} with a size: ${fmtBytes(numOrZero(t.size_in_bytes))} in ${fmtInt(numOrZero(t.num_files))} files. ${tableSizesScope(d.info, true)}`}
             {d.volumes ? ` Volumes: ${fmtInt(d.volumes.volumes)}, ${fmtInt(d.volumes.files)} files, ${fmtBytes(d.volumes.size_in_bytes)}${d.volumes.failed ? `; ${fmtInt(d.volumes.failed)} could not be listed` : ""}${d.volumes.truncated ? `; ${fmtInt(d.volumes.truncated)} too big to list fully` : ""}.` : ""}{volumeScope(d.volume_info)}
           </div>
           <div className="grid-2">

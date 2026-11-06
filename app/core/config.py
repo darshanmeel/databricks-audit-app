@@ -221,7 +221,7 @@ DEFAULT_SETTINGS: dict = {
 # a system table name, plain or in backticks: system.billing.usage, `system`.`billing`.`usage`
 SYSTEM_TABLE_RE = re.compile(r"(?<![\w.`])`?system`?\.`?(\w+)`?\.`?(\w+)`?(?![\w`])", re.I)
 # catalog.schema.name; a part with anything but letters, digits and _ goes in backticks
-_PART = r"(?:[A-Za-z_][A-Za-z0-9_]*|`[^`]+`)"
+_PART = r"(?:[A-Za-z_][A-Za-z0-9_]*|`[^`\"'\\]+`)"  # no quotes or backslashes: names go into JSON and SQL text
 OBJECT_NAME_RE = re.compile(rf"{_PART}\.{_PART}\.{_PART}")
 
 
