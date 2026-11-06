@@ -941,7 +941,7 @@ def build() -> dict[str, str]:
             out[f"{stem}_summary.html"] = doc.build_short(dash, datasets, title, stem)
     from tools import direct_data_usage as wdata
     out["data_usage_sizes.py"] = wdata.collect_sizes_notebook()
-    return out
+    return {name: bdd.map_sources(content) for name, content in out.items()}
 
 
 def main() -> int:
@@ -963,7 +963,7 @@ def main() -> int:
     out = Path(args.out_dir)
     out.mkdir(parents=True, exist_ok=True)
     for name, content in build().items():
-        (out / name).write_text(bdd.map_sources(content), encoding="utf-8", newline="\n")
+        (out / name).write_text(content, encoding="utf-8", newline="\n")
         print(out / name)
     return 0
 

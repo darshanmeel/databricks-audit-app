@@ -245,10 +245,13 @@ def _validate_dashboards(value) -> dict:
     if not isinstance(tables, dict) or set(tables) - set(default["sizes_tables"]):
         raise SettingsError(msg, key="dashboards")
     merged.update({k: v for k, v in value.items() if k != "sizes_tables"})
+    if isinstance(merged["snapshot_catalog"], str):
+        # the builders add the backticks themselves
+        merged["snapshot_catalog"] = merged["snapshot_catalog"].strip().strip("`")
     merged["sizes_tables"].update(tables)
     one = re.compile(_PART)
     ok = ((merged["snapshot_catalog"] is None or isinstance(merged["snapshot_catalog"], str)
-           and one.fullmatch(merged["snapshot_catalog"]))
+           and re.fullmatch(r"[A-Za-z0-9_-]+", merged["snapshot_catalog"]))
           and isinstance(merged["snapshot_schema"], str) and one.fullmatch(merged["snapshot_schema"])
           and isinstance(merged["sizes_schema"], str) and re.fullmatch(rf"{_PART}\.{_PART}", merged["sizes_schema"])
           and all(isinstance(t, str) and one.fullmatch(t) for t in merged["sizes_tables"].values()))
@@ -623,18 +626,13 @@ def table_sizes() -> dict:
 
 def sources() -> dict:
     """settings sources: the system tables read from another catalog.schema.table or view."""
-    try:
-        return dict(load_settings()["sources"])
-    except ConfigError:
-        return {}
+    # no fallback: a bad settings file must stop the run, not quietly read the system tables
+    return dict(load_settings()["sources"])
 
 
 def dashboards() -> dict:
     """settings dashboards: the snapshot schema, and where the sizes job writes and Data usage reads."""
-    try:
-        return load_settings()["dashboards"]
-    except ConfigError:
-        return _validate_dashboards(None)
+    return load_settings()["dashboards"]
 
 
 def query_source() -> str:

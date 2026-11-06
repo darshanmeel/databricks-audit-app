@@ -1368,6 +1368,7 @@ def qualified_schema(catalog: str | None) -> str:
 
 
 def build(catalog: str | None = None) -> dict[str, object]:
+    catalog = catalog or app_config.dashboards()["snapshot_catalog"]
     schema = qualified_schema(catalog)
     files: dict[str, object] = {NOTEBOOK_FILE: build_snapshot_notebook(catalog)}
     pages: dict[str, list[str]] = {}
@@ -1376,7 +1377,7 @@ def build(catalog: str | None = None) -> dict[str, object]:
         pages[tab] = [p["displayName"] for p in dash["pages"]]
         files[dashboard_file(tab)] = json.dumps(dash, indent=2) + "\n"
     files["README.md"] = build_readme(schema, pages)
-    return files
+    return {name: map_sources(content) for name, content in files.items()}
 
 
 def main() -> None:
@@ -1396,11 +1397,12 @@ def main() -> None:
     out_dir = Path(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     if args.only:
-        files = {dashboard_file(args.only): json.dumps(build_tab(qualified_schema(args.catalog), args.only), indent=2) + "\n"}
+        files = {dashboard_file(args.only): map_sources(
+            json.dumps(build_tab(qualified_schema(args.catalog), args.only), indent=2) + "\n")}
     else:
         files = build(args.catalog)
     for name, content in files.items():
-        (out_dir / name).write_text(map_sources(content), encoding="utf-8", newline="\n")
+        (out_dir / name).write_text(content, encoding="utf-8", newline="\n")
         print(f"wrote {out_dir / name}")
 
 
