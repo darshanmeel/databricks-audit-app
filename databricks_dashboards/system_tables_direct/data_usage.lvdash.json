@@ -3231,11 +3231,12 @@
         "q AS (\n",
         "  SELECT statement_id, CAST(workspace_id AS STRING) AS workspace_id, lower(executed_by) AS who, start_time, statement_type,\n",
         "         COALESCE(total_duration_ms, 0) AS ms, read_bytes, read_files, pruned_files, compute.warehouse_id AS warehouse_id,\n",
-        "         statement_text\n",
+        "         statement_text, COALESCE(spilled_local_bytes, 0) AS spilled_bytes, written_bytes,\n",
+        "         COALESCE(waiting_for_compute_duration_ms, 0) + COALESCE(waiting_at_capacity_duration_ms, 0) AS wait_ms\n",
         "  FROM system.query.history\n",
         "  WHERE start_time >= CAST(:time_range.min AS DATE) AND start_time < date_add(:time_range.max, 1)\n",
         "),\n",
-        "wsl AS (SELECT CAST(workspace_id AS STRING) AS workspace_id, workspace_name FROM system.access.workspaces_latest),\n",
+        "wsl AS (SELECT CAST(workspace_id AS STRING) AS workspace_id, workspace_name, workspace_url FROM system.access.workspaces_latest),\n",
         "r AS (\n",
         "  SELECT st.table_name, st.access, q.*, ROW_NUMBER() OVER (PARTITION BY st.table_name ORDER BY q.ms DESC, q.statement_id) AS rnk\n",
         "  FROM st JOIN q ON q.statement_id = st.statement_id\n",
@@ -3245,7 +3246,11 @@
         "       r.pruned_files AS files_pruned,\n",
         "       CASE WHEN r.access = 'Reads' AND COALESCE(r.pruned_files, 0) = 0 AND COALESCE(r.read_files, 0) >= 50\n",
         "            THEN 'Full scan' ELSE '' END AS scan,\n",
-        "       COALESCE(w.workspace_name, r.workspace_id) AS workspace, r.warehouse_id,\n",
+        "       COALESCE(w.workspace_name, r.workspace_id) AS workspace, r.warehouse_id, r.statement_id,\n",
+        "       ROUND(r.spilled_bytes / 1073741824.0, 2) AS gb_spilled, ROUND(r.wait_ms / 1000.0, 1) AS wait_seconds,\n",
+        "       ROUND(r.written_bytes / 1073741824.0, 2) AS gb_written,\n",
+        "       CASE WHEN w.workspace_url IS NOT NULL THEN concat('https://', regexp_replace(regexp_replace(w.workspace_url, '^https?://', ''),\n",
+        "            '/.*$', ''), '/sql/history?queryId=', r.statement_id, '&uiQueryProfileVisible=true') END AS profile_link,\n",
         "       left(regexp_replace(r.statement_text, '\\s+', ' '), 300) AS query\n",
         "FROM r LEFT JOIN wsl w ON w.workspace_id = r.workspace_id\n",
         "WHERE r.rnk <= 10\n",
@@ -3294,7 +3299,8 @@
         "q AS (\n",
         "  SELECT statement_id, CAST(workspace_id AS STRING) AS workspace_id, lower(executed_by) AS who, start_time, statement_type,\n",
         "         COALESCE(total_duration_ms, 0) AS ms, read_bytes, read_files, pruned_files, compute.warehouse_id AS warehouse_id,\n",
-        "         statement_text\n",
+        "         statement_text, COALESCE(spilled_local_bytes, 0) AS spilled_bytes, written_bytes,\n",
+        "         COALESCE(waiting_for_compute_duration_ms, 0) + COALESCE(waiting_at_capacity_duration_ms, 0) AS wait_ms\n",
         "  FROM system.query.history\n",
         "  WHERE start_time >= CAST(:time_range.min AS DATE) AND start_time < date_add(:time_range.max, 1)\n",
         ")\n",
@@ -3402,7 +3408,8 @@
         "q AS (\n",
         "  SELECT statement_id, CAST(workspace_id AS STRING) AS workspace_id, lower(executed_by) AS who, start_time, statement_type,\n",
         "         COALESCE(total_duration_ms, 0) AS ms, read_bytes, read_files, pruned_files, compute.warehouse_id AS warehouse_id,\n",
-        "         statement_text\n",
+        "         statement_text, COALESCE(spilled_local_bytes, 0) AS spilled_bytes, written_bytes,\n",
+        "         COALESCE(waiting_for_compute_duration_ms, 0) + COALESCE(waiting_at_capacity_duration_ms, 0) AS wait_ms\n",
         "  FROM system.query.history\n",
         "  WHERE start_time >= date_sub(CAST(:time_range.min AS DATE), 7) AND start_time < date_add(:time_range.max, 1)\n",
         "),\n",
@@ -3800,6 +3807,588 @@
           }
         }
       ]
+    },
+    {
+      "name": "5a90ca54",
+      "displayName": "The tables queries spend the most on",
+      "queryLines": [
+        "SET QUERY_TAGS['cost_center'] = 'lakehouse_health';\n",
+        "SET QUERY_TAGS['domain'] = 'lakehouse_health';\n",
+        "SET QUERY_TAGS['dashboard'] = 'data_usage';\n",
+        "SET QUERY_TAGS['tab'] = 'overview';\n",
+        "-- The tables queries spend the most on. Dates from the Time Window.\n",
+        "WITH wsl AS (\n",
+        "  SELECT CAST(workspace_id AS STRING) AS workspace_id, workspace_name, workspace_url\n",
+        "  FROM system.access.workspaces_latest\n",
+        "),\n",
+        "seen AS (\n",
+        "  SELECT catalog, CAST(workspace_id AS STRING) AS workspace_id, COUNT(*) AS events FROM (\n",
+        "    SELECT workspace_id, source_table_catalog AS catalog FROM system.access.table_lineage\n",
+        "    WHERE event_date >= date_sub(date_add(:time_range.max, 1), 90) AND event_date < date_add(:time_range.max, 1)\n",
+        "    UNION ALL\n",
+        "    SELECT workspace_id, target_table_catalog FROM system.access.table_lineage\n",
+        "    WHERE event_date >= date_sub(date_add(:time_range.max, 1), 90) AND event_date < date_add(:time_range.max, 1)\n",
+        "  ) WHERE catalog IS NOT NULL GROUP BY 1, 2\n",
+        "),\n",
+        "home AS (\n",
+        "  SELECT c.catalog_name AS catalog, max_by(s.workspace_id, s.events) AS workspace_id\n",
+        "  FROM system.information_schema.catalogs c LEFT JOIN seen s ON s.catalog = c.catalog_name\n",
+        "  WHERE c.catalog_name NOT IN ('system', 'samples', '__databricks_internal')\n",
+        "  GROUP BY c.catalog_name\n",
+        "),\n",
+        "place AS (\n",
+        "  -- a catalog without lineage in 90 days keeps its rows, under No home workspace\n",
+        "  SELECT h.catalog, h.workspace_id, w.workspace_url,\n",
+        "         COALESCE(w.workspace_name, h.workspace_id, 'No home workspace') AS workspace\n",
+        "  FROM home h LEFT JOIN wsl w ON w.workspace_id = h.workspace_id\n",
+        "),\n",
+        "t AS (\n",
+        "  SELECT table_catalog AS catalog, table_schema AS sch, table_name, table_type, table_owner, created,\n",
+        "         table_catalog || '.' || table_schema || '.' || table_name AS full_name\n",
+        "  FROM system.information_schema.tables\n",
+        "  WHERE table_catalog NOT IN ('system', 'samples', '__databricks_internal') AND table_schema <> 'information_schema'\n",
+        "),\n",
+        "lin AS (\n",
+        "  SELECT source_table_full_name AS full_name, 1 AS is_read, 0 AS is_write, event_time, lower(created_by) AS who\n",
+        "  FROM system.access.table_lineage\n",
+        "  WHERE event_date >= date_sub(date_add(:time_range.max, 1), 365) AND event_date < date_add(:time_range.max, 1) AND source_table_full_name IS NOT NULL\n",
+        "  UNION ALL\n",
+        "  SELECT target_table_full_name, 0, 1, event_time, lower(created_by) FROM system.access.table_lineage\n",
+        "  WHERE event_date >= date_sub(date_add(:time_range.max, 1), 365) AND event_date < date_add(:time_range.max, 1) AND target_table_full_name IS NOT NULL\n",
+        "),\n",
+        "used AS (\n",
+        "  -- counts in the Time Window; last read and write over the lineage's year\n",
+        "  SELECT full_name,\n",
+        "         SUM(CASE WHEN event_time >= CAST(:time_range.min AS DATE) THEN is_read ELSE 0 END) AS reads,\n",
+        "         SUM(CASE WHEN event_time >= CAST(:time_range.min AS DATE) THEN is_write ELSE 0 END) AS writes,\n",
+        "         COUNT(DISTINCT CASE WHEN is_read = 1 AND event_time >= CAST(:time_range.min AS DATE) THEN who END) AS readers,\n",
+        "         COUNT(DISTINCT CASE WHEN is_write = 1 AND event_time >= CAST(:time_range.min AS DATE) THEN who END) AS writers,\n",
+        "         MAX(CASE WHEN is_read = 1 THEN event_time END) AS last_read,\n",
+        "         MAX(CASE WHEN is_write = 1 THEN event_time END) AS last_write\n",
+        "  FROM lin GROUP BY 1\n",
+        "),\n",
+        "hist AS (\n",
+        "  SELECT catalog, schema, table_name,\n",
+        "         MAX(CASE WHEN operation RLIKE 'WRITE|MERGE|UPDATE|DELETE|STREAMING UPDATE|CREATE OR REPLACE|COPY INTO|TRUNCATE|RESTORE' THEN timestamp END) AS last_change,\n",
+        "         max_by(operation, CASE WHEN operation RLIKE 'WRITE|MERGE|UPDATE|DELETE|STREAMING UPDATE|CREATE OR REPLACE|COPY INTO|TRUNCATE|RESTORE' THEN timestamp END) AS last_change_op,\n",
+        "         MAX(CASE WHEN operation RLIKE 'OPTIMIZE|VACUUM|ANALYZE|REORG' THEN timestamp END) AS last_maintenance,\n",
+        "         SUM(CASE WHEN timestamp >= CAST(:time_range.min AS DATE) THEN rows_changed ELSE 0 END) AS rows_changed,\n",
+        "         SUM(CASE WHEN timestamp >= CAST(:time_range.min AS DATE) THEN bytes_written ELSE 0 END) AS bytes_written\n",
+        "  FROM main.data_usage.table_history GROUP BY 1, 2, 3\n",
+        "),\n",
+        "po AS (\n",
+        "  SELECT catalog_name AS catalog, schema_name AS schema, table_name, MAX(start_time) AS last_po\n",
+        "  FROM system.storage.predictive_optimization_operations_history\n",
+        "  WHERE start_time >= date_sub(date_add(:time_range.max, 1), 365)\n",
+        "  GROUP BY 1, 2, 3\n",
+        "),\n",
+        "found AS (\n",
+        "  SELECT catalog_name AS c, schema_name AS s, table_name AS t, column_name,\n",
+        "         COALESCE(NULLIF(tag_value, ''), tag_name) AS pii_type, 1 AS rnk\n",
+        "  FROM system.information_schema.column_tags\n",
+        "  WHERE lower(tag_name) RLIKE '^(pii|sensitive|gdpr|class[.])' AND catalog_name NOT IN ('system', 'samples', '__databricks_internal')\n",
+        "  UNION ALL\n",
+        "  SELECT table_catalog, table_schema, table_name, column_name,\n",
+        "         CASE\n",
+        "         WHEN lower(column_name) RLIKE 'e_?mail' THEN 'Email'\n",
+        "         WHEN lower(column_name) RLIKE 'phone|mobile|msisdn' THEN 'Phone number'\n",
+        "         WHEN lower(column_name) RLIKE 'iban|(^|_)bic($|_)|account_?(no|number)' THEN 'IBAN / bank account'\n",
+        "         WHEN lower(column_name) RLIKE 'ssn|(^|_)ahv|passport|national_?id' THEN 'National ID'\n",
+        "         WHEN lower(column_name) RLIKE '(^|_)ip(_?address)?($|_)' THEN 'IP address'\n",
+        "         WHEN lower(column_name) RLIKE 'address|street|(^|_)zip|postal' THEN 'Postal address'\n",
+        "         WHEN lower(column_name) RLIKE 'birth|(^|_)dob($|_)' THEN 'Date of birth'\n",
+        "         WHEN lower(column_name) RLIKE 'card_?(no|number|num)|(^|_)pan$' THEN 'Payment card'\n",
+        "         END, 2\n",
+        "  FROM system.information_schema.columns\n",
+        "  WHERE table_catalog NOT IN ('system', 'samples', '__databricks_internal') AND table_schema <> 'information_schema'\n",
+        "),\n",
+        "sens_col AS (\n",
+        "  SELECT f.c || '.' || f.s || '.' || f.t AS full_name, f.column_name, f.pii_type, cm.mask_name IS NOT NULL AS masked\n",
+        "  FROM found f\n",
+        "  LEFT JOIN system.information_schema.column_masks cm\n",
+        "    ON cm.table_catalog = f.c AND cm.table_schema = f.s AND cm.table_name = f.t AND cm.column_name = f.column_name\n",
+        "  WHERE f.pii_type IS NOT NULL\n",
+        "  QUALIFY ROW_NUMBER() OVER (PARTITION BY f.c, f.s, f.t, f.column_name ORDER BY f.rnk) = 1\n",
+        "),\n",
+        "sens AS (\n",
+        "  SELECT full_name, COUNT(*) AS sensitive_columns, COUNT_IF(NOT masked) AS unmasked_columns,\n",
+        "         concat_ws(', ', sort_array(collect_set(pii_type))) AS sensitive_types\n",
+        "  FROM sens_col GROUP BY 1\n",
+        "),\n",
+        "j AS (\n",
+        "  SELECT p.workspace, p.workspace_id, p.workspace_url, t.catalog, t.sch AS schema_name, t.table_name AS name, t.full_name,\n",
+        "         t.table_type, t.table_owner, t.created,\n",
+        "         s.size_in_bytes, s.num_files, COALESCE(u.reads, 0) AS reads, COALESCE(u.writes, 0) AS writes,\n",
+        "         COALESCE(u.readers, 0) AS readers, COALESCE(u.writers, 0) AS writers, u.last_read,\n",
+        "         GREATEST(u.last_write, h.last_change) AS last_write, h.last_change_op,\n",
+        "         GREATEST(h.last_maintenance, po.last_po) AS last_maintenance,\n",
+        "         COALESCE(h.rows_changed, 0) AS rows_changed, COALESCE(h.bytes_written, 0) AS bytes_written,\n",
+        "         COALESCE(se.sensitive_columns, 0) AS sensitive_columns, COALESCE(se.unmasked_columns, 0) AS unmasked_columns,\n",
+        "         se.sensitive_types\n",
+        "  FROM t\n",
+        "  LEFT JOIN place p ON p.catalog = t.catalog\n",
+        "  LEFT JOIN main.data_usage.table_sizes s ON s.catalog = t.catalog AND s.schema = t.sch AND s.table_name = t.table_name\n",
+        "  LEFT JOIN used u ON u.full_name = t.full_name\n",
+        "  LEFT JOIN hist h ON h.catalog = t.catalog AND h.schema = t.sch AND h.table_name = t.table_name\n",
+        "  LEFT JOIN po ON po.catalog = t.catalog AND po.schema = t.sch AND po.table_name = t.table_name\n",
+        "  LEFT JOIN sens se ON se.full_name = t.full_name\n",
+        "),\n",
+        "c AS (\n",
+        "  SELECT *, CASE WHEN writes > 0 AND reads = 0 THEN 'Written, never read'\n",
+        "            WHEN reads = 0 AND writes = 0 AND last_read IS NULL AND last_write IS NULL\n",
+        "                 AND created >= date_sub(date_add(:time_range.max, 1), 7) THEN 'Active'\n",
+        "            WHEN GREATEST(last_read, last_write) IS NULL OR datediff(date_add(:time_range.max, 1), CAST(GREATEST(last_read, last_write) AS DATE)) >= 90 THEN 'Idle 90d+'\n",
+        "            WHEN reads = 0 THEN 'Cooling'\n",
+        "            ELSE 'Active' END AS usage_class FROM j\n",
+        "),\n",
+        "st AS (\n",
+        "  SELECT statement_id, table_name, CASE WHEN MAX(is_write) = 1 THEN 'Writes' ELSE 'Reads' END AS access\n",
+        "  FROM (\n",
+        "    SELECT statement_id, source_table_full_name AS table_name, 0 AS is_write FROM system.access.table_lineage\n",
+        "    WHERE event_date >= CAST(:time_range.min AS DATE) AND event_date < date_add(:time_range.max, 1) AND statement_id IS NOT NULL AND source_table_full_name IS NOT NULL\n",
+        "    UNION ALL\n",
+        "    SELECT statement_id, target_table_full_name, 1 FROM system.access.table_lineage\n",
+        "    WHERE event_date >= CAST(:time_range.min AS DATE) AND event_date < date_add(:time_range.max, 1) AND statement_id IS NOT NULL AND target_table_full_name IS NOT NULL\n",
+        "  ) x\n",
+        "  GROUP BY 1, 2\n",
+        "),\n",
+        "q AS (\n",
+        "  SELECT statement_id, CAST(workspace_id AS STRING) AS workspace_id, lower(executed_by) AS who, start_time, statement_type,\n",
+        "         COALESCE(total_duration_ms, 0) AS ms, read_bytes, read_files, pruned_files, compute.warehouse_id AS warehouse_id,\n",
+        "         statement_text, COALESCE(spilled_local_bytes, 0) AS spilled_bytes, written_bytes,\n",
+        "         COALESCE(waiting_for_compute_duration_ms, 0) + COALESCE(waiting_at_capacity_duration_ms, 0) AS wait_ms\n",
+        "  FROM system.query.history\n",
+        "  WHERE start_time >= CAST(:time_range.min AS DATE) AND start_time < date_add(:time_range.max, 1)\n",
+        "),\n",
+        "ld AS (\n",
+        "  SELECT st.table_name AS full_name, COUNT_IF(st.access = 'Reads') AS read_queries, COUNT_IF(st.access = 'Writes') AS write_queries,\n",
+        "         SUM(CASE WHEN st.access = 'Reads' THEN q.ms ELSE 0 END) AS read_ms,\n",
+        "         SUM(CASE WHEN st.access = 'Writes' THEN q.ms ELSE 0 END) AS write_ms,\n",
+        "         SUM(CASE WHEN st.access = 'Reads' THEN COALESCE(q.read_bytes, 0) ELSE 0 END) AS read_bytes,\n",
+        "         SUM(q.spilled_bytes) AS spilled_bytes,\n",
+        "         COUNT_IF(st.access = 'Reads' AND COALESCE(q.pruned_files, 0) = 0 AND COALESCE(q.read_files, 0) >= 50) AS full_scans\n",
+        "  FROM st JOIN q ON q.statement_id = st.statement_id\n",
+        "  GROUP BY 1\n",
+        ")\n",
+        "SELECT c.workspace, c.full_name AS table_name, ROUND((ld.read_ms + ld.write_ms) / 3600000.0, 2) AS query_hours,\n",
+        "       ROUND(ld.read_ms / 3600000.0, 2) AS read_hours, ROUND(ld.write_ms / 3600000.0, 2) AS write_hours,\n",
+        "       ld.read_queries, ld.write_queries, ROUND(ld.read_bytes / 1073741824.0, 1) AS gb_read,\n",
+        "       ROUND(ld.spilled_bytes / 1073741824.0, 1) AS gb_spilled, ld.full_scans, ROUND(c.size_in_bytes / 1073741824.0, 1) AS size_gb,\n",
+        "       CASE WHEN workspace_url IS NOT NULL THEN concat('https://', regexp_replace(regexp_replace(workspace_url, '^https?://', ''), '/.*$', ''), '/explore/data/', catalog, '/', schema_name, '/', name) END AS table_link\n",
+        "FROM ld JOIN c ON c.full_name = ld.full_name\n",
+        "ORDER BY query_hours DESC, table_name\n"
+      ],
+      "parameters": [
+        {
+          "displayName": "time_range",
+          "keyword": "time_range",
+          "dataType": "DATE",
+          "complexType": "RANGE",
+          "defaultSelection": {
+            "range": {
+              "dataType": "DATE",
+              "min": {
+                "value": "now-30d/d"
+              },
+              "max": {
+                "value": "now-1d/d"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "f8f3eb1f",
+      "displayName": "The heaviest tables",
+      "queryLines": [
+        "SET QUERY_TAGS['cost_center'] = 'lakehouse_health';\n",
+        "SET QUERY_TAGS['domain'] = 'lakehouse_health';\n",
+        "SET QUERY_TAGS['dashboard'] = 'data_usage';\n",
+        "SET QUERY_TAGS['tab'] = 'overview';\n",
+        "-- The heaviest tables. Dates from the Time Window.\n",
+        "WITH wsl AS (\n",
+        "  SELECT CAST(workspace_id AS STRING) AS workspace_id, workspace_name, workspace_url\n",
+        "  FROM system.access.workspaces_latest\n",
+        "),\n",
+        "seen AS (\n",
+        "  SELECT catalog, CAST(workspace_id AS STRING) AS workspace_id, COUNT(*) AS events FROM (\n",
+        "    SELECT workspace_id, source_table_catalog AS catalog FROM system.access.table_lineage\n",
+        "    WHERE event_date >= date_sub(date_add(:time_range.max, 1), 90) AND event_date < date_add(:time_range.max, 1)\n",
+        "    UNION ALL\n",
+        "    SELECT workspace_id, target_table_catalog FROM system.access.table_lineage\n",
+        "    WHERE event_date >= date_sub(date_add(:time_range.max, 1), 90) AND event_date < date_add(:time_range.max, 1)\n",
+        "  ) WHERE catalog IS NOT NULL GROUP BY 1, 2\n",
+        "),\n",
+        "home AS (\n",
+        "  SELECT c.catalog_name AS catalog, max_by(s.workspace_id, s.events) AS workspace_id\n",
+        "  FROM system.information_schema.catalogs c LEFT JOIN seen s ON s.catalog = c.catalog_name\n",
+        "  WHERE c.catalog_name NOT IN ('system', 'samples', '__databricks_internal')\n",
+        "  GROUP BY c.catalog_name\n",
+        "),\n",
+        "place AS (\n",
+        "  -- a catalog without lineage in 90 days keeps its rows, under No home workspace\n",
+        "  SELECT h.catalog, h.workspace_id, w.workspace_url,\n",
+        "         COALESCE(w.workspace_name, h.workspace_id, 'No home workspace') AS workspace\n",
+        "  FROM home h LEFT JOIN wsl w ON w.workspace_id = h.workspace_id\n",
+        "),\n",
+        "t AS (\n",
+        "  SELECT table_catalog AS catalog, table_schema AS sch, table_name, table_type, table_owner, created,\n",
+        "         table_catalog || '.' || table_schema || '.' || table_name AS full_name\n",
+        "  FROM system.information_schema.tables\n",
+        "  WHERE table_catalog NOT IN ('system', 'samples', '__databricks_internal') AND table_schema <> 'information_schema'\n",
+        "),\n",
+        "lin AS (\n",
+        "  SELECT source_table_full_name AS full_name, 1 AS is_read, 0 AS is_write, event_time, lower(created_by) AS who\n",
+        "  FROM system.access.table_lineage\n",
+        "  WHERE event_date >= date_sub(date_add(:time_range.max, 1), 365) AND event_date < date_add(:time_range.max, 1) AND source_table_full_name IS NOT NULL\n",
+        "  UNION ALL\n",
+        "  SELECT target_table_full_name, 0, 1, event_time, lower(created_by) FROM system.access.table_lineage\n",
+        "  WHERE event_date >= date_sub(date_add(:time_range.max, 1), 365) AND event_date < date_add(:time_range.max, 1) AND target_table_full_name IS NOT NULL\n",
+        "),\n",
+        "used AS (\n",
+        "  -- counts in the Time Window; last read and write over the lineage's year\n",
+        "  SELECT full_name,\n",
+        "         SUM(CASE WHEN event_time >= CAST(:time_range.min AS DATE) THEN is_read ELSE 0 END) AS reads,\n",
+        "         SUM(CASE WHEN event_time >= CAST(:time_range.min AS DATE) THEN is_write ELSE 0 END) AS writes,\n",
+        "         COUNT(DISTINCT CASE WHEN is_read = 1 AND event_time >= CAST(:time_range.min AS DATE) THEN who END) AS readers,\n",
+        "         COUNT(DISTINCT CASE WHEN is_write = 1 AND event_time >= CAST(:time_range.min AS DATE) THEN who END) AS writers,\n",
+        "         MAX(CASE WHEN is_read = 1 THEN event_time END) AS last_read,\n",
+        "         MAX(CASE WHEN is_write = 1 THEN event_time END) AS last_write\n",
+        "  FROM lin GROUP BY 1\n",
+        "),\n",
+        "hist AS (\n",
+        "  SELECT catalog, schema, table_name,\n",
+        "         MAX(CASE WHEN operation RLIKE 'WRITE|MERGE|UPDATE|DELETE|STREAMING UPDATE|CREATE OR REPLACE|COPY INTO|TRUNCATE|RESTORE' THEN timestamp END) AS last_change,\n",
+        "         max_by(operation, CASE WHEN operation RLIKE 'WRITE|MERGE|UPDATE|DELETE|STREAMING UPDATE|CREATE OR REPLACE|COPY INTO|TRUNCATE|RESTORE' THEN timestamp END) AS last_change_op,\n",
+        "         MAX(CASE WHEN operation RLIKE 'OPTIMIZE|VACUUM|ANALYZE|REORG' THEN timestamp END) AS last_maintenance,\n",
+        "         SUM(CASE WHEN timestamp >= CAST(:time_range.min AS DATE) THEN rows_changed ELSE 0 END) AS rows_changed,\n",
+        "         SUM(CASE WHEN timestamp >= CAST(:time_range.min AS DATE) THEN bytes_written ELSE 0 END) AS bytes_written\n",
+        "  FROM main.data_usage.table_history GROUP BY 1, 2, 3\n",
+        "),\n",
+        "po AS (\n",
+        "  SELECT catalog_name AS catalog, schema_name AS schema, table_name, MAX(start_time) AS last_po\n",
+        "  FROM system.storage.predictive_optimization_operations_history\n",
+        "  WHERE start_time >= date_sub(date_add(:time_range.max, 1), 365)\n",
+        "  GROUP BY 1, 2, 3\n",
+        "),\n",
+        "found AS (\n",
+        "  SELECT catalog_name AS c, schema_name AS s, table_name AS t, column_name,\n",
+        "         COALESCE(NULLIF(tag_value, ''), tag_name) AS pii_type, 1 AS rnk\n",
+        "  FROM system.information_schema.column_tags\n",
+        "  WHERE lower(tag_name) RLIKE '^(pii|sensitive|gdpr|class[.])' AND catalog_name NOT IN ('system', 'samples', '__databricks_internal')\n",
+        "  UNION ALL\n",
+        "  SELECT table_catalog, table_schema, table_name, column_name,\n",
+        "         CASE\n",
+        "         WHEN lower(column_name) RLIKE 'e_?mail' THEN 'Email'\n",
+        "         WHEN lower(column_name) RLIKE 'phone|mobile|msisdn' THEN 'Phone number'\n",
+        "         WHEN lower(column_name) RLIKE 'iban|(^|_)bic($|_)|account_?(no|number)' THEN 'IBAN / bank account'\n",
+        "         WHEN lower(column_name) RLIKE 'ssn|(^|_)ahv|passport|national_?id' THEN 'National ID'\n",
+        "         WHEN lower(column_name) RLIKE '(^|_)ip(_?address)?($|_)' THEN 'IP address'\n",
+        "         WHEN lower(column_name) RLIKE 'address|street|(^|_)zip|postal' THEN 'Postal address'\n",
+        "         WHEN lower(column_name) RLIKE 'birth|(^|_)dob($|_)' THEN 'Date of birth'\n",
+        "         WHEN lower(column_name) RLIKE 'card_?(no|number|num)|(^|_)pan$' THEN 'Payment card'\n",
+        "         END, 2\n",
+        "  FROM system.information_schema.columns\n",
+        "  WHERE table_catalog NOT IN ('system', 'samples', '__databricks_internal') AND table_schema <> 'information_schema'\n",
+        "),\n",
+        "sens_col AS (\n",
+        "  SELECT f.c || '.' || f.s || '.' || f.t AS full_name, f.column_name, f.pii_type, cm.mask_name IS NOT NULL AS masked\n",
+        "  FROM found f\n",
+        "  LEFT JOIN system.information_schema.column_masks cm\n",
+        "    ON cm.table_catalog = f.c AND cm.table_schema = f.s AND cm.table_name = f.t AND cm.column_name = f.column_name\n",
+        "  WHERE f.pii_type IS NOT NULL\n",
+        "  QUALIFY ROW_NUMBER() OVER (PARTITION BY f.c, f.s, f.t, f.column_name ORDER BY f.rnk) = 1\n",
+        "),\n",
+        "sens AS (\n",
+        "  SELECT full_name, COUNT(*) AS sensitive_columns, COUNT_IF(NOT masked) AS unmasked_columns,\n",
+        "         concat_ws(', ', sort_array(collect_set(pii_type))) AS sensitive_types\n",
+        "  FROM sens_col GROUP BY 1\n",
+        "),\n",
+        "j AS (\n",
+        "  SELECT p.workspace, p.workspace_id, p.workspace_url, t.catalog, t.sch AS schema_name, t.table_name AS name, t.full_name,\n",
+        "         t.table_type, t.table_owner, t.created,\n",
+        "         s.size_in_bytes, s.num_files, COALESCE(u.reads, 0) AS reads, COALESCE(u.writes, 0) AS writes,\n",
+        "         COALESCE(u.readers, 0) AS readers, COALESCE(u.writers, 0) AS writers, u.last_read,\n",
+        "         GREATEST(u.last_write, h.last_change) AS last_write, h.last_change_op,\n",
+        "         GREATEST(h.last_maintenance, po.last_po) AS last_maintenance,\n",
+        "         COALESCE(h.rows_changed, 0) AS rows_changed, COALESCE(h.bytes_written, 0) AS bytes_written,\n",
+        "         COALESCE(se.sensitive_columns, 0) AS sensitive_columns, COALESCE(se.unmasked_columns, 0) AS unmasked_columns,\n",
+        "         se.sensitive_types\n",
+        "  FROM t\n",
+        "  LEFT JOIN place p ON p.catalog = t.catalog\n",
+        "  LEFT JOIN main.data_usage.table_sizes s ON s.catalog = t.catalog AND s.schema = t.sch AND s.table_name = t.table_name\n",
+        "  LEFT JOIN used u ON u.full_name = t.full_name\n",
+        "  LEFT JOIN hist h ON h.catalog = t.catalog AND h.schema = t.sch AND h.table_name = t.table_name\n",
+        "  LEFT JOIN po ON po.catalog = t.catalog AND po.schema = t.sch AND po.table_name = t.table_name\n",
+        "  LEFT JOIN sens se ON se.full_name = t.full_name\n",
+        "),\n",
+        "c AS (\n",
+        "  SELECT *, CASE WHEN writes > 0 AND reads = 0 THEN 'Written, never read'\n",
+        "            WHEN reads = 0 AND writes = 0 AND last_read IS NULL AND last_write IS NULL\n",
+        "                 AND created >= date_sub(date_add(:time_range.max, 1), 7) THEN 'Active'\n",
+        "            WHEN GREATEST(last_read, last_write) IS NULL OR datediff(date_add(:time_range.max, 1), CAST(GREATEST(last_read, last_write) AS DATE)) >= 90 THEN 'Idle 90d+'\n",
+        "            WHEN reads = 0 THEN 'Cooling'\n",
+        "            ELSE 'Active' END AS usage_class FROM j\n",
+        "),\n",
+        "st AS (\n",
+        "  SELECT statement_id, table_name, CASE WHEN MAX(is_write) = 1 THEN 'Writes' ELSE 'Reads' END AS access\n",
+        "  FROM (\n",
+        "    SELECT statement_id, source_table_full_name AS table_name, 0 AS is_write FROM system.access.table_lineage\n",
+        "    WHERE event_date >= CAST(:time_range.min AS DATE) AND event_date < date_add(:time_range.max, 1) AND statement_id IS NOT NULL AND source_table_full_name IS NOT NULL\n",
+        "    UNION ALL\n",
+        "    SELECT statement_id, target_table_full_name, 1 FROM system.access.table_lineage\n",
+        "    WHERE event_date >= CAST(:time_range.min AS DATE) AND event_date < date_add(:time_range.max, 1) AND statement_id IS NOT NULL AND target_table_full_name IS NOT NULL\n",
+        "  ) x\n",
+        "  GROUP BY 1, 2\n",
+        "),\n",
+        "q AS (\n",
+        "  SELECT statement_id, CAST(workspace_id AS STRING) AS workspace_id, lower(executed_by) AS who, start_time, statement_type,\n",
+        "         COALESCE(total_duration_ms, 0) AS ms, read_bytes, read_files, pruned_files, compute.warehouse_id AS warehouse_id,\n",
+        "         statement_text, COALESCE(spilled_local_bytes, 0) AS spilled_bytes, written_bytes,\n",
+        "         COALESCE(waiting_for_compute_duration_ms, 0) + COALESCE(waiting_at_capacity_duration_ms, 0) AS wait_ms\n",
+        "  FROM system.query.history\n",
+        "  WHERE start_time >= CAST(:time_range.min AS DATE) AND start_time < date_add(:time_range.max, 1)\n",
+        "),\n",
+        "ld AS (\n",
+        "  SELECT st.table_name AS full_name, COUNT_IF(st.access = 'Reads') AS read_queries, COUNT_IF(st.access = 'Writes') AS write_queries,\n",
+        "         SUM(CASE WHEN st.access = 'Reads' THEN q.ms ELSE 0 END) AS read_ms,\n",
+        "         SUM(CASE WHEN st.access = 'Writes' THEN q.ms ELSE 0 END) AS write_ms,\n",
+        "         SUM(CASE WHEN st.access = 'Reads' THEN COALESCE(q.read_bytes, 0) ELSE 0 END) AS read_bytes,\n",
+        "         SUM(q.spilled_bytes) AS spilled_bytes,\n",
+        "         COUNT_IF(st.access = 'Reads' AND COALESCE(q.pruned_files, 0) = 0 AND COALESCE(q.read_files, 0) >= 50) AS full_scans\n",
+        "  FROM st JOIN q ON q.statement_id = st.statement_id\n",
+        "  GROUP BY 1\n",
+        "),\n",
+        "b AS (\n",
+        "SELECT c.workspace, c.full_name AS table_name, ROUND((ld.read_ms + ld.write_ms) / 3600000.0, 2) AS query_hours,\n",
+        "       ROUND(ld.read_ms / 3600000.0, 2) AS read_hours, ROUND(ld.write_ms / 3600000.0, 2) AS write_hours,\n",
+        "       ld.read_queries, ld.write_queries, ROUND(ld.read_bytes / 1073741824.0, 1) AS gb_read,\n",
+        "       ROUND(ld.spilled_bytes / 1073741824.0, 1) AS gb_spilled, ld.full_scans, ROUND(c.size_in_bytes / 1073741824.0, 1) AS size_gb,\n",
+        "       CASE WHEN workspace_url IS NOT NULL THEN concat('https://', regexp_replace(regexp_replace(workspace_url, '^https?://', ''), '/.*$', ''), '/explore/data/', catalog, '/', schema_name, '/', name) END AS table_link\n",
+        "FROM ld JOIN c ON c.full_name = ld.full_name\n",
+        "ORDER BY query_hours DESC, table_name\n",
+        "),\n",
+        "r AS (SELECT *, ROW_NUMBER() OVER (ORDER BY query_hours DESC, table_name) AS rnk FROM b WHERE query_hours > 0)\n",
+        "SELECT workspace, table_name AS name, 'Reading' AS direction, read_hours AS hours FROM r WHERE rnk <= 15\n",
+        "UNION ALL\n",
+        "SELECT workspace, table_name, 'Writing', write_hours FROM r WHERE rnk <= 15\n"
+      ],
+      "parameters": [
+        {
+          "displayName": "time_range",
+          "keyword": "time_range",
+          "dataType": "DATE",
+          "complexType": "RANGE",
+          "defaultSelection": {
+            "range": {
+              "dataType": "DATE",
+              "min": {
+                "value": "now-30d/d"
+              },
+              "max": {
+                "value": "now-1d/d"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "9ec518bc",
+      "displayName": "Each workspace's heaviest tables",
+      "queryLines": [
+        "SET QUERY_TAGS['cost_center'] = 'lakehouse_health';\n",
+        "SET QUERY_TAGS['domain'] = 'lakehouse_health';\n",
+        "SET QUERY_TAGS['dashboard'] = 'data_usage';\n",
+        "SET QUERY_TAGS['tab'] = 'workspace_detail';\n",
+        "-- Each workspace's heaviest tables. Dates from the Time Window.\n",
+        "WITH wsl AS (\n",
+        "  SELECT CAST(workspace_id AS STRING) AS workspace_id, workspace_name, workspace_url\n",
+        "  FROM system.access.workspaces_latest\n",
+        "),\n",
+        "seen AS (\n",
+        "  SELECT catalog, CAST(workspace_id AS STRING) AS workspace_id, COUNT(*) AS events FROM (\n",
+        "    SELECT workspace_id, source_table_catalog AS catalog FROM system.access.table_lineage\n",
+        "    WHERE event_date >= date_sub(date_add(:time_range.max, 1), 90) AND event_date < date_add(:time_range.max, 1)\n",
+        "    UNION ALL\n",
+        "    SELECT workspace_id, target_table_catalog FROM system.access.table_lineage\n",
+        "    WHERE event_date >= date_sub(date_add(:time_range.max, 1), 90) AND event_date < date_add(:time_range.max, 1)\n",
+        "  ) WHERE catalog IS NOT NULL GROUP BY 1, 2\n",
+        "),\n",
+        "home AS (\n",
+        "  SELECT c.catalog_name AS catalog, max_by(s.workspace_id, s.events) AS workspace_id\n",
+        "  FROM system.information_schema.catalogs c LEFT JOIN seen s ON s.catalog = c.catalog_name\n",
+        "  WHERE c.catalog_name NOT IN ('system', 'samples', '__databricks_internal')\n",
+        "  GROUP BY c.catalog_name\n",
+        "),\n",
+        "place AS (\n",
+        "  -- a catalog without lineage in 90 days keeps its rows, under No home workspace\n",
+        "  SELECT h.catalog, h.workspace_id, w.workspace_url,\n",
+        "         COALESCE(w.workspace_name, h.workspace_id, 'No home workspace') AS workspace\n",
+        "  FROM home h LEFT JOIN wsl w ON w.workspace_id = h.workspace_id\n",
+        "),\n",
+        "t AS (\n",
+        "  SELECT table_catalog AS catalog, table_schema AS sch, table_name, table_type, table_owner, created,\n",
+        "         table_catalog || '.' || table_schema || '.' || table_name AS full_name\n",
+        "  FROM system.information_schema.tables\n",
+        "  WHERE table_catalog NOT IN ('system', 'samples', '__databricks_internal') AND table_schema <> 'information_schema'\n",
+        "),\n",
+        "lin AS (\n",
+        "  SELECT source_table_full_name AS full_name, 1 AS is_read, 0 AS is_write, event_time, lower(created_by) AS who\n",
+        "  FROM system.access.table_lineage\n",
+        "  WHERE event_date >= date_sub(date_add(:time_range.max, 1), 365) AND event_date < date_add(:time_range.max, 1) AND source_table_full_name IS NOT NULL\n",
+        "  UNION ALL\n",
+        "  SELECT target_table_full_name, 0, 1, event_time, lower(created_by) FROM system.access.table_lineage\n",
+        "  WHERE event_date >= date_sub(date_add(:time_range.max, 1), 365) AND event_date < date_add(:time_range.max, 1) AND target_table_full_name IS NOT NULL\n",
+        "),\n",
+        "used AS (\n",
+        "  -- counts in the Time Window; last read and write over the lineage's year\n",
+        "  SELECT full_name,\n",
+        "         SUM(CASE WHEN event_time >= CAST(:time_range.min AS DATE) THEN is_read ELSE 0 END) AS reads,\n",
+        "         SUM(CASE WHEN event_time >= CAST(:time_range.min AS DATE) THEN is_write ELSE 0 END) AS writes,\n",
+        "         COUNT(DISTINCT CASE WHEN is_read = 1 AND event_time >= CAST(:time_range.min AS DATE) THEN who END) AS readers,\n",
+        "         COUNT(DISTINCT CASE WHEN is_write = 1 AND event_time >= CAST(:time_range.min AS DATE) THEN who END) AS writers,\n",
+        "         MAX(CASE WHEN is_read = 1 THEN event_time END) AS last_read,\n",
+        "         MAX(CASE WHEN is_write = 1 THEN event_time END) AS last_write\n",
+        "  FROM lin GROUP BY 1\n",
+        "),\n",
+        "hist AS (\n",
+        "  SELECT catalog, schema, table_name,\n",
+        "         MAX(CASE WHEN operation RLIKE 'WRITE|MERGE|UPDATE|DELETE|STREAMING UPDATE|CREATE OR REPLACE|COPY INTO|TRUNCATE|RESTORE' THEN timestamp END) AS last_change,\n",
+        "         max_by(operation, CASE WHEN operation RLIKE 'WRITE|MERGE|UPDATE|DELETE|STREAMING UPDATE|CREATE OR REPLACE|COPY INTO|TRUNCATE|RESTORE' THEN timestamp END) AS last_change_op,\n",
+        "         MAX(CASE WHEN operation RLIKE 'OPTIMIZE|VACUUM|ANALYZE|REORG' THEN timestamp END) AS last_maintenance,\n",
+        "         SUM(CASE WHEN timestamp >= CAST(:time_range.min AS DATE) THEN rows_changed ELSE 0 END) AS rows_changed,\n",
+        "         SUM(CASE WHEN timestamp >= CAST(:time_range.min AS DATE) THEN bytes_written ELSE 0 END) AS bytes_written\n",
+        "  FROM main.data_usage.table_history GROUP BY 1, 2, 3\n",
+        "),\n",
+        "po AS (\n",
+        "  SELECT catalog_name AS catalog, schema_name AS schema, table_name, MAX(start_time) AS last_po\n",
+        "  FROM system.storage.predictive_optimization_operations_history\n",
+        "  WHERE start_time >= date_sub(date_add(:time_range.max, 1), 365)\n",
+        "  GROUP BY 1, 2, 3\n",
+        "),\n",
+        "found AS (\n",
+        "  SELECT catalog_name AS c, schema_name AS s, table_name AS t, column_name,\n",
+        "         COALESCE(NULLIF(tag_value, ''), tag_name) AS pii_type, 1 AS rnk\n",
+        "  FROM system.information_schema.column_tags\n",
+        "  WHERE lower(tag_name) RLIKE '^(pii|sensitive|gdpr|class[.])' AND catalog_name NOT IN ('system', 'samples', '__databricks_internal')\n",
+        "  UNION ALL\n",
+        "  SELECT table_catalog, table_schema, table_name, column_name,\n",
+        "         CASE\n",
+        "         WHEN lower(column_name) RLIKE 'e_?mail' THEN 'Email'\n",
+        "         WHEN lower(column_name) RLIKE 'phone|mobile|msisdn' THEN 'Phone number'\n",
+        "         WHEN lower(column_name) RLIKE 'iban|(^|_)bic($|_)|account_?(no|number)' THEN 'IBAN / bank account'\n",
+        "         WHEN lower(column_name) RLIKE 'ssn|(^|_)ahv|passport|national_?id' THEN 'National ID'\n",
+        "         WHEN lower(column_name) RLIKE '(^|_)ip(_?address)?($|_)' THEN 'IP address'\n",
+        "         WHEN lower(column_name) RLIKE 'address|street|(^|_)zip|postal' THEN 'Postal address'\n",
+        "         WHEN lower(column_name) RLIKE 'birth|(^|_)dob($|_)' THEN 'Date of birth'\n",
+        "         WHEN lower(column_name) RLIKE 'card_?(no|number|num)|(^|_)pan$' THEN 'Payment card'\n",
+        "         END, 2\n",
+        "  FROM system.information_schema.columns\n",
+        "  WHERE table_catalog NOT IN ('system', 'samples', '__databricks_internal') AND table_schema <> 'information_schema'\n",
+        "),\n",
+        "sens_col AS (\n",
+        "  SELECT f.c || '.' || f.s || '.' || f.t AS full_name, f.column_name, f.pii_type, cm.mask_name IS NOT NULL AS masked\n",
+        "  FROM found f\n",
+        "  LEFT JOIN system.information_schema.column_masks cm\n",
+        "    ON cm.table_catalog = f.c AND cm.table_schema = f.s AND cm.table_name = f.t AND cm.column_name = f.column_name\n",
+        "  WHERE f.pii_type IS NOT NULL\n",
+        "  QUALIFY ROW_NUMBER() OVER (PARTITION BY f.c, f.s, f.t, f.column_name ORDER BY f.rnk) = 1\n",
+        "),\n",
+        "sens AS (\n",
+        "  SELECT full_name, COUNT(*) AS sensitive_columns, COUNT_IF(NOT masked) AS unmasked_columns,\n",
+        "         concat_ws(', ', sort_array(collect_set(pii_type))) AS sensitive_types\n",
+        "  FROM sens_col GROUP BY 1\n",
+        "),\n",
+        "j AS (\n",
+        "  SELECT p.workspace, p.workspace_id, p.workspace_url, t.catalog, t.sch AS schema_name, t.table_name AS name, t.full_name,\n",
+        "         t.table_type, t.table_owner, t.created,\n",
+        "         s.size_in_bytes, s.num_files, COALESCE(u.reads, 0) AS reads, COALESCE(u.writes, 0) AS writes,\n",
+        "         COALESCE(u.readers, 0) AS readers, COALESCE(u.writers, 0) AS writers, u.last_read,\n",
+        "         GREATEST(u.last_write, h.last_change) AS last_write, h.last_change_op,\n",
+        "         GREATEST(h.last_maintenance, po.last_po) AS last_maintenance,\n",
+        "         COALESCE(h.rows_changed, 0) AS rows_changed, COALESCE(h.bytes_written, 0) AS bytes_written,\n",
+        "         COALESCE(se.sensitive_columns, 0) AS sensitive_columns, COALESCE(se.unmasked_columns, 0) AS unmasked_columns,\n",
+        "         se.sensitive_types\n",
+        "  FROM t\n",
+        "  LEFT JOIN place p ON p.catalog = t.catalog\n",
+        "  LEFT JOIN main.data_usage.table_sizes s ON s.catalog = t.catalog AND s.schema = t.sch AND s.table_name = t.table_name\n",
+        "  LEFT JOIN used u ON u.full_name = t.full_name\n",
+        "  LEFT JOIN hist h ON h.catalog = t.catalog AND h.schema = t.sch AND h.table_name = t.table_name\n",
+        "  LEFT JOIN po ON po.catalog = t.catalog AND po.schema = t.sch AND po.table_name = t.table_name\n",
+        "  LEFT JOIN sens se ON se.full_name = t.full_name\n",
+        "),\n",
+        "c AS (\n",
+        "  SELECT *, CASE WHEN writes > 0 AND reads = 0 THEN 'Written, never read'\n",
+        "            WHEN reads = 0 AND writes = 0 AND last_read IS NULL AND last_write IS NULL\n",
+        "                 AND created >= date_sub(date_add(:time_range.max, 1), 7) THEN 'Active'\n",
+        "            WHEN GREATEST(last_read, last_write) IS NULL OR datediff(date_add(:time_range.max, 1), CAST(GREATEST(last_read, last_write) AS DATE)) >= 90 THEN 'Idle 90d+'\n",
+        "            WHEN reads = 0 THEN 'Cooling'\n",
+        "            ELSE 'Active' END AS usage_class FROM j\n",
+        "),\n",
+        "st AS (\n",
+        "  SELECT statement_id, table_name, CASE WHEN MAX(is_write) = 1 THEN 'Writes' ELSE 'Reads' END AS access\n",
+        "  FROM (\n",
+        "    SELECT statement_id, source_table_full_name AS table_name, 0 AS is_write FROM system.access.table_lineage\n",
+        "    WHERE event_date >= CAST(:time_range.min AS DATE) AND event_date < date_add(:time_range.max, 1) AND statement_id IS NOT NULL AND source_table_full_name IS NOT NULL\n",
+        "    UNION ALL\n",
+        "    SELECT statement_id, target_table_full_name, 1 FROM system.access.table_lineage\n",
+        "    WHERE event_date >= CAST(:time_range.min AS DATE) AND event_date < date_add(:time_range.max, 1) AND statement_id IS NOT NULL AND target_table_full_name IS NOT NULL\n",
+        "  ) x\n",
+        "  GROUP BY 1, 2\n",
+        "),\n",
+        "q AS (\n",
+        "  SELECT statement_id, CAST(workspace_id AS STRING) AS workspace_id, lower(executed_by) AS who, start_time, statement_type,\n",
+        "         COALESCE(total_duration_ms, 0) AS ms, read_bytes, read_files, pruned_files, compute.warehouse_id AS warehouse_id,\n",
+        "         statement_text, COALESCE(spilled_local_bytes, 0) AS spilled_bytes, written_bytes,\n",
+        "         COALESCE(waiting_for_compute_duration_ms, 0) + COALESCE(waiting_at_capacity_duration_ms, 0) AS wait_ms\n",
+        "  FROM system.query.history\n",
+        "  WHERE start_time >= CAST(:time_range.min AS DATE) AND start_time < date_add(:time_range.max, 1)\n",
+        "),\n",
+        "ld AS (\n",
+        "  SELECT st.table_name AS full_name, COUNT_IF(st.access = 'Reads') AS read_queries, COUNT_IF(st.access = 'Writes') AS write_queries,\n",
+        "         SUM(CASE WHEN st.access = 'Reads' THEN q.ms ELSE 0 END) AS read_ms,\n",
+        "         SUM(CASE WHEN st.access = 'Writes' THEN q.ms ELSE 0 END) AS write_ms,\n",
+        "         SUM(CASE WHEN st.access = 'Reads' THEN COALESCE(q.read_bytes, 0) ELSE 0 END) AS read_bytes,\n",
+        "         SUM(q.spilled_bytes) AS spilled_bytes,\n",
+        "         COUNT_IF(st.access = 'Reads' AND COALESCE(q.pruned_files, 0) = 0 AND COALESCE(q.read_files, 0) >= 50) AS full_scans\n",
+        "  FROM st JOIN q ON q.statement_id = st.statement_id\n",
+        "  GROUP BY 1\n",
+        "),\n",
+        "b AS (\n",
+        "SELECT c.workspace, c.full_name AS table_name, ROUND((ld.read_ms + ld.write_ms) / 3600000.0, 2) AS query_hours,\n",
+        "       ROUND(ld.read_ms / 3600000.0, 2) AS read_hours, ROUND(ld.write_ms / 3600000.0, 2) AS write_hours,\n",
+        "       ld.read_queries, ld.write_queries, ROUND(ld.read_bytes / 1073741824.0, 1) AS gb_read,\n",
+        "       ROUND(ld.spilled_bytes / 1073741824.0, 1) AS gb_spilled, ld.full_scans, ROUND(c.size_in_bytes / 1073741824.0, 1) AS size_gb,\n",
+        "       CASE WHEN workspace_url IS NOT NULL THEN concat('https://', regexp_replace(regexp_replace(workspace_url, '^https?://', ''), '/.*$', ''), '/explore/data/', catalog, '/', schema_name, '/', name) END AS table_link\n",
+        "FROM ld JOIN c ON c.full_name = ld.full_name\n",
+        "ORDER BY query_hours DESC, table_name\n",
+        "),\n",
+        "r AS (SELECT *, ROW_NUMBER() OVER (PARTITION BY workspace ORDER BY query_hours DESC, table_name) AS rnk FROM b WHERE query_hours > 0)\n",
+        "SELECT workspace, table_name AS name, 'Reading' AS direction, read_hours AS hours FROM r WHERE rnk <= 10\n",
+        "UNION ALL\n",
+        "SELECT workspace, table_name, 'Writing', write_hours FROM r WHERE rnk <= 10\n"
+      ],
+      "parameters": [
+        {
+          "displayName": "time_range",
+          "keyword": "time_range",
+          "dataType": "DATE",
+          "complexType": "RANGE",
+          "defaultSelection": {
+            "range": {
+              "dataType": "DATE",
+              "min": {
+                "value": "now-30d/d"
+              },
+              "max": {
+                "value": "now-1d/d"
+              }
+            }
+          }
+        }
+      ]
     }
   ],
   "pages": [
@@ -3935,6 +4524,32 @@
                   ],
                   "disaggregated": false
                 }
+              },
+              {
+                "name": "q_847f5ac7",
+                "query": {
+                  "datasetName": "5a90ca54",
+                  "parameters": [
+                    {
+                      "name": "time_range",
+                      "keyword": "time_range"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_5ef0d4c2",
+                "query": {
+                  "datasetName": "f8f3eb1f",
+                  "parameters": [
+                    {
+                      "name": "time_range",
+                      "keyword": "time_range"
+                    }
+                  ],
+                  "disaggregated": false
+                }
               }
             ],
             "spec": {
@@ -3973,6 +4588,14 @@
                   {
                     "parameterName": "time_range",
                     "queryName": "q_5ff122f0"
+                  },
+                  {
+                    "parameterName": "time_range",
+                    "queryName": "q_847f5ac7"
+                  },
+                  {
+                    "parameterName": "time_range",
+                    "queryName": "q_5ef0d4c2"
                   }
                 ]
               },
@@ -4141,6 +4764,40 @@
                     }
                   ]
                 }
+              },
+              {
+                "name": "q_1fef5796",
+                "query": {
+                  "datasetName": "5a90ca54",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "name": "workspace",
+                      "expression": "`workspace`"
+                    },
+                    {
+                      "name": "workspace_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ]
+                }
+              },
+              {
+                "name": "q_4c42956e",
+                "query": {
+                  "datasetName": "f8f3eb1f",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "name": "workspace",
+                      "expression": "`workspace`"
+                    },
+                    {
+                      "name": "workspace_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ]
+                }
               }
             ],
             "spec": {
@@ -4187,6 +4844,16 @@
                     "fieldName": "workspace",
                     "displayName": "Workspace",
                     "queryName": "q_82f7fa42"
+                  },
+                  {
+                    "fieldName": "workspace",
+                    "displayName": "Workspace",
+                    "queryName": "q_1fef5796"
+                  },
+                  {
+                    "fieldName": "workspace",
+                    "displayName": "Workspace",
+                    "queryName": "q_4c42956e"
                   }
                 ]
               },
@@ -5249,6 +5916,508 @@
         },
         {
           "widget": {
+            "name": "eb209c78",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "f8f3eb1f",
+                  "fields": [
+                    {
+                      "name": "name",
+                      "expression": "`name`"
+                    },
+                    {
+                      "name": "direction",
+                      "expression": "`direction`"
+                    },
+                    {
+                      "name": "sum(hours)",
+                      "expression": "SUM(`hours`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "sum(hours)",
+                  "displayName": "Query hours",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "format": {
+                    "type": "number-plain",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 0
+                    }
+                  }
+                },
+                "y": {
+                  "fieldName": "name",
+                  "displayName": "Table",
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "x-reversed"
+                    }
+                  }
+                },
+                "label": {
+                  "show": false
+                },
+                "color": {
+                  "fieldName": "direction",
+                  "displayName": "direction",
+                  "legend": {
+                    "position": "bottom",
+                    "hideTitle": true
+                  },
+                  "scale": {
+                    "type": "categorical",
+                    "mappings": [
+                      {
+                        "value": "Reading",
+                        "color": "#2456A6"
+                      },
+                      {
+                        "value": "Writing",
+                        "color": "#D27A2C"
+                      }
+                    ]
+                  }
+                }
+              },
+              "frame": {
+                "title": "Heaviest tables",
+                "showTitle": true,
+                "description": "The 15 tables with the most query hours, reading and writing",
+                "showDescription": true
+              },
+              "mark": {
+                "layout": "stack"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 70,
+            "width": 6,
+            "height": 10
+          }
+        },
+        {
+          "widget": {
+            "name": "1cf85c6c",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "5a90ca54",
+                  "fields": [
+                    {
+                      "name": "table_name",
+                      "expression": "`table_name`"
+                    },
+                    {
+                      "name": "table_link",
+                      "expression": "`table_link`"
+                    },
+                    {
+                      "name": "workspace",
+                      "expression": "`workspace`"
+                    },
+                    {
+                      "name": "query_hours",
+                      "expression": "`query_hours`"
+                    },
+                    {
+                      "name": "read_hours",
+                      "expression": "`read_hours`"
+                    },
+                    {
+                      "name": "write_hours",
+                      "expression": "`write_hours`"
+                    },
+                    {
+                      "name": "read_queries",
+                      "expression": "`read_queries`"
+                    },
+                    {
+                      "name": "write_queries",
+                      "expression": "`write_queries`"
+                    },
+                    {
+                      "name": "gb_read",
+                      "expression": "`gb_read`"
+                    },
+                    {
+                      "name": "gb_spilled",
+                      "expression": "`gb_spilled`"
+                    },
+                    {
+                      "name": "full_scans",
+                      "expression": "`full_scans`"
+                    },
+                    {
+                      "name": "size_gb",
+                      "expression": "`size_gb`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 1,
+              "widgetType": "table",
+              "allowHTMLByDefault": false,
+              "condensed": false,
+              "withRowNumber": false,
+              "itemsPerPage": 20,
+              "paginationSize": "default",
+              "invisibleColumns": [],
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "table_name",
+                    "title": "Table",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 0,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": true,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "table_link",
+                    "title": "Open",
+                    "type": "string",
+                    "displayAs": "link",
+                    "order": 1,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": true,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "Open",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "workspace",
+                    "title": "Workspace",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 2,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": true,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "query_hours",
+                    "title": "Query hours",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 3,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "0,0.[0]",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "read_hours",
+                    "title": "Reading",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 4,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "0,0.[0]",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "write_hours",
+                    "title": "Writing",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 5,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "0,0.[0]",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "read_queries",
+                    "title": "Reads",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 6,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "0,0",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "write_queries",
+                    "title": "Writes",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 7,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "0,0",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "gb_read",
+                    "title": "GB read",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 8,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "0,0.[0]",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "gb_spilled",
+                    "title": "GB spilled",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 9,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "0,0.[0]",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "full_scans",
+                    "title": "Full scans",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 10,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "0,0",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "size_gb",
+                    "title": "GB",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 11,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "0,0.[0]",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  }
+                ]
+              },
+              "frame": {
+                "title": "Heaviest tables: every table queried",
+                "showTitle": true,
+                "showDescription": false
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 70,
+            "width": 6,
+            "height": 10
+          }
+        },
+        {
+          "widget": {
             "name": "a518a9d1",
             "queries": [
               {
@@ -5348,7 +6517,7 @@
           },
           "position": {
             "x": 0,
-            "y": 70,
+            "y": 85,
             "width": 6,
             "height": 10
           }
@@ -5454,7 +6623,7 @@
           },
           "position": {
             "x": 6,
-            "y": 70,
+            "y": 85,
             "width": 6,
             "height": 10
           }
@@ -5560,7 +6729,7 @@
           },
           "position": {
             "x": 0,
-            "y": 85,
+            "y": 100,
             "width": 6,
             "height": 12
           }
@@ -5666,7 +6835,7 @@
           },
           "position": {
             "x": 6,
-            "y": 85,
+            "y": 100,
             "width": 6,
             "height": 12
           }
@@ -5772,7 +6941,7 @@
           },
           "position": {
             "x": 0,
-            "y": 97,
+            "y": 112,
             "width": 6,
             "height": 12
           }
@@ -5878,7 +7047,7 @@
           },
           "position": {
             "x": 6,
-            "y": 97,
+            "y": 112,
             "width": 6,
             "height": 12
           }
@@ -5984,7 +7153,7 @@
           },
           "position": {
             "x": 0,
-            "y": 109,
+            "y": 124,
             "width": 12,
             "height": 12
           }
@@ -6005,7 +7174,7 @@
           },
           "position": {
             "x": 0,
-            "y": 126,
+            "y": 141,
             "width": 12,
             "height": 5
           }
@@ -6138,7 +7307,7 @@
           },
           "position": {
             "x": 0,
-            "y": 121,
+            "y": 136,
             "width": 12,
             "height": 5
           }
@@ -6271,6 +7440,139 @@
           },
           "position": {
             "x": 6,
+            "y": 95,
+            "width": 6,
+            "height": 5
+          }
+        },
+        {
+          "widget": {
+            "name": "b5e11b30",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "f8f3eb1f",
+                  "fields": [
+                    {
+                      "name": "name",
+                      "expression": "`name`"
+                    },
+                    {
+                      "name": "direction",
+                      "expression": "`direction`"
+                    },
+                    {
+                      "name": "hours",
+                      "expression": "`hours`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 1,
+              "widgetType": "table",
+              "allowHTMLByDefault": false,
+              "condensed": false,
+              "withRowNumber": false,
+              "itemsPerPage": 20,
+              "paginationSize": "default",
+              "invisibleColumns": [],
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "name",
+                    "title": "Table",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 0,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": true,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "direction",
+                    "title": "Direction",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 1,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": true,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "hours",
+                    "title": "Query hours",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 2,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "0,0.[00]",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  }
+                ]
+              },
+              "frame": {
+                "title": "Heaviest tables: rows",
+                "showTitle": true,
+                "showDescription": false
+              }
+            }
+          },
+          "position": {
+            "x": 0,
             "y": 80,
             "width": 6,
             "height": 5
@@ -9506,6 +10808,40 @@
                     }
                   ]
                 }
+              },
+              {
+                "name": "q_d6e586c9",
+                "query": {
+                  "datasetName": "5a90ca54",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "name": "workspace",
+                      "expression": "`workspace`"
+                    },
+                    {
+                      "name": "workspace_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ]
+                }
+              },
+              {
+                "name": "q_6e1c768c",
+                "query": {
+                  "datasetName": "9ec518bc",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "name": "workspace",
+                      "expression": "`workspace`"
+                    },
+                    {
+                      "name": "workspace_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ]
+                }
               }
             ],
             "spec": {
@@ -9557,6 +10893,16 @@
                     "fieldName": "workspace",
                     "displayName": "Workspace",
                     "queryName": "q_ac85c6a9"
+                  },
+                  {
+                    "fieldName": "workspace",
+                    "displayName": "Workspace",
+                    "queryName": "q_d6e586c9"
+                  },
+                  {
+                    "fieldName": "workspace",
+                    "displayName": "Workspace",
+                    "queryName": "q_6e1c768c"
                   }
                 ]
               },
@@ -10819,6 +12165,509 @@
         },
         {
           "widget": {
+            "name": "d6c65dec",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "9ec518bc",
+                  "fields": [
+                    {
+                      "name": "name",
+                      "expression": "`name`"
+                    },
+                    {
+                      "name": "direction",
+                      "expression": "`direction`"
+                    },
+                    {
+                      "name": "sum(hours)",
+                      "expression": "SUM(`hours`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "sum(hours)",
+                  "displayName": "Query hours",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "format": {
+                    "type": "number-plain",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 0
+                    }
+                  }
+                },
+                "y": {
+                  "fieldName": "name",
+                  "displayName": "Table",
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "x-reversed"
+                    }
+                  }
+                },
+                "label": {
+                  "show": false
+                },
+                "color": {
+                  "fieldName": "direction",
+                  "displayName": "direction",
+                  "legend": {
+                    "position": "bottom",
+                    "hideTitle": true
+                  },
+                  "scale": {
+                    "type": "categorical",
+                    "mappings": [
+                      {
+                        "value": "Reading",
+                        "color": "#2456A6"
+                      },
+                      {
+                        "value": "Writing",
+                        "color": "#D27A2C"
+                      }
+                    ]
+                  }
+                }
+              },
+              "frame": {
+                "title": "Heaviest tables",
+                "showTitle": true,
+                "description": "Its 10 tables with the most query hours, reading and writing",
+                "showDescription": true
+              },
+              "mark": {
+                "layout": "stack"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 43,
+            "width": 6,
+            "height": 10
+          }
+        },
+        {
+          "widget": {
+            "name": "fc248367",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "5a90ca54",
+                  "fields": [
+                    {
+                      "name": "table_name",
+                      "expression": "`table_name`"
+                    },
+                    {
+                      "name": "table_link",
+                      "expression": "`table_link`"
+                    },
+                    {
+                      "name": "workspace",
+                      "expression": "`workspace`"
+                    },
+                    {
+                      "name": "query_hours",
+                      "expression": "`query_hours`"
+                    },
+                    {
+                      "name": "read_hours",
+                      "expression": "`read_hours`"
+                    },
+                    {
+                      "name": "write_hours",
+                      "expression": "`write_hours`"
+                    },
+                    {
+                      "name": "read_queries",
+                      "expression": "`read_queries`"
+                    },
+                    {
+                      "name": "write_queries",
+                      "expression": "`write_queries`"
+                    },
+                    {
+                      "name": "gb_read",
+                      "expression": "`gb_read`"
+                    },
+                    {
+                      "name": "gb_spilled",
+                      "expression": "`gb_spilled`"
+                    },
+                    {
+                      "name": "full_scans",
+                      "expression": "`full_scans`"
+                    },
+                    {
+                      "name": "size_gb",
+                      "expression": "`size_gb`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 1,
+              "widgetType": "table",
+              "allowHTMLByDefault": false,
+              "condensed": false,
+              "withRowNumber": false,
+              "itemsPerPage": 20,
+              "paginationSize": "default",
+              "invisibleColumns": [],
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "table_name",
+                    "title": "Table",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 0,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": true,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "table_link",
+                    "title": "Open",
+                    "type": "string",
+                    "displayAs": "link",
+                    "order": 1,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": true,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "Open",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "workspace",
+                    "title": "Workspace",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 2,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": true,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "query_hours",
+                    "title": "Query hours",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 3,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "0,0.[0]",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "read_hours",
+                    "title": "Reading",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 4,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "0,0.[0]",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "write_hours",
+                    "title": "Writing",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 5,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "0,0.[0]",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "read_queries",
+                    "title": "Reads",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 6,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "0,0",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "write_queries",
+                    "title": "Writes",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 7,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "0,0",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "gb_read",
+                    "title": "GB read",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 8,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "0,0.[0]",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "gb_spilled",
+                    "title": "GB spilled",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 9,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "0,0.[0]",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "full_scans",
+                    "title": "Full scans",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 10,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "0,0",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "size_gb",
+                    "title": "GB",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 11,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "0,0.[0]",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  }
+                ]
+              },
+              "frame": {
+                "title": "Heaviest tables: every table queried",
+                "showTitle": true,
+                "showDescription": true,
+                "description": "Hours of the queries reading or writing it, GB read and spilled, full scans: sort on any column. SQL warehouses and serverless only; a query on several tables counts on each."
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 43,
+            "width": 6,
+            "height": 10
+          }
+        },
+        {
+          "widget": {
             "name": "3069524b",
             "queries": [
               {
@@ -10910,7 +12759,7 @@
           },
           "position": {
             "x": 0,
-            "y": 43,
+            "y": 58,
             "width": 6,
             "height": 10
           }
@@ -11008,7 +12857,7 @@
           },
           "position": {
             "x": 6,
-            "y": 43,
+            "y": 58,
             "width": 6,
             "height": 10
           }
@@ -11088,7 +12937,7 @@
           },
           "position": {
             "x": 0,
-            "y": 58,
+            "y": 73,
             "width": 8,
             "height": 9
           }
@@ -11186,7 +13035,7 @@
           },
           "position": {
             "x": 8,
-            "y": 58,
+            "y": 73,
             "width": 4,
             "height": 9
           }
@@ -11900,7 +13749,7 @@
           },
           "position": {
             "x": 0,
-            "y": 72,
+            "y": 87,
             "width": 12,
             "height": 10
           }
@@ -12336,7 +14185,7 @@
           },
           "position": {
             "x": 0,
-            "y": 82,
+            "y": 97,
             "width": 12,
             "height": 10
           }
@@ -12469,7 +14318,7 @@
           },
           "position": {
             "x": 0,
-            "y": 67,
+            "y": 82,
             "width": 8,
             "height": 5
           }
@@ -12602,7 +14451,7 @@
           },
           "position": {
             "x": 8,
-            "y": 67,
+            "y": 82,
             "width": 4,
             "height": 5
           }
@@ -12735,7 +14584,7 @@
           },
           "position": {
             "x": 0,
-            "y": 53,
+            "y": 68,
             "width": 6,
             "height": 5
           }
@@ -12868,6 +14717,139 @@
           },
           "position": {
             "x": 6,
+            "y": 68,
+            "width": 6,
+            "height": 5
+          }
+        },
+        {
+          "widget": {
+            "name": "d212ebff",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "9ec518bc",
+                  "fields": [
+                    {
+                      "name": "name",
+                      "expression": "`name`"
+                    },
+                    {
+                      "name": "direction",
+                      "expression": "`direction`"
+                    },
+                    {
+                      "name": "hours",
+                      "expression": "`hours`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 1,
+              "widgetType": "table",
+              "allowHTMLByDefault": false,
+              "condensed": false,
+              "withRowNumber": false,
+              "itemsPerPage": 20,
+              "paginationSize": "default",
+              "invisibleColumns": [],
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "name",
+                    "title": "Table",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 0,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": true,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "direction",
+                    "title": "Direction",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 1,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": true,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "hours",
+                    "title": "Query hours",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 2,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "0,0.[00]",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  }
+                ]
+              },
+              "frame": {
+                "title": "Heaviest tables: rows",
+                "showTitle": true,
+                "showDescription": false
+              }
+            }
+          },
+          "position": {
+            "x": 0,
             "y": 53,
             "width": 6,
             "height": 5
@@ -18705,8 +20687,28 @@
                       "expression": "`scan`"
                     },
                     {
+                      "name": "gb_spilled",
+                      "expression": "`gb_spilled`"
+                    },
+                    {
+                      "name": "wait_seconds",
+                      "expression": "`wait_seconds`"
+                    },
+                    {
+                      "name": "gb_written",
+                      "expression": "`gb_written`"
+                    },
+                    {
                       "name": "workspace",
                       "expression": "`workspace`"
+                    },
+                    {
+                      "name": "statement_id",
+                      "expression": "`statement_id`"
+                    },
+                    {
+                      "name": "profile_link",
+                      "expression": "`profile_link`"
                     },
                     {
                       "name": "query",
@@ -18968,11 +20970,89 @@
                     "imageHeight": ""
                   },
                   {
+                    "fieldName": "gb_spilled",
+                    "title": "GB spilled",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 9,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "0,0.[0]",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "wait_seconds",
+                    "title": "Waited · s",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 10,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "0,0.[0]",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "gb_written",
+                    "title": "GB written",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 11,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "0,0.[0]",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
                     "fieldName": "workspace",
                     "title": "Workspace",
                     "type": "string",
                     "displayAs": "string",
-                    "order": 9,
+                    "order": 12,
                     "visible": true,
                     "alignContent": "left",
                     "allowHTML": false,
@@ -18995,11 +21075,65 @@
                     "imageHeight": ""
                   },
                   {
+                    "fieldName": "statement_id",
+                    "title": "Query id",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 13,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": true,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "profile_link",
+                    "title": "Profile",
+                    "type": "string",
+                    "displayAs": "link",
+                    "order": 14,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": true,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "Open",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
                     "fieldName": "query",
                     "title": "Query",
                     "type": "string",
                     "displayAs": "string",
-                    "order": 10,
+                    "order": 15,
                     "visible": true,
                     "alignContent": "left",
                     "allowHTML": false,

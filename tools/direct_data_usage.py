@@ -866,14 +866,15 @@ def _statements(lo: str) -> str:
 q AS (
   SELECT statement_id, CAST(workspace_id AS STRING) AS workspace_id, lower(executed_by) AS who, start_time, statement_type,
          COALESCE(total_duration_ms, 0) AS ms, read_bytes, read_files, pruned_files, compute.warehouse_id AS warehouse_id,
-         statement_text
+         statement_text, COALESCE(spilled_local_bytes, 0) AS spilled_bytes, written_bytes,
+         COALESCE(waiting_for_compute_duration_ms, 0) + COALESCE(waiting_at_capacity_duration_ms, 0) AS wait_ms
   FROM system.query.history
   WHERE start_time >= {lo} AND start_time < {END}
 )"""
 
 
 _STMT_STEPS = {"st": "Each query statement and the tables it read or wrote (lineage rows with a statement_id).",
-               "q": "Query history: who, when, time, bytes and files read and pruned."}
+               "q": "Query history: who, when, time, bytes and files read and pruned, spill, time waiting for compute."}
 
 
 def table_queries() -> Dataset:
@@ -881,7 +882,7 @@ def table_queries() -> Dataset:
         "wd_table_queries", "Each table's slowest queries",
         [], [],
         f"""{_statements(START)},
-wsl AS (SELECT CAST(workspace_id AS STRING) AS workspace_id, workspace_name FROM system.access.workspaces_latest),
+wsl AS (SELECT CAST(workspace_id AS STRING) AS workspace_id, workspace_name, workspace_url FROM system.access.workspaces_latest),
 r AS (
   SELECT st.table_name, st.access, q.*, ROW_NUMBER() OVER (PARTITION BY st.table_name ORDER BY q.ms DESC, q.statement_id) AS rnk
   FROM st JOIN q ON q.statement_id = st.statement_id
@@ -891,17 +892,79 @@ SELECT r.table_name, CAST(date_format(r.start_time, 'yyyy-MM-dd HH:mm') AS STRIN
        r.pruned_files AS files_pruned,
        CASE WHEN r.access = 'Reads' AND COALESCE(r.pruned_files, 0) = 0 AND COALESCE(r.read_files, 0) >= {FULL_SCAN_FILES}
             THEN 'Full scan' ELSE '' END AS scan,
-       COALESCE(w.workspace_name, r.workspace_id) AS workspace, r.warehouse_id,
+       COALESCE(w.workspace_name, r.workspace_id) AS workspace, r.warehouse_id, r.statement_id,
+       ROUND(r.spilled_bytes / {_GB}, 2) AS gb_spilled, ROUND(r.wait_ms / 1000.0, 1) AS wait_seconds,
+       ROUND(r.written_bytes / {_GB}, 2) AS gb_written,
+       CASE WHEN w.workspace_url IS NOT NULL THEN concat('https://', regexp_replace(regexp_replace(w.workspace_url, '^https?://', ''),
+            '/.*$', ''), '/sql/history?queryId=', r.statement_id, '&uiQueryProfileVisible=true') END AS profile_link,
        left(regexp_replace(r.statement_text, '\\s+', ' '), {QUERY_TEXT_CHARS}) AS query
 FROM r LEFT JOIN wsl w ON w.workspace_id = r.workspace_id
 WHERE r.rnk <= 10
 ORDER BY r.table_name, r.ms DESC""",
-        f"Per table, the 10 slowest queries in the window that read or wrote it: who, time, bytes, files read and "
-        f"pruned. Full scan: {FULL_SCAN_FILES}+ files read, none pruned. Bytes and files are the whole query's.",
+        f"Per table, the 10 slowest queries in the window that read or wrote it: who, time, time waiting for compute, "
+        f"bytes read, spilled and written, files read and pruned, the query id and a link to its profile. Full scan: "
+        f"{FULL_SCAN_FILES}+ files read, none pruned. Bytes and files are the whole query's.",
         "Slowest queries on Table detail.",
         "Up to 10 rows per table.",
         {**_STMT_STEPS, "wsl": "Workspace names.", "r": "Each table's queries, slowest first."},
         head="Dates from the Time Window.",
+    )
+
+
+def heavy() -> Dataset:
+    return Dataset(
+        "wd_heavy_tables", "The tables queries spend the most on",
+        [], [],
+        f"""{_classified()},
+{_statements(START)},
+ld AS (
+  SELECT st.table_name AS full_name, COUNT_IF(st.access = 'Reads') AS read_queries, COUNT_IF(st.access = 'Writes') AS write_queries,
+         SUM(CASE WHEN st.access = 'Reads' THEN q.ms ELSE 0 END) AS read_ms,
+         SUM(CASE WHEN st.access = 'Writes' THEN q.ms ELSE 0 END) AS write_ms,
+         SUM(CASE WHEN st.access = 'Reads' THEN COALESCE(q.read_bytes, 0) ELSE 0 END) AS read_bytes,
+         SUM(q.spilled_bytes) AS spilled_bytes,
+         COUNT_IF(st.access = 'Reads' AND COALESCE(q.pruned_files, 0) = 0 AND COALESCE(q.read_files, 0) >= {FULL_SCAN_FILES}) AS full_scans
+  FROM st JOIN q ON q.statement_id = st.statement_id
+  GROUP BY 1
+)
+SELECT c.workspace, c.full_name AS table_name, ROUND((ld.read_ms + ld.write_ms) / 3600000.0, 2) AS query_hours,
+       ROUND(ld.read_ms / 3600000.0, 2) AS read_hours, ROUND(ld.write_ms / 3600000.0, 2) AS write_hours,
+       ld.read_queries, ld.write_queries, ROUND(ld.read_bytes / {_GB}, 1) AS gb_read,
+       ROUND(ld.spilled_bytes / {_GB}, 1) AS gb_spilled, ld.full_scans, ROUND(c.size_in_bytes / {_GB}, 1) AS size_gb,
+       {_TABLE_LINK} AS table_link
+FROM ld JOIN c ON c.full_name = ld.full_name
+ORDER BY query_hours DESC, table_name""",
+        "Per table, the queries in query history that read or wrote it in the window: their hours reading and "
+        f"writing it, GB read and spilled, reads that pruned no file out of {FULL_SCAN_FILES}+, with its size. "
+        "A query on several tables counts on each.",
+        "Heaviest tables on Overview and Workspace detail.",
+        "One row per table a query read or wrote, most hours first.",
+        {**_CLASS_STEPS, **_STMT_STEPS, "ld": "Per table: queries, hours, GB read and spilled, full scans."},
+        head="Dates from the Time Window.",
+    )
+
+
+def heavy_top(key: str, title: str, top: int, per_workspace: bool) -> Dataset:
+    """wd_heavy_tables' top by query hours, overall or per workspace, one row for reading and one for writing."""
+    base = heavy()
+    at = base.body.rfind("\nSELECT ")
+    over = "PARTITION BY workspace " if per_workspace else ""
+    return Dataset(
+        key, title, [], [],
+        f"""{base.body[:at]},
+b AS (
+{base.body[at + 1:]}
+),
+r AS (SELECT *, ROW_NUMBER() OVER ({over}ORDER BY query_hours DESC, table_name) AS rnk FROM b WHERE query_hours > 0)
+SELECT workspace, table_name AS name, 'Reading' AS direction, read_hours AS hours FROM r WHERE rnk <= {top}
+UNION ALL
+SELECT workspace, table_name, 'Writing', write_hours FROM r WHERE rnk <= {top}""",
+        f"The {top} tables with the most query hours{' per workspace' if per_workspace else ''}, from wd_heavy_tables: "
+        "one row for reading, one for writing.",
+        "The Heaviest tables charts.",
+        f"Up to {2 * top} rows{' per workspace' if per_workspace else ''}.",
+        {**base.steps, "b": "Every row of wd_heavy_tables.", "r": "Ranked by query hours."},
+        head=base.head,
     )
 
 
@@ -1122,7 +1185,9 @@ def _all() -> list[Dataset]:
             _ranked(volumes(), "wd_top_volumes_ws", "Each workspace's most active volumes", "volume", 10, True, ", usage_class"),
             busiest_days(), table_queries(), table_scans(), table_other(), compaction_effect(),
             _ranked(access(), "wd_table_people", "Each table's most active people", "identity", 10, "table_name", ", table_name, kind"),
-            _ranked(access(), "wd_person_tables", "Each person's most used tables", "table_name", 10, "identity", ", identity")]
+            _ranked(access(), "wd_person_tables", "Each person's most used tables", "table_name", 10, "identity", ", identity"),
+            heavy(), heavy_top("wd_heavy_top", "The heaviest tables", 15, False),
+            heavy_top("wd_heavy_top_ws", "Each workspace's heaviest tables", 10, True)]
 
 
 DATASETS: list[Dataset] = _all()
@@ -1270,6 +1335,10 @@ PEOPLE_COLS = [("identity", "Who", "text"), ("kind", "Kind", "text"), ("workspac
                ("reads", "Reads", "int"), ("writes", "Writes", "int"), ("writes_nobody_reads", "Writes nobody reads", "int"),
                ("sensitive_tables", "Sensitive tables", "int"), ("direct_grants", "Direct grants", "int"),
                ("logins", "Logins", "int"), ("last_seen", "Last seen", "text")]
+HEAVY_COLS = [("table_name", "Table", "text"), ("table_link", "Open", "text"), ("workspace", "Workspace", "text"),
+              ("query_hours", "Query hours", "num"), ("read_hours", "Reading", "num"), ("write_hours", "Writing", "num"),
+              ("read_queries", "Reads", "int"), ("write_queries", "Writes", "int"), ("gb_read", "GB read", "num"),
+              ("gb_spilled", "GB spilled", "num"), ("full_scans", "Full scans", "int"), ("size_gb", "GB", "num")]
 ACCESS_COLS = [("identity", "Who", "text"), ("kind", "Kind", "text"), ("table_name", "Table", "text"),
                ("workspace", "Workspace", "text"), ("access", "Access", "text"), ("reads", "Reads", "int"),
                ("writes", "Writes", "int"), ("last_access", "Last used", "text"), ("usage_class", "Table class", "text"),
@@ -1296,6 +1365,8 @@ TABLE_NOTES = {
     "Reads before and after a compaction": "Reads in query history 7 days each side, 3+ on both. An indication: other changes count too.",
     "Slowest queries": "Query history: SQL warehouses and serverless only. Bytes and files are the whole query's: a join "
                        f"shows them on each table. Full scan: {FULL_SCAN_FILES}+ files read, none pruned: filter on a clustering column.",
+    "Heaviest tables: every table queried": "Hours of the queries reading or writing it, GB read and spilled, full scans: "
+                                            "sort on any column. SQL warehouses and serverless only; a query on several tables counts on each.",
     "Not in query history": "Jobs, notebooks and pipelines on classic compute: in lineage with who and when; time, bytes "
                             "and files are not available.",
     "Every volume, clean-up order": "Spark jobs reading a volume on a cluster may not be in the audit log: check before you drop.",
@@ -1307,7 +1378,7 @@ TABLE_NOTES = {
 
 
 def dashboard() -> dict:
-    W, T, C, L, V, U, I, D, S, A, E, H, K, G, TW, TT, TTW, TP, TPW, TVW, DT, TQ, TS, TO, EF, TPP, PT = DATASETS
+    W, T, C, L, V, U, I, D, S, A, E, H, K, G, TW, TT, TTW, TP, TPW, TVW, DT, TQ, TS, TO, EF, TPP, PT, HV, HT, HTW = DATASETS
     rw = lambda key, d, cat_t, title, desc: _colored(  # noqa: E731
         bar(key, d, "name", cat_t, "events", "Events", title, desc, money=False, color="direction"),
         [("Reads", "#2456A6"), ("Writes", "#D27A2C")])
@@ -1315,6 +1386,10 @@ def dashboard() -> dict:
                                          field_filter(f"{key}:ws", "workspace", "Workspace", ds),
                                          *[field_filter(f"{key}:{col}", col, t, ds) for col, t in extra]])
     gb = lambda key, col, title, desc, color: _counter(key, T, col, title, desc, color)  # noqa: E731
+    heavy_bar = lambda key, d, title, desc: _colored(  # noqa: E731
+        bar(key, d, "name", "Table", "hours", "Query hours", title, desc, money=False, color="direction"),
+        [("Reading", "#2456A6"), ("Writing", "#D27A2C")])
+    heavy_table = lambda key: _links(table(key, HV, HEAVY_COLS, "Heaviest tables: every table queried"), "table_link")  # noqa: E731
     by_class = lambda key, d, cat, cat_t, m, m_t, title, desc: _colored(  # noqa: E731
         bar(key, d, cat, cat_t, m, m_t, title, desc, money=False, color="usage_class"), CLASS_COLORS)
 
@@ -1322,7 +1397,7 @@ def dashboard() -> dict:
         (2, [header("du:ov:head", "Overview",
                     "Where the data sits by how it is used, who reads and writes it, and what to clean up, for the "
                     "workspaces and the window picked above. Every chart follows the filters.")]),
-        filt("du:ov", [W, T, V, U, D, TW, TT, TP]),
+        filt("du:ov", [W, T, V, U, D, TW, TT, TP, HV, HT]),
         (3, [_counter("du:ov:gb", W, "data_gb", "Data · GB", "Tables and volume files"),
              _counter("du:ov:unread", W, "unread_gb", "Unread · GB", f"{WNR} plus {IDLE.lower()}", "#C2362B"),
              _counter("du:ov:reads", W, "reads", "Table reads", "Lineage, in the window", "#2456A6"),
@@ -1344,6 +1419,8 @@ def dashboard() -> dict:
         (10, [rw("du:ov:top_t", TT, "Table", "Most used tables", "The 15 tables with the most read and write events"),
               rw("du:ov:top_p", TP, "Who", "Most active people",
                  "The 15 people and service principals with the most table events, per workspace")]),
+        (10, [heavy_bar("du:ov:heavy", HT, "Heaviest tables", "The 15 tables with the most query hours, reading and writing"),
+              heavy_table("du:ov:heavy_t")]),
         (10, [by_class("du:ov:ws_n", T, "workspace", "Workspace", "objects", "Tables and views", "Tables in use, by workspace",
                        "Active of all: blue = read in the window"),
               by_class("du:ov:vol_n", V, "workspace", "Workspace", "volumes", "Volumes", "Volumes in use, by workspace",
@@ -1397,7 +1474,7 @@ def dashboard() -> dict:
         (2, [header("du:wd:head", "Workspace detail",
                     "Pick one workspace: its schemas, its tables by class, its reads and writes per day, and its people.")]),
         (1, [time_window("du:wd:time", [W, S, T, D, U, TTW, TPW, TVW, DT]),
-             _pick("du:wd:ws", "workspace", "Workspace", [W, S, T, D, U, TTW, TPW, TVW, DT])]),
+             _pick("du:wd:ws", "workspace", "Workspace", [W, S, T, D, U, TTW, TPW, TVW, DT, HV, HTW])]),
         (3, [_counter("du:wd:gb", W, "data_gb", "Data · GB", "Tables and volume files"),
              _counter("du:wd:unread", W, "unread_gb", "Unread · GB", f"{WNR} plus {IDLE.lower()}", "#C2362B"),
              _counter("du:wd:tables", W, "tables", "Tables", "In its home catalogs"),
@@ -1419,6 +1496,8 @@ def dashboard() -> dict:
               _bubbles("du:wd:size", T, ("size_gb", "GB"), ("reads", "Reads"), ("readers", "Readers"), ("usage_class", "Class"),
                        CLASS_COLORS, "Its tables: size against reads",
                        "Every table, idle ones on the bottom line. Right and low: big, little used.")]),
+        (10, [heavy_bar("du:wd:heavy", HTW, "Heaviest tables", "Its 10 tables with the most query hours, reading and writing"),
+              heavy_table("du:wd:heavy_t")]),
         (10, [rw("du:wd:top_t", TTW, "Table", "Most used tables", "Its 10 tables with the most read and write events"),
               rw("du:wd:top_p", TPW, "Who", "Most active people", "Its 10 people and service principals with the most table events")]),
         (9, [(_heat("du:wd:heat", DT, "table_name", "Table", "Busiest tables per day",
@@ -1495,11 +1574,14 @@ def dashboard() -> dict:
                                          ("files_per_read_before", "Files per read before", "int"),
                                          ("files_per_read_after", "Files per read after", "int")],
                    "Reads before and after a compaction")]),
-        (10, [table("du:td:queries", TQ, [("started", "When", "text"), ("who", "Who", "text"), ("statement_type", "Type", "text"),
+        (10, [_links(table("du:td:queries", TQ, [("started", "When", "text"), ("who", "Who", "text"), ("statement_type", "Type", "text"),
                                            ("access", "Access", "text"), ("seconds", "Seconds", "num"), ("gb_read", "GB read", "num"),
                                            ("files_read", "Files read", "int"), ("files_pruned", "Pruned", "int"),
-                                           ("scan", "Scan", "text"), ("workspace", "Workspace", "text"), ("query", "Query", "text")],
-                    "Slowest queries")]),
+                                           ("scan", "Scan", "text"), ("gb_spilled", "GB spilled", "num"),
+                                           ("wait_seconds", "Waited · s", "num"), ("gb_written", "GB written", "num"),
+                                           ("workspace", "Workspace", "text"), ("statement_id", "Query id", "text"),
+                                           ("profile_link", "Profile", "text"), ("query", "Query", "text")],
+                    "Slowest queries"), "profile_link")]),
         (7, [table("du:td:other", TO, [("who", "Who", "text"), ("via", "Through", "text"), ("access", "Access", "text"),
                                         ("events", "Events", "int"), ("last_event", "Last", "text"),
                                         ("time_bytes_files", "Time, bytes, files", "text")],
