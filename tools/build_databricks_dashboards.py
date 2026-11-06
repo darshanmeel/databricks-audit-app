@@ -24,13 +24,16 @@ DIRECT_SQL_DIR = REPO_ROOT / "app" / "direct_sql"
 NAMES_DIR = DIRECT_SQL_DIR / "names"
 OUT_DIR = REPO_ROOT / "databricks_dashboards"
 SETTINGS_PATH = REPO_ROOT / "config" / "settings.yml"
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+from app.core import config as app_config  # noqa: E402
 
 # A live run's values for the markers app/direct_sql/*.sql carries: a fixed 30-day window, and
 # "now" computed when the snapshot runs, so a rerun months later still means today.
 WINDOW_DAYS = 30
 AS_OF_DATE_SQL = "current_date()"
 AS_OF_TS_SQL = "current_timestamp()"
-SCHEMA_NAME = "databricks_audit_dashboard"
+SCHEMA_NAME = app_config.dashboards()["snapshot_schema"]  # settings dashboards
 
 # Checks the snapshot runs first, in this order. cost_failed_statement_waste is last on purpose:
 # it reads system.billing.attributed_usage, a grant some accounts never gave, so a failure there
@@ -90,6 +93,11 @@ def read_check(query_id: str) -> str:
 def read_dim(name: str) -> str:
     text = (NAMES_DIR / f"{name}.sql").read_text(encoding="utf-8")
     return fill_placeholders(text, name)
+
+
+def map_sources(text: str) -> str:
+    """`text` with each system table in settings sources swapped for its view or table."""
+    return app_config.map_sources(text, app_config.sources())
 
 
 def hid(key: str) -> str:
@@ -1373,9 +1381,10 @@ def build(catalog: str | None = None) -> dict[str, object]:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--catalog", default=None,
-                        help=f"catalog holding {SCHEMA_NAME}, written into every file (default: none; the "
-                             "dashboards read their default catalog, the notebook asks)")
+    parser.add_argument("--catalog", default=app_config.dashboards()["snapshot_catalog"],
+                        help=f"catalog holding {SCHEMA_NAME}, written into every file (default: settings "
+                             "dashboards snapshot_catalog, else none; the dashboards read their default catalog, "
+                             "the notebook asks)")
     parser.add_argument("--out-dir", default=str(OUT_DIR), help="output directory (default databricks_dashboards/)")
     parser.add_argument("--only", choices=TABS, help="write just this tab's dashboard")
     parser.add_argument("--refresh-columns", action="store_true",
@@ -1391,7 +1400,7 @@ def main() -> None:
     else:
         files = build(args.catalog)
     for name, content in files.items():
-        (out_dir / name).write_text(content, encoding="utf-8", newline="\n")
+        (out_dir / name).write_text(map_sources(content), encoding="utf-8", newline="\n")
         print(f"wrote {out_dir / name}")
 
 

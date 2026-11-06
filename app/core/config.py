@@ -173,6 +173,7 @@ SETTINGS_KEYS = {
     "load",  # the local database load: DuckDB memory and threads, which tag keys tags.tag_entity keeps.
     "table_sizes",  # DESCRIBE DETAIL of every table in the export: on/off, how many at once, how many at most.
     "sources",  # system table -> the catalog.schema.table or view read instead; left out = the system table.
+    "dashboards",  # where the Databricks dashboards' own tables live: the snapshot schema, the sizes job's schema and tables.
 }
 UI_KEYS = {"max_rows", "max_chart_categories"}
 LOAD_KEYS = {"memory_limit", "threads", "tag_keys", "top_tag_keys"}
@@ -211,6 +212,10 @@ DEFAULT_SETTINGS: dict = {
                     "columns_from": "system.information_schema.columns",
                     "volumes_from": "system.information_schema.volumes"},
     "sources": {},
+    "dashboards": {"snapshot_catalog": None, "snapshot_schema": "databricks_audit_dashboard",
+                   "sizes_schema": "main.data_usage",
+                   "sizes_tables": {"table_sizes": "table_sizes", "table_history": "table_history",
+                                    "volume_sizes": "volume_sizes"}},
 }
 
 # a system table name, plain or in backticks: system.billing.usage, `system`.`billing`.`usage`
@@ -224,6 +229,32 @@ def _validate_object_name(value, key: str) -> str:
     if not isinstance(value, str) or not OBJECT_NAME_RE.fullmatch(value.strip()):
         raise SettingsError(f"{key} must be catalog.schema.table (backticks around a part with a hyphen)", key=key)
     return value.strip()
+
+
+def _validate_dashboards(value) -> dict:
+    """{snapshot_catalog, snapshot_schema, sizes_schema (catalog.schema), sizes_tables}; a missing key keeps its default."""
+    default = DEFAULT_SETTINGS["dashboards"]
+    merged = {**default, "sizes_tables": dict(default["sizes_tables"])}
+    msg = ("dashboards takes snapshot_catalog, snapshot_schema, sizes_schema (catalog.schema) and sizes_tables "
+           "(table_sizes, table_history, volume_sizes: a table name each)")
+    if value is None:
+        return merged
+    if not isinstance(value, dict) or set(value) - set(default):
+        raise SettingsError(msg, key="dashboards")
+    tables = value.get("sizes_tables") or {}
+    if not isinstance(tables, dict) or set(tables) - set(default["sizes_tables"]):
+        raise SettingsError(msg, key="dashboards")
+    merged.update({k: v for k, v in value.items() if k != "sizes_tables"})
+    merged["sizes_tables"].update(tables)
+    one = re.compile(_PART)
+    ok = ((merged["snapshot_catalog"] is None or isinstance(merged["snapshot_catalog"], str)
+           and one.fullmatch(merged["snapshot_catalog"]))
+          and isinstance(merged["snapshot_schema"], str) and one.fullmatch(merged["snapshot_schema"])
+          and isinstance(merged["sizes_schema"], str) and re.fullmatch(rf"{_PART}\.{_PART}", merged["sizes_schema"])
+          and all(isinstance(t, str) and one.fullmatch(t) for t in merged["sizes_tables"].values()))
+    if not ok:
+        raise SettingsError(msg, key="dashboards")
+    return merged
 
 
 def _validate_sources(value) -> dict:
@@ -367,6 +398,7 @@ def _validate_settings(settings: dict) -> dict:
     out["contract"] = _validate_contract(out["contract"])
     out["table_sizes"] = _validate_table_sizes(out["table_sizes"])
     out["sources"] = _validate_sources(out["sources"])
+    out["dashboards"] = _validate_dashboards(out["dashboards"])
     keys = out["export_tag_keys"]
     if keys is not None and (
         not isinstance(keys, list) or not keys
@@ -595,6 +627,14 @@ def sources() -> dict:
         return dict(load_settings()["sources"])
     except ConfigError:
         return {}
+
+
+def dashboards() -> dict:
+    """settings dashboards: the snapshot schema, and where the sizes job writes and Data usage reads."""
+    try:
+        return load_settings()["dashboards"]
+    except ConfigError:
+        return _validate_dashboards(None)
 
 
 def query_source() -> str:

@@ -20,7 +20,9 @@ from tools.workspace_activity import SENSITIVE_NAMES, SENSITIVE_TAGS
 TITLE = "Data usage"
 P = "wdata"
 
-SIZES_SCHEMA = "main.data_usage"  # build_direct_dashboards.py --sizes-schema
+SIZES_SCHEMA = bdd.app_config.dashboards()["sizes_schema"]  # settings dashboards, or --sizes-schema
+SIZES_TABLES = bdd.app_config.dashboards()["sizes_tables"]
+LIST_FROM = bdd.app_config.table_sizes()  # tables_from, volumes_from: where the sizes job lists them
 HOME_DAYS = 90  # lineage days that decide a catalog's home workspace
 INACTIVE_DAYS = rules.IDLE_DAYS
 READ_LOOKBACK_DAYS = 365  # lineage's retention: how far back a table's last read is looked for
@@ -45,7 +47,7 @@ _SKIP = ", ".join(f"'{c}'" for c in SKIP_CATALOGS)
 
 
 def _sized(table: str) -> str:
-    return f"{SIZES_SCHEMA}.{table}"
+    return f"{SIZES_SCHEMA}.{SIZES_TABLES[table]}"
 
 
 def _kind(col: str) -> str:
@@ -1620,7 +1622,7 @@ print(f"{{len(cats)}} catalogs")
 # COMMAND ----------
 
 tables = spark.sql(
-    "SELECT table_catalog, table_schema, table_name FROM system.information_schema.tables "
+    "SELECT table_catalog, table_schema, table_name FROM {LIST_FROM['tables_from']} "
     "WHERE table_type <> 'VIEW' AND (data_source_format IS NULL OR data_source_format = 'DELTA') "
     "AND table_schema <> 'information_schema' AND array_contains(:cats, table_catalog) "
     "ORDER BY last_altered DESC NULLS LAST LIMIT :n",  # the most recently changed first
@@ -1655,18 +1657,18 @@ with ThreadPoolExecutor(threads) as pool:
     rows = list(pool.map(describe, tables))
 (spark.createDataFrame(rows, "catalog string, schema string, table_name string, size_in_bytes bigint, num_files bigint, "
                              "last_modified string, detail string, collected_at timestamp")
-      .write.mode("overwrite").option("overwriteSchema", "true").saveAsTable(f"{{out}}.table_sizes"))
+      .write.mode("overwrite").option("overwriteSchema", "true").saveAsTable(f"{{out}}.{SIZES_TABLES['table_sizes']}"))
 (spark.createDataFrame(history_rows, "catalog string, schema string, table_name string, version bigint, timestamp timestamp, "
                                      "operation string, user_name string, rows_changed bigint, bytes_written bigint, "
                                      "files_added bigint, files_removed bigint, bytes_added bigint, bytes_removed bigint, "
                                      "freed_bytes bigint")
-      .write.mode("overwrite").option("overwriteSchema", "true").saveAsTable(f"{{out}}.table_history"))
+      .write.mode("overwrite").option("overwriteSchema", "true").saveAsTable(f"{{out}}.{SIZES_TABLES['table_history']}"))
 print(f"{{len(rows)}} tables, {{sum(1 for r in rows if r[6] == 'described')}} described, {{len(history_rows)}} history rows")
 
 # COMMAND ----------
 
 volumes = spark.sql(
-    "SELECT volume_catalog, volume_schema, volume_name FROM system.information_schema.volumes "
+    "SELECT volume_catalog, volume_schema, volume_name FROM {LIST_FROM['volumes_from']} "
     "WHERE array_contains(:cats, volume_catalog)", args={{"cats": cats}}).collect()
 
 def walk(v):
@@ -1693,6 +1695,6 @@ with ThreadPoolExecutor(threads) as pool:
     vrows = list(pool.map(walk, volumes))
 (spark.createDataFrame(vrows, "catalog string, schema string, volume_name string, files bigint, size_in_bytes bigint, "
                               "truncated boolean, detail string, collected_at timestamp")
-      .write.mode("overwrite").option("overwriteSchema", "true").saveAsTable(f"{{out}}.volume_sizes"))
+      .write.mode("overwrite").option("overwriteSchema", "true").saveAsTable(f"{{out}}.{SIZES_TABLES['volume_sizes']}"))
 print(f"{{len(vrows)}} volumes")
 '''

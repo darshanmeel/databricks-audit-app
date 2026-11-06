@@ -953,7 +953,8 @@ def main() -> int:
     parser.add_argument("--query-tags", help="k=v,k=v in place of the settings' query_tags (letters, digits, _)")
     parser.add_argument("--workspace-class", action="append", default=[], metavar="CLASS=PATTERN",
                         help="Workspace usage: a workspace class and a LIKE pattern on the lower-case workspace name")
-    parser.add_argument("--sizes-schema", help="Data usage: the catalog.schema its sizes job writes to")
+    parser.add_argument("--sizes-schema", help="Data usage: the catalog.schema its sizes job writes to "
+                                               "(default: settings dashboards sizes_schema)")
     args = parser.parse_args()
     if args.query_tags:
         bdd.QUERY_TAGS_OVERRIDE = dict(p.split("=", 1) for p in args.query_tags.split(","))
@@ -962,7 +963,7 @@ def main() -> int:
     out = Path(args.out_dir)
     out.mkdir(parents=True, exist_ok=True)
     for name, content in build().items():
-        (out / name).write_text(content, encoding="utf-8", newline="\n")
+        (out / name).write_text(bdd.map_sources(content), encoding="utf-8", newline="\n")
         print(out / name)
     return 0
 

@@ -109,8 +109,8 @@ table_sizes:
   # volumes_from: system.information_schema.volumes
 
 # Read a system table from a view or table elsewhere, with the same columns: every query the app
-# sends swaps the name. Left out, the system table itself. Backticks around a part with a hyphen.
-# Next export.
+# sends, and every Databricks dashboard and notebook it builds, swaps the name. Left out, the system
+# table itself. Backticks around a part with a hyphen. Next export; rebuild the dashboards.
 # sources:
 #   system.query.history: my_catalog.my_schema.query_history
 #   system.access.audit: my_catalog.my_schema.audit
@@ -122,3 +122,18 @@ table_sizes:
 #   start: 2026-01-01
 #   end: 2026-12-31
 #   commit_usd: 500000
+
+# The Databricks dashboards' own tables (tools/build_databricks_dashboards.py, build_direct_dashboards.py).
+# Lakehouse Health: the snapshot notebook writes <snapshot_catalog>.<snapshot_schema>, its dashboards
+# read it (no catalog = the dashboards' default; --catalog overrides). Data usage: its sizes job writes
+# DESCRIBE DETAIL, DESCRIBE HISTORY and volume listings to <sizes_schema>.<table>, the dashboard reads
+# them there (--sizes-schema overrides); the job lists tables and volumes from table_sizes tables_from,
+# volumes_from. Rebuild the dashboards.
+# dashboards:
+#   snapshot_catalog: main
+#   snapshot_schema: databricks_audit_dashboard
+#   sizes_schema: main.data_usage
+#   sizes_tables:
+#     table_sizes: table_sizes
+#     table_history: table_history
+#     volume_sizes: volume_sizes
