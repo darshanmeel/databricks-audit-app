@@ -10581,6 +10581,32 @@
                   ],
                   "disaggregated": false
                 }
+              },
+              {
+                "name": "q_7259063c",
+                "query": {
+                  "datasetName": "5a90ca54",
+                  "parameters": [
+                    {
+                      "name": "time_range",
+                      "keyword": "time_range"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_b4b62c17",
+                "query": {
+                  "datasetName": "9ec518bc",
+                  "parameters": [
+                    {
+                      "name": "time_range",
+                      "keyword": "time_range"
+                    }
+                  ],
+                  "disaggregated": false
+                }
               }
             ],
             "spec": {
@@ -10623,6 +10649,14 @@
                   {
                     "parameterName": "time_range",
                     "queryName": "q_e4247573"
+                  },
+                  {
+                    "parameterName": "time_range",
+                    "queryName": "q_7259063c"
+                  },
+                  {
+                    "parameterName": "time_range",
+                    "queryName": "q_b4b62c17"
                   }
                 ]
               },

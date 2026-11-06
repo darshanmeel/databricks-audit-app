@@ -2205,6 +2205,7 @@ def read_activity(window: int, workspace_scope: set[str] | None, workspace_id: s
     used = [u for u in used if ours(u[2])]
     daily = [d for d in daily if ours(d[0])]
     size = {t: b for _c, t, b in held}
+    load = {t: v for t, v in load.items() if ours(t)}
 
     def keep(ws) -> bool:
         return ws is not None and (workspace_scope is None or str(ws) in workspace_scope) \
@@ -2308,7 +2309,7 @@ def read_activity(window: int, workspace_scope: set[str] | None, workspace_id: s
                       "tables_active": every("tables"), "tables": every("tables_all"), "people_active": every("people"),
                       "people": every("people_all"), "volumes_active": every("volumes"), "volumes": every("volumes_all")},
            "workspaces": rows, "top_tables": top_tables[:10], "top_people": top_people[:10],
-           "heavy_tables": _heaviest(load, size, lambda t: where(t, None) or home.get(t.split(".")[0]), keep, name)}
+           "heavy_tables": _heaviest(load, size, lambda t: home.get(t.split(".")[0]) or where(t, None), keep, name)}
     if workspace_id is None:
         h = heat(lambda t, ws: ws)
         out["heat"] = [{"key": r["workspace_id"], "label": r["workspace_name"], "cells": h.get(r["workspace_id"], [0] * window)}

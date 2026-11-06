@@ -1473,7 +1473,7 @@ def dashboard() -> dict:
     ws_detail = place([
         (2, [header("du:wd:head", "Workspace detail",
                     "Pick one workspace: its schemas, its tables by class, its reads and writes per day, and its people.")]),
-        (1, [time_window("du:wd:time", [W, S, T, D, U, TTW, TPW, TVW, DT]),
+        (1, [time_window("du:wd:time", [W, S, T, D, U, TTW, TPW, TVW, DT, HV, HTW]),
              _pick("du:wd:ws", "workspace", "Workspace", [W, S, T, D, U, TTW, TPW, TVW, DT, HV, HTW])]),
         (3, [_counter("du:wd:gb", W, "data_gb", "Data · GB", "Tables and volume files"),
              _counter("du:wd:unread", W, "unread_gb", "Unread · GB", f"{WNR} plus {IDLE.lower()}", "#C2362B"),
