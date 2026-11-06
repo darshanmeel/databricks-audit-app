@@ -919,13 +919,15 @@ def dashboards() -> list[tuple[str, str, object, list[Dataset]]]:
     from tools import direct_governance as gov
     from tools import direct_jobs_health as jobs
     from tools import direct_data_usage as wdata
+    from tools import direct_dashboard_load as dload
 
     return [("waste_savings", "Waste & savings", waste_dashboard, DATASETS),
             ("jobs_health", jobs.TITLE, jobs.dashboard, jobs.DATASETS),
             ("workspace_usage", gov.USAGE_TITLE, gov.usage_dashboard, gov.USAGE_DATASETS),
             ("broad_grants", gov.GRANTS_TITLE, gov.grants_dashboard, gov.GRANTS_DATASETS),
             ("admin_changes", gov.ADMIN_TITLE, gov.admin_dashboard, gov.ADMIN_DATASETS),
-            ("data_usage", wdata.TITLE, wdata.dashboard, wdata.DATASETS)]
+            ("data_usage", wdata.TITLE, wdata.dashboard, wdata.DATASETS),
+            ("dashboard_load", dload.TITLE, dload.dashboard, dload.DATASETS)]
 
 
 def build() -> dict[str, str]:

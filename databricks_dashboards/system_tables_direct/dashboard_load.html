@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dashboard load queries</title><style>
+:root { --bg:#fbfbfa; --fg:#1d1d1b; --muted:#5f5f5a; --line:#e2e1dc; --card:#ffffff; --code:#f4f3ef; --accent:#1f5f8b; }
+@media (prefers-color-scheme: dark) { :root { --bg:#161615; --fg:#ecebe6; --muted:#a3a29b; --line:#33332f;
+  --card:#1e1e1c; --code:#232321; --accent:#7fb4dc; } }
+* { box-sizing: border-box; }
+body { margin:0; background:var(--bg); color:var(--fg); font:15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+main { max-width: 1040px; margin: 0 auto; padding: 24px 16px 64px; }
+h1 { font-size: 24px; margin: 0 0 4px; } h2 { font-size: 19px; margin: 32px 0 8px; padding-top: 8px;
+  border-top: 1px solid var(--line); } h3 { font-size: 16px; margin: 0 0 6px; }
+p, li { color: var(--fg); } .muted { color: var(--muted); }
+nav a, a { color: var(--accent); } nav { margin: 12px 0 0; display:flex; flex-wrap:wrap; gap: 6px 14px; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; margin: 12px 0; }
+dl { display: grid; grid-template-columns: 110px 1fr; gap: 4px 12px; margin: 0 0 8px; }
+dt { color: var(--muted); } dd { margin: 0; }
+code { font: 13px/1.45 ui-monospace, Consolas, monospace; }
+pre { background: var(--code); border: 1px solid var(--line); border-radius: 6px; padding: 12px; overflow-x: auto;
+  font: 12.5px/1.45 ui-monospace, Consolas, monospace; white-space: pre; }
+.c { color: #2e7d32; } @media (prefers-color-scheme: dark) { .c { color: #8fcf8f; } }
+summary { cursor: pointer; color: var(--accent); }
+h4 { font-size: 14px; margin: 12px 0 4px; color: var(--muted); } ol, ul { margin: 4px 0; padding-left: 22px; }
+.table-wrap { overflow-x: auto; } table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th, td { text-align: left; vertical-align: top; padding: 6px 8px; border-bottom: 1px solid var(--line); }
+th { color: var(--muted); font-weight: 600; } td:first-child { white-space: nowrap; }
+
+.flow-wrap { overflow-x: auto; margin: 6px 0 4px; }
+.flow .edge { fill: none; stroke: var(--muted); stroke-width: 1.2; opacity: .55; }
+.flow rect { fill: var(--card); stroke: var(--line); stroke-width: 1.2; }
+.flow text { font: 11.5px ui-monospace, Consolas, monospace; fill: var(--fg); }
+.flow .table rect { fill: var(--code); }
+.flow .check rect { stroke: var(--accent); stroke-width: 1.6; }
+.flow .final rect { stroke: #2e7d32; stroke-width: 1.6; }
+.er .ent rect { fill: var(--card); stroke: var(--line); stroke-width: 1.2; }
+.er .ent .hd { fill: var(--code); }
+.er .table .hd { fill: #d9d6cc; } .er .check rect { stroke: var(--accent); stroke-width: 1.6; } .er .result rect { stroke: #2e7d32; stroke-width: 1.6; }
+.er .result .hd { fill: #cfe8cf; }
+.er .t { font: 600 11.5px system-ui, sans-serif; fill: #1d1d1b; }
+.er .c, .er .k { font: 11px ui-monospace, Consolas, monospace; fill: var(--fg); }
+.er .k { fill: var(--accent); font-weight: 600; }
+.er .n { font: 11px system-ui, sans-serif; fill: var(--muted); }
+.er .mark circle { fill: var(--accent); } .er .mark text { font: 600 10px system-ui, sans-serif; fill: #fff; }
+.er-notes { font-size: 14px; } .er-notes li { margin: 2px 0; }
+.timeline text { font: 12px system-ui, sans-serif; }
+.timeline .axis { fill: var(--muted); font-size: 11px; }
+.timeline .tick { stroke: var(--line); stroke-dasharray: 3 3; }
+.timeline .bar rect { stroke: none; }
+.timeline .bar text { font-size: 11px; fill: #1d1d1b; }
+.timeline .queue rect { fill: #d9d6cc; } .timeline .setup rect { fill: #f2c46d; }
+.timeline .run rect { fill: #9cc3e0; } .timeline .ok rect { fill: #8fcf8f; }
+.timeline .failed rect { fill: #ec8c84; } .timeline .idle rect { fill: #e8e6df; }
+.legend .key { display: inline-block; width: 12px; height: 12px; border-radius: 2px; margin: 0 4px 0 10px;
+  vertical-align: -1px; }
+.key.queue { background: #d9d6cc; } .key.setup { background: #f2c46d; } .key.run { background: #9cc3e0; }
+.key.ok { background: #8fcf8f; } .key.failed { background: #ec8c84; } .key.idle { background: #e8e6df; }
+.caption { margin: 14px 0 4px; font-size: 13px; color: var(--muted); }
+table.example td { font: 12.5px ui-monospace, Consolas, monospace; }
+</style></head>
+<body><main>
+<h1>Dashboard load (system tables, direct): the queries</h1>
+<p class="muted">1 query, each reading the Databricks system tables live. Generated from the
+dashboard's own SQL; regenerate rather than edit.</p>
+<nav><a href="#purpose">Purpose</a> <a href="#joins">Joins</a> <a href="#example">Example</a> <a href="#map">Map</a> <a href="#basics">Basics</a> <a href="#rules">Rules</a> <a href="#limits">Limits</a> <a href="#checks">Checks</a> <a href="#how">How to read</a> <a href="#tables">System tables</a> <a href="#widgets">Widgets</a> <a href="#74653cfe">Dashboard load: the queries of every dashboard in this set, per tab, from their query tags</a></nav>
+
+<h2 id="purpose">What this dashboard is for</h2><p>Shows what the dashboards of this set cost to run: their queries per dashboard, tab, day and warehouse, with failures, cache hits, run time and queue time, found by their query tags.</p>
+<h2 id="joins">How the tables join</h2>
+<div class='flow-wrap'><svg class="flow er" viewBox="-2 -2 716 205" width="716" height="205" role="img"><path class="edge" d="M200,30.0 C228.0,30.0 228.0,30.0 256,30.0"/><g class="mark"><circle cx="228.0" cy="30.0" r="8"/><text x="228.0" y="34.0" text-anchor="middle">1</text></g><path class="edge" d="M456,30.0 C484.0,30.0 484.0,30.0 512,30.0"/><g class="mark"><circle cx="484.0" cy="30.0" r="8"/><text x="484.0" y="34.0" text-anchor="middle">2</text></g><path class="edge" d="M200,167.0 C356.0,167.0 356.0,30.0 512,30.0"/><g class="mark"><circle cx="356.0" cy="98.5" r="8"/><text x="356.0" y="102.5" text-anchor="middle">3</text></g><path class="edge" d="M456,167.0 C484.0,167.0 484.0,30.0 512,30.0"/><g class="mark"><circle cx="484.0" cy="98.5" r="8"/><text x="484.0" y="102.5" text-anchor="middle">4</text></g><g class="ent table"><title>system.query.history</title><rect x="0" y="0" width="200" height="115" rx="5"/><rect class="hd" x="0" y="0" width="200" height="24" rx="5"/><text class="t" x="8" y="16">query.history</text><text class="k" x="8" y="37">◆ compute.warehouse_id</text><text class="c" x="8" y="54">query_tags</text><text class="c" x="8" y="71">start_time</text><text class="c" x="8" y="88">total_duration_ms</text><text class="c" x="8" y="105">from_result_cache</text></g><g class="ent table"><title>boards: this set&#x27;s dashboards</title><rect x="0" y="137" width="200" height="64" rx="5"/><rect class="hd" x="0" y="137" width="200" height="24" rx="5"/><text class="t" x="8" y="153">boards: this set&#x27;s dashboards</text><text class="k" x="8" y="174">◆ slug</text><text class="c" x="8" y="191">dashboard</text></g><g class="ent step"><title>q: tagged queries in the window</title><rect x="256" y="0" width="200" height="115" rx="5"/><rect class="hd" x="256" y="0" width="200" height="24" rx="5"/><text class="t" x="264" y="16">q: tagged queries in the wind…</text><text class="k" x="264" y="37">◆ slug</text><text class="c" x="264" y="54">tab</text><text class="c" x="264" y="71">day</text><text class="c" x="264" y="88">warehouse_id</text><text class="c" x="264" y="105">duration_ms</text></g><g class="ent table"><title>system.compute.warehouses</title><rect x="256" y="137" width="200" height="64" rx="5"/><rect class="hd" x="256" y="137" width="200" height="24" rx="5"/><text class="t" x="264" y="153">compute.warehouses</text><text class="k" x="264" y="174">◆ warehouse_id</text><text class="c" x="264" y="191">warehouse_name</text></g><g class="ent result"><title>dashboard rows</title><rect x="512" y="0" width="200" height="149" rx="5"/><rect class="hd" x="512" y="0" width="200" height="24" rx="5"/><text class="t" x="520" y="16">dashboard rows</text><text class="c" x="520" y="37">dashboard</text><text class="c" x="520" y="54">tab</text><text class="c" x="520" y="71">day</text><text class="c" x="520" y="88">warehouse</text><text class="c" x="520" y="105">queries</text><text class="c" x="520" y="122">hours</text><text class="c" x="520" y="139">queued_hours</text></g></svg></div><p class='muted'>Grey: system tables. Blue border: a shared check (its steps are listed under Steps). White: steps of the query. Green: the rows the dashboard shows. ◆ marks the columns the joins use.</p><ol class='er-notes'><li><b>query.history</b> → <b>q</b>: dashboard and tab tags; not SET</li><li><b>q</b> → <b>dashboard rows</b>: JOIN boards ON slug</li><li><b>boards</b> → <b>dashboard rows</b>: the title</li><li><b>compute.warehouses</b> → <b>dashboard rows</b>: LEFT JOIN ON warehouse_id</li></ol>
+<h2 id="example">How it works, with an example</h2>
+<p class="muted">What happens in Databricks, what the system tables record, and how the dashboard's queries read it.
+Names and ids are made up; table rows are simplified.</p>
+
+<h2 id="map">How it fits together</h2>
+<p class="muted">Left: the system tables it reads. Middle: its queries. Right: the pages whose widgets read them.</p>
+<div class='flow-wrap'><svg class="flow" viewBox="-2 -2 576 66" width="576" height="66" role="img"><path class="edge" d="M172,13.0 C186.0,13.0 186.0,13.0 200,13.0"/><path class="edge" d="M172,49.0 C186.0,49.0 186.0,13.0 200,13.0"/><path class="edge" d="M372,13.0 C386.0,13.0 386.0,13.0 400,13.0"/><g class="node table"><title>system.compute.warehouses</title><rect x="0" y="0" width="172" height="26" rx="5"/><text x="8" y="17">compute.warehouses</text></g><g class="node table"><title>system.query.history</title><rect x="0" y="36" width="172" height="26" rx="5"/><text x="8" y="53">query.history</text></g><g class="node step"><title>dashboard_load</title><rect x="200" y="0" width="172" height="26" rx="5"/><text x="208" y="17">dashboard_load</text></g><g class="node final"><title>Dashboard load</title><rect x="400" y="0" width="172" height="26" rx="5"/><text x="408" y="17">Dashboard load</text></g></svg></div>
+<h2 id="basics">Databricks basics</h2>
+<div class="table-wrap"><table><tr><th>Term</th><th>What it means</th></tr><tr><td><b>System tables</b></td><td>Read-only tables Databricks fills for the whole account under the catalog system (system.billing, system.lakeflow, system.compute, system.access). The dashboards read them live; there are no tables of our own.</td></tr><tr><td><b>SQL warehouse</b></td><td>Compute for SQL: dashboards, BI tools and the SQL editor run their queries on it. It is billed while it runs, whether or not a query is running, and stops after its auto-stop setting with no query. Serverless warehouses start in seconds; pro and classic take minutes.</td></tr><tr><td><b>Query tags</b></td><td>Key-value labels set with SET QUERY_TAGS at the top of a query and stored with it in system.query.history (query_tags). Every dataset here sets dashboard and tab.</td></tr><tr><td><b>User, group, service principal</b></td><td>A user is a person (an email). A group bundles users. A service principal is a non-human identity for automation (CI/CD, Terraform); in the audit log it appears as its application id, a UUID like 1b2c3d4e-....</td></tr><tr><td><b>Query, CTE</b></td><td>A query is SQL. Each one here is a chain of named steps written WITH name AS (...), called CTEs; each step reads the ones before it, and one last SELECT gives the rows.</td></tr></table></div>
+<h2 id="rules">Rules and thresholds</h2>
+<div class="table-wrap"><table><tr><th>Rule</th><th>Definition</th><th>Why</th></tr><tr><td><b>Dashboard query</b></td><td>A query-history row whose dashboard tag is one of this set&#x27;s dashboards and that has a tab tag; SET statements left out.</td><td>The SET QUERY_TAGS lines run as statements of their own but do no work.</td></tr><tr><td><b>Queued</b></td><td>waiting_at_capacity_duration_ms: the query waited because the warehouse was full.</td><td>Queue time on a dashboard means a bigger or a scaling warehouse, or fewer widgets per page.</td></tr><tr><td><b>From cache</b></td><td>from_result_cache is true.</td><td>A repeat view answered without compute.</td></tr></table></div>
+<h2 id="limits">What it can miss</h2><ul><li>Run time, not $: the warehouse&#x27;s bill covers every query on it, and idle time too.</li><li>Only queries since the dashboards carry tags; an older copy without SET QUERY_TAGS doesn&#x27;t show.</li><li>A dashboard renamed or added later shows only after this dashboard is rebuilt.</li><li>Some system tables only hold workspaces in the same cloud region as the metastore; if a workspace is missing, check its region.</li></ul>
+<h2 id="checks">Check it against your data</h2>
+<p class="muted">Run these in a SQL editor to see the raw rows the dashboard starts from.</p><h4>Which dashboard tags your query history has</h4><pre><code>SELECT query_tags[&#x27;dashboard&#x27;] AS dashboard, query_tags[&#x27;tab&#x27;] AS tab, COUNT(*) AS queries
+FROM system.query.history
+WHERE query_tags[&#x27;dashboard&#x27;] IS NOT NULL AND statement_type &lt;&gt; &#x27;SET&#x27;
+  AND start_time &gt;= current_date() - 7
+GROUP BY 1, 2 ORDER BY 3 DESC;</code></pre>
+<h2 id="how">How to read a query</h2>
+<ul>
+  <li><b>No snapshot.</b> Each query reads the Databricks <b>system tables</b> directly, every time the dashboard
+    opens or a filter changes.</li>
+  <li><b>Widgets share queries.</b> Each widget reads one query and adds up its rows its own way (the Widgets
+    table says how); widgets that read the same query always agree.</li>
+  <li><b>Each query reads like a recipe:</b> named steps (<code>WITH step AS (...)</code>, called CTEs), each building
+    on the one before, then one final <code>SELECT</code>. A step named after a check (for example
+    <code>lakeflow_job_reliability</code>) is a shared, tested check reused unchanged except for the dates; its own
+    steps are listed under it.</li>
+  <li><b>Time Window:</b> <code>:time_range.min</code> and <code>:time_range.max</code> are the dates picked in the
+    Time Window filter (on Global Filters, or on the page). The end day counts in full.</li>
+  <li><b>Workspace</b> and the other field filters need no SQL: Databricks keeps the rows whose column
+    matches the pick.</li>
+  <li><b>$</b> is list price (usage x the SKU's list price), not the invoice.</li>
+  <li><b>Comments in the SQL</b> (green, starting <code>--</code>) are added on this page only.</li>
+</ul>
+
+<h2 id="tables">System tables</h2>
+<p class="muted">Databricks fills them for the whole account.</p>
+<div class="table-wrap"><table><tr><th>System table</th><th>What it holds</th></tr><tr id="t-system-compute-warehouses"><td><code>system.compute.warehouses</code></td><td>Each SQL warehouse&#x27;s settings over time: size, type, auto-stop minutes.</td></tr><tr id="t-system-query-history"><td><code>system.query.history</code></td><td>Every SQL statement: who ran it, on which warehouse, start, end, status, bytes read.</td></tr></table></div>
+<h2 id="widgets">Widgets and the query each reads</h2><div class='table-wrap'><table><tr><th>Page</th><th>Widget</th><th>Type</th><th>Query</th><th>What it takes from the query</th></tr><tr><td>Dashboard load</td><td>Time Window</td><td>filter-date-range-picker</td><td><a href='#74653cfe'>Dashboard load: the queries of every dashboard in this set, per tab, from their query tags</a></td><td>sets <code>:time_range</code></td></tr><tr><td>Dashboard load</td><td>Dashboard</td><td>filter-multi-select</td><td><a href='#74653cfe'>Dashboard load: the queries of every dashboard in this set, per tab, from their query tags</a></td><td><code>`dashboard`</code></td></tr><tr><td>Dashboard load</td><td>Tab</td><td>filter-multi-select</td><td><a href='#74653cfe'>Dashboard load: the queries of every dashboard in this set, per tab, from their query tags</a></td><td><code>`tab`</code></td></tr><tr><td>Dashboard load</td><td>Warehouse</td><td>filter-multi-select</td><td><a href='#74653cfe'>Dashboard load: the queries of every dashboard in this set, per tab, from their query tags</a></td><td><code>`warehouse`</code></td></tr><tr><td>Dashboard load</td><td>Queries</td><td>counter</td><td><a href='#74653cfe'>Dashboard load: the queries of every dashboard in this set, per tab, from their query tags</a></td><td><code>SUM(`queries`)</code></td></tr><tr><td>Dashboard load</td><td>Query hours</td><td>counter</td><td><a href='#74653cfe'>Dashboard load: the queries of every dashboard in this set, per tab, from their query tags</a></td><td><code>SUM(`hours`)</code></td></tr><tr><td>Dashboard load</td><td>Queued hours</td><td>counter</td><td><a href='#74653cfe'>Dashboard load: the queries of every dashboard in this set, per tab, from their query tags</a></td><td><code>SUM(`queued_hours`)</code></td></tr><tr><td>Dashboard load</td><td>Failed queries</td><td>counter</td><td><a href='#74653cfe'>Dashboard load: the queries of every dashboard in this set, per tab, from their query tags</a></td><td><code>SUM(`failed`)</code></td></tr><tr><td>Dashboard load</td><td>Queries per day</td><td>bar</td><td><a href='#74653cfe'>Dashboard load: the queries of every dashboard in this set, per tab, from their query tags</a></td><td><code>`day`</code>, <code>`dashboard`</code>, <code>SUM(`queries`)</code></td></tr><tr><td>Dashboard load</td><td>Query hours by dashboard</td><td>bar</td><td><a href='#74653cfe'>Dashboard load: the queries of every dashboard in this set, per tab, from their query tags</a></td><td><code>`dashboard`</code>, <code>`warehouse`</code>, <code>SUM(`hours`)</code></td></tr><tr><td>Dashboard load</td><td>Queries per dashboard, tab and day, newest first</td><td>table</td><td><a href='#74653cfe'>Dashboard load: the queries of every dashboard in this set, per tab, from their query tags</a></td><td><code>`day`</code>, <code>`dashboard`</code>, <code>`tab`</code>, <code>`run_as`</code>, <code>`warehouse`</code>, <code>`queries`</code>, <code>`failed`</code>, <code>`cached`</code>, <code>`hours`</code>, <code>`queued_hours`</code>, <code>`slowest_s`</code>, <code>`gb_read`</code></td></tr></table></div>
+<h2>The queries</h2>
+<div class="card" id="74653cfe">
+  <h3>Dashboard load: the queries of every dashboard in this set, per tab, from their query tags</h3>
+  <p><b>Shows:</b> Every query of the dashboards in this set, found by their dashboard and tab query tags, per dashboard, tab, day, identity and warehouse: count, failures, cache hits, run time, queue time and data read. <b>Used by:</b> The whole dashboard.</p>
+  <p><b>Why it is built this way:</b> A dashboard&#x27;s query text reads &lt;REDACTED&gt; in the query history, so only its tags tell its queries apart. Per dashboard and tab it shows which page is slow, fails or queues, and which warehouse carries the load.</p>
+  <h4>How its tables join</h4><div class='flow-wrap'><svg class="flow er" viewBox="-2 -2 972 238" width="972" height="238" role="img"><path class="edge" d="M712,30.0 C740.0,30.0 740.0,30.0 768,30.0"/><path class="edge" d="M712,133.0 C740.0,133.0 740.0,30.0 768,30.0"/><path class="edge" d="M456,30.0 C612.0,30.0 612.0,30.0 768,30.0"/><g class="mark"><circle cx="612.0" cy="30.0" r="8"/><text x="612.0" y="34.0" text-anchor="middle">1</text></g><g class="ent table"><title>wh: system.compute.warehouses</title><rect x="256" y="0" width="200" height="64" rx="5"/><rect class="hd" x="256" y="0" width="200" height="24" rx="5"/><text class="t" x="264" y="16">wh: system.compute.warehouses</text><text class="k" x="264" y="37">◆ warehouse_id</text><text class="c" x="264" y="54">warehouse_name</text></g><g class="ent step"><title>boards</title><rect x="512" y="0" width="200" height="81" rx="5"/><rect class="hd" x="512" y="0" width="200" height="24" rx="5"/><text class="t" x="520" y="16">boards</text><text class="n" x="520" y="37">The dashboards of this set:</text><text class="n" x="520" y="54">their dashboard tag value and</text><text class="n" x="520" y="71">title.</text></g><g class="ent step"><title>q</title><rect x="512" y="103" width="200" height="81" rx="5"/><rect class="hd" x="512" y="103" width="200" height="24" rx="5"/><text class="t" x="520" y="119">q</text><text class="n" x="520" y="140">Their queries in the window,</text><text class="n" x="520" y="157">tagged with a dashboard and a</text><text class="n" x="520" y="174">tab; SET statements left out.</text></g><g class="ent result"><title>dashboard rows</title><rect x="768" y="0" width="200" height="234" rx="5"/><rect class="hd" x="768" y="0" width="200" height="24" rx="5"/><text class="t" x="776" y="16">dashboard rows</text><text class="c" x="776" y="37">dashboard</text><text class="c" x="776" y="54">tab</text><text class="c" x="776" y="71">day</text><text class="c" x="776" y="88">run_as</text><text class="c" x="776" y="105">warehouse</text><text class="c" x="776" y="122">queries</text><text class="c" x="776" y="139">failed</text><text class="c" x="776" y="156">cached</text><text class="c" x="776" y="173">hours</text><text class="c" x="776" y="190">queued_hours</text><text class="c" x="776" y="207">slowest_s</text><text class="c" x="776" y="224">gb_read</text></g></svg></div><p class='muted'>Grey: system tables. Blue border: a shared check (its steps are listed under Steps). White: steps of the query. Green: the rows the dashboard shows. ◆ marks the columns the joins use.</p><ol class='er-notes'><li><b>wh</b> → <b>dashboard rows</b>: LEFT JOIN ON warehouse_id: names</li></ol>
+  <h4>1. System tables it reads</h4><ul><li><a href='#t-system-compute-warehouses'><code>system.compute.warehouses</code></a></li><li><a href='#t-system-query-history'><code>system.query.history</code></a></li></ul>
+  <h4>2. Steps (CTEs), in order</h4><ol><li><code>wh</code>: Warehouse id to name: the latest row per warehouse.<details><summary>Its SQL (6 lines)</summary><pre><code><span class="c">-- Dashboard load: the queries of every dashboard in this set, per tab, from their query tags. Dates from the Time Window.</span>
+<span class="c">-- Warehouse id to name: the latest row per warehouse.</span>
+wh AS (
+  SELECT CAST(warehouse_id AS STRING) AS warehouse_id, warehouse_name FROM system.compute.warehouses
+  QUALIFY ROW_NUMBER() OVER (PARTITION BY warehouse_id ORDER BY change_time DESC) = 1
+)</code></pre></details></li><li><code>boards</code>: The dashboards of this set: their dashboard tag value and title.<details><summary>Its SQL (26 lines)</summary><pre><code><span class="c">-- The dashboards of this set: their dashboard tag value and title.</span>
+boards AS (
+  SELECT * FROM VALUES
+         (&#x27;lakehouse_health_01_overview&#x27;, &#x27;Lakehouse Health 01 - Overview&#x27;),
+         (&#x27;lakehouse_health_02_actions&#x27;, &#x27;Lakehouse Health 02 - Actions&#x27;),
+         (&#x27;lakehouse_health_03_jobs&#x27;, &#x27;Lakehouse Health 03 - Jobs&#x27;),
+         (&#x27;lakehouse_health_04_compute&#x27;, &#x27;Lakehouse Health 04 - Compute&#x27;),
+         (&#x27;lakehouse_health_05_queries&#x27;, &#x27;Lakehouse Health 05 - Queries&#x27;),
+         (&#x27;lakehouse_health_06_cost&#x27;, &#x27;Lakehouse Health 06 - Cost&#x27;),
+         (&#x27;lakehouse_health_07_waste_savings&#x27;, &#x27;Lakehouse Health 07 - Waste &amp; savings&#x27;),
+         (&#x27;lakehouse_health_08_ml_ai&#x27;, &#x27;Lakehouse Health 08 - ML &amp; AI&#x27;),
+         (&#x27;lakehouse_health_09_genie&#x27;, &#x27;Lakehouse Health 09 - Genie&#x27;),
+         (&#x27;lakehouse_health_10_governance_pii&#x27;, &#x27;Lakehouse Health 10 - Governance &amp; PII&#x27;),
+         (&#x27;lakehouse_health_11_storage&#x27;, &#x27;Lakehouse Health 11 - Storage&#x27;),
+         (&#x27;lakehouse_health_12_tags&#x27;, &#x27;Lakehouse Health 12 - Tags&#x27;),
+         (&#x27;lakehouse_health_13_all_findings&#x27;, &#x27;Lakehouse Health 13 - All findings&#x27;),
+         (&#x27;lakehouse_health_14_coverage_gaps&#x27;, &#x27;Lakehouse Health 14 - Coverage &amp; Gaps&#x27;),
+         (&#x27;waste_savings&#x27;, &#x27;Waste &amp; savings&#x27;),
+         (&#x27;jobs_health&#x27;, &#x27;Jobs health&#x27;),
+         (&#x27;workspace_usage&#x27;, &#x27;Workspace usage&#x27;),
+         (&#x27;broad_grants&#x27;, &#x27;Broad grants&#x27;),
+         (&#x27;admin_changes&#x27;, &#x27;Admin changes&#x27;),
+         (&#x27;data_usage&#x27;, &#x27;Data usage&#x27;),
+         (&#x27;dashboard_load&#x27;, &#x27;Dashboard load&#x27;)
+         AS t(slug, dashboard)
+)</code></pre></details></li><li><code>q</code>: Their queries in the window, tagged with a dashboard and a tab; SET statements left out.<details><summary>Its SQL (13 lines)</summary><pre><code><span class="c">-- Their queries in the window, tagged with a dashboard and a tab; SET statements left out.</span>
+q AS (
+  SELECT query_tags[&#x27;dashboard&#x27;] AS slug, query_tags[&#x27;tab&#x27;] AS tab, CAST(start_time AS DATE) AS day,
+         executed_by, CAST(compute.warehouse_id AS STRING) AS warehouse_id, execution_status,
+         COALESCE(from_result_cache, false) AS cached,
+         COALESCE(total_duration_ms, 0) AS duration_ms,
+         COALESCE(waiting_at_capacity_duration_ms, 0) AS queued_ms, COALESCE(read_bytes, 0) AS read_bytes
+  FROM system.query.history
+<span class="c">  -- the SET QUERY_TAGS statements are not the dashboard&#x27;s work; on a reused session they carry a tab</span>
+  WHERE query_tags[&#x27;dashboard&#x27;] IS NOT NULL AND query_tags[&#x27;tab&#x27;] IS NOT NULL
+    AND upper(COALESCE(statement_type, &#x27;&#x27;)) &lt;&gt; &#x27;SET&#x27;
+    AND start_time &gt;= CAST(:time_range.min AS DATE) AND start_time &lt; date_add(:time_range.max, 1)
+)</code></pre></details></li></ol>
+  <h4>3. Final query</h4><p>One row per dashboard, tab, day, identity and warehouse; newest first.</p>
+  <h4>4. Columns it returns</h4><div class='table-wrap'><table><tr><th>Column</th><th>Meaning</th></tr><tr><td><code>dashboard</code></td><td>The dashboard, by title: query_tags[&#x27;dashboard&#x27;] matched to the dashboards of this set.</td></tr><tr><td><code>tab</code></td><td>The page the query belongs to: query_tags[&#x27;tab&#x27;].</td></tr><tr><td><code>day</code></td><td>The day the queries started (UTC).</td></tr><tr><td><code>run_as</code></td><td>Who ran them: the dashboard&#x27;s owner when credentials are embedded, else the viewer.</td></tr><tr><td><code>warehouse</code></td><td>The SQL warehouse, by name.</td></tr><tr><td><code>queries</code></td><td>Queries in the row.</td></tr><tr><td><code>failed</code></td><td>Of them, failed.</td></tr><tr><td><code>cached</code></td><td>Of them, answered from the result cache: no compute.</td></tr><tr><td><code>hours</code></td><td>Their run time, summed, in hours.</td></tr><tr><td><code>queued_hours</code></td><td>Time they waited for a free slot on the warehouse, summed, in hours.</td></tr><tr><td><code>slowest_s</code></td><td>The longest single query in the row, in seconds.</td></tr><tr><td><code>gb_read</code></td><td>Data they read, in GB.</td></tr></table></div>
+  <details><summary>SQL with comments (56 lines)</summary><pre><code><span class="c">-- Dashboard load: the queries of every dashboard in this set, per tab, from their query tags. Dates from the Time Window.</span>
+<span class="c">-- Warehouse id to name: the latest row per warehouse.</span>
+WITH wh AS (
+  SELECT CAST(warehouse_id AS STRING) AS warehouse_id, warehouse_name FROM system.compute.warehouses
+  QUALIFY ROW_NUMBER() OVER (PARTITION BY warehouse_id ORDER BY change_time DESC) = 1
+),
+<span class="c">-- The dashboards of this set: their dashboard tag value and title.</span>
+boards AS (
+  SELECT * FROM VALUES
+         (&#x27;lakehouse_health_01_overview&#x27;, &#x27;Lakehouse Health 01 - Overview&#x27;),
+         (&#x27;lakehouse_health_02_actions&#x27;, &#x27;Lakehouse Health 02 - Actions&#x27;),
+         (&#x27;lakehouse_health_03_jobs&#x27;, &#x27;Lakehouse Health 03 - Jobs&#x27;),
+         (&#x27;lakehouse_health_04_compute&#x27;, &#x27;Lakehouse Health 04 - Compute&#x27;),
+         (&#x27;lakehouse_health_05_queries&#x27;, &#x27;Lakehouse Health 05 - Queries&#x27;),
+         (&#x27;lakehouse_health_06_cost&#x27;, &#x27;Lakehouse Health 06 - Cost&#x27;),
+         (&#x27;lakehouse_health_07_waste_savings&#x27;, &#x27;Lakehouse Health 07 - Waste &amp; savings&#x27;),
+         (&#x27;lakehouse_health_08_ml_ai&#x27;, &#x27;Lakehouse Health 08 - ML &amp; AI&#x27;),
+         (&#x27;lakehouse_health_09_genie&#x27;, &#x27;Lakehouse Health 09 - Genie&#x27;),
+         (&#x27;lakehouse_health_10_governance_pii&#x27;, &#x27;Lakehouse Health 10 - Governance &amp; PII&#x27;),
+         (&#x27;lakehouse_health_11_storage&#x27;, &#x27;Lakehouse Health 11 - Storage&#x27;),
+         (&#x27;lakehouse_health_12_tags&#x27;, &#x27;Lakehouse Health 12 - Tags&#x27;),
+         (&#x27;lakehouse_health_13_all_findings&#x27;, &#x27;Lakehouse Health 13 - All findings&#x27;),
+         (&#x27;lakehouse_health_14_coverage_gaps&#x27;, &#x27;Lakehouse Health 14 - Coverage &amp; Gaps&#x27;),
+         (&#x27;waste_savings&#x27;, &#x27;Waste &amp; savings&#x27;),
+         (&#x27;jobs_health&#x27;, &#x27;Jobs health&#x27;),
+         (&#x27;workspace_usage&#x27;, &#x27;Workspace usage&#x27;),
+         (&#x27;broad_grants&#x27;, &#x27;Broad grants&#x27;),
+         (&#x27;admin_changes&#x27;, &#x27;Admin changes&#x27;),
+         (&#x27;data_usage&#x27;, &#x27;Data usage&#x27;),
+         (&#x27;dashboard_load&#x27;, &#x27;Dashboard load&#x27;)
+         AS t(slug, dashboard)
+),
+<span class="c">-- Their queries in the window, tagged with a dashboard and a tab; SET statements left out.</span>
+q AS (
+  SELECT query_tags[&#x27;dashboard&#x27;] AS slug, query_tags[&#x27;tab&#x27;] AS tab, CAST(start_time AS DATE) AS day,
+         executed_by, CAST(compute.warehouse_id AS STRING) AS warehouse_id, execution_status,
+         COALESCE(from_result_cache, false) AS cached,
+         COALESCE(total_duration_ms, 0) AS duration_ms,
+         COALESCE(waiting_at_capacity_duration_ms, 0) AS queued_ms, COALESCE(read_bytes, 0) AS read_bytes
+  FROM system.query.history
+<span class="c">  -- the SET QUERY_TAGS statements are not the dashboard&#x27;s work; on a reused session they carry a tab</span>
+  WHERE query_tags[&#x27;dashboard&#x27;] IS NOT NULL AND query_tags[&#x27;tab&#x27;] IS NOT NULL
+    AND upper(COALESCE(statement_type, &#x27;&#x27;)) &lt;&gt; &#x27;SET&#x27;
+    AND start_time &gt;= CAST(:time_range.min AS DATE) AND start_time &lt; date_add(:time_range.max, 1)
+)
+<span class="c">-- Final SELECT: the rows the widgets read.</span>
+SELECT b.dashboard, q.tab, q.day, q.executed_by AS run_as,
+       COALESCE(wh.warehouse_name, q.warehouse_id, &#x27;No warehouse&#x27;) AS warehouse,
+       COUNT(*) AS queries,
+       SUM(CASE WHEN q.execution_status = &#x27;FAILED&#x27; THEN 1 ELSE 0 END) AS failed,
+       SUM(CASE WHEN q.cached THEN 1 ELSE 0 END) AS cached,
+       ROUND(SUM(q.duration_ms) / 3600000, 3) AS hours,
+       ROUND(SUM(q.queued_ms) / 3600000, 3) AS queued_hours,
+       ROUND(MAX(q.duration_ms) / 1000, 1) AS slowest_s,
+       ROUND(SUM(q.read_bytes) / 1e9, 2) AS gb_read
+FROM q
+JOIN boards b ON b.slug = q.slug
+LEFT JOIN wh ON wh.warehouse_id = q.warehouse_id
+GROUP BY ALL
+ORDER BY q.day DESC, hours DESC</code></pre></details>
+</div>
+</main></body></html>

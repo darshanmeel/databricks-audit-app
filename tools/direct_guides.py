@@ -1294,3 +1294,91 @@ ER["data_usage"] = {
         ("c", "out", "per workspace, per table"), ("who", "out", "LEFT JOIN ON workspace_id"),
     ],
 }
+
+# ------------------------------------------------------------------------------------------------
+# Dashboard load
+# ------------------------------------------------------------------------------------------------
+
+BASICS["query_tags"] = ("Query tags", "Key-value labels set with SET QUERY_TAGS at the top of a query and stored "
+                        "with it in system.query.history (query_tags). Every dataset here sets dashboard and tab.")
+
+COLUMNS["dashboard_load"] = {
+    "dashboard": "The dashboard, by title: query_tags['dashboard'] matched to the dashboards of this set.",
+    "tab": "The page the query belongs to: query_tags['tab'].",
+    "day": "The day the queries started (UTC).",
+    "run_as": "Who ran them: the dashboard's owner when credentials are embedded, else the viewer.",
+    "warehouse": "The SQL warehouse, by name.",
+    "queries": "Queries in the row.",
+    "failed": "Of them, failed.",
+    "cached": "Of them, answered from the result cache: no compute.",
+    "hours": "Their run time, summed, in hours.",
+    "queued_hours": "Time they waited for a free slot on the warehouse, summed, in hours.",
+    "slowest_s": "The longest single query in the row, in seconds.",
+    "gb_read": "Data they read, in GB.",
+}
+
+WHY["dashboard_load"] = ("A dashboard's query text reads <REDACTED> in the query history, so only its tags tell its "
+                         "queries apart. Per dashboard and tab it shows which page is slow, fails or queues, and "
+                         "which warehouse carries the load.")
+
+GUIDES["dashboard_load"] = {
+    "purpose": "Shows what the dashboards of this set cost to run: their queries per dashboard, tab, day and "
+               "warehouse, with failures, cache hits, run time and queue time, found by their query tags.",
+    "basics": ["system_tables", "warehouse", "query_tags", "principal", "sql"],
+    "rules": [
+        ("Dashboard query", "A query-history row whose dashboard tag is one of this set's dashboards and that has a "
+         "tab tag; SET statements left out.", "The SET QUERY_TAGS lines run as statements of their own but do no "
+         "work."),
+        ("Queued", "waiting_at_capacity_duration_ms: the query waited because the warehouse was full.",
+         "Queue time on a dashboard means a bigger or a scaling warehouse, or fewer widgets per page."),
+        ("From cache", "from_result_cache is true.", "A repeat view answered without compute."),
+    ],
+    "limits": [
+        "Run time, not $: the warehouse's bill covers every query on it, and idle time too.",
+        "Only queries since the dashboards carry tags; an older copy without SET QUERY_TAGS doesn't show.",
+        "A dashboard renamed or added later shows only after this dashboard is rebuilt.",
+        _REGION,
+    ],
+    "checks": [
+        ("Which dashboard tags your query history has",
+         "SELECT query_tags['dashboard'] AS dashboard, query_tags['tab'] AS tab, COUNT(*) AS queries\n"
+         "FROM system.query.history\n"
+         "WHERE query_tags['dashboard'] IS NOT NULL AND statement_type <> 'SET'\n"
+         "  AND start_time >= current_date() - 7\nGROUP BY 1, 2 ORDER BY 3 DESC;"),
+    ],
+}
+
+SHORT["dashboard_load"] = {
+    "how": [
+        "Every dataset of these dashboards starts with SET QUERY_TAGS: dashboard and tab.",
+        "system.query.history stores the tags with each query, so they can be counted per dashboard and tab.",
+        "Run time, queue time and failures per tab show which page to fix and which warehouse to size.",
+    ],
+    "rules": ["Dashboard query", "Queued", "From cache"],
+    "sql": """-- Per dashboard and tab, last 7 days: queries, hours, queued hours.
+SELECT query_tags['dashboard'] AS dashboard, query_tags['tab'] AS tab, COUNT(*) AS queries,
+       ROUND(SUM(total_duration_ms) / 3600000, 2) AS hours,
+       ROUND(SUM(waiting_at_capacity_duration_ms) / 3600000, 2) AS queued_hours
+FROM system.query.history
+WHERE query_tags['dashboard'] IS NOT NULL AND query_tags['tab'] IS NOT NULL
+  AND statement_type <> 'SET' AND start_time >= current_date() - 7
+GROUP BY 1, 2 ORDER BY hours DESC;""",
+}
+
+ER["dashboard_load"] = {
+    "nodes": [
+        ("qh", "system.query.history", "table",
+         ["*compute.warehouse_id", "query_tags", "start_time", "total_duration_ms", "from_result_cache"], 0),
+        ("boards", "boards: this set's dashboards", "table", ["*slug", "dashboard"], 0),
+        ("q", "q: tagged queries in the window", "step", ["*slug", "tab", "day", "warehouse_id", "duration_ms"], 1),
+        ("wh", "system.compute.warehouses", "table", ["*warehouse_id", "warehouse_name"], 1),
+        ("out", "dashboard rows", "result", ["dashboard", "tab", "day", "warehouse", "queries", "hours",
+                                              "queued_hours"], 2),
+    ],
+    "edges": [
+        ("qh", "q", "dashboard and tab tags; not SET"),
+        ("q", "out", "JOIN boards ON slug"),
+        ("boards", "out", "the title"),
+        ("wh", "out", "LEFT JOIN ON warehouse_id"),
+    ],
+}

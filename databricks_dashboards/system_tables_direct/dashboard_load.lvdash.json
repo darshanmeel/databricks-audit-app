@@ -1,0 +1,1103 @@
+{
+  "datasets": [
+    {
+      "name": "74653cfe",
+      "displayName": "Dashboard load: the queries of every dashboard in this set, per tab, from their query tags",
+      "queryLines": [
+        "SET QUERY_TAGS['cost_center'] = 'lakehouse_health';\n",
+        "SET QUERY_TAGS['domain'] = 'lakehouse_health';\n",
+        "SET QUERY_TAGS['dashboard'] = 'dashboard_load';\n",
+        "SET QUERY_TAGS['tab'] = 'dashboard_load';\n",
+        "-- Dashboard load: the queries of every dashboard in this set, per tab, from their query tags. Dates from the Time Window.\n",
+        "WITH wh AS (\n",
+        "  SELECT CAST(warehouse_id AS STRING) AS warehouse_id, warehouse_name FROM system.compute.warehouses\n",
+        "  QUALIFY ROW_NUMBER() OVER (PARTITION BY warehouse_id ORDER BY change_time DESC) = 1\n",
+        "),\n",
+        "boards AS (\n",
+        "  SELECT * FROM VALUES\n",
+        "         ('lakehouse_health_01_overview', 'Lakehouse Health 01 - Overview'),\n",
+        "         ('lakehouse_health_02_actions', 'Lakehouse Health 02 - Actions'),\n",
+        "         ('lakehouse_health_03_jobs', 'Lakehouse Health 03 - Jobs'),\n",
+        "         ('lakehouse_health_04_compute', 'Lakehouse Health 04 - Compute'),\n",
+        "         ('lakehouse_health_05_queries', 'Lakehouse Health 05 - Queries'),\n",
+        "         ('lakehouse_health_06_cost', 'Lakehouse Health 06 - Cost'),\n",
+        "         ('lakehouse_health_07_waste_savings', 'Lakehouse Health 07 - Waste & savings'),\n",
+        "         ('lakehouse_health_08_ml_ai', 'Lakehouse Health 08 - ML & AI'),\n",
+        "         ('lakehouse_health_09_genie', 'Lakehouse Health 09 - Genie'),\n",
+        "         ('lakehouse_health_10_governance_pii', 'Lakehouse Health 10 - Governance & PII'),\n",
+        "         ('lakehouse_health_11_storage', 'Lakehouse Health 11 - Storage'),\n",
+        "         ('lakehouse_health_12_tags', 'Lakehouse Health 12 - Tags'),\n",
+        "         ('lakehouse_health_13_all_findings', 'Lakehouse Health 13 - All findings'),\n",
+        "         ('lakehouse_health_14_coverage_gaps', 'Lakehouse Health 14 - Coverage & Gaps'),\n",
+        "         ('waste_savings', 'Waste & savings'),\n",
+        "         ('jobs_health', 'Jobs health'),\n",
+        "         ('workspace_usage', 'Workspace usage'),\n",
+        "         ('broad_grants', 'Broad grants'),\n",
+        "         ('admin_changes', 'Admin changes'),\n",
+        "         ('data_usage', 'Data usage'),\n",
+        "         ('dashboard_load', 'Dashboard load')\n",
+        "         AS t(slug, dashboard)\n",
+        "),\n",
+        "q AS (\n",
+        "  SELECT query_tags['dashboard'] AS slug, query_tags['tab'] AS tab, CAST(start_time AS DATE) AS day,\n",
+        "         executed_by, CAST(compute.warehouse_id AS STRING) AS warehouse_id, execution_status,\n",
+        "         COALESCE(from_result_cache, false) AS cached,\n",
+        "         COALESCE(total_duration_ms, 0) AS duration_ms,\n",
+        "         COALESCE(waiting_at_capacity_duration_ms, 0) AS queued_ms, COALESCE(read_bytes, 0) AS read_bytes\n",
+        "  FROM system.query.history\n",
+        "  -- the SET QUERY_TAGS statements are not the dashboard's work; on a reused session they carry a tab\n",
+        "  WHERE query_tags['dashboard'] IS NOT NULL AND query_tags['tab'] IS NOT NULL\n",
+        "    AND upper(COALESCE(statement_type, '')) <> 'SET'\n",
+        "    AND start_time >= CAST(:time_range.min AS DATE) AND start_time < date_add(:time_range.max, 1)\n",
+        ")\n",
+        "SELECT b.dashboard, q.tab, q.day, q.executed_by AS run_as,\n",
+        "       COALESCE(wh.warehouse_name, q.warehouse_id, 'No warehouse') AS warehouse,\n",
+        "       COUNT(*) AS queries,\n",
+        "       SUM(CASE WHEN q.execution_status = 'FAILED' THEN 1 ELSE 0 END) AS failed,\n",
+        "       SUM(CASE WHEN q.cached THEN 1 ELSE 0 END) AS cached,\n",
+        "       ROUND(SUM(q.duration_ms) / 3600000, 3) AS hours,\n",
+        "       ROUND(SUM(q.queued_ms) / 3600000, 3) AS queued_hours,\n",
+        "       ROUND(MAX(q.duration_ms) / 1000, 1) AS slowest_s,\n",
+        "       ROUND(SUM(q.read_bytes) / 1e9, 2) AS gb_read\n",
+        "FROM q\n",
+        "JOIN boards b ON b.slug = q.slug\n",
+        "LEFT JOIN wh ON wh.warehouse_id = q.warehouse_id\n",
+        "GROUP BY ALL\n",
+        "ORDER BY q.day DESC, hours DESC\n"
+      ],
+      "parameters": [
+        {
+          "displayName": "time_range",
+          "keyword": "time_range",
+          "dataType": "DATE",
+          "complexType": "RANGE",
+          "defaultSelection": {
+            "range": {
+              "dataType": "DATE",
+              "min": {
+                "value": "now-30d/d"
+              },
+              "max": {
+                "value": "now-1d/d"
+              }
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "pages": [
+    {
+      "name": "c13e2ff8",
+      "displayName": "Dashboard load",
+      "pageType": "PAGE_TYPE_CANVAS",
+      "layoutVersion": "GRID_V1",
+      "layout": [
+        {
+          "widget": {
+            "name": "196d9bfd",
+            "multilineTextboxSpec": {
+              "lines": [
+                "# **Dashboard load**\n",
+                "---\n",
+                "\n",
+                "**The queries of every Lakehouse Health and direct dashboard, from their dashboard and tab query tags: how many, how long, how long queued, and on which warehouse.**\n"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 12,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "b171dc50",
+            "queries": [
+              {
+                "name": "q_0c3f1b3f",
+                "query": {
+                  "datasetName": "74653cfe",
+                  "parameters": [
+                    {
+                      "name": "time_range",
+                      "keyword": "time_range"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-date-range-picker",
+              "encodings": {
+                "fields": [
+                  {
+                    "parameterName": "time_range",
+                    "queryName": "q_0c3f1b3f"
+                  }
+                ]
+              },
+              "selection": {
+                "defaultSelection": {
+                  "range": {
+                    "dataType": "DATE",
+                    "min": {
+                      "value": "now-30d/d"
+                    },
+                    "max": {
+                      "value": "now-1d/d"
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Time Window"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 2,
+            "width": 3,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "2d169ea7",
+            "queries": [
+              {
+                "name": "q_45388df8",
+                "query": {
+                  "datasetName": "74653cfe",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "name": "dashboard",
+                      "expression": "`dashboard`"
+                    },
+                    {
+                      "name": "dashboard_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-multi-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "dashboard",
+                    "displayName": "Dashboard",
+                    "queryName": "q_45388df8"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Dashboard"
+              }
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 2,
+            "width": 3,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "2db23222",
+            "queries": [
+              {
+                "name": "q_5b6b1a53",
+                "query": {
+                  "datasetName": "74653cfe",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "name": "tab",
+                      "expression": "`tab`"
+                    },
+                    {
+                      "name": "tab_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-multi-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "tab",
+                    "displayName": "Tab",
+                    "queryName": "q_5b6b1a53"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Tab"
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 2,
+            "width": 3,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "4643a6b2",
+            "queries": [
+              {
+                "name": "q_f02e6f80",
+                "query": {
+                  "datasetName": "74653cfe",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "name": "warehouse",
+                      "expression": "`warehouse`"
+                    },
+                    {
+                      "name": "warehouse_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-multi-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "warehouse",
+                    "displayName": "Warehouse",
+                    "queryName": "q_f02e6f80"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Warehouse"
+              }
+            }
+          },
+          "position": {
+            "x": 9,
+            "y": 2,
+            "width": 3,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "9c086627",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "74653cfe",
+                  "fields": [
+                    {
+                      "name": "sum(queries)",
+                      "expression": "SUM(`queries`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(queries)",
+                  "displayName": "Queries",
+                  "style": {
+                    "bold": true,
+                    "fontSize": 32,
+                    "color": "#1c1b18"
+                  },
+                  "format": {
+                    "type": "number-plain",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 0
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "title": "Queries",
+                "showTitle": true,
+                "description": "In the Time Window",
+                "showDescription": true
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 3,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "bc3bf2a8",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "74653cfe",
+                  "fields": [
+                    {
+                      "name": "sum(hours)",
+                      "expression": "SUM(`hours`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(hours)",
+                  "displayName": "Query hours",
+                  "style": {
+                    "bold": true,
+                    "fontSize": 32,
+                    "color": "#1c1b18"
+                  },
+                  "format": {
+                    "type": "number-plain",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 0
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "title": "Query hours",
+                "showTitle": true,
+                "description": "Run time, summed",
+                "showDescription": true
+              }
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 3,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "604b74be",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "74653cfe",
+                  "fields": [
+                    {
+                      "name": "sum(queued_hours)",
+                      "expression": "SUM(`queued_hours`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(queued_hours)",
+                  "displayName": "Queued hours",
+                  "style": {
+                    "bold": true,
+                    "fontSize": 32,
+                    "color": "#1c1b18"
+                  },
+                  "format": {
+                    "type": "number-plain",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 0
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "title": "Queued hours",
+                "showTitle": true,
+                "description": "Waiting for a free warehouse slot",
+                "showDescription": true
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 3,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "ab144801",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "74653cfe",
+                  "fields": [
+                    {
+                      "name": "sum(failed)",
+                      "expression": "SUM(`failed`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(failed)",
+                  "displayName": "Failed queries",
+                  "style": {
+                    "bold": true,
+                    "fontSize": 32,
+                    "color": "#1c1b18"
+                  },
+                  "format": {
+                    "type": "number-plain",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 0
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "title": "Failed queries",
+                "showTitle": true,
+                "description": "A widget showed an error",
+                "showDescription": true
+              }
+            }
+          },
+          "position": {
+            "x": 9,
+            "y": 3,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "d5d0be2e",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "74653cfe",
+                  "fields": [
+                    {
+                      "name": "day",
+                      "expression": "`day`"
+                    },
+                    {
+                      "name": "dashboard",
+                      "expression": "`dashboard`"
+                    },
+                    {
+                      "name": "sum(queries)",
+                      "expression": "SUM(`queries`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "day",
+                  "displayName": "Day",
+                  "scale": {
+                    "type": "temporal"
+                  }
+                },
+                "y": {
+                  "fieldName": "sum(queries)",
+                  "displayName": "Queries",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "label": {
+                  "show": false
+                },
+                "color": {
+                  "fieldName": "dashboard",
+                  "displayName": "dashboard",
+                  "legend": {
+                    "position": "bottom"
+                  },
+                  "scale": {
+                    "type": "categorical"
+                  }
+                }
+              },
+              "frame": {
+                "title": "Queries per day",
+                "showTitle": true,
+                "description": "By dashboard",
+                "showDescription": true
+              },
+              "mark": {
+                "layout": "stack"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 6,
+            "width": 6,
+            "height": 7
+          }
+        },
+        {
+          "widget": {
+            "name": "3b9af64e",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "74653cfe",
+                  "fields": [
+                    {
+                      "name": "dashboard",
+                      "expression": "`dashboard`"
+                    },
+                    {
+                      "name": "warehouse",
+                      "expression": "`warehouse`"
+                    },
+                    {
+                      "name": "sum(hours)",
+                      "expression": "SUM(`hours`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "sum(hours)",
+                  "displayName": "Hours",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "format": {
+                    "type": "number-plain",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 0
+                    }
+                  }
+                },
+                "y": {
+                  "fieldName": "dashboard",
+                  "displayName": "Dashboard",
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "x-reversed"
+                    }
+                  }
+                },
+                "label": {
+                  "show": false
+                },
+                "color": {
+                  "fieldName": "warehouse",
+                  "displayName": "warehouse",
+                  "legend": {
+                    "position": "bottom"
+                  },
+                  "scale": {
+                    "type": "categorical"
+                  }
+                }
+              },
+              "frame": {
+                "title": "Query hours by dashboard",
+                "showTitle": true,
+                "description": "By warehouse",
+                "showDescription": true
+              },
+              "mark": {
+                "layout": "stack"
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 6,
+            "width": 6,
+            "height": 7
+          }
+        },
+        {
+          "widget": {
+            "name": "d861abfe",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "74653cfe",
+                  "fields": [
+                    {
+                      "name": "day",
+                      "expression": "`day`"
+                    },
+                    {
+                      "name": "dashboard",
+                      "expression": "`dashboard`"
+                    },
+                    {
+                      "name": "tab",
+                      "expression": "`tab`"
+                    },
+                    {
+                      "name": "run_as",
+                      "expression": "`run_as`"
+                    },
+                    {
+                      "name": "warehouse",
+                      "expression": "`warehouse`"
+                    },
+                    {
+                      "name": "queries",
+                      "expression": "`queries`"
+                    },
+                    {
+                      "name": "failed",
+                      "expression": "`failed`"
+                    },
+                    {
+                      "name": "cached",
+                      "expression": "`cached`"
+                    },
+                    {
+                      "name": "hours",
+                      "expression": "`hours`"
+                    },
+                    {
+                      "name": "queued_hours",
+                      "expression": "`queued_hours`"
+                    },
+                    {
+                      "name": "slowest_s",
+                      "expression": "`slowest_s`"
+                    },
+                    {
+                      "name": "gb_read",
+                      "expression": "`gb_read`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 1,
+              "widgetType": "table",
+              "allowHTMLByDefault": false,
+              "condensed": false,
+              "withRowNumber": false,
+              "itemsPerPage": 20,
+              "paginationSize": "default",
+              "invisibleColumns": [],
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "day",
+                    "title": "Day",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 0,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": true,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "dashboard",
+                    "title": "Dashboard",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 1,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": true,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "tab",
+                    "title": "Tab",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 2,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": true,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "run_as",
+                    "title": "Run as",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 3,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": true,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "warehouse",
+                    "title": "Warehouse",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 4,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": true,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "queries",
+                    "title": "Queries",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 5,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "0,0",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "failed",
+                    "title": "Failed",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 6,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "0,0",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "cached",
+                    "title": "From cache",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 7,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "0,0",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "hours",
+                    "title": "Hours",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 8,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "0,0.[0]",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "queued_hours",
+                    "title": "Queued hours",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 9,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "0,0.[0]",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "slowest_s",
+                    "title": "Slowest (s)",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 10,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "0,0.[0]",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "gb_read",
+                    "title": "GB read",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 11,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "0,0.[0]",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  }
+                ]
+              },
+              "frame": {
+                "title": "Queries per dashboard, tab and day, newest first",
+                "showTitle": true,
+                "showDescription": false
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 13,
+            "width": 12,
+            "height": 10
+          }
+        }
+      ]
+    }
+  ]
+}
