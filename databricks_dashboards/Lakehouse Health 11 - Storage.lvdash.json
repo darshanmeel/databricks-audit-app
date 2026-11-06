@@ -1533,7 +1533,7 @@
           },
           "position": {
             "x": 0,
-            "y": 14,
+            "y": 19,
             "width": 12,
             "height": 8
           }
@@ -1595,7 +1595,7 @@
           },
           "position": {
             "x": 0,
-            "y": 22,
+            "y": 27,
             "width": 12,
             "height": 7
           }
@@ -1612,7 +1612,7 @@
           },
           "position": {
             "x": 0,
-            "y": 29,
+            "y": 39,
             "width": 12,
             "height": 2
           }
@@ -1840,7 +1840,7 @@
           },
           "position": {
             "x": 0,
-            "y": 31,
+            "y": 41,
             "width": 12,
             "height": 7
           }
@@ -2068,7 +2068,7 @@
           },
           "position": {
             "x": 0,
-            "y": 38,
+            "y": 48,
             "width": 12,
             "height": 8
           }
@@ -2265,7 +2265,7 @@
           },
           "position": {
             "x": 0,
-            "y": 46,
+            "y": 56,
             "width": 12,
             "height": 8
           }
@@ -2586,7 +2586,7 @@
           },
           "position": {
             "x": 0,
-            "y": 54,
+            "y": 64,
             "width": 12,
             "height": 8
           }
@@ -3093,9 +3093,315 @@
           },
           "position": {
             "x": 0,
-            "y": 62,
+            "y": 72,
             "width": 12,
             "height": 8
+          }
+        },
+        {
+          "widget": {
+            "name": "3209c470",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "9eb821c8",
+                  "fields": [
+                    {
+                      "name": "full_name",
+                      "expression": "`full_name`"
+                    },
+                    {
+                      "name": "gb",
+                      "expression": "`gb`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 1,
+              "widgetType": "table",
+              "allowHTMLByDefault": false,
+              "condensed": false,
+              "withRowNumber": false,
+              "itemsPerPage": 20,
+              "paginationSize": "default",
+              "invisibleColumns": [],
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "full_name",
+                    "title": "Table",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 0,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": true,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "gb",
+                    "title": "GB grown",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 1,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "0,0.[00]",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  }
+                ]
+              },
+              "frame": {
+                "title": "Growth, fastest first: rows",
+                "showTitle": true,
+                "showDescription": false
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 34,
+            "width": 12,
+            "height": 5
+          }
+        },
+        {
+          "widget": {
+            "name": "14c7cd4a",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "d3519568",
+                  "fields": [
+                    {
+                      "name": "table_type",
+                      "expression": "`table_type`"
+                    },
+                    {
+                      "name": "tables",
+                      "expression": "`tables`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 1,
+              "widgetType": "table",
+              "allowHTMLByDefault": false,
+              "condensed": false,
+              "withRowNumber": false,
+              "itemsPerPage": 20,
+              "paginationSize": "default",
+              "invisibleColumns": [],
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "table_type",
+                    "title": "Type",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 0,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": true,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "tables",
+                    "title": "Tables",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 1,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "0,0.[00]",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  }
+                ]
+              },
+              "frame": {
+                "title": "Tables by type: rows",
+                "showTitle": true,
+                "showDescription": false
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 14,
+            "width": 6,
+            "height": 5
+          }
+        },
+        {
+          "widget": {
+            "name": "b16af73c",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "b13ee2de",
+                  "fields": [
+                    {
+                      "name": "tbl",
+                      "expression": "`tbl`"
+                    },
+                    {
+                      "name": "days",
+                      "expression": "`days`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 1,
+              "widgetType": "table",
+              "allowHTMLByDefault": false,
+              "condensed": false,
+              "withRowNumber": false,
+              "itemsPerPage": 20,
+              "paginationSize": "default",
+              "invisibleColumns": [],
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "tbl",
+                    "title": "Table",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 0,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": true,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "days",
+                    "title": "Days since altered",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 1,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "0,0.[00]",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  }
+                ]
+              },
+              "frame": {
+                "title": "Oldest untouched tables: rows",
+                "showTitle": true,
+                "showDescription": false
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 14,
+            "width": 6,
+            "height": 5
           }
         }
       ]
@@ -3656,7 +3962,7 @@
           },
           "position": {
             "x": 0,
-            "y": 14,
+            "y": 19,
             "width": 12,
             "height": 8
           }
@@ -3853,7 +4159,7 @@
           },
           "position": {
             "x": 0,
-            "y": 22,
+            "y": 27,
             "width": 12,
             "height": 8
           }
@@ -3915,7 +4221,7 @@
           },
           "position": {
             "x": 0,
-            "y": 30,
+            "y": 35,
             "width": 12,
             "height": 7
           }
@@ -4112,7 +4418,7 @@
           },
           "position": {
             "x": 0,
-            "y": 37,
+            "y": 47,
             "width": 12,
             "height": 8
           }
@@ -4129,7 +4435,7 @@
           },
           "position": {
             "x": 0,
-            "y": 45,
+            "y": 55,
             "width": 12,
             "height": 2
           }
@@ -4357,7 +4663,7 @@
           },
           "position": {
             "x": 0,
-            "y": 47,
+            "y": 57,
             "width": 12,
             "height": 11
           }
@@ -4864,7 +5170,7 @@
           },
           "position": {
             "x": 0,
-            "y": 58,
+            "y": 68,
             "width": 12,
             "height": 8
           }
@@ -5216,7 +5522,7 @@
           },
           "position": {
             "x": 0,
-            "y": 66,
+            "y": 76,
             "width": 12,
             "height": 8
           }
@@ -5661,7 +5967,7 @@
           },
           "position": {
             "x": 0,
-            "y": 74,
+            "y": 84,
             "width": 12,
             "height": 8
           }
@@ -6106,7 +6412,7 @@
           },
           "position": {
             "x": 0,
-            "y": 82,
+            "y": 92,
             "width": 12,
             "height": 8
           }
@@ -6520,7 +6826,7 @@
           },
           "position": {
             "x": 0,
-            "y": 90,
+            "y": 100,
             "width": 12,
             "height": 8
           }
@@ -7058,7 +7364,7 @@
           },
           "position": {
             "x": 0,
-            "y": 98,
+            "y": 108,
             "width": 12,
             "height": 8
           }
@@ -7534,7 +7840,7 @@
           },
           "position": {
             "x": 0,
-            "y": 106,
+            "y": 116,
             "width": 12,
             "height": 8
           }
@@ -7948,9 +8254,213 @@
           },
           "position": {
             "x": 0,
-            "y": 114,
+            "y": 124,
             "width": 12,
             "height": 8
+          }
+        },
+        {
+          "widget": {
+            "name": "0f2b1c45",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "39034b05",
+                  "fields": [
+                    {
+                      "name": "full_name",
+                      "expression": "`full_name`"
+                    },
+                    {
+                      "name": "gb",
+                      "expression": "`gb`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 1,
+              "widgetType": "table",
+              "allowHTMLByDefault": false,
+              "condensed": false,
+              "withRowNumber": false,
+              "itemsPerPage": 20,
+              "paginationSize": "default",
+              "invisibleColumns": [],
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "full_name",
+                    "title": "Table",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 0,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": true,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "gb",
+                    "title": "GB",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 1,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "0,0.[00]",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  }
+                ]
+              },
+              "frame": {
+                "title": "Largest tables missing predictive optimization: rows",
+                "showTitle": true,
+                "showDescription": false
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 42,
+            "width": 12,
+            "height": 5
+          }
+        },
+        {
+          "widget": {
+            "name": "56ec1c44",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "64ec7830",
+                  "fields": [
+                    {
+                      "name": "tbl",
+                      "expression": "`tbl`"
+                    },
+                    {
+                      "name": "dbu",
+                      "expression": "`dbu`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 1,
+              "widgetType": "table",
+              "allowHTMLByDefault": false,
+              "condensed": false,
+              "withRowNumber": false,
+              "itemsPerPage": 20,
+              "paginationSize": "default",
+              "invisibleColumns": [],
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "tbl",
+                    "title": "Table",
+                    "type": "string",
+                    "displayAs": "string",
+                    "order": 0,
+                    "visible": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": true,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "dbu",
+                    "title": "DBU",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 1,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "0,0.[00]",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  }
+                ]
+              },
+              "frame": {
+                "title": "Maintenance DBU by table: rows",
+                "showTitle": true,
+                "showDescription": false
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 14,
+            "width": 12,
+            "height": 5
           }
         }
       ]

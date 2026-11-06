@@ -743,6 +743,74 @@ def table_widget(
     }
 
 
+CHART_TYPES = {"bar", "line", "area", "pie", "scatter", "heatmap", "combo"}
+CHART_TABLE_HEIGHT = 5
+_BACKTICKED = re.compile(r"`([^`]+)`")
+
+
+def _chart_columns(widget: dict) -> list[tuple[str, str, str]]:
+    """The dataset columns a chart plots, in encoding order: (column, title, string|number)."""
+    exprs = {f["name"]: f["expression"] for f in widget["queries"][0]["query"]["fields"]}
+    out: dict[str, tuple[str, str, str]] = {}
+
+    def add(enc: dict) -> None:
+        kind = "number" if (enc.get("scale") or {}).get("type") == "quantitative" else "string"
+        for col in _BACKTICKED.findall(exprs.get(enc["fieldName"], "")):
+            if col != "*" and col not in out:
+                title = enc.get("displayName") or col
+                out[col] = (col, col.replace("_", " ").capitalize() if title == col else title, kind)
+
+    for enc in widget["spec"].get("encodings", {}).values():
+        if isinstance(enc, dict) and "fieldName" in enc:
+            add(enc)
+        for sub in (enc.get("fields") or []) if isinstance(enc, dict) else []:
+            add({**sub, "scale": enc.get("scale")})
+    return sorted(out.values(), key=lambda c: c[2] == "number")  # names first, then the numbers
+
+
+def add_chart_tables(dash: dict) -> dict:
+    """Under each chart whose data no table on its page shows, a table of the columns it plots, so
+    the rows can be sorted and downloaded (CSV) like any table."""
+    for page in dash["pages"]:
+        layout = page["layout"]
+        tabled = {q["query"]["datasetName"] for w in layout if w["widget"].get("spec", {}).get("widgetType") == "table"
+                  for q in w["widget"]["queries"]}
+        bands: dict[int, list] = {}
+        for w in sorted(layout, key=lambda w: (w["position"]["y"], w["position"]["x"])):
+            spec = w["widget"].get("spec", {})
+            if spec.get("widgetType") not in CHART_TYPES or not w["widget"].get("queries"):
+                continue
+            ds = w["widget"]["queries"][0]["query"]["datasetName"]
+            cols = _chart_columns(w["widget"])
+            if ds in tabled or not cols:
+                continue
+            tabled.add(ds)
+            p = w["position"]
+            bands.setdefault(p["y"] + p["height"], []).append((w, ds, cols))
+        for y in sorted(bands, reverse=True):
+            # below anything that reaches past this line beside the charts
+            span = [(c["position"]["x"], c["position"]["x"] + c["position"]["width"]) for c, _, _ in bands[y]]
+            at = y
+            while True:
+                deeper = [w["position"]["y"] + w["position"]["height"] for w in layout
+                          if w["position"]["y"] < at < w["position"]["y"] + w["position"]["height"]
+                          and any(w["position"]["x"] < b and a < w["position"]["x"] + w["position"]["width"] for a, b in span)]
+                if not deeper:
+                    break
+                at = max(deeper)
+            for w in layout:
+                if w["position"]["y"] >= at:
+                    w["position"]["y"] += CHART_TABLE_HEIGHT
+            for chart, ds, cols in bands[y]:
+                p = chart["position"]
+                title = (chart["widget"]["spec"].get("frame") or {}).get("title") or ""
+                layout.append(data_table_widget(f"chart-table:{page['name']}:{chart['widget']['name']}", ds,
+                                                [(c, t, k, "0,0.[00]") for c, t, k in cols],
+                                                f"{title}: rows" if title else "Rows", x=p["x"], y=at,
+                                                width=p["width"], height=CHART_TABLE_HEIGHT))
+    return dash
+
+
 def workspace_filter_widget(
     dashboard_key: str, lookup_dataset_name: str, targets: list[tuple[str, str]], *, x: int, y: int, width: int, height: int
 ) -> dict:
@@ -1205,7 +1273,7 @@ def build_tab(schema: str, tab: str) -> dict:
     d = kit.Dashboard(schema, tab, area_registry()[tab]["label"], dashboard_name(tab))
     if (Path(__file__).resolve().parent / "dashboard_screens" / f"{tab}.py").exists():
         importlib.import_module(f"tools.dashboard_screens.{tab}").build(d)
-    return d.to_json()
+    return add_chart_tables(d.to_json())
 
 
 # --------------------------------------------------------------------------------------------

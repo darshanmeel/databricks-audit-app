@@ -934,7 +934,7 @@ def build() -> dict[str, str]:
 
     out = {}
     for stem, title, make, datasets in dashboards():
-        dash = make()
+        dash = bdd.add_chart_tables(make())
         out[f"{stem}.lvdash.json"] = json.dumps(dash, indent=2, ensure_ascii=False) + "\n"
         out[f"{stem}.html"] = doc.build(dash, datasets, title, stem)
         if stem in guides.SHORT:
