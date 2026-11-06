@@ -108,12 +108,14 @@ def add(db: Path) -> dict:
     # acme.sales.orders: compacted 10 days ago, its reads got faster
     history.append(("acme.sales.orders", 1, ts(10, 2), "OPTIMIZE", "ana@acme.example",
                     "numAddedFiles=40, numRemovedFiles=3100, numAddedBytes=212000000000, numRemovedBytes=220000000000"))
+    # acme.sales.returns: written every day (lineage), but DESCRIBE HISTORY gave nothing for it
+    history = [h for h in history if h[0] != "acme.sales.returns"]
     put(con, "storage.table_history", "table_full_name VARCHAR, version BIGINT, timestamp VARCHAR, operation VARCHAR, "
         "user_name VARCHAR, metrics VARCHAR", history)
-    described = sum(1 for d in detail if d[-1] == "described")
+    described = sum(1 for d in detail if d[10] == "described")
     con.execute("CREATE OR REPLACE TABLE storage.table_detail_info AS SELECT ? AS info", [json.dumps(
         {"exported": True, "error": None, "tables": len(detail), "described": described,
-         "view": sum(1 for d in detail if d[-1] == "view"), "failed": 1, "history_rows": len(history),
+         "view": sum(1 for d in detail if d[10] == "view"), "failed": 1, "history_rows": len(history),
          "threads": 16, "max_tables": 20000, "seconds": 41.0})])
 
     # storage.volume_detail: files and bytes from listing each volume
@@ -174,6 +176,10 @@ def add(db: Path) -> dict:
         for w in WINDOWS:
             access.append((w, "2001", "finance.reporting.monthly_pnl", ts(2), None, 40 * w // 90, 0, 2, 0,
                            "ana@acme.example, ben@acme.example", None))
+    # the export's own reads of a system table: in lineage, never shown as a table of the account
+    for w in WINDOWS:
+        access.append((w, "2001", "system.query.history", ts(0), None, 5000 * w // 30, 0, 1, 0, "svc-audit", None))
+    daily += [("system.query.history", "2001", (END - timedelta(days=d)).isoformat(), 5000, 0, 1, 0) for d in range(30)]
     put(con, "usage.table_access", "window_days BIGINT, workspace_id VARCHAR, table_full_name VARCHAR, last_read VARCHAR, "
         "last_write VARCHAR, reads BIGINT, writes BIGINT, readers BIGINT, writers BIGINT, reader_names VARCHAR, "
         "writer_names VARCHAR", access)
@@ -188,7 +194,10 @@ def add(db: Path) -> dict:
     maint = [m + (json.dumps(po[m[2]]()) if m[2] in po else None,) for m in maint]
     put(con, "usage.table_maintenance", "table_full_name VARCHAR, start_time VARCHAR, operation_type VARCHAR, "
         "operation_status VARCHAR, usage_quantity DOUBLE, usage_unit VARCHAR, metrics VARCHAR", maint)
-    _table_queries(con, daily)
+    _table_queries(con, [d for d in daily if not d[0].startswith("system.")])
+    con.executemany("INSERT INTO usage.table_query_daily VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    [("system.query.history", (END - timedelta(days=d)).isoformat(), 500, 90_000_000, 10**12, 9000, 0, 400,
+                      10**11, 0, 0, 0) for d in range(30)])
 
     # usage.user_access / user_last_seen: who works where, and when they were last seen
     users, seen = [], []
@@ -285,7 +294,7 @@ def _table_queries(con, daily: list[tuple]) -> None:
             files = rnd.randint(800, 3000) if before or (scans and t != "acme.sales.orders") else rnd.randint(5, 60)
             pruned = 0 if files >= 800 else files * rnd.randint(5, 40)
             ms = (rnd.randint(20000, 90000) if files >= 800 else rnd.randint(800, 6000)) * n
-            spill = files * n * 4_000_000 if files >= 800 else 0
+            spill = files * n * 400_000 if files >= 800 else 0
             per_day.append((t, (END - timedelta(days=d)).isoformat(), n, ms, files * n * 30_000_000, files * n, pruned * n,
                             n if pruned == 0 and files >= 50 else 0, spill, 1 if d % 7 == 1 else 0,
                             rnd.randint(30000, 400000) if d % 7 == 1 else 0, 2_000_000_000 if d % 7 == 1 else 0))
@@ -294,7 +303,7 @@ def _table_queries(con, daily: list[tuple]) -> None:
                 text = f"SELECT * FROM {t}" if files >= 800 else f"SELECT region, SUM(amount) FROM {t} WHERE order_date >= '2026-09-01' GROUP BY region"
                 top.append((t, "read", ws, f"ac_tq_{len(top)}", who, ts(d, 8 + k), "SELECT", "FINISHED", ms // n,
                             files * 30_000_000, files, pruned, files * 400_000, rnd.randint(1, 5000), "ac_wh_bi", text,
-                            files * 4_000_000 if files >= 800 else 0, files * 5_000_000, 0, 400, ms // n - 2000, 1200, 400,
+                            files * 400_000 if files >= 800 else 0, files * 5_000_000, 0, 400, ms // n - 2000, 1200, 400,
                             ms // n * 6, 35.0, 0, d))
         top.append((t, "write", ws, f"ac_tq_{len(top)}", SPS.get(ws, PEOPLE[ws])[0], ts(1, 2), "MERGE", "FINISHED",
                     rnd.randint(30000, 400000), 10_000_000_000, 400, 0, 9_000_000, 120_000, "ac_wh_etl",

@@ -641,7 +641,8 @@ function Upkeep({ d, window }: { d: any; window: number }) {
             <li>Predictive optimization DBUs are its own estimate, not billed figures.</li>
           </ul>
         </React.Fragment>
-      ) : <span className="muted">No write, merge or maintenance run in this export.</span>}
+      ) : <span className="muted">{u.lineage_writes ? `No DESCRIBE HISTORY or predictive optimization entry in this export; the ${fmtInt(u.lineage_writes)} write events above are from lineage.`
+        : "No write, merge or maintenance run in this export."}</span>}
     </Card>
   );
 }
