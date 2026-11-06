@@ -206,7 +206,7 @@ DEFAULT_SETTINGS: dict = {
     "mandatory_tag_keys": ["cost_center", "domain", "env"],
     "admin_groups": [],
     "load": {"memory_limit": "1GB", "threads": 4, "tag_keys": None, "top_tag_keys": 10},
-    "table_sizes": {"enabled": True, "threads": 16, "max_tables": 20000, "volumes": True,
+    "table_sizes": {"enabled": True, "source": "describe", "threads": 16, "max_tables": 20000, "volumes": True,
                     "volume_max_entries": 50000, "volume_full_days": 7,
                     "tables_from": "system.information_schema.tables",
                     "columns_from": "system.information_schema.columns",
@@ -302,10 +302,11 @@ def _validate_contract(contract) -> dict | None:
 
 
 def _validate_table_sizes(value) -> dict:
-    """{enabled, threads (1-64), max_tables (0-1,000,000), volumes, volume_max_entries (100-10,000,000),
+    """{enabled, source (describe | stored), threads (1-64), max_tables (0-1,000,000), volumes, volume_max_entries (100-10,000,000),
     volume_full_days (0-365)}; a missing key keeps its default."""
     merged = dict(DEFAULT_SETTINGS["table_sizes"])
-    msg = ("table_sizes takes enabled and volumes (true/false), threads (1-64), max_tables (0-1000000), "
+    msg = ("table_sizes takes enabled and volumes (true/false), source (describe, or stored: read the sizes "
+           "job's tables in dashboards sizes_schema), threads (1-64), max_tables (0-1000000), "
            "volume_max_entries (100-10000000), volume_full_days (0-365) and tables_from, columns_from, "
            "volumes_from (catalog.schema.table)")
     if value is None:
@@ -313,7 +314,7 @@ def _validate_table_sizes(value) -> dict:
     if not isinstance(value, dict) or set(value) - set(merged):
         raise SettingsError(msg, key="table_sizes")
     merged.update(value)
-    ok = (isinstance(merged["enabled"], bool)
+    ok = (isinstance(merged["enabled"], bool) and merged["source"] in ("describe", "stored")
           and isinstance(merged["threads"], int) and not isinstance(merged["threads"], bool)
           and 1 <= merged["threads"] <= 64
           and isinstance(merged["max_tables"], int) and not isinstance(merged["max_tables"], bool)

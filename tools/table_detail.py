@@ -8,6 +8,9 @@ system.storage.table_metrics_history would give the same per day, but it is ofte
 Each table described also gets DESCRIBE HISTORY (its last 100 writes, merges, deletes, OPTIMIZE and
 VACUUM runs, who ran them and when) in the same pass.
 
+With settings table_sizes source: stored, nothing is described or listed: the Data usage sizes
+job's tables (dashboards sizes_schema) are read and written to the same files.
+
 Called by tools/export_direct_results.py after the checks; writes storage/table_detail.parquet and
 storage/table_history.parquet.
 """
@@ -92,6 +95,48 @@ def _list_from() -> dict[str, str]:
     return {k: cfg[k] for k in ("tables_from", "columns_from", "volumes_from")}
 
 
+def _stored() -> dict[str, str] | None:
+    """settings table_sizes source: stored gives the sizes job's tables (dashboards sizes_schema), describe None."""
+    from app.core import config
+
+    if config.table_sizes()["source"] != "stored":
+        return None
+    d = config.dashboards()
+    return {k: f"{d['sizes_schema']}.{name}" for k, name in d["sizes_tables"].items()}
+
+
+# the Data usage sizes job's tables (tools/direct_data_usage.py collect_sizes_notebook)
+_STORED_SIZES_SQL = """
+SELECT `catalog`, `schema`, table_name, size_in_bytes, num_files, last_modified, detail,
+       CAST(collected_at AS STRING) AS collected_at
+FROM {table_sizes}
+"""
+_STORED_HISTORY_SQL = """
+SELECT `catalog`, `schema`, table_name, version, CAST(`timestamp` AS STRING) AS `timestamp`, operation, user_name,
+       rows_changed, bytes_written, files_added, files_removed, bytes_added, bytes_removed, freed_bytes
+FROM {table_history}
+"""
+_STORED_VOLUMES_SQL = """
+SELECT s.`catalog` AS volume_catalog, s.`schema` AS volume_schema, s.volume_name, v.volume_type, s.files,
+       s.size_in_bytes, s.truncated, s.detail, CAST(s.collected_at AS STRING) AS listed_at
+FROM {volume_sizes} s
+LEFT JOIN {volumes_from} v
+  ON v.volume_catalog = s.`catalog` AND v.volume_schema = s.`schema` AND v.volume_name = s.volume_name
+"""
+# the job's history columns as the operation metrics DESCRIBE HISTORY gives
+_STORED_METRICS = (("rows_changed", "numOutputRows"), ("files_added", "numAddedFiles"),
+                   ("files_removed", "numRemovedFiles"), ("freed_bytes", "sizeOfDataToDelete"),
+                   ("bytes_added", "numAddedBytes"), ("bytes_removed", "numRemovedBytes"),
+                   ("bytes_written", "numOutputBytes"))
+
+
+def _stored_history(h: dict) -> dict:
+    metrics = ", ".join(f"{key}={h[col]}" for col, key in _STORED_METRICS if h.get(col) not in (None, 0))
+    return {"table_full_name": f"{h['catalog']}.{h['schema']}.{h['table_name']}", "version": h.get("version"),
+            "timestamp": h.get("timestamp"), "operation": h.get("operation"), "user_name": h.get("user_name"),
+            "metrics": metrics or None}
+
+
 def _q(name: str) -> str:
     return "`" + str(name).replace("`", "``") + "`"
 
@@ -131,8 +176,13 @@ def export(connect_fn: Callable, out_dir: Path, *, previous: Path | None = None,
         lister = connect_fn()
     except Exception as exc:  # noqa: BLE001 -- table sizes are a side table; the export goes on
         return {"exported": False, "error": redact(str(exc))}
+    stored = _stored()
     try:
-        tables = [r for r in _rows(lister.conn.cursor(), _LIST_SQL.format(**_list_from())) if not skipped(r["table_catalog"])]
+        cur = lister.conn.cursor()
+        tables = [r for r in _rows(cur, _LIST_SQL.format(**_list_from())) if not skipped(r["table_catalog"])]
+        if stored is not None:
+            sizes = {(r["catalog"], r["schema"], r["table_name"]): r for r in _rows(cur, _STORED_SIZES_SQL.format(**stored))}
+            hist = [_stored_history(h) for h in _rows(cur, _STORED_HISTORY_SQL.format(**stored))] if history else []
     except Exception as exc:  # noqa: BLE001
         return {"exported": False, "error": redact(str(exc))}
     finally:
@@ -140,6 +190,26 @@ def export(connect_fn: Callable, out_dir: Path, *, previous: Path | None = None,
             lister.conn.close()
         except Exception:  # noqa: BLE001
             pass
+
+    if stored is not None:
+        out = []
+        for r in tables:
+            row = {**{f.name: None for f in SCHEMA}, **{k: r.get(k) for k in
+                   ("table_catalog", "table_schema", "table_name", "table_type", "data_source_format",
+                    "last_altered", "column_count", "created", "owner")}}
+            s = sizes.get((r["table_catalog"], r["table_schema"], r["table_name"]))
+            if not _describable(r):
+                row["detail"] = "view" if (r.get("table_type") or "").upper() == "VIEW" else "not_delta"
+            elif s is None:  # the job didn't describe it: over its max_tables, or newer than its last run
+                row["detail"] = "not_asked"
+            else:
+                row.update(size_in_bytes=s.get("size_in_bytes"), num_files=s.get("num_files"),
+                           last_modified=s.get("last_modified"), detail=s.get("detail") or "described")
+            out.append(row)
+        collected = max((s["collected_at"] for s in sizes.values() if s.get("collected_at")), default=None)
+        log(f"table sizes: {len(tables)} tables, read from {stored['table_sizes']} (collected {collected})")
+        return _write_tables(out, hist, out_dir, source="stored", stored_from=stored["table_sizes"],
+                             collected_at=collected, seconds=round(time.perf_counter() - t0, 1))
 
     prev = _previous(previous)
     prev_hist = _previous_history(previous.with_name(HISTORY_FILE) if previous else None)
@@ -215,7 +285,12 @@ def export(connect_fn: Callable, out_dir: Path, *, previous: Path | None = None,
             c.conn.close()
         except Exception:  # noqa: BLE001
             pass
+    return _write_tables(out, hist, out_dir, source="describe", threads=threads, max_tables=max_tables,
+                         seconds=round(time.perf_counter() - t0, 1))
 
+
+def _write_tables(out: list[dict], hist: list[dict], out_dir: Path, **info) -> dict:
+    """Write storage/table_detail.parquet and table_history.parquet; what was written, for the manifest."""
     folder = out_dir / "storage"
     folder.mkdir(parents=True, exist_ok=True)
     pq.write_table(pa.Table.from_pylist(out, schema=SCHEMA), str(folder / FILE), compression="snappy")
@@ -228,8 +303,7 @@ def export(connect_fn: Callable, out_dir: Path, *, previous: Path | None = None,
         counts[k] = counts.get(k, 0) + 1
     first_error = next((r["detail"][8:] for r in out if (r["detail"] or "").startswith("failed")), None)
     return {"exported": True, "error": None, "tables": len(out), **counts, "first_error": first_error,
-            "history_rows": len(clean),
-            "threads": threads, "max_tables": max_tables, "seconds": round(time.perf_counter() - t0, 1)}
+            "history_rows": len(clean), **info}
 
 
 # ------------------------------------------------------------------------------------------------
@@ -305,6 +379,9 @@ def export_volumes(connect_fn: Callable, out_dir: Path, *, threads: int = 16,
     """List the volumes' files `threads` volumes at a time; write out_dir/storage/volume_detail.parquet.
     A volume listed in the last full_days with no file write in the audit log since keeps its counts."""
     t0 = time.perf_counter()
+    stored = _stored()
+    if stored is not None:
+        return _stored_volumes(connect_fn, out_dir, stored, redact=redact, log=log, t0=t0)
     now = now or datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
     stamp = now.strftime("%Y-%m-%d %H:%M:%S")
     prev = _previous_volumes(previous)
@@ -380,3 +457,36 @@ def export_volumes(connect_fn: Callable, out_dir: Path, *, threads: int = 16,
             "failed": len(failed), "truncated": sum(1 for r in out if r["truncated"]),
             "first_error": failed[0]["detail"][8:] if failed else None, "max_entries": max_entries,
             "reused": reused, "full_days": full_days, "seconds": round(time.perf_counter() - t0, 1)}
+
+
+def _stored_volumes(connect_fn: Callable, out_dir: Path, stored: dict[str, str], *,
+                    redact: Callable[[str], str], log: Callable[[str], None], t0: float) -> dict:
+    """settings table_sizes source: stored. The sizes job's volume_sizes as volume_detail.parquet; nothing is listed."""
+    try:
+        conn = connect_fn()
+    except Exception as exc:  # noqa: BLE001 -- a side table; the export goes on
+        return {"exported": False, "error": redact(str(exc))}
+    try:
+        sql = _STORED_VOLUMES_SQL.format(volumes_from=_list_from()["volumes_from"], **stored)
+        out = [r for r in _rows(conn.conn.cursor(), sql) if not skipped(r["volume_catalog"])]
+    except Exception as exc:  # noqa: BLE001
+        return {"exported": False, "error": redact(str(exc))}
+    finally:
+        try:
+            conn.conn.close()
+        except Exception:  # noqa: BLE001
+            pass
+    for r in out:
+        r["truncated"] = bool(r.get("truncated"))
+    out.sort(key=lambda r: (r["volume_catalog"], r["volume_schema"], r["volume_name"]))
+    folder = out_dir / "storage"
+    folder.mkdir(parents=True, exist_ok=True)
+    pq.write_table(pa.Table.from_pylist(out, schema=VOLUME_SCHEMA), str(folder / VOLUME_FILE), compression="snappy")
+    failed = [r for r in out if (r["detail"] or "").startswith("failed")]
+    collected = max((r["listed_at"] for r in out if r.get("listed_at")), default=None)
+    log(f"volume files: {len(out)} volumes, read from {stored['volume_sizes']} (collected {collected})")
+    return {"exported": True, "error": None, "volumes": len(out), "listed": len(out) - len(failed),
+            "failed": len(failed), "truncated": sum(1 for r in out if r["truncated"]),
+            "first_error": failed[0]["detail"][8:] if failed else None, "source": "stored",
+            "stored_from": stored["volume_sizes"], "collected_at": collected,
+            "seconds": round(time.perf_counter() - t0, 1)}

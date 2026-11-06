@@ -98,6 +98,9 @@ query_tags:
 # system.storage.table_metrics_history has the same per day but is often empty.
 table_sizes:
   enabled: true
+  # describe: run DESCRIBE DETAIL / HISTORY and list volumes. stored: read what the Data usage sizes job
+  # saved in dashboards sizes_schema (below) instead, as of its last run; nothing is described or listed
+  source: describe
   threads: 16          # statements at once (1-64)
   max_tables: 20000    # the most recently changed first; the rest read "not asked"
   volumes: true        # list every volume's files (count, bytes); false keeps the last listing
