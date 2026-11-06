@@ -74,14 +74,22 @@ _LIST_SQL = """
 SELECT t.table_catalog, t.table_schema, t.table_name, t.table_type, t.data_source_format,
        CAST(t.last_altered AS STRING) AS last_altered, c.column_count,
        CAST(t.created AS STRING) AS created, t.table_owner AS owner
-FROM system.information_schema.tables t
+FROM {tables_from} t
 LEFT JOIN (
   SELECT table_catalog, table_schema, table_name, COUNT(*) AS column_count
-  FROM system.information_schema.columns
+  FROM {columns_from}
   GROUP BY table_catalog, table_schema, table_name
 ) c ON c.table_catalog = t.table_catalog AND c.table_schema = t.table_schema AND c.table_name = t.table_name
 WHERE t.table_schema <> 'information_schema'
 """
+
+
+def _list_from() -> dict[str, str]:
+    """Where the table and volume lists come from: settings table_sizes tables_from, columns_from, volumes_from."""
+    from app.core import config
+
+    cfg = config.table_sizes()
+    return {k: cfg[k] for k in ("tables_from", "columns_from", "volumes_from")}
 
 
 def _q(name: str) -> str:
@@ -124,7 +132,7 @@ def export(connect_fn: Callable, out_dir: Path, *, previous: Path | None = None,
     except Exception as exc:  # noqa: BLE001 -- table sizes are a side table; the export goes on
         return {"exported": False, "error": redact(str(exc))}
     try:
-        tables = [r for r in _rows(lister.conn.cursor(), _LIST_SQL) if not skipped(r["table_catalog"])]
+        tables = [r for r in _rows(lister.conn.cursor(), _LIST_SQL.format(**_list_from())) if not skipped(r["table_catalog"])]
     except Exception as exc:  # noqa: BLE001
         return {"exported": False, "error": redact(str(exc))}
     finally:
@@ -239,7 +247,7 @@ VOLUME_SCHEMA = pa.schema([
 # listed_at: when these counts were listed (UTC); an unchanged volume keeps last run's counts and time
 _VOLUMES_SQL = """
 SELECT volume_catalog, volume_schema, volume_name, volume_type
-FROM system.information_schema.volumes
+FROM {volumes_from}
 WHERE volume_schema <> 'information_schema'
 """
 # the last file write per volume in the audit log since `since`; Spark writes to /Volumes paths may
@@ -309,7 +317,7 @@ def export_volumes(connect_fn: Callable, out_dir: Path, *, threads: int = 16,
     writes: dict[str, str] | None = {}
     try:
         cur = lister.conn.cursor()
-        vols = [r for r in _rows(cur, _VOLUMES_SQL) if not skipped(r["volume_catalog"])]
+        vols = [r for r in _rows(cur, _VOLUMES_SQL.format(**_list_from())) if not skipped(r["volume_catalog"])]
         if fresh:
             since = min(r["listed_at"] for r in fresh.values())[:10]
             try:

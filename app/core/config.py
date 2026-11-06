@@ -172,6 +172,7 @@ SETTINGS_KEYS = {
     "admin_groups",  # groups expected to hold broad grants; their grants read OK.
     "load",  # the local database load: DuckDB memory and threads, which tag keys tags.tag_entity keeps.
     "table_sizes",  # DESCRIBE DETAIL of every table in the export: on/off, how many at once, how many at most.
+    "sources",  # system table -> the catalog.schema.table or view read instead; left out = the system table.
 }
 UI_KEYS = {"max_rows", "max_chart_categories"}
 LOAD_KEYS = {"memory_limit", "threads", "tag_keys", "top_tag_keys"}
@@ -205,8 +206,47 @@ DEFAULT_SETTINGS: dict = {
     "admin_groups": [],
     "load": {"memory_limit": "1GB", "threads": 4, "tag_keys": None, "top_tag_keys": 10},
     "table_sizes": {"enabled": True, "threads": 16, "max_tables": 20000, "volumes": True,
-                    "volume_max_entries": 50000, "volume_full_days": 7},
+                    "volume_max_entries": 50000, "volume_full_days": 7,
+                    "tables_from": "system.information_schema.tables",
+                    "columns_from": "system.information_schema.columns",
+                    "volumes_from": "system.information_schema.volumes"},
+    "sources": {},
 }
+
+# a system table name, plain or in backticks: system.billing.usage, `system`.`billing`.`usage`
+SYSTEM_TABLE_RE = re.compile(r"(?<![\w.`])`?system`?\.`?(\w+)`?\.`?(\w+)`?(?![\w`])", re.I)
+# catalog.schema.name; a part with anything but letters, digits and _ goes in backticks
+_PART = r"(?:[A-Za-z_][A-Za-z0-9_]*|`[^`]+`)"
+OBJECT_NAME_RE = re.compile(rf"{_PART}\.{_PART}\.{_PART}")
+
+
+def _validate_object_name(value, key: str) -> str:
+    if not isinstance(value, str) or not OBJECT_NAME_RE.fullmatch(value.strip()):
+        raise SettingsError(f"{key} must be catalog.schema.table (backticks around a part with a hyphen)", key=key)
+    return value.strip()
+
+
+def _validate_sources(value) -> dict:
+    """{"system.<schema>.<table>": "<catalog>.<schema>.<table or view>"}; the target has the same columns."""
+    if value is None:
+        return {}
+    if not isinstance(value, dict):
+        raise SettingsError("sources maps system.<schema>.<table> to catalog.schema.table", key="sources")
+    out = {}
+    for k, v in value.items():
+        m = SYSTEM_TABLE_RE.fullmatch(str(k).strip())
+        if not m:
+            raise SettingsError(f"sources: {k} is not a system table (system.<schema>.<table>)", key="sources")
+        out[f"system.{m.group(1).lower()}.{m.group(2).lower()}"] = _validate_object_name(v, "sources")
+    return out
+
+
+def map_sources(sql: str, sources: dict) -> str:
+    """`sql` with every mapped system table swapped for its target; unmapped ones stay."""
+    if not sources:
+        return sql
+    return SYSTEM_TABLE_RE.sub(
+        lambda m: sources.get(f"system.{m.group(1).lower()}.{m.group(2).lower()}", m.group(0)), sql)
 
 
 def _validate_contract(contract) -> dict | None:
@@ -232,7 +272,8 @@ def _validate_table_sizes(value) -> dict:
     volume_full_days (0-365)}; a missing key keeps its default."""
     merged = dict(DEFAULT_SETTINGS["table_sizes"])
     msg = ("table_sizes takes enabled and volumes (true/false), threads (1-64), max_tables (0-1000000), "
-           "volume_max_entries (100-10000000) and volume_full_days (0-365)")
+           "volume_max_entries (100-10000000), volume_full_days (0-365) and tables_from, columns_from, "
+           "volumes_from (catalog.schema.table)")
     if value is None:
         return merged
     if not isinstance(value, dict) or set(value) - set(merged):
@@ -250,6 +291,8 @@ def _validate_table_sizes(value) -> dict:
           and 0 <= merged["volume_full_days"] <= 365)
     if not ok:
         raise SettingsError(msg, key="table_sizes")
+    for k in ("tables_from", "columns_from", "volumes_from"):
+        merged[k] = _validate_object_name(merged[k], "table_sizes")
     return merged
 
 
@@ -323,6 +366,7 @@ def _validate_settings(settings: dict) -> dict:
             f"(not {', '.join(RESERVED_QUERY_TAGS)})", key="query_tags")
     out["contract"] = _validate_contract(out["contract"])
     out["table_sizes"] = _validate_table_sizes(out["table_sizes"])
+    out["sources"] = _validate_sources(out["sources"])
     keys = out["export_tag_keys"]
     if keys is not None and (
         not isinstance(keys, list) or not keys
@@ -543,6 +587,14 @@ def table_sizes() -> dict:
         return dict(load_settings()["table_sizes"])
     except ConfigError:
         return dict(DEFAULT_SETTINGS["table_sizes"])
+
+
+def sources() -> dict:
+    """settings sources: the system tables read from another catalog.schema.table or view."""
+    try:
+        return dict(load_settings()["sources"])
+    except ConfigError:
+        return {}
 
 
 def query_source() -> str:

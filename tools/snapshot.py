@@ -107,6 +107,52 @@ def _query_tags() -> dict[str, str]:
     return app_config.query_tags()
 
 
+def _sources() -> dict[str, str]:
+    if str(ROOT) not in sys.path:
+        sys.path.insert(0, str(ROOT))
+    from app.core import config as app_config
+
+    return app_config.sources()
+
+
+class _MappedCursor:
+    """A cursor that reads each mapped system table (settings sources) from its target instead."""
+
+    def __init__(self, cur: Any, sources: dict[str, str]):
+        self._cur, self._sources = cur, sources
+
+    def execute(self, operation: str, *args, **kwargs):
+        from app.core.config import map_sources
+
+        return self._cur.execute(map_sources(operation, self._sources), *args, **kwargs)
+
+    def __getattr__(self, name: str):
+        return getattr(self._cur, name)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        return self._cur.__exit__(*exc)
+
+
+class _MappedConnection:
+    def __init__(self, conn: Any, sources: dict[str, str]):
+        self._conn, self._sources = conn, sources
+
+    def cursor(self, *args, **kwargs):
+        return _MappedCursor(self._conn.cursor(*args, **kwargs), self._sources)
+
+    def __getattr__(self, name: str):
+        return getattr(self._conn, name)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        return self._conn.__exit__(*exc)
+
+
 def _query_source() -> str:
     if str(ROOT) not in sys.path:  # run as a script from tools/
         sys.path.insert(0, str(ROOT))
@@ -500,6 +546,10 @@ def connect(timeout: int = DEFAULT_TIMEOUT_S, dotenv_path: Any = _USE_DEFAULT_DO
         _user_agent_entry=_query_source(),
     )
     _tag_session(conn)
+    sources = _sources()
+    if sources:
+        print(f"{len(sources)} system table(s) read from settings sources", file=sys.stderr, flush=True)
+        conn = _MappedConnection(conn, sources)
     version = str(getattr(dbsql, "__version__", "unknown"))
     return Connected(conn=conn, connector_version=version, host_fingerprint=host_fingerprint(host),
                      metastore=read_metastore(conn))
