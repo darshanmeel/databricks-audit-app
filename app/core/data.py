@@ -2174,8 +2174,8 @@ def read_activity(window: int, workspace_scope: set[str] | None, workspace_id: s
             return con.execute(sql).fetchall() if ok else []
         access = q(f"SELECT workspace_id, table_full_name, SUM(reads), SUM(writes), SUM(readers), SUM(writers) FROM {src} "
                    "GROUP BY 1, 2 HAVING SUM(reads) + SUM(writes) > 0")
-        held = q("SELECT table_catalog, table_catalog || '.' || table_schema || '.' || table_name FROM storage.table_detail "
-                 "WHERE detail IS DISTINCT FROM 'view'", ("storage", "table_detail") in have)
+        held = q("SELECT table_catalog, table_catalog || '.' || table_schema || '.' || table_name, size_in_bytes "
+                 "FROM storage.table_detail WHERE detail IS DISTINCT FROM 'view'", ("storage", "table_detail") in have)
         vols = q("SELECT volume_catalog, volume_catalog || '.' || volume_schema || '.' || volume_name FROM storage.volume_detail",
                  ("storage", "volume_detail") in have)
         va, _w = _windowed(con, have, "volume_access", window)
@@ -2191,8 +2191,20 @@ def read_activity(window: int, workspace_scope: set[str] | None, workspace_id: s
                   f"WHERE day >= '{since}' AND day < '{end}'", ("usage", "table_daily") in have)
         classes = _table_classes(con, have, window, end) if workspace_id else {}
         home, names, envs = _home_and_names(con, have)
+        load = _query_load(con, have, since, end.isoformat())
     finally:
         con.close()
+    from app.core.usage import skipped_catalog
+
+    def ours(full_name) -> bool:
+        return bool(full_name) and not skipped_catalog(str(full_name).split(".")[0])
+    access = [a for a in access if ours(a[1])]
+    held = [h for h in held if ours(h[1])]
+    vols = [v for v in vols if ours(v[1])]
+    vol_use = [v for v in vol_use if ours(v[1])]
+    used = [u for u in used if ours(u[2])]
+    daily = [d for d in daily if ours(d[0])]
+    size = {t: b for _c, t, b in held}
 
     def keep(ws) -> bool:
         return ws is not None and (workspace_scope is None or str(ws) in workspace_scope) \
@@ -2223,7 +2235,7 @@ def read_activity(window: int, workspace_scope: set[str] | None, workspace_id: s
         a["tables_all"].add(t)
         tbl[(str(ws), t)] = {"table_full_name": t, "workspace_id": str(ws), "workspace_name": name(ws), "reads": int(r or 0),
                              "writes": int(w or 0), "people": int(rd or 0) + int(wt or 0)}
-    for cat, t in held:
+    for cat, t, _b in held:
         if keep(home.get(cat)):
             at(home[cat])["tables_all"].add(t)
     for cat, v in vols:
@@ -2295,7 +2307,8 @@ def read_activity(window: int, workspace_scope: set[str] | None, workspace_id: s
            "totals": {"reads": sum(r["reads"] for r in rows), "writes": sum(r["writes"] for r in rows),
                       "tables_active": every("tables"), "tables": every("tables_all"), "people_active": every("people"),
                       "people": every("people_all"), "volumes_active": every("volumes"), "volumes": every("volumes_all")},
-           "workspaces": rows, "top_tables": top_tables[:10], "top_people": top_people[:10]}
+           "workspaces": rows, "top_tables": top_tables[:10], "top_people": top_people[:10],
+           "heavy_tables": _heaviest(load, size, lambda t: where(t, None) or home.get(t.split(".")[0]), keep, name)}
     if workspace_id is None:
         h = heat(lambda t, ws: ws)
         out["heat"] = [{"key": r["workspace_id"], "label": r["workspace_name"], "cells": h.get(r["workspace_id"], [0] * window)}
@@ -2325,6 +2338,44 @@ def read_activity(window: int, workspace_scope: set[str] | None, workspace_id: s
                 "volumes": sorted(({**v, "people": len(v["people"])} for v in vol.values()),
                                   key=lambda v: (-(v["reads"] + v["writes"]), v["volume_full_name"]))[:10]})
     return out
+
+
+# what the Heaviest tables chart can rank by; each keeps its own top so a switch has rows
+HEAVY_BY = ("query_ms", "read_bytes", "spilled_bytes", "full_scans", "size_in_bytes")
+
+
+def _query_load(con, have, since: str, end: str) -> dict[str, dict]:
+    """Per table, the queries reading and writing it in [since, end): their time, bytes read and
+    written, spill and full scans (usage.table_query_daily; write and spill columns from newer exports)."""
+    if ("usage", "table_query_daily") not in have:
+        return {}
+    cols = _columns(con, "usage", "table_query_daily")
+    extra = ", ".join(c if c in cols else f"0 AS {c}" for c in ("spilled_bytes", "write_queries", "write_ms", "written_bytes"))
+    got = con.execute(
+        "SELECT table_full_name, SUM(queries), SUM(total_ms), SUM(read_bytes), SUM(full_scans), SUM(spilled_bytes), "
+        "SUM(write_queries), SUM(write_ms), SUM(written_bytes) FROM (SELECT table_full_name, queries, total_ms, read_bytes, "
+        f"full_scans, {extra} FROM usage.table_query_daily WHERE day >= ? AND day < ?) GROUP BY 1", [since, end]).fetchall()
+    return {str(t): {"reads": int(r or 0), "read_ms": int(rm or 0), "read_bytes": int(rb or 0), "full_scans": int(fs or 0),
+                     "spilled_bytes": int(sp or 0), "writes": int(w or 0), "write_ms": int(wm or 0), "written_bytes": int(wb or 0)}
+            for t, r, rm, rb, fs, sp, w, wm, wb in got}
+
+
+def _heaviest(load: dict[str, dict], size: dict[str, int | None], ws_of, keep, name, top: int = 10) -> list[dict]:
+    """The tables queries spend the most on, for the Heaviest tables chart: the top `top` by each of
+    HEAVY_BY, query time being read plus write time."""
+    rows = []
+    for t in set(load) | {t for t, b in size.items() if b}:
+        ws = ws_of(t)
+        if not keep(ws):
+            continue
+        x = load.get(t) or {"reads": 0, "read_ms": 0, "read_bytes": 0, "full_scans": 0, "spilled_bytes": 0,
+                             "writes": 0, "write_ms": 0, "written_bytes": 0}
+        rows.append({**x, "table_full_name": t, "workspace_id": str(ws), "workspace_name": name(ws),
+                     "query_ms": x["read_ms"] + x["write_ms"], "size_in_bytes": size.get(t)})
+    keys = set()
+    for k in HEAVY_BY:
+        keys |= {r["table_full_name"] for r in sorted(rows, key=lambda r: (-(r[k] or 0), r["table_full_name"]))[:top] if r[k]}
+    return sorted((r for r in rows if r["table_full_name"] in keys), key=lambda r: (-r["query_ms"], r["table_full_name"]))
 
 
 def read_volumes(workspace_scope: set[str] | None, tag_filter=None, window: int = 30) -> dict:
@@ -2593,6 +2644,8 @@ def read_table(full_name: str, window: int = 30) -> dict:
         query_daily = rows("SELECT day, queries, total_ms, read_bytes, read_files, pruned_files, full_scans "
                            "FROM usage.table_query_daily WHERE table_full_name = ? ORDER BY day", [full_name]
                            ) if ("usage", "table_query_daily") in have else []
+        urls = dict(con.execute("SELECT CAST(workspace_id AS VARCHAR), url FROM dims.dim_workspace").fetchall()) \
+            if queries and ("dims", "dim_workspace") in have else {}
         wh_names = dict(con.execute("SELECT warehouse_id, warehouse_name FROM dims.dim_warehouse").fetchall())             if queries and ("dims", "dim_warehouse") in have else {}
         access = rows("SELECT MAX(last_read) AS last_read, MAX(last_write) AS last_write FROM usage.table_access "
                       "WHERE table_full_name = ?", [full_name]) if ("usage", "table_access") in have else []
@@ -2621,10 +2674,11 @@ def read_table(full_name: str, window: int = 30) -> dict:
     for q in queries:
         q["workspace_name"] = names.get(str(q["workspace_id"]), q["workspace_id"])
         q["warehouse_name"] = wh_names.get(q["warehouse_id"]) or q["warehouse_id"]
+        q["workspace_url"] = urls.get(str(q["workspace_id"]))
     end = _seen_end(json.loads(info_row[0]) if info_row and info_row[0] else None)
     timeline = _timeline(history, maint, query_daily)
     return {"outcome": "ok_rows" if (facts or daily or history) else "ok_empty", "table_full_name": full_name,
-            "timeline": timeline, "upkeep": _upkeep(timeline, window, end),
+            "timeline": timeline, "upkeep": {**_upkeep(timeline, window, end), "lineage_writes": cls["writes"] if cls else None},
             "queries": queries, "scans": _scans(query_daily, window, end), "other": other,
             "other_events": other[0]["table_events"] if other else 0, "has_other": to is not None,
             "has_queries": ("usage", "table_query_daily") in have,
@@ -2648,6 +2702,10 @@ _ROW_KEYS = ("numTargetRowsInserted", "numTargetRowsUpdated", "numTargetRowsDele
 # operations that rewrite small files into big ones: Delta's OPTIMIZE (also ZORDER and liquid
 # clustering), predictive optimization's compaction and clustering
 _COMPACT = ("OPTIMIZE", "COMPACTION", "CLUSTERING")
+# DESCRIBE HISTORY operations that change a table's rows
+_WRITE_OPS = ("WRITE", "MERGE", "UPDATE", "DELETE", "STREAMING UPDATE", "COPY INTO", "TRUNCATE", "RESTORE",
+              "CREATE TABLE AS SELECT", "CREATE OR REPLACE TABLE AS SELECT", "REPLACE TABLE AS SELECT",
+              "CREATE OR REPLACE TABLE", "REPLACE TABLE")
 
 
 def _first(m: dict, keys: tuple) -> int | None:
@@ -2730,8 +2788,8 @@ def _upkeep(timeline: list[dict], window: int, end) -> dict:
             "files_after": sum(e["files_added"] or 0 for e in comp),
             "vacuums": len({str(e["when"])[:10] for e in vac}), "freed_bytes": sum(e["freed_bytes"] or 0 for e in vac),
             "files_deleted": sum(e["files_removed"] or 0 for e in vac if e["operation"].upper() in ("VACUUM END", "VACUUM")),
-            "writes": sum(1 for e in inside if e["operation"].upper() in ("WRITE", "MERGE", "UPDATE", "DELETE", "STREAMING UPDATE",
-                                                                             "CREATE OR REPLACE TABLE AS SELECT", "REPLACE TABLE AS SELECT")),
+            "writes": sum(1 for e in inside if e["operation"].upper() in _WRITE_OPS),
+            "history_in_window": sum(1 for e in inside if e["by"] == "delta"),
             "dbu": round(sum(e["dbu"] or 0 for e in inside), 2),
             "history_since": min((str(e["when"])[:10] for e in delta if e["when"]), default=None),
             "history_ops": len(delta)}

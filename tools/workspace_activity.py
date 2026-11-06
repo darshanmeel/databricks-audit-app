@@ -18,7 +18,7 @@ belongs to, for Governance > Workspaces. Plain statements, not checks:
 - table_other_access: per window and table, reads and writes with no query in query history (jobs,
   notebooks and pipelines on classic compute), by identity and through what, the 10 biggest;
 - table_query_daily: per table and day, queries reading it, their time, files read and pruned, and how
-  many read without pruning a file;
+  many read without pruning a file; queries writing it, their time and bytes; the spill of both;
 - table_edges: which table feeds which (lineage source -> target), with events and the last one;
 - table_grants: who holds SELECT (or ALL PRIVILEGES) on a table directly, not through its schema,
   catalog or a group;
@@ -90,7 +90,9 @@ TABLE_QUERIES_SCHEMA = pa.schema([
     ("statement_id", pa.string()), ("identity", pa.string()), ("start_time", pa.string()), ("statement_type", pa.string()),
     ("status", pa.string()), ("total_ms", pa.int64()), ("read_bytes", pa.int64()), ("read_files", pa.int64()),
     ("pruned_files", pa.int64()), ("read_rows", pa.int64()), ("produced_rows", pa.int64()), ("warehouse_id", pa.string()),
-    ("text", pa.string()),
+    ("text", pa.string()), ("spilled_bytes", pa.int64()), ("shuffle_bytes", pa.int64()), ("written_bytes", pa.int64()),
+    ("compile_ms", pa.int64()), ("exec_ms", pa.int64()), ("wait_compute_ms", pa.int64()), ("queue_ms", pa.int64()),
+    ("task_ms", pa.int64()), ("cache_pct", pa.float64()), ("result_cache", pa.int64()),
 ])
 TABLE_OTHER_FILE = "table_other_access.parquet"
 TABLE_OTHER_SCHEMA = pa.schema([
@@ -101,6 +103,7 @@ TABLE_QUERY_DAILY_FILE = "table_query_daily.parquet"
 TABLE_QUERY_DAILY_SCHEMA = pa.schema([
     ("table_full_name", pa.string()), ("day", pa.string()), ("queries", pa.int64()), ("total_ms", pa.int64()),
     ("read_bytes", pa.int64()), ("read_files", pa.int64()), ("pruned_files", pa.int64()), ("full_scans", pa.int64()),
+    ("spilled_bytes", pa.int64()), ("write_queries", pa.int64()), ("write_ms", pa.int64()), ("written_bytes", pa.int64()),
 ])
 # a read that pruned no file out of at least this many read the whole table: no filter on a
 # partition or clustering column, or none that data skipping could use
@@ -416,7 +419,11 @@ def _statements(e: str, days: int) -> str:
 q AS (
   SELECT statement_id, CAST(workspace_id AS STRING) AS workspace_id, lower(executed_by) AS who, start_time, statement_type,
          execution_status, COALESCE(total_duration_ms, 0) AS total_ms, read_bytes, read_files, pruned_files, read_rows,
-         produced_rows, compute.warehouse_id AS warehouse_id, statement_text
+         produced_rows, compute.warehouse_id AS warehouse_id, statement_text,
+         COALESCE(spilled_local_bytes, 0) AS spilled_bytes, shuffle_read_bytes AS shuffle_bytes, written_bytes,
+         compilation_duration_ms AS compile_ms, execution_duration_ms AS exec_ms,
+         waiting_for_compute_duration_ms AS wait_compute_ms, waiting_at_capacity_duration_ms AS queue_ms,
+         total_task_duration_ms AS task_ms, read_io_cache_percent AS cache_pct, CAST(from_result_cache AS INT) AS result_cache
   FROM system.query.history
   WHERE start_time >= date_sub({e}, {days}) AND start_time < {e}
 )"""
@@ -433,7 +440,8 @@ w AS (SELECT explode(array({", ".join(map(str, ws))})) AS days)
 SELECT w.days AS window_days, st.table_full_name, st.access, q.workspace_id, q.statement_id, q.who AS identity,
        CAST(q.start_time AS STRING) AS start_time, q.statement_type, q.execution_status AS status, q.total_ms,
        q.read_bytes, q.read_files, q.pruned_files, q.read_rows, q.produced_rows, q.warehouse_id,
-       left(regexp_replace(q.statement_text, '\\s+', ' '), {QUERY_TEXT_CHARS}) AS text
+       left(regexp_replace(q.statement_text, '\\s+', ' '), {QUERY_TEXT_CHARS}) AS text, q.spilled_bytes, q.shuffle_bytes,
+       q.written_bytes, q.compile_ms, q.exec_ms, q.wait_compute_ms, q.queue_ms, q.task_ms, q.cache_pct, q.result_cache
 FROM st JOIN q ON q.statement_id = st.statement_id JOIN w ON q.start_time >= date_sub({e}, w.days)
 QUALIFY ROW_NUMBER() OVER (PARTITION BY w.days, st.table_full_name ORDER BY q.total_ms DESC, q.statement_id) <= {TABLE_QUERIES_MAX}
 """
@@ -479,16 +487,22 @@ QUALIFY ROW_NUMBER() OVER (PARTITION BY days, t ORDER BY events DESC, who, acces
 
 def table_query_daily_sql(end: dt.date, days: int) -> str:
     """Per table and day: queries reading it, their time, bytes and files read and pruned, and how
-    many pruned nothing out of FULL_SCAN_FILES or more files."""
+    many pruned nothing out of FULL_SCAN_FILES or more files; queries writing it, their time and bytes
+    written; the spill of both."""
     e = f"DATE'{end.isoformat()}'"
+    r = "st.access = 'read'"
     return f"""
 WITH {_statements(e, days)}
-SELECT st.table_full_name, CAST(CAST(q.start_time AS DATE) AS STRING) AS day, COUNT(*) AS queries,
-       SUM(q.total_ms) AS total_ms, SUM(COALESCE(q.read_bytes, 0)) AS read_bytes, SUM(COALESCE(q.read_files, 0)) AS read_files,
-       SUM(COALESCE(q.pruned_files, 0)) AS pruned_files,
-       COUNT_IF(COALESCE(q.pruned_files, 0) = 0 AND COALESCE(q.read_files, 0) >= {FULL_SCAN_FILES}) AS full_scans
+SELECT st.table_full_name, CAST(CAST(q.start_time AS DATE) AS STRING) AS day, COUNT_IF({r}) AS queries,
+       SUM(CASE WHEN {r} THEN q.total_ms ELSE 0 END) AS total_ms,
+       SUM(CASE WHEN {r} THEN COALESCE(q.read_bytes, 0) ELSE 0 END) AS read_bytes,
+       SUM(CASE WHEN {r} THEN COALESCE(q.read_files, 0) ELSE 0 END) AS read_files,
+       SUM(CASE WHEN {r} THEN COALESCE(q.pruned_files, 0) ELSE 0 END) AS pruned_files,
+       COUNT_IF({r} AND COALESCE(q.pruned_files, 0) = 0 AND COALESCE(q.read_files, 0) >= {FULL_SCAN_FILES}) AS full_scans,
+       SUM(q.spilled_bytes) AS spilled_bytes, COUNT_IF(NOT {r}) AS write_queries,
+       SUM(CASE WHEN {r} THEN 0 ELSE q.total_ms END) AS write_ms,
+       SUM(CASE WHEN {r} THEN 0 ELSE COALESCE(q.written_bytes, 0) END) AS written_bytes
 FROM st JOIN q ON q.statement_id = st.statement_id
-WHERE st.access = 'read'
 GROUP BY 1, 2
 """
 

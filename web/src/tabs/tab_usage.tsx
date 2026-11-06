@@ -602,8 +602,15 @@ function Upkeep({ d, window }: { d: any; window: number }) {
         <Card title="Reads after the last compaction"><div className="pqgs-card-value" style={{ fontSize: 22, whiteSpace: "nowrap" }}>{effect ? <Change a={effect.effect.before.avg_ms} b={effect.effect.after.avg_ms} fmt={(v) => fmtDurationMs(v)} /> : "-"}</div>
           <PqgsNote facts={effect ? [{ label: "Files per read", value: `${fmtInt(Math.round(effect.effect.before.files_per_read))} → ${fmtInt(Math.round(effect.effect.after.files_per_read))}` }]
             : [{ label: "Needs", value: "3+ reads in the 7 days before and after" }]} /></Card>
-        <Card title={`Writes and merges · ${window}d`}><div className="pqgs-card-value">{fmtInt(u.writes || 0)}</div>
-          <PqgsNote facts={[{ label: "Predictive optimization", value: u.dbu ? `${u.dbu} DBU (est.)` : "-" }]} /></Card>
+        {u.history_in_window ? (
+          <Card title={`Writes and merges · ${window}d`}><div className="pqgs-card-value">{fmtInt(u.writes || 0)}</div>
+            <PqgsNote facts={[{ label: "Write events", value: u.lineage_writes == null ? "-" : `${fmtInt(u.lineage_writes)} (lineage)` },
+              { label: "Predictive optimization", value: u.dbu ? `${u.dbu} DBU (est.)` : "-" }]} /></Card>
+        ) : (
+          <Card title={`Write events · ${window}d`}><div className="pqgs-card-value">{u.lineage_writes == null ? "-" : fmtInt(u.lineage_writes)}</div>
+            <PqgsNote facts={[{ label: "From", value: "lineage: DESCRIBE HISTORY has nothing for it in the window" },
+              { label: "Predictive optimization", value: u.dbu ? `${u.dbu} DBU (est.)` : "-" }]} /></Card>
+        )}
       </div>
       {u.history_since && u.history_since > since ? <div className="metric-note">{`History reaches back to ${fmtDayShort(u.history_since)} only: changes before it in the window are not available.`}</div> : null}
       {tl.length ? (
@@ -639,6 +646,23 @@ function Upkeep({ d, window }: { d: any; window: number }) {
   );
 }
 
+// the query's profile in its workspace's query history
+function profileUrl(q: any): string | null {
+  if (!q.workspace_url || !q.statement_id) return null;
+  const host = String(q.workspace_url).replace(/^https?:\/\//, "").replace(/\/.*$/, "");
+  return `https://${host}/sql/history?queryId=${encodeURIComponent(q.statement_id)}&uiQueryProfileVisible=true`;
+}
+
+function timeParts(q: any): string {
+  const parts: [string, any][] = [["compile", q.compile_ms], ["run", q.exec_ms], ["task time over all cores", q.task_ms]];
+  const out = parts.filter(([, v]) => v != null).map(([k, v]) => `${k} ${fmtDurationMs(v)}`);
+  if (q.cache_pct != null) out.push(`${Math.round(q.cache_pct)}% read from disk cache`);
+  if (q.result_cache) out.push("served from the result cache");
+  if (q.shuffle_bytes) out.push(`${fmtBytes(q.shuffle_bytes)} shuffled`);
+  if (q.written_bytes) out.push(`${fmtBytes(q.written_bytes)} written`);
+  return out.join(" · ");
+}
+
 // The slowest queries on the table in the window, and reads that pruned no file.
 function TableQueries({ d, window }: { d: any; window: number }) {
   const qs: any[] = d.queries || [];
@@ -654,17 +678,22 @@ function TableQueries({ d, window }: { d: any; window: number }) {
             <span style={{ color: sc.full_scans ? "#9F1D14" : undefined, fontWeight: sc.full_scans ? 600 : undefined }}>{`${fmtInt(sc.full_scans)} pruned no file`}</span>
             {sc.pruned_share != null ? `; ${fmtPct(sc.pruned_share, 0)} of files skipped overall.` : "."}</div> : null}
           <div className="data-table-wrap"><table className="data">
-            <thead><tr><th>When</th><th>Who</th><th>Type</th><th className="num">Time</th><th className="num">Read</th><th className="num">Files read</th><th className="num">Pruned</th><th>Query</th></tr></thead>
+            <thead><tr><th>When</th><th>Who</th><th>Type</th><th className="num">Time</th><th className="num">Waited</th><th className="num">Read</th><th className="num">Spilled</th><th className="num">Files read</th><th className="num">Pruned</th><th>Query</th></tr></thead>
             <tbody>{qs.map((q) => (
               <tr key={q.statement_id}>
                 <td>{String(q.start_time || "").slice(0, 16)}<div className="muted" style={{ fontSize: 12 }}>{[q.workspace_name, q.warehouse_name].filter(Boolean).join(" · ")}</div></td>
                 <td style={{ fontSize: 12.5 }}>{q.identity}</td>
                 <td>{q.statement_type}{q.access === "write" ? <span className="muted"> · writes it</span> : null}{q.status && q.status !== "FINISHED" ? <span className="muted">{` · ${String(q.status).toLowerCase()}`}</span> : null}</td>
-                <td className="num mono">{fmtDurationMs(q.total_ms)}</td>
+                <td className="num mono" title={timeParts(q)}>{fmtDurationMs(q.total_ms)}</td>
+                <td className="num mono" title="Waiting for compute plus queued at capacity">{q.queue_ms == null && q.wait_compute_ms == null ? "-" : fmtDurationMs((q.queue_ms || 0) + (q.wait_compute_ms || 0))}</td>
                 <td className="num mono">{q.read_bytes == null ? "-" : fmtBytes(q.read_bytes)}</td>
+                <td className="num mono" style={{ color: q.spilled_bytes ? "#9F1D14" : undefined }}>{q.spilled_bytes == null ? "-" : q.spilled_bytes ? fmtBytes(q.spilled_bytes) : "0"}</td>
                 <td className="num mono">{q.read_files == null ? "-" : fmtInt(q.read_files)}</td>
                 <td className="num mono">{full(q) ? <span className="badge" style={{ color: "#9F1D14" }}>none · full scan</span> : q.pruned_files == null ? "-" : fmtInt(q.pruned_files)}</td>
-                <td className="mono" style={{ fontSize: 12, maxWidth: 360, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={q.text || ""}>{q.text || "-"}</td>
+                <td className="mono" style={{ fontSize: 12, maxWidth: 360 }}>
+                  <div style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={q.text || ""}>{q.text || "-"}</div>
+                  <div className="muted" style={{ fontSize: 11.5 }}>{q.statement_id}{profileUrl(q) ? <React.Fragment>{" · "}<a href={profileUrl(q)!} target="_blank" rel="noreferrer">profile ↗</a></React.Fragment> : null}</div>
+                </td>
               </tr>
             ))}</tbody>
           </table></div>
@@ -688,6 +717,7 @@ function TableQueries({ d, window }: { d: any; window: number }) {
         <li>Query history has SQL warehouses and serverless only. Jobs, notebooks and pipelines on classic compute are in lineage with who and when; their time, bytes and files are not available.</li>
         <li>The 10 slowest per window; bytes and files are the whole query's, so a join shows them on each table it reads.</li>
         <li>Full scan: 50+ files read and none pruned. Filter on a clustering or partition column.</li>
+        <li>Spilled: data that did not fit in memory and went to disk; a bigger warehouse or a narrower query avoids it. Waited: for compute to start plus queued at capacity. Hover Time for compile, run and cache.</li>
         <li>Reads that never reach Unity Catalog lineage (paths, external engines) are not counted.</li>
       </ul>
     </Card>

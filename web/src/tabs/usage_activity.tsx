@@ -3,7 +3,7 @@
 import React from "react";
 
 import { Api } from "../api";
-import { fmtBytes, fmtInt } from "../format";
+import { fmtBytes, fmtDurationMs, fmtInt } from "../format";
 import { AreaContent, Card, PqgsNote } from "../components/primitives";
 import { Donut } from "../components/charts";
 import { Columns } from "../components/charts_more";
@@ -57,6 +57,47 @@ function RWBars({ rows }: { rows: { key: string; label: string; sub?: string; r:
       ))}
       <Legend />
     </div>
+  );
+}
+
+const HEAVY: [string, string][] = [["query_ms", "Query time"], ["read_bytes", "Data read"], ["spilled_bytes", "Spill"],
+  ["full_scans", "Full scans"], ["size_in_bytes", "Size"]];
+
+function heavyFmt(k: string, v: number): string {
+  return k.endsWith("_ms") ? fmtDurationMs(v) : k.endsWith("bytes") ? fmtBytes(v) : fmtInt(v);
+}
+
+// The tables queries spend the most on, not the most often touched: a small lookup table every job
+// reads tops the event count but costs little.
+function Heavy({ rows, open, all }: { rows: any[]; open: (name: string) => void; all: boolean }) {
+  const [by, setBy] = React.useState("query_ms");
+  const top = rows.filter((r) => r[by]).sort((a, b) => b[by] - a[by] || String(a.table_full_name).localeCompare(b.table_full_name)).slice(0, 10);
+  const max = Math.max(1, ...top.map((r) => r[by]));
+  return (
+    <Card title="Heaviest tables" right={<span className="muted">{`${all ? "all workspaces · " : ""}query history · click one`}</span>}>
+      <div className="ws-actions" style={{ marginBottom: 8 }}>
+        {HEAVY.map(([k, l]) => <button key={k} type="button" className={by === k ? "on" : ""} onClick={() => setBy(k)}>{l}</button>)}
+      </div>
+      {!top.length ? <span className="muted">{by === "size_in_bytes" ? "No table sizes in this export." : "No query in query history read or wrote these tables in the window."}</span> : top.map((r) => (
+        <div key={r.table_full_name} style={{ display: "grid", gridTemplateColumns: "minmax(160px, 42%) 1fr 84px", gap: 10, alignItems: "center", margin: "6px 0", fontSize: 13 }}>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis" }}><Link text={r.table_full_name} onClick={() => open(r.table_full_name)} /></div>
+            <div className="muted" style={{ fontSize: 11.5, overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis" }}>
+              {[all ? r.workspace_name : null, r.size_in_bytes ? fmtBytes(r.size_in_bytes) : null, `${fmtInt(r.reads)} reads, ${fmtInt(r.writes)} writes`,
+                r.full_scans ? `${fmtInt(r.full_scans)} full scans` : null, r.spilled_bytes ? `${fmtBytes(r.spilled_bytes)} spilled` : null].filter(Boolean).join(" · ")}
+            </div>
+          </div>
+          <div style={{ display: "flex", height: 14, borderRadius: 3, overflow: "hidden", background: "var(--panel-2, #eee)" }}
+            title={by === "query_ms" ? `${fmtDurationMs(r.read_ms)} reading · ${fmtDurationMs(r.write_ms)} writing` : heavyFmt(by, r[by])}>
+            {by === "query_ms"
+              ? <React.Fragment><div style={{ width: `${(100 * r.read_ms) / max}%`, background: READ }} /><div style={{ width: `${(100 * r.write_ms) / max}%`, background: WRITE }} /></React.Fragment>
+              : <div style={{ width: `${(100 * r[by]) / max}%`, background: by === "spilled_bytes" || by === "full_scans" ? "#9F1D14" : READ }} />}
+          </div>
+          <span className="mono muted" style={{ textAlign: "right", fontSize: 12, whiteSpace: "nowrap" }}>{heavyFmt(by, r[by])}</span>
+        </div>
+      ))}
+      <div className="metric-note">{by === "query_ms" ? "Blue = reading it, orange = writing it. " : ""}SQL warehouses and serverless only; a query on several tables counts on each.</div>
+    </Card>
   );
 }
 
@@ -293,6 +334,7 @@ function UsageActivityContent({ filters, goTo, onVerdict, setManyWorkspaces }: L
             <RWBars rows={people} />
           </Card>
         </div>
+        <Heavy rows={d.heavy_tables || []} open={toTable} all />
       </div>
     );
   }
@@ -334,6 +376,7 @@ function UsageActivityContent({ filters, goTo, onVerdict, setManyWorkspaces }: L
           <RWBars rows={people} />
         </Card>
       </div>
+      <Heavy rows={d.heavy_tables || []} open={toTable} all={false} />
       <div className="grid-2">
         <Card title="Busiest tables per day"><Heat rows={d.heat || []} days={d.days} open={toTable} /></Card>
         <Card title="Volumes" right={<span className="muted">file events · click one</span>}>

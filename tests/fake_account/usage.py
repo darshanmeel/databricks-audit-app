@@ -285,16 +285,21 @@ def _table_queries(con, daily: list[tuple]) -> None:
             files = rnd.randint(800, 3000) if before or (scans and t != "acme.sales.orders") else rnd.randint(5, 60)
             pruned = 0 if files >= 800 else files * rnd.randint(5, 40)
             ms = (rnd.randint(20000, 90000) if files >= 800 else rnd.randint(800, 6000)) * n
+            spill = files * n * 4_000_000 if files >= 800 else 0
             per_day.append((t, (END - timedelta(days=d)).isoformat(), n, ms, files * n * 30_000_000, files * n, pruned * n,
-                            n if pruned == 0 and files >= 50 else 0))
+                            n if pruned == 0 and files >= 50 else 0, spill, 1 if d % 7 == 1 else 0,
+                            rnd.randint(30000, 400000) if d % 7 == 1 else 0, 2_000_000_000 if d % 7 == 1 else 0))
             for k in range(min(n, 2)):
                 who = rnd.choice(PEOPLE[ws])
                 text = f"SELECT * FROM {t}" if files >= 800 else f"SELECT region, SUM(amount) FROM {t} WHERE order_date >= '2026-09-01' GROUP BY region"
                 top.append((t, "read", ws, f"ac_tq_{len(top)}", who, ts(d, 8 + k), "SELECT", "FINISHED", ms // n,
-                            files * 30_000_000, files, pruned, files * 400_000, rnd.randint(1, 5000), "ac_wh_bi", text, d))
+                            files * 30_000_000, files, pruned, files * 400_000, rnd.randint(1, 5000), "ac_wh_bi", text,
+                            files * 4_000_000 if files >= 800 else 0, files * 5_000_000, 0, 400, ms // n - 2000, 1200, 400,
+                            ms // n * 6, 35.0, 0, d))
         top.append((t, "write", ws, f"ac_tq_{len(top)}", SPS.get(ws, PEOPLE[ws])[0], ts(1, 2), "MERGE", "FINISHED",
                     rnd.randint(30000, 400000), 10_000_000_000, 400, 0, 9_000_000, 120_000, "ac_wh_etl",
-                    f"MERGE INTO {t} t USING updates u ON t.id = u.id WHEN MATCHED THEN UPDATE SET *", 1))
+                    f"MERGE INTO {t} t USING updates u ON t.id = u.id WHEN MATCHED THEN UPDATE SET *",
+                    3_000_000_000, 6_000_000_000, 2_000_000_000, 900, 100000, 8000, 0, 900000, 10.0, 0, 1))
     rows = []
     for w in WINDOWS:
         for t in tables:
@@ -303,7 +308,8 @@ def _table_queries(con, daily: list[tuple]) -> None:
     put(con, "usage.table_queries", "window_days BIGINT, table_full_name VARCHAR, access VARCHAR, workspace_id VARCHAR, "
         "statement_id VARCHAR, identity VARCHAR, start_time VARCHAR, statement_type VARCHAR, status VARCHAR, total_ms BIGINT, "
         "read_bytes BIGINT, read_files BIGINT, pruned_files BIGINT, read_rows BIGINT, produced_rows BIGINT, warehouse_id VARCHAR, "
-        "text VARCHAR", rows)
+        "text VARCHAR, spilled_bytes BIGINT, shuffle_bytes BIGINT, written_bytes BIGINT, compile_ms BIGINT, exec_ms BIGINT, "
+        "wait_compute_ms BIGINT, queue_ms BIGINT, task_ms BIGINT, cache_pct DOUBLE, result_cache BIGINT", rows)
     # jobs and notebooks on classic compute: in lineage, not in query history
     other = []
     for t in tables:
@@ -315,7 +321,8 @@ def _table_queries(con, daily: list[tuple]) -> None:
     put(con, "usage.table_other_access", "window_days BIGINT, table_full_name VARCHAR, access VARCHAR, via VARCHAR, identity VARCHAR, "
         "events BIGINT, last_event VARCHAR, table_events BIGINT", other)
     put(con, "usage.table_query_daily", "table_full_name VARCHAR, day VARCHAR, queries BIGINT, total_ms BIGINT, read_bytes BIGINT, "
-        "read_files BIGINT, pruned_files BIGINT, full_scans BIGINT", per_day)
+        "read_files BIGINT, pruned_files BIGINT, full_scans BIGINT, spilled_bytes BIGINT, write_queries BIGINT, write_ms BIGINT, "
+        "written_bytes BIGINT", per_day)
 
 
 # warehouse -> (workspace, $ per up hour, typical up hours a day, share of up time busy)
