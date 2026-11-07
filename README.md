@@ -160,6 +160,8 @@ storage part takes long, the volume listing most. On a cluster the same statemen
   `storage.table_detail`, `storage.table_history`, `storage.volume_detail`.
 - **Used by:** Data usage (sizes, GB by class, largest tables, schemas, volumes) and Storage › Tables.
   Reads, writes and people come from `system.*` and don't need them.
+- **Left out:** the `system` and `samples` catalogs and Databricks' internal ones (`__databricks_internal…`),
+  in the app, the export and the Data usage dashboard.
 - **Grants:** `USE CATALOG`, `USE SCHEMA`, `SELECT` on the tables and `READ VOLUME` on the volumes, for the
   identity that measures (`BROWSE` isn't enough). A catalog it can't read shows under "Could not describe",
   and its tables show GB as `-`.
@@ -234,6 +236,10 @@ Fourteen Databricks AI/BI dashboards, one per app tab, without the app:
 
 Step by step, with the widgets, tags and grants:
 [databricks_dashboards/README.md](databricks_dashboards/README.md).
+
+Seven more read `system.*` live, with no notebook: Waste & savings, Jobs health, Workspace usage,
+Broad grants, Admin changes, Data usage and Dashboard load (every dashboard's own queries, from
+their query tags). See [system_tables_direct/README.md](databricks_dashboards/system_tables_direct/README.md).
 
 ## Update to a new version
 
