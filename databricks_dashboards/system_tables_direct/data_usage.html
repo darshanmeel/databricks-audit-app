@@ -131,7 +131,7 @@ seen AS (
 home AS (
   SELECT c.catalog_name AS catalog, max_by(s.workspace_id, s.events) AS workspace_id
   FROM system.information_schema.catalogs c LEFT JOIN seen s ON s.catalog = c.catalog_name
-  WHERE c.catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  WHERE c.catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(c.catalog_name, &#x27;__databricks_internal&#x27;)
   GROUP BY c.catalog_name
 )</code></pre></details></li><li><code>place</code>: Each catalog with its home workspace&#x27;s name and URL.<details><summary>Its SQL (7 lines)</summary><pre><code><span class="c">-- Each catalog with its home workspace&#x27;s name and URL.</span>
 place AS (
@@ -144,7 +144,7 @@ t AS (
   SELECT table_catalog AS catalog, table_schema AS sch, table_name, table_type, table_owner, created,
          table_catalog || &#x27;.&#x27; || table_schema || &#x27;.&#x27; || table_name AS full_name
   FROM system.information_schema.tables
-  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
+  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(table_catalog, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
 )</code></pre></details></li><li><code>lin</code>: Every read (source) and write (target) of a table over 365 days, from lineage.<details><summary>Its SQL (9 lines)</summary><pre><code><span class="c">-- Every read (source) and write (target) of a table over 365 days, from lineage.</span>
 lin AS (
   SELECT source_table_full_name AS full_name, 1 AS is_read, 0 AS is_write, event_time, lower(created_by) AS who
@@ -184,7 +184,7 @@ found AS (
   SELECT catalog_name AS c, schema_name AS s, table_name AS t, column_name,
          COALESCE(NULLIF(tag_value, &#x27;&#x27;), tag_name) AS pii_type, 1 AS rnk
   FROM system.information_schema.column_tags
-  WHERE lower(tag_name) RLIKE &#x27;^(pii|sensitive|gdpr|class[.])&#x27; AND catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  WHERE lower(tag_name) RLIKE &#x27;^(pii|sensitive|gdpr|class[.])&#x27; AND catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(catalog_name, &#x27;__databricks_internal&#x27;)
   UNION ALL
   SELECT table_catalog, table_schema, table_name, column_name,
          CASE
@@ -198,7 +198,7 @@ found AS (
          WHEN lower(column_name) RLIKE &#x27;card_?(no|number|num)|(^|_)pan$&#x27; THEN &#x27;Payment card&#x27;
          END, 2
   FROM system.information_schema.columns
-  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
+  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(table_catalog, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
 )</code></pre></details></li><li><code>sens_col</code>: One row per sensitive column, the tag winning over the name, and whether a column mask covers it.<details><summary>Its SQL (9 lines)</summary><pre><code><span class="c">-- One row per sensitive column, the tag winning over the name, and whether a column mask covers it.</span>
 sens_col AS (
   SELECT f.c || &#x27;.&#x27; || f.s || &#x27;.&#x27; || f.t AS full_name, f.column_name, f.pii_type, cm.mask_name IS NOT NULL AS masked
@@ -352,7 +352,7 @@ seen AS (
 home AS (
   SELECT c.catalog_name AS catalog, max_by(s.workspace_id, s.events) AS workspace_id
   FROM system.information_schema.catalogs c LEFT JOIN seen s ON s.catalog = c.catalog_name
-  WHERE c.catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  WHERE c.catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(c.catalog_name, &#x27;__databricks_internal&#x27;)
   GROUP BY c.catalog_name
 ),
 <span class="c">-- Each catalog with its home workspace&#x27;s name and URL.</span>
@@ -367,7 +367,7 @@ t AS (
   SELECT table_catalog AS catalog, table_schema AS sch, table_name, table_type, table_owner, created,
          table_catalog || &#x27;.&#x27; || table_schema || &#x27;.&#x27; || table_name AS full_name
   FROM system.information_schema.tables
-  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
+  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(table_catalog, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
 ),
 <span class="c">-- Every read (source) and write (target) of a table over 365 days, from lineage.</span>
 lin AS (
@@ -412,7 +412,7 @@ found AS (
   SELECT catalog_name AS c, schema_name AS s, table_name AS t, column_name,
          COALESCE(NULLIF(tag_value, &#x27;&#x27;), tag_name) AS pii_type, 1 AS rnk
   FROM system.information_schema.column_tags
-  WHERE lower(tag_name) RLIKE &#x27;^(pii|sensitive|gdpr|class[.])&#x27; AND catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  WHERE lower(tag_name) RLIKE &#x27;^(pii|sensitive|gdpr|class[.])&#x27; AND catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(catalog_name, &#x27;__databricks_internal&#x27;)
   UNION ALL
   SELECT table_catalog, table_schema, table_name, column_name,
          CASE
@@ -426,7 +426,7 @@ found AS (
          WHEN lower(column_name) RLIKE &#x27;card_?(no|number|num)|(^|_)pan$&#x27; THEN &#x27;Payment card&#x27;
          END, 2
   FROM system.information_schema.columns
-  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
+  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(table_catalog, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
 ),
 <span class="c">-- One row per sensitive column, the tag winning over the name, and whether a column mask covers it.</span>
 sens_col AS (
@@ -615,7 +615,7 @@ seen AS (
 home AS (
   SELECT c.catalog_name AS catalog, max_by(s.workspace_id, s.events) AS workspace_id
   FROM system.information_schema.catalogs c LEFT JOIN seen s ON s.catalog = c.catalog_name
-  WHERE c.catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  WHERE c.catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(c.catalog_name, &#x27;__databricks_internal&#x27;)
   GROUP BY c.catalog_name
 )</code></pre></details></li><li><code>place</code>: Each catalog with its home workspace&#x27;s name and URL.<details><summary>Its SQL (7 lines)</summary><pre><code><span class="c">-- Each catalog with its home workspace&#x27;s name and URL.</span>
 place AS (
@@ -628,7 +628,7 @@ t AS (
   SELECT table_catalog AS catalog, table_schema AS sch, table_name, table_type, table_owner, created,
          table_catalog || &#x27;.&#x27; || table_schema || &#x27;.&#x27; || table_name AS full_name
   FROM system.information_schema.tables
-  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
+  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(table_catalog, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
 )</code></pre></details></li><li><code>lin</code>: Every read (source) and write (target) of a table over 365 days, from lineage.<details><summary>Its SQL (9 lines)</summary><pre><code><span class="c">-- Every read (source) and write (target) of a table over 365 days, from lineage.</span>
 lin AS (
   SELECT source_table_full_name AS full_name, 1 AS is_read, 0 AS is_write, event_time, lower(created_by) AS who
@@ -668,7 +668,7 @@ found AS (
   SELECT catalog_name AS c, schema_name AS s, table_name AS t, column_name,
          COALESCE(NULLIF(tag_value, &#x27;&#x27;), tag_name) AS pii_type, 1 AS rnk
   FROM system.information_schema.column_tags
-  WHERE lower(tag_name) RLIKE &#x27;^(pii|sensitive|gdpr|class[.])&#x27; AND catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  WHERE lower(tag_name) RLIKE &#x27;^(pii|sensitive|gdpr|class[.])&#x27; AND catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(catalog_name, &#x27;__databricks_internal&#x27;)
   UNION ALL
   SELECT table_catalog, table_schema, table_name, column_name,
          CASE
@@ -682,7 +682,7 @@ found AS (
          WHEN lower(column_name) RLIKE &#x27;card_?(no|number|num)|(^|_)pan$&#x27; THEN &#x27;Payment card&#x27;
          END, 2
   FROM system.information_schema.columns
-  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
+  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(table_catalog, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
 )</code></pre></details></li><li><code>sens_col</code>: One row per sensitive column, the tag winning over the name, and whether a column mask covers it.<details><summary>Its SQL (9 lines)</summary><pre><code><span class="c">-- One row per sensitive column, the tag winning over the name, and whether a column mask covers it.</span>
 sens_col AS (
   SELECT f.c || &#x27;.&#x27; || f.s || &#x27;.&#x27; || f.t AS full_name, f.column_name, f.pii_type, cm.mask_name IS NOT NULL AS masked
@@ -745,7 +745,7 @@ seen AS (
 home AS (
   SELECT c.catalog_name AS catalog, max_by(s.workspace_id, s.events) AS workspace_id
   FROM system.information_schema.catalogs c LEFT JOIN seen s ON s.catalog = c.catalog_name
-  WHERE c.catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  WHERE c.catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(c.catalog_name, &#x27;__databricks_internal&#x27;)
   GROUP BY c.catalog_name
 ),
 <span class="c">-- Each catalog with its home workspace&#x27;s name and URL.</span>
@@ -760,7 +760,7 @@ t AS (
   SELECT table_catalog AS catalog, table_schema AS sch, table_name, table_type, table_owner, created,
          table_catalog || &#x27;.&#x27; || table_schema || &#x27;.&#x27; || table_name AS full_name
   FROM system.information_schema.tables
-  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
+  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(table_catalog, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
 ),
 <span class="c">-- Every read (source) and write (target) of a table over 365 days, from lineage.</span>
 lin AS (
@@ -805,7 +805,7 @@ found AS (
   SELECT catalog_name AS c, schema_name AS s, table_name AS t, column_name,
          COALESCE(NULLIF(tag_value, &#x27;&#x27;), tag_name) AS pii_type, 1 AS rnk
   FROM system.information_schema.column_tags
-  WHERE lower(tag_name) RLIKE &#x27;^(pii|sensitive|gdpr|class[.])&#x27; AND catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  WHERE lower(tag_name) RLIKE &#x27;^(pii|sensitive|gdpr|class[.])&#x27; AND catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(catalog_name, &#x27;__databricks_internal&#x27;)
   UNION ALL
   SELECT table_catalog, table_schema, table_name, column_name,
          CASE
@@ -819,7 +819,7 @@ found AS (
          WHEN lower(column_name) RLIKE &#x27;card_?(no|number|num)|(^|_)pan$&#x27; THEN &#x27;Payment card&#x27;
          END, 2
   FROM system.information_schema.columns
-  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
+  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(table_catalog, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
 ),
 <span class="c">-- One row per sensitive column, the tag winning over the name, and whether a column mask covers it.</span>
 sens_col AS (
@@ -912,7 +912,7 @@ seen AS (
 home AS (
   SELECT c.catalog_name AS catalog, max_by(s.workspace_id, s.events) AS workspace_id
   FROM system.information_schema.catalogs c LEFT JOIN seen s ON s.catalog = c.catalog_name
-  WHERE c.catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  WHERE c.catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(c.catalog_name, &#x27;__databricks_internal&#x27;)
   GROUP BY c.catalog_name
 )</code></pre></details></li><li><code>place</code>: Each catalog with its home workspace&#x27;s name and URL.<details><summary>Its SQL (7 lines)</summary><pre><code><span class="c">-- Each catalog with its home workspace&#x27;s name and URL.</span>
 place AS (
@@ -925,7 +925,7 @@ t AS (
   SELECT table_catalog AS catalog, table_schema AS sch, table_name, table_type, table_owner, created,
          table_catalog || &#x27;.&#x27; || table_schema || &#x27;.&#x27; || table_name AS full_name
   FROM system.information_schema.tables
-  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
+  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(table_catalog, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
 )</code></pre></details></li><li><code>lin</code>: Every read (source) and write (target) of a table over 365 days, from lineage.<details><summary>Its SQL (9 lines)</summary><pre><code><span class="c">-- Every read (source) and write (target) of a table over 365 days, from lineage.</span>
 lin AS (
   SELECT source_table_full_name AS full_name, 1 AS is_read, 0 AS is_write, event_time, lower(created_by) AS who
@@ -965,7 +965,7 @@ found AS (
   SELECT catalog_name AS c, schema_name AS s, table_name AS t, column_name,
          COALESCE(NULLIF(tag_value, &#x27;&#x27;), tag_name) AS pii_type, 1 AS rnk
   FROM system.information_schema.column_tags
-  WHERE lower(tag_name) RLIKE &#x27;^(pii|sensitive|gdpr|class[.])&#x27; AND catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  WHERE lower(tag_name) RLIKE &#x27;^(pii|sensitive|gdpr|class[.])&#x27; AND catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(catalog_name, &#x27;__databricks_internal&#x27;)
   UNION ALL
   SELECT table_catalog, table_schema, table_name, column_name,
          CASE
@@ -979,7 +979,7 @@ found AS (
          WHEN lower(column_name) RLIKE &#x27;card_?(no|number|num)|(^|_)pan$&#x27; THEN &#x27;Payment card&#x27;
          END, 2
   FROM system.information_schema.columns
-  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
+  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(table_catalog, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
 )</code></pre></details></li><li><code>sens_col</code>: One row per sensitive column, the tag winning over the name, and whether a column mask covers it.<details><summary>Its SQL (9 lines)</summary><pre><code><span class="c">-- One row per sensitive column, the tag winning over the name, and whether a column mask covers it.</span>
 sens_col AS (
   SELECT f.c || &#x27;.&#x27; || f.s || &#x27;.&#x27; || f.t AS full_name, f.column_name, f.pii_type, cm.mask_name IS NOT NULL AS masked
@@ -1042,7 +1042,7 @@ seen AS (
 home AS (
   SELECT c.catalog_name AS catalog, max_by(s.workspace_id, s.events) AS workspace_id
   FROM system.information_schema.catalogs c LEFT JOIN seen s ON s.catalog = c.catalog_name
-  WHERE c.catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  WHERE c.catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(c.catalog_name, &#x27;__databricks_internal&#x27;)
   GROUP BY c.catalog_name
 ),
 <span class="c">-- Each catalog with its home workspace&#x27;s name and URL.</span>
@@ -1057,7 +1057,7 @@ t AS (
   SELECT table_catalog AS catalog, table_schema AS sch, table_name, table_type, table_owner, created,
          table_catalog || &#x27;.&#x27; || table_schema || &#x27;.&#x27; || table_name AS full_name
   FROM system.information_schema.tables
-  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
+  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(table_catalog, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
 ),
 <span class="c">-- Every read (source) and write (target) of a table over 365 days, from lineage.</span>
 lin AS (
@@ -1102,7 +1102,7 @@ found AS (
   SELECT catalog_name AS c, schema_name AS s, table_name AS t, column_name,
          COALESCE(NULLIF(tag_value, &#x27;&#x27;), tag_name) AS pii_type, 1 AS rnk
   FROM system.information_schema.column_tags
-  WHERE lower(tag_name) RLIKE &#x27;^(pii|sensitive|gdpr|class[.])&#x27; AND catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  WHERE lower(tag_name) RLIKE &#x27;^(pii|sensitive|gdpr|class[.])&#x27; AND catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(catalog_name, &#x27;__databricks_internal&#x27;)
   UNION ALL
   SELECT table_catalog, table_schema, table_name, column_name,
          CASE
@@ -1116,7 +1116,7 @@ found AS (
          WHEN lower(column_name) RLIKE &#x27;card_?(no|number|num)|(^|_)pan$&#x27; THEN &#x27;Payment card&#x27;
          END, 2
   FROM system.information_schema.columns
-  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
+  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(table_catalog, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
 ),
 <span class="c">-- One row per sensitive column, the tag winning over the name, and whether a column mask covers it.</span>
 sens_col AS (
@@ -1195,7 +1195,7 @@ seen AS (
 home AS (
   SELECT c.catalog_name AS catalog, max_by(s.workspace_id, s.events) AS workspace_id
   FROM system.information_schema.catalogs c LEFT JOIN seen s ON s.catalog = c.catalog_name
-  WHERE c.catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  WHERE c.catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(c.catalog_name, &#x27;__databricks_internal&#x27;)
   GROUP BY c.catalog_name
 )</code></pre></details></li><li><code>place</code>: Each catalog with its home workspace&#x27;s name and URL.<details><summary>Its SQL (7 lines)</summary><pre><code><span class="c">-- Each catalog with its home workspace&#x27;s name and URL.</span>
 place AS (
@@ -1208,7 +1208,7 @@ t AS (
   SELECT table_catalog AS catalog, table_schema AS sch, table_name, table_type, table_owner, created,
          table_catalog || &#x27;.&#x27; || table_schema || &#x27;.&#x27; || table_name AS full_name
   FROM system.information_schema.tables
-  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
+  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(table_catalog, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
 )</code></pre></details></li><li><code>lin</code>: Every read (source) and write (target) of a table over 365 days, from lineage.<details><summary>Its SQL (9 lines)</summary><pre><code><span class="c">-- Every read (source) and write (target) of a table over 365 days, from lineage.</span>
 lin AS (
   SELECT source_table_full_name AS full_name, 1 AS is_read, 0 AS is_write, event_time, lower(created_by) AS who
@@ -1248,7 +1248,7 @@ found AS (
   SELECT catalog_name AS c, schema_name AS s, table_name AS t, column_name,
          COALESCE(NULLIF(tag_value, &#x27;&#x27;), tag_name) AS pii_type, 1 AS rnk
   FROM system.information_schema.column_tags
-  WHERE lower(tag_name) RLIKE &#x27;^(pii|sensitive|gdpr|class[.])&#x27; AND catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  WHERE lower(tag_name) RLIKE &#x27;^(pii|sensitive|gdpr|class[.])&#x27; AND catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(catalog_name, &#x27;__databricks_internal&#x27;)
   UNION ALL
   SELECT table_catalog, table_schema, table_name, column_name,
          CASE
@@ -1262,7 +1262,7 @@ found AS (
          WHEN lower(column_name) RLIKE &#x27;card_?(no|number|num)|(^|_)pan$&#x27; THEN &#x27;Payment card&#x27;
          END, 2
   FROM system.information_schema.columns
-  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
+  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(table_catalog, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
 )</code></pre></details></li><li><code>sens_col</code>: One row per sensitive column, the tag winning over the name, and whether a column mask covers it.<details><summary>Its SQL (9 lines)</summary><pre><code><span class="c">-- One row per sensitive column, the tag winning over the name, and whether a column mask covers it.</span>
 sens_col AS (
   SELECT f.c || &#x27;.&#x27; || f.s || &#x27;.&#x27; || f.t AS full_name, f.column_name, f.pii_type, cm.mask_name IS NOT NULL AS masked
@@ -1325,7 +1325,7 @@ seen AS (
 home AS (
   SELECT c.catalog_name AS catalog, max_by(s.workspace_id, s.events) AS workspace_id
   FROM system.information_schema.catalogs c LEFT JOIN seen s ON s.catalog = c.catalog_name
-  WHERE c.catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  WHERE c.catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(c.catalog_name, &#x27;__databricks_internal&#x27;)
   GROUP BY c.catalog_name
 ),
 <span class="c">-- Each catalog with its home workspace&#x27;s name and URL.</span>
@@ -1340,7 +1340,7 @@ t AS (
   SELECT table_catalog AS catalog, table_schema AS sch, table_name, table_type, table_owner, created,
          table_catalog || &#x27;.&#x27; || table_schema || &#x27;.&#x27; || table_name AS full_name
   FROM system.information_schema.tables
-  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
+  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(table_catalog, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
 ),
 <span class="c">-- Every read (source) and write (target) of a table over 365 days, from lineage.</span>
 lin AS (
@@ -1385,7 +1385,7 @@ found AS (
   SELECT catalog_name AS c, schema_name AS s, table_name AS t, column_name,
          COALESCE(NULLIF(tag_value, &#x27;&#x27;), tag_name) AS pii_type, 1 AS rnk
   FROM system.information_schema.column_tags
-  WHERE lower(tag_name) RLIKE &#x27;^(pii|sensitive|gdpr|class[.])&#x27; AND catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  WHERE lower(tag_name) RLIKE &#x27;^(pii|sensitive|gdpr|class[.])&#x27; AND catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(catalog_name, &#x27;__databricks_internal&#x27;)
   UNION ALL
   SELECT table_catalog, table_schema, table_name, column_name,
          CASE
@@ -1399,7 +1399,7 @@ found AS (
          WHEN lower(column_name) RLIKE &#x27;card_?(no|number|num)|(^|_)pan$&#x27; THEN &#x27;Payment card&#x27;
          END, 2
   FROM system.information_schema.columns
-  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
+  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(table_catalog, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
 ),
 <span class="c">-- One row per sensitive column, the tag winning over the name, and whether a column mask covers it.</span>
 sens_col AS (
@@ -1476,7 +1476,7 @@ seen AS (
 home AS (
   SELECT c.catalog_name AS catalog, max_by(s.workspace_id, s.events) AS workspace_id
   FROM system.information_schema.catalogs c LEFT JOIN seen s ON s.catalog = c.catalog_name
-  WHERE c.catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  WHERE c.catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(c.catalog_name, &#x27;__databricks_internal&#x27;)
   GROUP BY c.catalog_name
 )</code></pre></details></li><li><code>place</code>: Each catalog with its home workspace&#x27;s name and URL.<details><summary>Its SQL (7 lines)</summary><pre><code><span class="c">-- Each catalog with its home workspace&#x27;s name and URL.</span>
 place AS (
@@ -1488,7 +1488,7 @@ place AS (
 v AS (
   SELECT volume_catalog AS catalog, volume_schema AS sch, volume_name, volume_type, created,
          volume_catalog || &#x27;.&#x27; || volume_schema || &#x27;.&#x27; || volume_name AS full_name
-  FROM system.information_schema.volumes WHERE volume_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  FROM system.information_schema.volumes WHERE volume_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(volume_catalog, &#x27;__databricks_internal&#x27;)
 )</code></pre></details></li><li><code>ev</code>: File-system events under /Volumes over 365 days: who, when, read or write.<details><summary>Its SQL (10 lines)</summary><pre><code><span class="c">-- File-system events under /Volumes over 365 days: who, when, read or write.</span>
 ev AS (
   SELECT regexp_extract(COALESCE(request_params[&#x27;path&#x27;], request_params[&#x27;file_path&#x27;], request_params[&#x27;directory_path&#x27;]),
@@ -1546,7 +1546,7 @@ seen AS (
 home AS (
   SELECT c.catalog_name AS catalog, max_by(s.workspace_id, s.events) AS workspace_id
   FROM system.information_schema.catalogs c LEFT JOIN seen s ON s.catalog = c.catalog_name
-  WHERE c.catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  WHERE c.catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(c.catalog_name, &#x27;__databricks_internal&#x27;)
   GROUP BY c.catalog_name
 ),
 <span class="c">-- Each catalog with its home workspace&#x27;s name and URL.</span>
@@ -1560,7 +1560,7 @@ place AS (
 v AS (
   SELECT volume_catalog AS catalog, volume_schema AS sch, volume_name, volume_type, created,
          volume_catalog || &#x27;.&#x27; || volume_schema || &#x27;.&#x27; || volume_name AS full_name
-  FROM system.information_schema.volumes WHERE volume_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  FROM system.information_schema.volumes WHERE volume_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(volume_catalog, &#x27;__databricks_internal&#x27;)
 ),
 <span class="c">-- File-system events under /Volumes over 365 days: who, when, read or write.</span>
 ev AS (
@@ -1655,7 +1655,7 @@ found AS (
   SELECT catalog_name AS c, schema_name AS s, table_name AS t, column_name,
          COALESCE(NULLIF(tag_value, &#x27;&#x27;), tag_name) AS pii_type, 1 AS rnk
   FROM system.information_schema.column_tags
-  WHERE lower(tag_name) RLIKE &#x27;^(pii|sensitive|gdpr|class[.])&#x27; AND catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  WHERE lower(tag_name) RLIKE &#x27;^(pii|sensitive|gdpr|class[.])&#x27; AND catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(catalog_name, &#x27;__databricks_internal&#x27;)
   UNION ALL
   SELECT table_catalog, table_schema, table_name, column_name,
          CASE
@@ -1669,7 +1669,7 @@ found AS (
          WHEN lower(column_name) RLIKE &#x27;card_?(no|number|num)|(^|_)pan$&#x27; THEN &#x27;Payment card&#x27;
          END, 2
   FROM system.information_schema.columns
-  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
+  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(table_catalog, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
 )</code></pre></details></li><li><code>sens_col</code>: One row per sensitive column, and whether a mask covers it.<details><summary>Its SQL (9 lines)</summary><pre><code><span class="c">-- One row per sensitive column, and whether a mask covers it.</span>
 sens_col AS (
   SELECT f.c || &#x27;.&#x27; || f.s || &#x27;.&#x27; || f.t AS full_name, f.column_name, f.pii_type, cm.mask_name IS NOT NULL AS masked
@@ -1702,7 +1702,7 @@ grants AS (
          COUNT(DISTINCT CASE WHEN se.full_name IS NOT NULL THEN p.table_catalog || &#x27;.&#x27; || p.table_schema || &#x27;.&#x27; || p.table_name END) AS sensitive_grants
   FROM system.information_schema.table_privileges p
   LEFT JOIN sens se ON se.full_name = p.table_catalog || &#x27;.&#x27; || p.table_schema || &#x27;.&#x27; || p.table_name
-  WHERE p.privilege_type IN (&#x27;SELECT&#x27;, &#x27;ALL PRIVILEGES&#x27;) AND p.table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  WHERE p.privilege_type IN (&#x27;SELECT&#x27;, &#x27;ALL PRIVILEGES&#x27;) AND p.table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(p.table_catalog, &#x27;__databricks_internal&#x27;)
   GROUP BY 1
 )</code></pre></details></li><li><code>ids</code>: Every workspace and identity seen in any of them.<details><summary>Its SQL (4 lines)</summary><pre><code><span class="c">-- Every workspace and identity seen in any of them.</span>
 ids AS (
@@ -1789,7 +1789,7 @@ found AS (
   SELECT catalog_name AS c, schema_name AS s, table_name AS t, column_name,
          COALESCE(NULLIF(tag_value, &#x27;&#x27;), tag_name) AS pii_type, 1 AS rnk
   FROM system.information_schema.column_tags
-  WHERE lower(tag_name) RLIKE &#x27;^(pii|sensitive|gdpr|class[.])&#x27; AND catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  WHERE lower(tag_name) RLIKE &#x27;^(pii|sensitive|gdpr|class[.])&#x27; AND catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(catalog_name, &#x27;__databricks_internal&#x27;)
   UNION ALL
   SELECT table_catalog, table_schema, table_name, column_name,
          CASE
@@ -1803,7 +1803,7 @@ found AS (
          WHEN lower(column_name) RLIKE &#x27;card_?(no|number|num)|(^|_)pan$&#x27; THEN &#x27;Payment card&#x27;
          END, 2
   FROM system.information_schema.columns
-  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
+  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(table_catalog, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
 ),
 <span class="c">-- One row per sensitive column, and whether a mask covers it.</span>
 sens_col AS (
@@ -1840,7 +1840,7 @@ grants AS (
          COUNT(DISTINCT CASE WHEN se.full_name IS NOT NULL THEN p.table_catalog || &#x27;.&#x27; || p.table_schema || &#x27;.&#x27; || p.table_name END) AS sensitive_grants
   FROM system.information_schema.table_privileges p
   LEFT JOIN sens se ON se.full_name = p.table_catalog || &#x27;.&#x27; || p.table_schema || &#x27;.&#x27; || p.table_name
-  WHERE p.privilege_type IN (&#x27;SELECT&#x27;, &#x27;ALL PRIVILEGES&#x27;) AND p.table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  WHERE p.privilege_type IN (&#x27;SELECT&#x27;, &#x27;ALL PRIVILEGES&#x27;) AND p.table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(p.table_catalog, &#x27;__databricks_internal&#x27;)
   GROUP BY 1
 ),
 <span class="c">-- Every workspace and identity seen in any of them.</span>
@@ -1935,7 +1935,7 @@ found AS (
   SELECT catalog_name AS c, schema_name AS s, table_name AS t, column_name,
          COALESCE(NULLIF(tag_value, &#x27;&#x27;), tag_name) AS pii_type, 1 AS rnk
   FROM system.information_schema.column_tags
-  WHERE lower(tag_name) RLIKE &#x27;^(pii|sensitive|gdpr|class[.])&#x27; AND catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  WHERE lower(tag_name) RLIKE &#x27;^(pii|sensitive|gdpr|class[.])&#x27; AND catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(catalog_name, &#x27;__databricks_internal&#x27;)
   UNION ALL
   SELECT table_catalog, table_schema, table_name, column_name,
          CASE
@@ -1949,7 +1949,7 @@ found AS (
          WHEN lower(column_name) RLIKE &#x27;card_?(no|number|num)|(^|_)pan$&#x27; THEN &#x27;Payment card&#x27;
          END, 2
   FROM system.information_schema.columns
-  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
+  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(table_catalog, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
 )</code></pre></details></li><li><code>sens_col</code>: One row per sensitive column, and whether a mask covers it.<details><summary>Its SQL (9 lines)</summary><pre><code><span class="c">-- One row per sensitive column, and whether a mask covers it.</span>
 sens_col AS (
   SELECT f.c || &#x27;.&#x27; || f.s || &#x27;.&#x27; || f.t AS full_name, f.column_name, f.pii_type, cm.mask_name IS NOT NULL AS masked
@@ -1982,7 +1982,7 @@ grants AS (
          COUNT(DISTINCT CASE WHEN se.full_name IS NOT NULL THEN p.table_catalog || &#x27;.&#x27; || p.table_schema || &#x27;.&#x27; || p.table_name END) AS sensitive_grants
   FROM system.information_schema.table_privileges p
   LEFT JOIN sens se ON se.full_name = p.table_catalog || &#x27;.&#x27; || p.table_schema || &#x27;.&#x27; || p.table_name
-  WHERE p.privilege_type IN (&#x27;SELECT&#x27;, &#x27;ALL PRIVILEGES&#x27;) AND p.table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  WHERE p.privilege_type IN (&#x27;SELECT&#x27;, &#x27;ALL PRIVILEGES&#x27;) AND p.table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(p.table_catalog, &#x27;__databricks_internal&#x27;)
   GROUP BY 1
 )</code></pre></details></li><li><code>ids</code>: Every workspace and identity seen in any of them.<details><summary>Its SQL (4 lines)</summary><pre><code><span class="c">-- Every workspace and identity seen in any of them.</span>
 ids AS (
@@ -2069,7 +2069,7 @@ found AS (
   SELECT catalog_name AS c, schema_name AS s, table_name AS t, column_name,
          COALESCE(NULLIF(tag_value, &#x27;&#x27;), tag_name) AS pii_type, 1 AS rnk
   FROM system.information_schema.column_tags
-  WHERE lower(tag_name) RLIKE &#x27;^(pii|sensitive|gdpr|class[.])&#x27; AND catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  WHERE lower(tag_name) RLIKE &#x27;^(pii|sensitive|gdpr|class[.])&#x27; AND catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(catalog_name, &#x27;__databricks_internal&#x27;)
   UNION ALL
   SELECT table_catalog, table_schema, table_name, column_name,
          CASE
@@ -2083,7 +2083,7 @@ found AS (
          WHEN lower(column_name) RLIKE &#x27;card_?(no|number|num)|(^|_)pan$&#x27; THEN &#x27;Payment card&#x27;
          END, 2
   FROM system.information_schema.columns
-  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
+  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(table_catalog, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
 ),
 <span class="c">-- One row per sensitive column, and whether a mask covers it.</span>
 sens_col AS (
@@ -2120,7 +2120,7 @@ grants AS (
          COUNT(DISTINCT CASE WHEN se.full_name IS NOT NULL THEN p.table_catalog || &#x27;.&#x27; || p.table_schema || &#x27;.&#x27; || p.table_name END) AS sensitive_grants
   FROM system.information_schema.table_privileges p
   LEFT JOIN sens se ON se.full_name = p.table_catalog || &#x27;.&#x27; || p.table_schema || &#x27;.&#x27; || p.table_name
-  WHERE p.privilege_type IN (&#x27;SELECT&#x27;, &#x27;ALL PRIVILEGES&#x27;) AND p.table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  WHERE p.privilege_type IN (&#x27;SELECT&#x27;, &#x27;ALL PRIVILEGES&#x27;) AND p.table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(p.table_catalog, &#x27;__databricks_internal&#x27;)
   GROUP BY 1
 ),
 <span class="c">-- Every workspace and identity seen in any of them.</span>
@@ -2196,7 +2196,7 @@ seen AS (
 home AS (
   SELECT c.catalog_name AS catalog, max_by(s.workspace_id, s.events) AS workspace_id
   FROM system.information_schema.catalogs c LEFT JOIN seen s ON s.catalog = c.catalog_name
-  WHERE c.catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  WHERE c.catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(c.catalog_name, &#x27;__databricks_internal&#x27;)
   GROUP BY c.catalog_name
 )</code></pre></details></li><li><code>place</code>: Each catalog with its home workspace&#x27;s name and URL.<details><summary>Its SQL (7 lines)</summary><pre><code><span class="c">-- Each catalog with its home workspace&#x27;s name and URL.</span>
 place AS (
@@ -2227,7 +2227,7 @@ seen AS (
 home AS (
   SELECT c.catalog_name AS catalog, max_by(s.workspace_id, s.events) AS workspace_id
   FROM system.information_schema.catalogs c LEFT JOIN seen s ON s.catalog = c.catalog_name
-  WHERE c.catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  WHERE c.catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(c.catalog_name, &#x27;__databricks_internal&#x27;)
   GROUP BY c.catalog_name
 ),
 <span class="c">-- Each catalog with its home workspace&#x27;s name and URL.</span>
@@ -2249,7 +2249,7 @@ FROM (
   WHERE event_date &gt;= CAST(:time_range.min AS DATE) AND event_date &lt; date_add(:time_range.max, 1) AND target_table_full_name IS NOT NULL
 ) l
 LEFT JOIN place p ON p.catalog = l.catalog
-WHERE l.catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+WHERE l.catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(l.catalog, &#x27;__databricks_internal&#x27;)
 GROUP BY 1, 2, 3, 4</code></pre></details>
 </div>
 <div class="card" id="7990cb0a">
@@ -2276,7 +2276,7 @@ seen AS (
 home AS (
   SELECT c.catalog_name AS catalog, max_by(s.workspace_id, s.events) AS workspace_id
   FROM system.information_schema.catalogs c LEFT JOIN seen s ON s.catalog = c.catalog_name
-  WHERE c.catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  WHERE c.catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(c.catalog_name, &#x27;__databricks_internal&#x27;)
   GROUP BY c.catalog_name
 )</code></pre></details></li><li><code>place</code>: Each catalog with its home workspace&#x27;s name and URL.<details><summary>Its SQL (7 lines)</summary><pre><code><span class="c">-- Each catalog with its home workspace&#x27;s name and URL.</span>
 place AS (
@@ -2289,7 +2289,7 @@ t AS (
   SELECT table_catalog AS catalog, table_schema AS sch, table_name, table_type, table_owner, created,
          table_catalog || &#x27;.&#x27; || table_schema || &#x27;.&#x27; || table_name AS full_name
   FROM system.information_schema.tables
-  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
+  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(table_catalog, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
 )</code></pre></details></li><li><code>lin</code>: Every read (source) and write (target) of a table over 365 days, from lineage.<details><summary>Its SQL (9 lines)</summary><pre><code><span class="c">-- Every read (source) and write (target) of a table over 365 days, from lineage.</span>
 lin AS (
   SELECT source_table_full_name AS full_name, 1 AS is_read, 0 AS is_write, event_time, lower(created_by) AS who
@@ -2329,7 +2329,7 @@ found AS (
   SELECT catalog_name AS c, schema_name AS s, table_name AS t, column_name,
          COALESCE(NULLIF(tag_value, &#x27;&#x27;), tag_name) AS pii_type, 1 AS rnk
   FROM system.information_schema.column_tags
-  WHERE lower(tag_name) RLIKE &#x27;^(pii|sensitive|gdpr|class[.])&#x27; AND catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  WHERE lower(tag_name) RLIKE &#x27;^(pii|sensitive|gdpr|class[.])&#x27; AND catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(catalog_name, &#x27;__databricks_internal&#x27;)
   UNION ALL
   SELECT table_catalog, table_schema, table_name, column_name,
          CASE
@@ -2343,7 +2343,7 @@ found AS (
          WHEN lower(column_name) RLIKE &#x27;card_?(no|number|num)|(^|_)pan$&#x27; THEN &#x27;Payment card&#x27;
          END, 2
   FROM system.information_schema.columns
-  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
+  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(table_catalog, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
 )</code></pre></details></li><li><code>sens_col</code>: One row per sensitive column, the tag winning over the name, and whether a column mask covers it.<details><summary>Its SQL (9 lines)</summary><pre><code><span class="c">-- One row per sensitive column, the tag winning over the name, and whether a column mask covers it.</span>
 sens_col AS (
   SELECT f.c || &#x27;.&#x27; || f.s || &#x27;.&#x27; || f.t AS full_name, f.column_name, f.pii_type, cm.mask_name IS NOT NULL AS masked
@@ -2390,7 +2390,7 @@ cols AS (
   FROM system.information_schema.columns c
   JOIN system.information_schema.tables t
     ON t.table_catalog = c.table_catalog AND t.table_schema = c.table_schema AND t.table_name = c.table_name
-  WHERE c.table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND c.table_schema &lt;&gt; &#x27;information_schema&#x27;
+  WHERE c.table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(c.table_catalog, &#x27;__databricks_internal&#x27;) AND c.table_schema &lt;&gt; &#x27;information_schema&#x27;
   GROUP BY 1
 )</code></pre></details></li><li><code>vols</code>: Volumes per schema, with files and bytes from the job.<details><summary>Its SQL (10 lines)</summary><pre><code><span class="c">-- Volumes per schema, with files and bytes from the job.</span>
 vols AS (
@@ -2399,7 +2399,7 @@ vols AS (
   FROM system.information_schema.volumes v
   LEFT JOIN main.data_usage.volume_sizes vs
     ON vs.catalog = v.volume_catalog AND vs.schema = v.volume_schema AND vs.volume_name = v.volume_name
-  WHERE v.volume_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  WHERE v.volume_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(v.volume_catalog, &#x27;__databricks_internal&#x27;)
   GROUP BY 1
 )</code></pre></details></li><li><code>sch</code>: Per schema: tables and views, tables by class, bytes, unread bytes, reads, writes, sensitive tables.<details><summary>Its SQL (13 lines)</summary><pre><code><span class="c">-- Per schema: tables and views, tables by class, bytes, unread bytes, reads, writes, sensitive tables.</span>
 sch AS (
@@ -2436,7 +2436,7 @@ seen AS (
 home AS (
   SELECT c.catalog_name AS catalog, max_by(s.workspace_id, s.events) AS workspace_id
   FROM system.information_schema.catalogs c LEFT JOIN seen s ON s.catalog = c.catalog_name
-  WHERE c.catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  WHERE c.catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(c.catalog_name, &#x27;__databricks_internal&#x27;)
   GROUP BY c.catalog_name
 ),
 <span class="c">-- Each catalog with its home workspace&#x27;s name and URL.</span>
@@ -2451,7 +2451,7 @@ t AS (
   SELECT table_catalog AS catalog, table_schema AS sch, table_name, table_type, table_owner, created,
          table_catalog || &#x27;.&#x27; || table_schema || &#x27;.&#x27; || table_name AS full_name
   FROM system.information_schema.tables
-  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
+  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(table_catalog, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
 ),
 <span class="c">-- Every read (source) and write (target) of a table over 365 days, from lineage.</span>
 lin AS (
@@ -2496,7 +2496,7 @@ found AS (
   SELECT catalog_name AS c, schema_name AS s, table_name AS t, column_name,
          COALESCE(NULLIF(tag_value, &#x27;&#x27;), tag_name) AS pii_type, 1 AS rnk
   FROM system.information_schema.column_tags
-  WHERE lower(tag_name) RLIKE &#x27;^(pii|sensitive|gdpr|class[.])&#x27; AND catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  WHERE lower(tag_name) RLIKE &#x27;^(pii|sensitive|gdpr|class[.])&#x27; AND catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(catalog_name, &#x27;__databricks_internal&#x27;)
   UNION ALL
   SELECT table_catalog, table_schema, table_name, column_name,
          CASE
@@ -2510,7 +2510,7 @@ found AS (
          WHEN lower(column_name) RLIKE &#x27;card_?(no|number|num)|(^|_)pan$&#x27; THEN &#x27;Payment card&#x27;
          END, 2
   FROM system.information_schema.columns
-  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
+  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(table_catalog, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
 ),
 <span class="c">-- One row per sensitive column, the tag winning over the name, and whether a column mask covers it.</span>
 sens_col AS (
@@ -2562,7 +2562,7 @@ cols AS (
   FROM system.information_schema.columns c
   JOIN system.information_schema.tables t
     ON t.table_catalog = c.table_catalog AND t.table_schema = c.table_schema AND t.table_name = c.table_name
-  WHERE c.table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND c.table_schema &lt;&gt; &#x27;information_schema&#x27;
+  WHERE c.table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(c.table_catalog, &#x27;__databricks_internal&#x27;) AND c.table_schema &lt;&gt; &#x27;information_schema&#x27;
   GROUP BY 1
 ),
 <span class="c">-- Volumes per schema, with files and bytes from the job.</span>
@@ -2572,7 +2572,7 @@ vols AS (
   FROM system.information_schema.volumes v
   LEFT JOIN main.data_usage.volume_sizes vs
     ON vs.catalog = v.volume_catalog AND vs.schema = v.volume_schema AND vs.volume_name = v.volume_name
-  WHERE v.volume_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  WHERE v.volume_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(v.volume_catalog, &#x27;__databricks_internal&#x27;)
   GROUP BY 1
 ),
 <span class="c">-- Per schema: tables and views, tables by class, bytes, unread bytes, reads, writes, sensitive tables.</span>
@@ -2623,7 +2623,7 @@ seen AS (
 home AS (
   SELECT c.catalog_name AS catalog, max_by(s.workspace_id, s.events) AS workspace_id
   FROM system.information_schema.catalogs c LEFT JOIN seen s ON s.catalog = c.catalog_name
-  WHERE c.catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  WHERE c.catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(c.catalog_name, &#x27;__databricks_internal&#x27;)
   GROUP BY c.catalog_name
 )</code></pre></details></li><li><code>place</code>: Each catalog with its home workspace&#x27;s name and URL.<details><summary>Its SQL (7 lines)</summary><pre><code><span class="c">-- Each catalog with its home workspace&#x27;s name and URL.</span>
 place AS (
@@ -2636,7 +2636,7 @@ t AS (
   SELECT table_catalog AS catalog, table_schema AS sch, table_name, table_type, table_owner, created,
          table_catalog || &#x27;.&#x27; || table_schema || &#x27;.&#x27; || table_name AS full_name
   FROM system.information_schema.tables
-  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
+  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(table_catalog, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
 )</code></pre></details></li><li><code>lin</code>: Every read (source) and write (target) of a table over 365 days, from lineage.<details><summary>Its SQL (9 lines)</summary><pre><code><span class="c">-- Every read (source) and write (target) of a table over 365 days, from lineage.</span>
 lin AS (
   SELECT source_table_full_name AS full_name, 1 AS is_read, 0 AS is_write, event_time, lower(created_by) AS who
@@ -2676,7 +2676,7 @@ found AS (
   SELECT catalog_name AS c, schema_name AS s, table_name AS t, column_name,
          COALESCE(NULLIF(tag_value, &#x27;&#x27;), tag_name) AS pii_type, 1 AS rnk
   FROM system.information_schema.column_tags
-  WHERE lower(tag_name) RLIKE &#x27;^(pii|sensitive|gdpr|class[.])&#x27; AND catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  WHERE lower(tag_name) RLIKE &#x27;^(pii|sensitive|gdpr|class[.])&#x27; AND catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(catalog_name, &#x27;__databricks_internal&#x27;)
   UNION ALL
   SELECT table_catalog, table_schema, table_name, column_name,
          CASE
@@ -2690,7 +2690,7 @@ found AS (
          WHEN lower(column_name) RLIKE &#x27;card_?(no|number|num)|(^|_)pan$&#x27; THEN &#x27;Payment card&#x27;
          END, 2
   FROM system.information_schema.columns
-  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
+  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(table_catalog, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
 )</code></pre></details></li><li><code>sens_col</code>: One row per sensitive column, the tag winning over the name, and whether a column mask covers it.<details><summary>Its SQL (9 lines)</summary><pre><code><span class="c">-- One row per sensitive column, the tag winning over the name, and whether a column mask covers it.</span>
 sens_col AS (
   SELECT f.c || &#x27;.&#x27; || f.s || &#x27;.&#x27; || f.t AS full_name, f.column_name, f.pii_type, cm.mask_name IS NOT NULL AS masked
@@ -2753,7 +2753,7 @@ seen AS (
 home AS (
   SELECT c.catalog_name AS catalog, max_by(s.workspace_id, s.events) AS workspace_id
   FROM system.information_schema.catalogs c LEFT JOIN seen s ON s.catalog = c.catalog_name
-  WHERE c.catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  WHERE c.catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(c.catalog_name, &#x27;__databricks_internal&#x27;)
   GROUP BY c.catalog_name
 ),
 <span class="c">-- Each catalog with its home workspace&#x27;s name and URL.</span>
@@ -2768,7 +2768,7 @@ t AS (
   SELECT table_catalog AS catalog, table_schema AS sch, table_name, table_type, table_owner, created,
          table_catalog || &#x27;.&#x27; || table_schema || &#x27;.&#x27; || table_name AS full_name
   FROM system.information_schema.tables
-  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
+  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(table_catalog, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
 ),
 <span class="c">-- Every read (source) and write (target) of a table over 365 days, from lineage.</span>
 lin AS (
@@ -2813,7 +2813,7 @@ found AS (
   SELECT catalog_name AS c, schema_name AS s, table_name AS t, column_name,
          COALESCE(NULLIF(tag_value, &#x27;&#x27;), tag_name) AS pii_type, 1 AS rnk
   FROM system.information_schema.column_tags
-  WHERE lower(tag_name) RLIKE &#x27;^(pii|sensitive|gdpr|class[.])&#x27; AND catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  WHERE lower(tag_name) RLIKE &#x27;^(pii|sensitive|gdpr|class[.])&#x27; AND catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(catalog_name, &#x27;__databricks_internal&#x27;)
   UNION ALL
   SELECT table_catalog, table_schema, table_name, column_name,
          CASE
@@ -2827,7 +2827,7 @@ found AS (
          WHEN lower(column_name) RLIKE &#x27;card_?(no|number|num)|(^|_)pan$&#x27; THEN &#x27;Payment card&#x27;
          END, 2
   FROM system.information_schema.columns
-  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
+  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(table_catalog, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
 ),
 <span class="c">-- One row per sensitive column, the tag winning over the name, and whether a column mask covers it.</span>
 sens_col AS (
@@ -2909,7 +2909,7 @@ seen AS (
 home AS (
   SELECT c.catalog_name AS catalog, max_by(s.workspace_id, s.events) AS workspace_id
   FROM system.information_schema.catalogs c LEFT JOIN seen s ON s.catalog = c.catalog_name
-  WHERE c.catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  WHERE c.catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(c.catalog_name, &#x27;__databricks_internal&#x27;)
   GROUP BY c.catalog_name
 )</code></pre></details></li><li><code>place</code>: Each catalog with its home workspace&#x27;s name and URL.<details><summary>Its SQL (7 lines)</summary><pre><code><span class="c">-- Each catalog with its home workspace&#x27;s name and URL.</span>
 place AS (
@@ -2922,7 +2922,7 @@ t AS (
   SELECT table_catalog AS catalog, table_schema AS sch, table_name, table_type, table_owner, created,
          table_catalog || &#x27;.&#x27; || table_schema || &#x27;.&#x27; || table_name AS full_name
   FROM system.information_schema.tables
-  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
+  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(table_catalog, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
 )</code></pre></details></li><li><code>lin</code>: Every read (source) and write (target) of a table over 365 days, from lineage.<details><summary>Its SQL (9 lines)</summary><pre><code><span class="c">-- Every read (source) and write (target) of a table over 365 days, from lineage.</span>
 lin AS (
   SELECT source_table_full_name AS full_name, 1 AS is_read, 0 AS is_write, event_time, lower(created_by) AS who
@@ -2962,7 +2962,7 @@ found AS (
   SELECT catalog_name AS c, schema_name AS s, table_name AS t, column_name,
          COALESCE(NULLIF(tag_value, &#x27;&#x27;), tag_name) AS pii_type, 1 AS rnk
   FROM system.information_schema.column_tags
-  WHERE lower(tag_name) RLIKE &#x27;^(pii|sensitive|gdpr|class[.])&#x27; AND catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  WHERE lower(tag_name) RLIKE &#x27;^(pii|sensitive|gdpr|class[.])&#x27; AND catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(catalog_name, &#x27;__databricks_internal&#x27;)
   UNION ALL
   SELECT table_catalog, table_schema, table_name, column_name,
          CASE
@@ -2976,7 +2976,7 @@ found AS (
          WHEN lower(column_name) RLIKE &#x27;card_?(no|number|num)|(^|_)pan$&#x27; THEN &#x27;Payment card&#x27;
          END, 2
   FROM system.information_schema.columns
-  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
+  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(table_catalog, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
 )</code></pre></details></li><li><code>sens_col</code>: One row per sensitive column, the tag winning over the name, and whether a column mask covers it.<details><summary>Its SQL (9 lines)</summary><pre><code><span class="c">-- One row per sensitive column, the tag winning over the name, and whether a column mask covers it.</span>
 sens_col AS (
   SELECT f.c || &#x27;.&#x27; || f.s || &#x27;.&#x27; || f.t AS full_name, f.column_name, f.pii_type, cm.mask_name IS NOT NULL AS masked
@@ -3050,7 +3050,7 @@ seen AS (
 home AS (
   SELECT c.catalog_name AS catalog, max_by(s.workspace_id, s.events) AS workspace_id
   FROM system.information_schema.catalogs c LEFT JOIN seen s ON s.catalog = c.catalog_name
-  WHERE c.catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  WHERE c.catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(c.catalog_name, &#x27;__databricks_internal&#x27;)
   GROUP BY c.catalog_name
 ),
 <span class="c">-- Each catalog with its home workspace&#x27;s name and URL.</span>
@@ -3065,7 +3065,7 @@ t AS (
   SELECT table_catalog AS catalog, table_schema AS sch, table_name, table_type, table_owner, created,
          table_catalog || &#x27;.&#x27; || table_schema || &#x27;.&#x27; || table_name AS full_name
   FROM system.information_schema.tables
-  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
+  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(table_catalog, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
 ),
 <span class="c">-- Every read (source) and write (target) of a table over 365 days, from lineage.</span>
 lin AS (
@@ -3110,7 +3110,7 @@ found AS (
   SELECT catalog_name AS c, schema_name AS s, table_name AS t, column_name,
          COALESCE(NULLIF(tag_value, &#x27;&#x27;), tag_name) AS pii_type, 1 AS rnk
   FROM system.information_schema.column_tags
-  WHERE lower(tag_name) RLIKE &#x27;^(pii|sensitive|gdpr|class[.])&#x27; AND catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  WHERE lower(tag_name) RLIKE &#x27;^(pii|sensitive|gdpr|class[.])&#x27; AND catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(catalog_name, &#x27;__databricks_internal&#x27;)
   UNION ALL
   SELECT table_catalog, table_schema, table_name, column_name,
          CASE
@@ -3124,7 +3124,7 @@ found AS (
          WHEN lower(column_name) RLIKE &#x27;card_?(no|number|num)|(^|_)pan$&#x27; THEN &#x27;Payment card&#x27;
          END, 2
   FROM system.information_schema.columns
-  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
+  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(table_catalog, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
 ),
 <span class="c">-- One row per sensitive column, the tag winning over the name, and whether a column mask covers it.</span>
 sens_col AS (
@@ -3262,7 +3262,7 @@ found AS (
   SELECT catalog_name AS c, schema_name AS s, table_name AS t, column_name,
          COALESCE(NULLIF(tag_value, &#x27;&#x27;), tag_name) AS pii_type, 1 AS rnk
   FROM system.information_schema.column_tags
-  WHERE lower(tag_name) RLIKE &#x27;^(pii|sensitive|gdpr|class[.])&#x27; AND catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  WHERE lower(tag_name) RLIKE &#x27;^(pii|sensitive|gdpr|class[.])&#x27; AND catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(catalog_name, &#x27;__databricks_internal&#x27;)
   UNION ALL
   SELECT table_catalog, table_schema, table_name, column_name,
          CASE
@@ -3276,7 +3276,7 @@ found AS (
          WHEN lower(column_name) RLIKE &#x27;card_?(no|number|num)|(^|_)pan$&#x27; THEN &#x27;Payment card&#x27;
          END, 2
   FROM system.information_schema.columns
-  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
+  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(table_catalog, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
 )</code></pre></details></li><li><code>sens_col</code>: One row per sensitive column, the tag winning over the name, and whether a mask covers it.<details><summary>Its SQL (9 lines)</summary><pre><code><span class="c">-- One row per sensitive column, the tag winning over the name, and whether a mask covers it.</span>
 sens_col AS (
   SELECT f.c || &#x27;.&#x27; || f.s || &#x27;.&#x27; || f.t AS full_name, f.column_name, f.pii_type, cm.mask_name IS NOT NULL AS masked
@@ -3299,7 +3299,7 @@ WITH found AS (
   SELECT catalog_name AS c, schema_name AS s, table_name AS t, column_name,
          COALESCE(NULLIF(tag_value, &#x27;&#x27;), tag_name) AS pii_type, 1 AS rnk
   FROM system.information_schema.column_tags
-  WHERE lower(tag_name) RLIKE &#x27;^(pii|sensitive|gdpr|class[.])&#x27; AND catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  WHERE lower(tag_name) RLIKE &#x27;^(pii|sensitive|gdpr|class[.])&#x27; AND catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(catalog_name, &#x27;__databricks_internal&#x27;)
   UNION ALL
   SELECT table_catalog, table_schema, table_name, column_name,
          CASE
@@ -3313,7 +3313,7 @@ WITH found AS (
          WHEN lower(column_name) RLIKE &#x27;card_?(no|number|num)|(^|_)pan$&#x27; THEN &#x27;Payment card&#x27;
          END, 2
   FROM system.information_schema.columns
-  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
+  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(table_catalog, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
 ),
 <span class="c">-- One row per sensitive column, the tag winning over the name, and whether a mask covers it.</span>
 sens_col AS (
@@ -3360,7 +3360,7 @@ seen AS (
 home AS (
   SELECT c.catalog_name AS catalog, max_by(s.workspace_id, s.events) AS workspace_id
   FROM system.information_schema.catalogs c LEFT JOIN seen s ON s.catalog = c.catalog_name
-  WHERE c.catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  WHERE c.catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(c.catalog_name, &#x27;__databricks_internal&#x27;)
   GROUP BY c.catalog_name
 )</code></pre></details></li><li><code>place</code>: Each catalog with its home workspace&#x27;s name and URL.<details><summary>Its SQL (7 lines)</summary><pre><code><span class="c">-- Each catalog with its home workspace&#x27;s name and URL.</span>
 place AS (
@@ -3373,7 +3373,7 @@ t AS (
   SELECT table_catalog AS catalog, table_schema AS sch, table_name, table_type, table_owner, created,
          table_catalog || &#x27;.&#x27; || table_schema || &#x27;.&#x27; || table_name AS full_name
   FROM system.information_schema.tables
-  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
+  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(table_catalog, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
 )</code></pre></details></li><li><code>lin</code>: Every read (source) and write (target) of a table over 365 days, from lineage.<details><summary>Its SQL (9 lines)</summary><pre><code><span class="c">-- Every read (source) and write (target) of a table over 365 days, from lineage.</span>
 lin AS (
   SELECT source_table_full_name AS full_name, 1 AS is_read, 0 AS is_write, event_time, lower(created_by) AS who
@@ -3413,7 +3413,7 @@ found AS (
   SELECT catalog_name AS c, schema_name AS s, table_name AS t, column_name,
          COALESCE(NULLIF(tag_value, &#x27;&#x27;), tag_name) AS pii_type, 1 AS rnk
   FROM system.information_schema.column_tags
-  WHERE lower(tag_name) RLIKE &#x27;^(pii|sensitive|gdpr|class[.])&#x27; AND catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  WHERE lower(tag_name) RLIKE &#x27;^(pii|sensitive|gdpr|class[.])&#x27; AND catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(catalog_name, &#x27;__databricks_internal&#x27;)
   UNION ALL
   SELECT table_catalog, table_schema, table_name, column_name,
          CASE
@@ -3427,7 +3427,7 @@ found AS (
          WHEN lower(column_name) RLIKE &#x27;card_?(no|number|num)|(^|_)pan$&#x27; THEN &#x27;Payment card&#x27;
          END, 2
   FROM system.information_schema.columns
-  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
+  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(table_catalog, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
 )</code></pre></details></li><li><code>sens_col</code>: One row per sensitive column, the tag winning over the name, and whether a column mask covers it.<details><summary>Its SQL (9 lines)</summary><pre><code><span class="c">-- One row per sensitive column, the tag winning over the name, and whether a column mask covers it.</span>
 sens_col AS (
   SELECT f.c || &#x27;.&#x27; || f.s || &#x27;.&#x27; || f.t AS full_name, f.column_name, f.pii_type, cm.mask_name IS NOT NULL AS masked
@@ -3493,7 +3493,7 @@ seen AS (
 home AS (
   SELECT c.catalog_name AS catalog, max_by(s.workspace_id, s.events) AS workspace_id
   FROM system.information_schema.catalogs c LEFT JOIN seen s ON s.catalog = c.catalog_name
-  WHERE c.catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  WHERE c.catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(c.catalog_name, &#x27;__databricks_internal&#x27;)
   GROUP BY c.catalog_name
 ),
 <span class="c">-- Each catalog with its home workspace&#x27;s name and URL.</span>
@@ -3508,7 +3508,7 @@ t AS (
   SELECT table_catalog AS catalog, table_schema AS sch, table_name, table_type, table_owner, created,
          table_catalog || &#x27;.&#x27; || table_schema || &#x27;.&#x27; || table_name AS full_name
   FROM system.information_schema.tables
-  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
+  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(table_catalog, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
 ),
 <span class="c">-- Every read (source) and write (target) of a table over 365 days, from lineage.</span>
 lin AS (
@@ -3553,7 +3553,7 @@ found AS (
   SELECT catalog_name AS c, schema_name AS s, table_name AS t, column_name,
          COALESCE(NULLIF(tag_value, &#x27;&#x27;), tag_name) AS pii_type, 1 AS rnk
   FROM system.information_schema.column_tags
-  WHERE lower(tag_name) RLIKE &#x27;^(pii|sensitive|gdpr|class[.])&#x27; AND catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  WHERE lower(tag_name) RLIKE &#x27;^(pii|sensitive|gdpr|class[.])&#x27; AND catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(catalog_name, &#x27;__databricks_internal&#x27;)
   UNION ALL
   SELECT table_catalog, table_schema, table_name, column_name,
          CASE
@@ -3567,7 +3567,7 @@ found AS (
          WHEN lower(column_name) RLIKE &#x27;card_?(no|number|num)|(^|_)pan$&#x27; THEN &#x27;Payment card&#x27;
          END, 2
   FROM system.information_schema.columns
-  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
+  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(table_catalog, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
 ),
 <span class="c">-- One row per sensitive column, the tag winning over the name, and whether a column mask covers it.</span>
 sens_col AS (
@@ -3651,7 +3651,7 @@ seen AS (
 home AS (
   SELECT c.catalog_name AS catalog, max_by(s.workspace_id, s.events) AS workspace_id
   FROM system.information_schema.catalogs c LEFT JOIN seen s ON s.catalog = c.catalog_name
-  WHERE c.catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  WHERE c.catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(c.catalog_name, &#x27;__databricks_internal&#x27;)
   GROUP BY c.catalog_name
 )</code></pre></details></li><li><code>place</code>: Each catalog with its home workspace&#x27;s name and URL.<details><summary>Its SQL (7 lines)</summary><pre><code><span class="c">-- Each catalog with its home workspace&#x27;s name and URL.</span>
 place AS (
@@ -3664,7 +3664,7 @@ t AS (
   SELECT table_catalog AS catalog, table_schema AS sch, table_name, table_type, table_owner, created,
          table_catalog || &#x27;.&#x27; || table_schema || &#x27;.&#x27; || table_name AS full_name
   FROM system.information_schema.tables
-  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
+  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(table_catalog, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
 )</code></pre></details></li><li><code>lin</code>: Every read (source) and write (target) of a table over 365 days, from lineage.<details><summary>Its SQL (9 lines)</summary><pre><code><span class="c">-- Every read (source) and write (target) of a table over 365 days, from lineage.</span>
 lin AS (
   SELECT source_table_full_name AS full_name, 1 AS is_read, 0 AS is_write, event_time, lower(created_by) AS who
@@ -3704,7 +3704,7 @@ found AS (
   SELECT catalog_name AS c, schema_name AS s, table_name AS t, column_name,
          COALESCE(NULLIF(tag_value, &#x27;&#x27;), tag_name) AS pii_type, 1 AS rnk
   FROM system.information_schema.column_tags
-  WHERE lower(tag_name) RLIKE &#x27;^(pii|sensitive|gdpr|class[.])&#x27; AND catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  WHERE lower(tag_name) RLIKE &#x27;^(pii|sensitive|gdpr|class[.])&#x27; AND catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(catalog_name, &#x27;__databricks_internal&#x27;)
   UNION ALL
   SELECT table_catalog, table_schema, table_name, column_name,
          CASE
@@ -3718,7 +3718,7 @@ found AS (
          WHEN lower(column_name) RLIKE &#x27;card_?(no|number|num)|(^|_)pan$&#x27; THEN &#x27;Payment card&#x27;
          END, 2
   FROM system.information_schema.columns
-  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
+  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(table_catalog, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
 )</code></pre></details></li><li><code>sens_col</code>: One row per sensitive column, the tag winning over the name, and whether a column mask covers it.<details><summary>Its SQL (9 lines)</summary><pre><code><span class="c">-- One row per sensitive column, the tag winning over the name, and whether a column mask covers it.</span>
 sens_col AS (
   SELECT f.c || &#x27;.&#x27; || f.s || &#x27;.&#x27; || f.t AS full_name, f.column_name, f.pii_type, cm.mask_name IS NOT NULL AS masked
@@ -3896,7 +3896,7 @@ seen AS (
 home AS (
   SELECT c.catalog_name AS catalog, max_by(s.workspace_id, s.events) AS workspace_id
   FROM system.information_schema.catalogs c LEFT JOIN seen s ON s.catalog = c.catalog_name
-  WHERE c.catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  WHERE c.catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(c.catalog_name, &#x27;__databricks_internal&#x27;)
   GROUP BY c.catalog_name
 ),
 <span class="c">-- Each catalog with its home workspace&#x27;s name and URL.</span>
@@ -3911,7 +3911,7 @@ t AS (
   SELECT table_catalog AS catalog, table_schema AS sch, table_name, table_type, table_owner, created,
          table_catalog || &#x27;.&#x27; || table_schema || &#x27;.&#x27; || table_name AS full_name
   FROM system.information_schema.tables
-  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
+  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(table_catalog, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
 ),
 <span class="c">-- Every read (source) and write (target) of a table over 365 days, from lineage.</span>
 lin AS (
@@ -3956,7 +3956,7 @@ found AS (
   SELECT catalog_name AS c, schema_name AS s, table_name AS t, column_name,
          COALESCE(NULLIF(tag_value, &#x27;&#x27;), tag_name) AS pii_type, 1 AS rnk
   FROM system.information_schema.column_tags
-  WHERE lower(tag_name) RLIKE &#x27;^(pii|sensitive|gdpr|class[.])&#x27; AND catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  WHERE lower(tag_name) RLIKE &#x27;^(pii|sensitive|gdpr|class[.])&#x27; AND catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(catalog_name, &#x27;__databricks_internal&#x27;)
   UNION ALL
   SELECT table_catalog, table_schema, table_name, column_name,
          CASE
@@ -3970,7 +3970,7 @@ found AS (
          WHEN lower(column_name) RLIKE &#x27;card_?(no|number|num)|(^|_)pan$&#x27; THEN &#x27;Payment card&#x27;
          END, 2
   FROM system.information_schema.columns
-  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
+  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(table_catalog, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
 ),
 <span class="c">-- One row per sensitive column, the tag winning over the name, and whether a column mask covers it.</span>
 sens_col AS (
@@ -4169,7 +4169,7 @@ seen AS (
 home AS (
   SELECT c.catalog_name AS catalog, max_by(s.workspace_id, s.events) AS workspace_id
   FROM system.information_schema.catalogs c LEFT JOIN seen s ON s.catalog = c.catalog_name
-  WHERE c.catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  WHERE c.catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(c.catalog_name, &#x27;__databricks_internal&#x27;)
   GROUP BY c.catalog_name
 )</code></pre></details></li><li><code>place</code>: Each catalog with its home workspace&#x27;s name and URL.<details><summary>Its SQL (7 lines)</summary><pre><code><span class="c">-- Each catalog with its home workspace&#x27;s name and URL.</span>
 place AS (
@@ -4182,7 +4182,7 @@ t AS (
   SELECT table_catalog AS catalog, table_schema AS sch, table_name, table_type, table_owner, created,
          table_catalog || &#x27;.&#x27; || table_schema || &#x27;.&#x27; || table_name AS full_name
   FROM system.information_schema.tables
-  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
+  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(table_catalog, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
 )</code></pre></details></li><li><code>lin</code>: Every read (source) and write (target) of a table over 365 days, from lineage.<details><summary>Its SQL (9 lines)</summary><pre><code><span class="c">-- Every read (source) and write (target) of a table over 365 days, from lineage.</span>
 lin AS (
   SELECT source_table_full_name AS full_name, 1 AS is_read, 0 AS is_write, event_time, lower(created_by) AS who
@@ -4222,7 +4222,7 @@ found AS (
   SELECT catalog_name AS c, schema_name AS s, table_name AS t, column_name,
          COALESCE(NULLIF(tag_value, &#x27;&#x27;), tag_name) AS pii_type, 1 AS rnk
   FROM system.information_schema.column_tags
-  WHERE lower(tag_name) RLIKE &#x27;^(pii|sensitive|gdpr|class[.])&#x27; AND catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  WHERE lower(tag_name) RLIKE &#x27;^(pii|sensitive|gdpr|class[.])&#x27; AND catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(catalog_name, &#x27;__databricks_internal&#x27;)
   UNION ALL
   SELECT table_catalog, table_schema, table_name, column_name,
          CASE
@@ -4236,7 +4236,7 @@ found AS (
          WHEN lower(column_name) RLIKE &#x27;card_?(no|number|num)|(^|_)pan$&#x27; THEN &#x27;Payment card&#x27;
          END, 2
   FROM system.information_schema.columns
-  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
+  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(table_catalog, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
 )</code></pre></details></li><li><code>sens_col</code>: One row per sensitive column, the tag winning over the name, and whether a column mask covers it.<details><summary>Its SQL (9 lines)</summary><pre><code><span class="c">-- One row per sensitive column, the tag winning over the name, and whether a column mask covers it.</span>
 sens_col AS (
   SELECT f.c || &#x27;.&#x27; || f.s || &#x27;.&#x27; || f.t AS full_name, f.column_name, f.pii_type, cm.mask_name IS NOT NULL AS masked
@@ -4328,7 +4328,7 @@ seen AS (
 home AS (
   SELECT c.catalog_name AS catalog, max_by(s.workspace_id, s.events) AS workspace_id
   FROM system.information_schema.catalogs c LEFT JOIN seen s ON s.catalog = c.catalog_name
-  WHERE c.catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  WHERE c.catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(c.catalog_name, &#x27;__databricks_internal&#x27;)
   GROUP BY c.catalog_name
 ),
 <span class="c">-- Each catalog with its home workspace&#x27;s name and URL.</span>
@@ -4343,7 +4343,7 @@ t AS (
   SELECT table_catalog AS catalog, table_schema AS sch, table_name, table_type, table_owner, created,
          table_catalog || &#x27;.&#x27; || table_schema || &#x27;.&#x27; || table_name AS full_name
   FROM system.information_schema.tables
-  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
+  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(table_catalog, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
 ),
 <span class="c">-- Every read (source) and write (target) of a table over 365 days, from lineage.</span>
 lin AS (
@@ -4388,7 +4388,7 @@ found AS (
   SELECT catalog_name AS c, schema_name AS s, table_name AS t, column_name,
          COALESCE(NULLIF(tag_value, &#x27;&#x27;), tag_name) AS pii_type, 1 AS rnk
   FROM system.information_schema.column_tags
-  WHERE lower(tag_name) RLIKE &#x27;^(pii|sensitive|gdpr|class[.])&#x27; AND catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  WHERE lower(tag_name) RLIKE &#x27;^(pii|sensitive|gdpr|class[.])&#x27; AND catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(catalog_name, &#x27;__databricks_internal&#x27;)
   UNION ALL
   SELECT table_catalog, table_schema, table_name, column_name,
          CASE
@@ -4402,7 +4402,7 @@ found AS (
          WHEN lower(column_name) RLIKE &#x27;card_?(no|number|num)|(^|_)pan$&#x27; THEN &#x27;Payment card&#x27;
          END, 2
   FROM system.information_schema.columns
-  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
+  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(table_catalog, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
 ),
 <span class="c">-- One row per sensitive column, the tag winning over the name, and whether a column mask covers it.</span>
 sens_col AS (
@@ -4505,7 +4505,7 @@ seen AS (
 home AS (
   SELECT c.catalog_name AS catalog, max_by(s.workspace_id, s.events) AS workspace_id
   FROM system.information_schema.catalogs c LEFT JOIN seen s ON s.catalog = c.catalog_name
-  WHERE c.catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  WHERE c.catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(c.catalog_name, &#x27;__databricks_internal&#x27;)
   GROUP BY c.catalog_name
 )</code></pre></details></li><li><code>place</code>: Each catalog with its home workspace&#x27;s name and URL.<details><summary>Its SQL (7 lines)</summary><pre><code><span class="c">-- Each catalog with its home workspace&#x27;s name and URL.</span>
 place AS (
@@ -4518,7 +4518,7 @@ t AS (
   SELECT table_catalog AS catalog, table_schema AS sch, table_name, table_type, table_owner, created,
          table_catalog || &#x27;.&#x27; || table_schema || &#x27;.&#x27; || table_name AS full_name
   FROM system.information_schema.tables
-  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
+  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(table_catalog, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
 )</code></pre></details></li><li><code>lin</code>: Every read (source) and write (target) of a table over 365 days, from lineage.<details><summary>Its SQL (9 lines)</summary><pre><code><span class="c">-- Every read (source) and write (target) of a table over 365 days, from lineage.</span>
 lin AS (
   SELECT source_table_full_name AS full_name, 1 AS is_read, 0 AS is_write, event_time, lower(created_by) AS who
@@ -4558,7 +4558,7 @@ found AS (
   SELECT catalog_name AS c, schema_name AS s, table_name AS t, column_name,
          COALESCE(NULLIF(tag_value, &#x27;&#x27;), tag_name) AS pii_type, 1 AS rnk
   FROM system.information_schema.column_tags
-  WHERE lower(tag_name) RLIKE &#x27;^(pii|sensitive|gdpr|class[.])&#x27; AND catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  WHERE lower(tag_name) RLIKE &#x27;^(pii|sensitive|gdpr|class[.])&#x27; AND catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(catalog_name, &#x27;__databricks_internal&#x27;)
   UNION ALL
   SELECT table_catalog, table_schema, table_name, column_name,
          CASE
@@ -4572,7 +4572,7 @@ found AS (
          WHEN lower(column_name) RLIKE &#x27;card_?(no|number|num)|(^|_)pan$&#x27; THEN &#x27;Payment card&#x27;
          END, 2
   FROM system.information_schema.columns
-  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
+  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(table_catalog, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
 )</code></pre></details></li><li><code>sens_col</code>: One row per sensitive column, the tag winning over the name, and whether a column mask covers it.<details><summary>Its SQL (9 lines)</summary><pre><code><span class="c">-- One row per sensitive column, the tag winning over the name, and whether a column mask covers it.</span>
 sens_col AS (
   SELECT f.c || &#x27;.&#x27; || f.s || &#x27;.&#x27; || f.t AS full_name, f.column_name, f.pii_type, cm.mask_name IS NOT NULL AS masked
@@ -4664,7 +4664,7 @@ seen AS (
 home AS (
   SELECT c.catalog_name AS catalog, max_by(s.workspace_id, s.events) AS workspace_id
   FROM system.information_schema.catalogs c LEFT JOIN seen s ON s.catalog = c.catalog_name
-  WHERE c.catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  WHERE c.catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(c.catalog_name, &#x27;__databricks_internal&#x27;)
   GROUP BY c.catalog_name
 ),
 <span class="c">-- Each catalog with its home workspace&#x27;s name and URL.</span>
@@ -4679,7 +4679,7 @@ t AS (
   SELECT table_catalog AS catalog, table_schema AS sch, table_name, table_type, table_owner, created,
          table_catalog || &#x27;.&#x27; || table_schema || &#x27;.&#x27; || table_name AS full_name
   FROM system.information_schema.tables
-  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
+  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(table_catalog, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
 ),
 <span class="c">-- Every read (source) and write (target) of a table over 365 days, from lineage.</span>
 lin AS (
@@ -4724,7 +4724,7 @@ found AS (
   SELECT catalog_name AS c, schema_name AS s, table_name AS t, column_name,
          COALESCE(NULLIF(tag_value, &#x27;&#x27;), tag_name) AS pii_type, 1 AS rnk
   FROM system.information_schema.column_tags
-  WHERE lower(tag_name) RLIKE &#x27;^(pii|sensitive|gdpr|class[.])&#x27; AND catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  WHERE lower(tag_name) RLIKE &#x27;^(pii|sensitive|gdpr|class[.])&#x27; AND catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(catalog_name, &#x27;__databricks_internal&#x27;)
   UNION ALL
   SELECT table_catalog, table_schema, table_name, column_name,
          CASE
@@ -4738,7 +4738,7 @@ found AS (
          WHEN lower(column_name) RLIKE &#x27;card_?(no|number|num)|(^|_)pan$&#x27; THEN &#x27;Payment card&#x27;
          END, 2
   FROM system.information_schema.columns
-  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
+  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(table_catalog, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
 ),
 <span class="c">-- One row per sensitive column, the tag winning over the name, and whether a column mask covers it.</span>
 sens_col AS (
@@ -4861,7 +4861,7 @@ found AS (
   SELECT catalog_name AS c, schema_name AS s, table_name AS t, column_name,
          COALESCE(NULLIF(tag_value, &#x27;&#x27;), tag_name) AS pii_type, 1 AS rnk
   FROM system.information_schema.column_tags
-  WHERE lower(tag_name) RLIKE &#x27;^(pii|sensitive|gdpr|class[.])&#x27; AND catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  WHERE lower(tag_name) RLIKE &#x27;^(pii|sensitive|gdpr|class[.])&#x27; AND catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(catalog_name, &#x27;__databricks_internal&#x27;)
   UNION ALL
   SELECT table_catalog, table_schema, table_name, column_name,
          CASE
@@ -4875,7 +4875,7 @@ found AS (
          WHEN lower(column_name) RLIKE &#x27;card_?(no|number|num)|(^|_)pan$&#x27; THEN &#x27;Payment card&#x27;
          END, 2
   FROM system.information_schema.columns
-  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
+  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(table_catalog, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
 )</code></pre></details></li><li><code>sens_col</code>: One row per sensitive column, and whether a mask covers it.<details><summary>Its SQL (9 lines)</summary><pre><code><span class="c">-- One row per sensitive column, and whether a mask covers it.</span>
 sens_col AS (
   SELECT f.c || &#x27;.&#x27; || f.s || &#x27;.&#x27; || f.t AS full_name, f.column_name, f.pii_type, cm.mask_name IS NOT NULL AS masked
@@ -4908,7 +4908,7 @@ grants AS (
          COUNT(DISTINCT CASE WHEN se.full_name IS NOT NULL THEN p.table_catalog || &#x27;.&#x27; || p.table_schema || &#x27;.&#x27; || p.table_name END) AS sensitive_grants
   FROM system.information_schema.table_privileges p
   LEFT JOIN sens se ON se.full_name = p.table_catalog || &#x27;.&#x27; || p.table_schema || &#x27;.&#x27; || p.table_name
-  WHERE p.privilege_type IN (&#x27;SELECT&#x27;, &#x27;ALL PRIVILEGES&#x27;) AND p.table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  WHERE p.privilege_type IN (&#x27;SELECT&#x27;, &#x27;ALL PRIVILEGES&#x27;) AND p.table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(p.table_catalog, &#x27;__databricks_internal&#x27;)
   GROUP BY 1
 )</code></pre></details></li><li><code>ids</code>: Every workspace and identity seen in any of them.<details><summary>Its SQL (4 lines)</summary><pre><code><span class="c">-- Every workspace and identity seen in any of them.</span>
 ids AS (
@@ -5007,7 +5007,7 @@ found AS (
   SELECT catalog_name AS c, schema_name AS s, table_name AS t, column_name,
          COALESCE(NULLIF(tag_value, &#x27;&#x27;), tag_name) AS pii_type, 1 AS rnk
   FROM system.information_schema.column_tags
-  WHERE lower(tag_name) RLIKE &#x27;^(pii|sensitive|gdpr|class[.])&#x27; AND catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  WHERE lower(tag_name) RLIKE &#x27;^(pii|sensitive|gdpr|class[.])&#x27; AND catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(catalog_name, &#x27;__databricks_internal&#x27;)
   UNION ALL
   SELECT table_catalog, table_schema, table_name, column_name,
          CASE
@@ -5021,7 +5021,7 @@ found AS (
          WHEN lower(column_name) RLIKE &#x27;card_?(no|number|num)|(^|_)pan$&#x27; THEN &#x27;Payment card&#x27;
          END, 2
   FROM system.information_schema.columns
-  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
+  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(table_catalog, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
 ),
 <span class="c">-- One row per sensitive column, and whether a mask covers it.</span>
 sens_col AS (
@@ -5058,7 +5058,7 @@ grants AS (
          COUNT(DISTINCT CASE WHEN se.full_name IS NOT NULL THEN p.table_catalog || &#x27;.&#x27; || p.table_schema || &#x27;.&#x27; || p.table_name END) AS sensitive_grants
   FROM system.information_schema.table_privileges p
   LEFT JOIN sens se ON se.full_name = p.table_catalog || &#x27;.&#x27; || p.table_schema || &#x27;.&#x27; || p.table_name
-  WHERE p.privilege_type IN (&#x27;SELECT&#x27;, &#x27;ALL PRIVILEGES&#x27;) AND p.table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  WHERE p.privilege_type IN (&#x27;SELECT&#x27;, &#x27;ALL PRIVILEGES&#x27;) AND p.table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(p.table_catalog, &#x27;__databricks_internal&#x27;)
   GROUP BY 1
 ),
 <span class="c">-- Every workspace and identity seen in any of them.</span>
@@ -5163,7 +5163,7 @@ found AS (
   SELECT catalog_name AS c, schema_name AS s, table_name AS t, column_name,
          COALESCE(NULLIF(tag_value, &#x27;&#x27;), tag_name) AS pii_type, 1 AS rnk
   FROM system.information_schema.column_tags
-  WHERE lower(tag_name) RLIKE &#x27;^(pii|sensitive|gdpr|class[.])&#x27; AND catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  WHERE lower(tag_name) RLIKE &#x27;^(pii|sensitive|gdpr|class[.])&#x27; AND catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(catalog_name, &#x27;__databricks_internal&#x27;)
   UNION ALL
   SELECT table_catalog, table_schema, table_name, column_name,
          CASE
@@ -5177,7 +5177,7 @@ found AS (
          WHEN lower(column_name) RLIKE &#x27;card_?(no|number|num)|(^|_)pan$&#x27; THEN &#x27;Payment card&#x27;
          END, 2
   FROM system.information_schema.columns
-  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
+  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(table_catalog, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
 )</code></pre></details></li><li><code>sens_col</code>: One row per sensitive column, and whether a mask covers it.<details><summary>Its SQL (9 lines)</summary><pre><code><span class="c">-- One row per sensitive column, and whether a mask covers it.</span>
 sens_col AS (
   SELECT f.c || &#x27;.&#x27; || f.s || &#x27;.&#x27; || f.t AS full_name, f.column_name, f.pii_type, cm.mask_name IS NOT NULL AS masked
@@ -5210,7 +5210,7 @@ grants AS (
          COUNT(DISTINCT CASE WHEN se.full_name IS NOT NULL THEN p.table_catalog || &#x27;.&#x27; || p.table_schema || &#x27;.&#x27; || p.table_name END) AS sensitive_grants
   FROM system.information_schema.table_privileges p
   LEFT JOIN sens se ON se.full_name = p.table_catalog || &#x27;.&#x27; || p.table_schema || &#x27;.&#x27; || p.table_name
-  WHERE p.privilege_type IN (&#x27;SELECT&#x27;, &#x27;ALL PRIVILEGES&#x27;) AND p.table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  WHERE p.privilege_type IN (&#x27;SELECT&#x27;, &#x27;ALL PRIVILEGES&#x27;) AND p.table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(p.table_catalog, &#x27;__databricks_internal&#x27;)
   GROUP BY 1
 )</code></pre></details></li><li><code>ids</code>: Every workspace and identity seen in any of them.<details><summary>Its SQL (4 lines)</summary><pre><code><span class="c">-- Every workspace and identity seen in any of them.</span>
 ids AS (
@@ -5309,7 +5309,7 @@ found AS (
   SELECT catalog_name AS c, schema_name AS s, table_name AS t, column_name,
          COALESCE(NULLIF(tag_value, &#x27;&#x27;), tag_name) AS pii_type, 1 AS rnk
   FROM system.information_schema.column_tags
-  WHERE lower(tag_name) RLIKE &#x27;^(pii|sensitive|gdpr|class[.])&#x27; AND catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  WHERE lower(tag_name) RLIKE &#x27;^(pii|sensitive|gdpr|class[.])&#x27; AND catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(catalog_name, &#x27;__databricks_internal&#x27;)
   UNION ALL
   SELECT table_catalog, table_schema, table_name, column_name,
          CASE
@@ -5323,7 +5323,7 @@ found AS (
          WHEN lower(column_name) RLIKE &#x27;card_?(no|number|num)|(^|_)pan$&#x27; THEN &#x27;Payment card&#x27;
          END, 2
   FROM system.information_schema.columns
-  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
+  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(table_catalog, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
 ),
 <span class="c">-- One row per sensitive column, and whether a mask covers it.</span>
 sens_col AS (
@@ -5360,7 +5360,7 @@ grants AS (
          COUNT(DISTINCT CASE WHEN se.full_name IS NOT NULL THEN p.table_catalog || &#x27;.&#x27; || p.table_schema || &#x27;.&#x27; || p.table_name END) AS sensitive_grants
   FROM system.information_schema.table_privileges p
   LEFT JOIN sens se ON se.full_name = p.table_catalog || &#x27;.&#x27; || p.table_schema || &#x27;.&#x27; || p.table_name
-  WHERE p.privilege_type IN (&#x27;SELECT&#x27;, &#x27;ALL PRIVILEGES&#x27;) AND p.table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  WHERE p.privilege_type IN (&#x27;SELECT&#x27;, &#x27;ALL PRIVILEGES&#x27;) AND p.table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(p.table_catalog, &#x27;__databricks_internal&#x27;)
   GROUP BY 1
 ),
 <span class="c">-- Every workspace and identity seen in any of them.</span>
@@ -5445,7 +5445,7 @@ seen AS (
 home AS (
   SELECT c.catalog_name AS catalog, max_by(s.workspace_id, s.events) AS workspace_id
   FROM system.information_schema.catalogs c LEFT JOIN seen s ON s.catalog = c.catalog_name
-  WHERE c.catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  WHERE c.catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(c.catalog_name, &#x27;__databricks_internal&#x27;)
   GROUP BY c.catalog_name
 )</code></pre></details></li><li><code>place</code>: Each catalog with its home workspace&#x27;s name and URL.<details><summary>Its SQL (7 lines)</summary><pre><code><span class="c">-- Each catalog with its home workspace&#x27;s name and URL.</span>
 place AS (
@@ -5457,7 +5457,7 @@ place AS (
 v AS (
   SELECT volume_catalog AS catalog, volume_schema AS sch, volume_name, volume_type, created,
          volume_catalog || &#x27;.&#x27; || volume_schema || &#x27;.&#x27; || volume_name AS full_name
-  FROM system.information_schema.volumes WHERE volume_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  FROM system.information_schema.volumes WHERE volume_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(volume_catalog, &#x27;__databricks_internal&#x27;)
 )</code></pre></details></li><li><code>ev</code>: File-system events under /Volumes over 365 days: who, when, read or write.<details><summary>Its SQL (10 lines)</summary><pre><code><span class="c">-- File-system events under /Volumes over 365 days: who, when, read or write.</span>
 ev AS (
   SELECT regexp_extract(COALESCE(request_params[&#x27;path&#x27;], request_params[&#x27;file_path&#x27;], request_params[&#x27;directory_path&#x27;]),
@@ -5531,7 +5531,7 @@ seen AS (
 home AS (
   SELECT c.catalog_name AS catalog, max_by(s.workspace_id, s.events) AS workspace_id
   FROM system.information_schema.catalogs c LEFT JOIN seen s ON s.catalog = c.catalog_name
-  WHERE c.catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  WHERE c.catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(c.catalog_name, &#x27;__databricks_internal&#x27;)
   GROUP BY c.catalog_name
 ),
 <span class="c">-- Each catalog with its home workspace&#x27;s name and URL.</span>
@@ -5545,7 +5545,7 @@ place AS (
 v AS (
   SELECT volume_catalog AS catalog, volume_schema AS sch, volume_name, volume_type, created,
          volume_catalog || &#x27;.&#x27; || volume_schema || &#x27;.&#x27; || volume_name AS full_name
-  FROM system.information_schema.volumes WHERE volume_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  FROM system.information_schema.volumes WHERE volume_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(volume_catalog, &#x27;__databricks_internal&#x27;)
 ),
 <span class="c">-- File-system events under /Volumes over 365 days: who, when, read or write.</span>
 ev AS (
@@ -5630,7 +5630,7 @@ seen AS (
 home AS (
   SELECT c.catalog_name AS catalog, max_by(s.workspace_id, s.events) AS workspace_id
   FROM system.information_schema.catalogs c LEFT JOIN seen s ON s.catalog = c.catalog_name
-  WHERE c.catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  WHERE c.catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(c.catalog_name, &#x27;__databricks_internal&#x27;)
   GROUP BY c.catalog_name
 )</code></pre></details></li><li><code>place</code>: Each catalog with its home workspace&#x27;s name and URL.<details><summary>Its SQL (7 lines)</summary><pre><code><span class="c">-- Each catalog with its home workspace&#x27;s name and URL.</span>
 place AS (
@@ -5651,7 +5651,7 @@ FROM (
   WHERE event_date &gt;= CAST(:time_range.min AS DATE) AND event_date &lt; date_add(:time_range.max, 1) AND target_table_full_name IS NOT NULL
 ) l
 LEFT JOIN place p ON p.catalog = l.catalog
-WHERE l.catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+WHERE l.catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(l.catalog, &#x27;__databricks_internal&#x27;)
 GROUP BY 1, 2, 3, 4
 )</code></pre></details></li><li><code>t</code>: Each workspace&#x27;s tables ranked by events.<details><summary>Its SQL (5 lines)</summary><pre><code><span class="c">-- Each workspace&#x27;s tables ranked by events.</span>
 t AS (
@@ -5680,7 +5680,7 @@ seen AS (
 home AS (
   SELECT c.catalog_name AS catalog, max_by(s.workspace_id, s.events) AS workspace_id
   FROM system.information_schema.catalogs c LEFT JOIN seen s ON s.catalog = c.catalog_name
-  WHERE c.catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  WHERE c.catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(c.catalog_name, &#x27;__databricks_internal&#x27;)
   GROUP BY c.catalog_name
 ),
 <span class="c">-- Each catalog with its home workspace&#x27;s name and URL.</span>
@@ -5703,7 +5703,7 @@ FROM (
   WHERE event_date &gt;= CAST(:time_range.min AS DATE) AND event_date &lt; date_add(:time_range.max, 1) AND target_table_full_name IS NOT NULL
 ) l
 LEFT JOIN place p ON p.catalog = l.catalog
-WHERE l.catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+WHERE l.catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(l.catalog, &#x27;__databricks_internal&#x27;)
 GROUP BY 1, 2, 3, 4
 ),
 <span class="c">-- Each workspace&#x27;s tables ranked by events.</span>
@@ -6040,7 +6040,7 @@ seen AS (
 home AS (
   SELECT c.catalog_name AS catalog, max_by(s.workspace_id, s.events) AS workspace_id
   FROM system.information_schema.catalogs c LEFT JOIN seen s ON s.catalog = c.catalog_name
-  WHERE c.catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  WHERE c.catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(c.catalog_name, &#x27;__databricks_internal&#x27;)
   GROUP BY c.catalog_name
 )</code></pre></details></li><li><code>place</code>: Each catalog with its home workspace&#x27;s name and URL.<details><summary>Its SQL (7 lines)</summary><pre><code><span class="c">-- Each catalog with its home workspace&#x27;s name and URL.</span>
 place AS (
@@ -6053,7 +6053,7 @@ t AS (
   SELECT table_catalog AS catalog, table_schema AS sch, table_name, table_type, table_owner, created,
          table_catalog || &#x27;.&#x27; || table_schema || &#x27;.&#x27; || table_name AS full_name
   FROM system.information_schema.tables
-  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
+  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(table_catalog, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
 )</code></pre></details></li><li><code>lin</code>: Every read (source) and write (target) of a table over 365 days, from lineage.<details><summary>Its SQL (9 lines)</summary><pre><code><span class="c">-- Every read (source) and write (target) of a table over 365 days, from lineage.</span>
 lin AS (
   SELECT source_table_full_name AS full_name, 1 AS is_read, 0 AS is_write, event_time, lower(created_by) AS who
@@ -6093,7 +6093,7 @@ found AS (
   SELECT catalog_name AS c, schema_name AS s, table_name AS t, column_name,
          COALESCE(NULLIF(tag_value, &#x27;&#x27;), tag_name) AS pii_type, 1 AS rnk
   FROM system.information_schema.column_tags
-  WHERE lower(tag_name) RLIKE &#x27;^(pii|sensitive|gdpr|class[.])&#x27; AND catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  WHERE lower(tag_name) RLIKE &#x27;^(pii|sensitive|gdpr|class[.])&#x27; AND catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(catalog_name, &#x27;__databricks_internal&#x27;)
   UNION ALL
   SELECT table_catalog, table_schema, table_name, column_name,
          CASE
@@ -6107,7 +6107,7 @@ found AS (
          WHEN lower(column_name) RLIKE &#x27;card_?(no|number|num)|(^|_)pan$&#x27; THEN &#x27;Payment card&#x27;
          END, 2
   FROM system.information_schema.columns
-  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
+  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(table_catalog, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
 )</code></pre></details></li><li><code>sens_col</code>: One row per sensitive column, the tag winning over the name, and whether a column mask covers it.<details><summary>Its SQL (9 lines)</summary><pre><code><span class="c">-- One row per sensitive column, the tag winning over the name, and whether a column mask covers it.</span>
 sens_col AS (
   SELECT f.c || &#x27;.&#x27; || f.s || &#x27;.&#x27; || f.t AS full_name, f.column_name, f.pii_type, cm.mask_name IS NOT NULL AS masked
@@ -6188,7 +6188,7 @@ seen AS (
 home AS (
   SELECT c.catalog_name AS catalog, max_by(s.workspace_id, s.events) AS workspace_id
   FROM system.information_schema.catalogs c LEFT JOIN seen s ON s.catalog = c.catalog_name
-  WHERE c.catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  WHERE c.catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(c.catalog_name, &#x27;__databricks_internal&#x27;)
   GROUP BY c.catalog_name
 ),
 <span class="c">-- Each catalog with its home workspace&#x27;s name and URL.</span>
@@ -6203,7 +6203,7 @@ t AS (
   SELECT table_catalog AS catalog, table_schema AS sch, table_name, table_type, table_owner, created,
          table_catalog || &#x27;.&#x27; || table_schema || &#x27;.&#x27; || table_name AS full_name
   FROM system.information_schema.tables
-  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
+  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(table_catalog, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
 ),
 <span class="c">-- Every read (source) and write (target) of a table over 365 days, from lineage.</span>
 lin AS (
@@ -6248,7 +6248,7 @@ found AS (
   SELECT catalog_name AS c, schema_name AS s, table_name AS t, column_name,
          COALESCE(NULLIF(tag_value, &#x27;&#x27;), tag_name) AS pii_type, 1 AS rnk
   FROM system.information_schema.column_tags
-  WHERE lower(tag_name) RLIKE &#x27;^(pii|sensitive|gdpr|class[.])&#x27; AND catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  WHERE lower(tag_name) RLIKE &#x27;^(pii|sensitive|gdpr|class[.])&#x27; AND catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(catalog_name, &#x27;__databricks_internal&#x27;)
   UNION ALL
   SELECT table_catalog, table_schema, table_name, column_name,
          CASE
@@ -6262,7 +6262,7 @@ found AS (
          WHEN lower(column_name) RLIKE &#x27;card_?(no|number|num)|(^|_)pan$&#x27; THEN &#x27;Payment card&#x27;
          END, 2
   FROM system.information_schema.columns
-  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
+  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(table_catalog, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
 ),
 <span class="c">-- One row per sensitive column, the tag winning over the name, and whether a column mask covers it.</span>
 sens_col AS (
@@ -6354,7 +6354,7 @@ seen AS (
 home AS (
   SELECT c.catalog_name AS catalog, max_by(s.workspace_id, s.events) AS workspace_id
   FROM system.information_schema.catalogs c LEFT JOIN seen s ON s.catalog = c.catalog_name
-  WHERE c.catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  WHERE c.catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(c.catalog_name, &#x27;__databricks_internal&#x27;)
   GROUP BY c.catalog_name
 )</code></pre></details></li><li><code>place</code>: Each catalog with its home workspace&#x27;s name and URL.<details><summary>Its SQL (7 lines)</summary><pre><code><span class="c">-- Each catalog with its home workspace&#x27;s name and URL.</span>
 place AS (
@@ -6367,7 +6367,7 @@ t AS (
   SELECT table_catalog AS catalog, table_schema AS sch, table_name, table_type, table_owner, created,
          table_catalog || &#x27;.&#x27; || table_schema || &#x27;.&#x27; || table_name AS full_name
   FROM system.information_schema.tables
-  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
+  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(table_catalog, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
 )</code></pre></details></li><li><code>lin</code>: Every read (source) and write (target) of a table over 365 days, from lineage.<details><summary>Its SQL (9 lines)</summary><pre><code><span class="c">-- Every read (source) and write (target) of a table over 365 days, from lineage.</span>
 lin AS (
   SELECT source_table_full_name AS full_name, 1 AS is_read, 0 AS is_write, event_time, lower(created_by) AS who
@@ -6407,7 +6407,7 @@ found AS (
   SELECT catalog_name AS c, schema_name AS s, table_name AS t, column_name,
          COALESCE(NULLIF(tag_value, &#x27;&#x27;), tag_name) AS pii_type, 1 AS rnk
   FROM system.information_schema.column_tags
-  WHERE lower(tag_name) RLIKE &#x27;^(pii|sensitive|gdpr|class[.])&#x27; AND catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  WHERE lower(tag_name) RLIKE &#x27;^(pii|sensitive|gdpr|class[.])&#x27; AND catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(catalog_name, &#x27;__databricks_internal&#x27;)
   UNION ALL
   SELECT table_catalog, table_schema, table_name, column_name,
          CASE
@@ -6421,7 +6421,7 @@ found AS (
          WHEN lower(column_name) RLIKE &#x27;card_?(no|number|num)|(^|_)pan$&#x27; THEN &#x27;Payment card&#x27;
          END, 2
   FROM system.information_schema.columns
-  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
+  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(table_catalog, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
 )</code></pre></details></li><li><code>sens_col</code>: One row per sensitive column, the tag winning over the name, and whether a column mask covers it.<details><summary>Its SQL (9 lines)</summary><pre><code><span class="c">-- One row per sensitive column, the tag winning over the name, and whether a column mask covers it.</span>
 sens_col AS (
   SELECT f.c || &#x27;.&#x27; || f.s || &#x27;.&#x27; || f.t AS full_name, f.column_name, f.pii_type, cm.mask_name IS NOT NULL AS masked
@@ -6502,7 +6502,7 @@ seen AS (
 home AS (
   SELECT c.catalog_name AS catalog, max_by(s.workspace_id, s.events) AS workspace_id
   FROM system.information_schema.catalogs c LEFT JOIN seen s ON s.catalog = c.catalog_name
-  WHERE c.catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  WHERE c.catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(c.catalog_name, &#x27;__databricks_internal&#x27;)
   GROUP BY c.catalog_name
 ),
 <span class="c">-- Each catalog with its home workspace&#x27;s name and URL.</span>
@@ -6517,7 +6517,7 @@ t AS (
   SELECT table_catalog AS catalog, table_schema AS sch, table_name, table_type, table_owner, created,
          table_catalog || &#x27;.&#x27; || table_schema || &#x27;.&#x27; || table_name AS full_name
   FROM system.information_schema.tables
-  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
+  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(table_catalog, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
 ),
 <span class="c">-- Every read (source) and write (target) of a table over 365 days, from lineage.</span>
 lin AS (
@@ -6562,7 +6562,7 @@ found AS (
   SELECT catalog_name AS c, schema_name AS s, table_name AS t, column_name,
          COALESCE(NULLIF(tag_value, &#x27;&#x27;), tag_name) AS pii_type, 1 AS rnk
   FROM system.information_schema.column_tags
-  WHERE lower(tag_name) RLIKE &#x27;^(pii|sensitive|gdpr|class[.])&#x27; AND catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  WHERE lower(tag_name) RLIKE &#x27;^(pii|sensitive|gdpr|class[.])&#x27; AND catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(catalog_name, &#x27;__databricks_internal&#x27;)
   UNION ALL
   SELECT table_catalog, table_schema, table_name, column_name,
          CASE
@@ -6576,7 +6576,7 @@ found AS (
          WHEN lower(column_name) RLIKE &#x27;card_?(no|number|num)|(^|_)pan$&#x27; THEN &#x27;Payment card&#x27;
          END, 2
   FROM system.information_schema.columns
-  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
+  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(table_catalog, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
 ),
 <span class="c">-- One row per sensitive column, the tag winning over the name, and whether a column mask covers it.</span>
 sens_col AS (
@@ -6668,7 +6668,7 @@ seen AS (
 home AS (
   SELECT c.catalog_name AS catalog, max_by(s.workspace_id, s.events) AS workspace_id
   FROM system.information_schema.catalogs c LEFT JOIN seen s ON s.catalog = c.catalog_name
-  WHERE c.catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  WHERE c.catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(c.catalog_name, &#x27;__databricks_internal&#x27;)
   GROUP BY c.catalog_name
 )</code></pre></details></li><li><code>place</code>: Each catalog with its home workspace&#x27;s name and URL.<details><summary>Its SQL (7 lines)</summary><pre><code><span class="c">-- Each catalog with its home workspace&#x27;s name and URL.</span>
 place AS (
@@ -6681,7 +6681,7 @@ t AS (
   SELECT table_catalog AS catalog, table_schema AS sch, table_name, table_type, table_owner, created,
          table_catalog || &#x27;.&#x27; || table_schema || &#x27;.&#x27; || table_name AS full_name
   FROM system.information_schema.tables
-  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
+  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(table_catalog, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
 )</code></pre></details></li><li><code>lin</code>: Every read (source) and write (target) of a table over 365 days, from lineage.<details><summary>Its SQL (9 lines)</summary><pre><code><span class="c">-- Every read (source) and write (target) of a table over 365 days, from lineage.</span>
 lin AS (
   SELECT source_table_full_name AS full_name, 1 AS is_read, 0 AS is_write, event_time, lower(created_by) AS who
@@ -6721,7 +6721,7 @@ found AS (
   SELECT catalog_name AS c, schema_name AS s, table_name AS t, column_name,
          COALESCE(NULLIF(tag_value, &#x27;&#x27;), tag_name) AS pii_type, 1 AS rnk
   FROM system.information_schema.column_tags
-  WHERE lower(tag_name) RLIKE &#x27;^(pii|sensitive|gdpr|class[.])&#x27; AND catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  WHERE lower(tag_name) RLIKE &#x27;^(pii|sensitive|gdpr|class[.])&#x27; AND catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(catalog_name, &#x27;__databricks_internal&#x27;)
   UNION ALL
   SELECT table_catalog, table_schema, table_name, column_name,
          CASE
@@ -6735,7 +6735,7 @@ found AS (
          WHEN lower(column_name) RLIKE &#x27;card_?(no|number|num)|(^|_)pan$&#x27; THEN &#x27;Payment card&#x27;
          END, 2
   FROM system.information_schema.columns
-  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
+  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(table_catalog, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
 )</code></pre></details></li><li><code>sens_col</code>: One row per sensitive column, the tag winning over the name, and whether a column mask covers it.<details><summary>Its SQL (9 lines)</summary><pre><code><span class="c">-- One row per sensitive column, the tag winning over the name, and whether a column mask covers it.</span>
 sens_col AS (
   SELECT f.c || &#x27;.&#x27; || f.s || &#x27;.&#x27; || f.t AS full_name, f.column_name, f.pii_type, cm.mask_name IS NOT NULL AS masked
@@ -6827,7 +6827,7 @@ seen AS (
 home AS (
   SELECT c.catalog_name AS catalog, max_by(s.workspace_id, s.events) AS workspace_id
   FROM system.information_schema.catalogs c LEFT JOIN seen s ON s.catalog = c.catalog_name
-  WHERE c.catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  WHERE c.catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(c.catalog_name, &#x27;__databricks_internal&#x27;)
   GROUP BY c.catalog_name
 ),
 <span class="c">-- Each catalog with its home workspace&#x27;s name and URL.</span>
@@ -6842,7 +6842,7 @@ t AS (
   SELECT table_catalog AS catalog, table_schema AS sch, table_name, table_type, table_owner, created,
          table_catalog || &#x27;.&#x27; || table_schema || &#x27;.&#x27; || table_name AS full_name
   FROM system.information_schema.tables
-  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
+  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(table_catalog, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
 ),
 <span class="c">-- Every read (source) and write (target) of a table over 365 days, from lineage.</span>
 lin AS (
@@ -6887,7 +6887,7 @@ found AS (
   SELECT catalog_name AS c, schema_name AS s, table_name AS t, column_name,
          COALESCE(NULLIF(tag_value, &#x27;&#x27;), tag_name) AS pii_type, 1 AS rnk
   FROM system.information_schema.column_tags
-  WHERE lower(tag_name) RLIKE &#x27;^(pii|sensitive|gdpr|class[.])&#x27; AND catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  WHERE lower(tag_name) RLIKE &#x27;^(pii|sensitive|gdpr|class[.])&#x27; AND catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(catalog_name, &#x27;__databricks_internal&#x27;)
   UNION ALL
   SELECT table_catalog, table_schema, table_name, column_name,
          CASE
@@ -6901,7 +6901,7 @@ found AS (
          WHEN lower(column_name) RLIKE &#x27;card_?(no|number|num)|(^|_)pan$&#x27; THEN &#x27;Payment card&#x27;
          END, 2
   FROM system.information_schema.columns
-  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
+  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(table_catalog, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
 ),
 <span class="c">-- One row per sensitive column, the tag winning over the name, and whether a column mask covers it.</span>
 sens_col AS (
@@ -7011,7 +7011,7 @@ seen AS (
 home AS (
   SELECT c.catalog_name AS catalog, max_by(s.workspace_id, s.events) AS workspace_id
   FROM system.information_schema.catalogs c LEFT JOIN seen s ON s.catalog = c.catalog_name
-  WHERE c.catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  WHERE c.catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(c.catalog_name, &#x27;__databricks_internal&#x27;)
   GROUP BY c.catalog_name
 )</code></pre></details></li><li><code>place</code>: Each catalog with its home workspace&#x27;s name and URL.<details><summary>Its SQL (7 lines)</summary><pre><code><span class="c">-- Each catalog with its home workspace&#x27;s name and URL.</span>
 place AS (
@@ -7024,7 +7024,7 @@ t AS (
   SELECT table_catalog AS catalog, table_schema AS sch, table_name, table_type, table_owner, created,
          table_catalog || &#x27;.&#x27; || table_schema || &#x27;.&#x27; || table_name AS full_name
   FROM system.information_schema.tables
-  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
+  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(table_catalog, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
 )</code></pre></details></li><li><code>lin</code>: Every read (source) and write (target) of a table over 365 days, from lineage.<details><summary>Its SQL (9 lines)</summary><pre><code><span class="c">-- Every read (source) and write (target) of a table over 365 days, from lineage.</span>
 lin AS (
   SELECT source_table_full_name AS full_name, 1 AS is_read, 0 AS is_write, event_time, lower(created_by) AS who
@@ -7064,7 +7064,7 @@ found AS (
   SELECT catalog_name AS c, schema_name AS s, table_name AS t, column_name,
          COALESCE(NULLIF(tag_value, &#x27;&#x27;), tag_name) AS pii_type, 1 AS rnk
   FROM system.information_schema.column_tags
-  WHERE lower(tag_name) RLIKE &#x27;^(pii|sensitive|gdpr|class[.])&#x27; AND catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  WHERE lower(tag_name) RLIKE &#x27;^(pii|sensitive|gdpr|class[.])&#x27; AND catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(catalog_name, &#x27;__databricks_internal&#x27;)
   UNION ALL
   SELECT table_catalog, table_schema, table_name, column_name,
          CASE
@@ -7078,7 +7078,7 @@ found AS (
          WHEN lower(column_name) RLIKE &#x27;card_?(no|number|num)|(^|_)pan$&#x27; THEN &#x27;Payment card&#x27;
          END, 2
   FROM system.information_schema.columns
-  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
+  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(table_catalog, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
 )</code></pre></details></li><li><code>sens_col</code>: One row per sensitive column, the tag winning over the name, and whether a column mask covers it.<details><summary>Its SQL (9 lines)</summary><pre><code><span class="c">-- One row per sensitive column, the tag winning over the name, and whether a column mask covers it.</span>
 sens_col AS (
   SELECT f.c || &#x27;.&#x27; || f.s || &#x27;.&#x27; || f.t AS full_name, f.column_name, f.pii_type, cm.mask_name IS NOT NULL AS masked
@@ -7182,7 +7182,7 @@ seen AS (
 home AS (
   SELECT c.catalog_name AS catalog, max_by(s.workspace_id, s.events) AS workspace_id
   FROM system.information_schema.catalogs c LEFT JOIN seen s ON s.catalog = c.catalog_name
-  WHERE c.catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  WHERE c.catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(c.catalog_name, &#x27;__databricks_internal&#x27;)
   GROUP BY c.catalog_name
 ),
 <span class="c">-- Each catalog with its home workspace&#x27;s name and URL.</span>
@@ -7197,7 +7197,7 @@ t AS (
   SELECT table_catalog AS catalog, table_schema AS sch, table_name, table_type, table_owner, created,
          table_catalog || &#x27;.&#x27; || table_schema || &#x27;.&#x27; || table_name AS full_name
   FROM system.information_schema.tables
-  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
+  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(table_catalog, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
 ),
 <span class="c">-- Every read (source) and write (target) of a table over 365 days, from lineage.</span>
 lin AS (
@@ -7242,7 +7242,7 @@ found AS (
   SELECT catalog_name AS c, schema_name AS s, table_name AS t, column_name,
          COALESCE(NULLIF(tag_value, &#x27;&#x27;), tag_name) AS pii_type, 1 AS rnk
   FROM system.information_schema.column_tags
-  WHERE lower(tag_name) RLIKE &#x27;^(pii|sensitive|gdpr|class[.])&#x27; AND catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  WHERE lower(tag_name) RLIKE &#x27;^(pii|sensitive|gdpr|class[.])&#x27; AND catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(catalog_name, &#x27;__databricks_internal&#x27;)
   UNION ALL
   SELECT table_catalog, table_schema, table_name, column_name,
          CASE
@@ -7256,7 +7256,7 @@ found AS (
          WHEN lower(column_name) RLIKE &#x27;card_?(no|number|num)|(^|_)pan$&#x27; THEN &#x27;Payment card&#x27;
          END, 2
   FROM system.information_schema.columns
-  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
+  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(table_catalog, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
 ),
 <span class="c">-- One row per sensitive column, the tag winning over the name, and whether a column mask covers it.</span>
 sens_col AS (
@@ -7374,7 +7374,7 @@ seen AS (
 home AS (
   SELECT c.catalog_name AS catalog, max_by(s.workspace_id, s.events) AS workspace_id
   FROM system.information_schema.catalogs c LEFT JOIN seen s ON s.catalog = c.catalog_name
-  WHERE c.catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  WHERE c.catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(c.catalog_name, &#x27;__databricks_internal&#x27;)
   GROUP BY c.catalog_name
 )</code></pre></details></li><li><code>place</code>: Each catalog with its home workspace&#x27;s name and URL.<details><summary>Its SQL (7 lines)</summary><pre><code><span class="c">-- Each catalog with its home workspace&#x27;s name and URL.</span>
 place AS (
@@ -7387,7 +7387,7 @@ t AS (
   SELECT table_catalog AS catalog, table_schema AS sch, table_name, table_type, table_owner, created,
          table_catalog || &#x27;.&#x27; || table_schema || &#x27;.&#x27; || table_name AS full_name
   FROM system.information_schema.tables
-  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
+  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(table_catalog, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
 )</code></pre></details></li><li><code>lin</code>: Every read (source) and write (target) of a table over 365 days, from lineage.<details><summary>Its SQL (9 lines)</summary><pre><code><span class="c">-- Every read (source) and write (target) of a table over 365 days, from lineage.</span>
 lin AS (
   SELECT source_table_full_name AS full_name, 1 AS is_read, 0 AS is_write, event_time, lower(created_by) AS who
@@ -7427,7 +7427,7 @@ found AS (
   SELECT catalog_name AS c, schema_name AS s, table_name AS t, column_name,
          COALESCE(NULLIF(tag_value, &#x27;&#x27;), tag_name) AS pii_type, 1 AS rnk
   FROM system.information_schema.column_tags
-  WHERE lower(tag_name) RLIKE &#x27;^(pii|sensitive|gdpr|class[.])&#x27; AND catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  WHERE lower(tag_name) RLIKE &#x27;^(pii|sensitive|gdpr|class[.])&#x27; AND catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(catalog_name, &#x27;__databricks_internal&#x27;)
   UNION ALL
   SELECT table_catalog, table_schema, table_name, column_name,
          CASE
@@ -7441,7 +7441,7 @@ found AS (
          WHEN lower(column_name) RLIKE &#x27;card_?(no|number|num)|(^|_)pan$&#x27; THEN &#x27;Payment card&#x27;
          END, 2
   FROM system.information_schema.columns
-  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
+  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(table_catalog, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
 )</code></pre></details></li><li><code>sens_col</code>: One row per sensitive column, the tag winning over the name, and whether a column mask covers it.<details><summary>Its SQL (9 lines)</summary><pre><code><span class="c">-- One row per sensitive column, the tag winning over the name, and whether a column mask covers it.</span>
 sens_col AS (
   SELECT f.c || &#x27;.&#x27; || f.s || &#x27;.&#x27; || f.t AS full_name, f.column_name, f.pii_type, cm.mask_name IS NOT NULL AS masked
@@ -7545,7 +7545,7 @@ seen AS (
 home AS (
   SELECT c.catalog_name AS catalog, max_by(s.workspace_id, s.events) AS workspace_id
   FROM system.information_schema.catalogs c LEFT JOIN seen s ON s.catalog = c.catalog_name
-  WHERE c.catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  WHERE c.catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(c.catalog_name, &#x27;__databricks_internal&#x27;)
   GROUP BY c.catalog_name
 ),
 <span class="c">-- Each catalog with its home workspace&#x27;s name and URL.</span>
@@ -7560,7 +7560,7 @@ t AS (
   SELECT table_catalog AS catalog, table_schema AS sch, table_name, table_type, table_owner, created,
          table_catalog || &#x27;.&#x27; || table_schema || &#x27;.&#x27; || table_name AS full_name
   FROM system.information_schema.tables
-  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
+  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(table_catalog, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
 ),
 <span class="c">-- Every read (source) and write (target) of a table over 365 days, from lineage.</span>
 lin AS (
@@ -7605,7 +7605,7 @@ found AS (
   SELECT catalog_name AS c, schema_name AS s, table_name AS t, column_name,
          COALESCE(NULLIF(tag_value, &#x27;&#x27;), tag_name) AS pii_type, 1 AS rnk
   FROM system.information_schema.column_tags
-  WHERE lower(tag_name) RLIKE &#x27;^(pii|sensitive|gdpr|class[.])&#x27; AND catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;)
+  WHERE lower(tag_name) RLIKE &#x27;^(pii|sensitive|gdpr|class[.])&#x27; AND catalog_name NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(catalog_name, &#x27;__databricks_internal&#x27;)
   UNION ALL
   SELECT table_catalog, table_schema, table_name, column_name,
          CASE
@@ -7619,7 +7619,7 @@ found AS (
          WHEN lower(column_name) RLIKE &#x27;card_?(no|number|num)|(^|_)pan$&#x27; THEN &#x27;Payment card&#x27;
          END, 2
   FROM system.information_schema.columns
-  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
+  WHERE table_catalog NOT IN (&#x27;system&#x27;, &#x27;samples&#x27;, &#x27;__databricks_internal&#x27;) AND NOT startswith(table_catalog, &#x27;__databricks_internal&#x27;) AND table_schema &lt;&gt; &#x27;information_schema&#x27;
 ),
 <span class="c">-- One row per sensitive column, the tag winning over the name, and whether a column mask covers it.</span>
 sens_col AS (

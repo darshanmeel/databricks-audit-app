@@ -25,7 +25,7 @@ cap = int(dbutils.widgets.get("max_entries_per_volume"))
 now = datetime.datetime.utcnow()
 cats = [c.strip() for c in dbutils.widgets.get("catalogs").split(",") if c.strip()] or [
     r.catalog_name for r in spark.sql("SELECT catalog_name FROM system.information_schema.catalogs "
-                                      "WHERE catalog_name NOT IN ('system', 'samples', '__databricks_internal')").collect()]
+                                      "WHERE catalog_name NOT IN ('system', 'samples', '__databricks_internal') AND NOT startswith(catalog_name, '__databricks_internal')").collect()]
 q = lambda s: "`" + s.replace("`", "``") + "`"
 print(f"{len(cats)} catalogs")
 

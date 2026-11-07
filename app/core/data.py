@@ -1799,6 +1799,8 @@ def _table_classes(con, have, window: int, end) -> dict[str, dict]:
     for name in acc:
         out.setdefault(name, {"table_type": None, "size_in_bytes": None, "num_files": None, "detail": None,
                               "created": None, "owner": None})
+    # system, sample and Databricks' own internal catalogs are not the customer's tables
+    out = {n: t for n, t in out.items() if not usage.skipped_catalog(n.split(".")[0])}
     blank = {"last_read": None, "last_write": None, "reads": 0, "writes": 0, "readers": 0, "writers": None,
              "reader_names": None, "writer_names": None}
     for name, t in out.items():

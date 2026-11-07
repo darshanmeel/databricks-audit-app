@@ -154,8 +154,8 @@ export function Scatter({ rows, onPick }: { rows: any[]; onPick?: (workspaceId: 
   return (
     <div style={{ overflowX: "auto" }}>
       <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ maxWidth: W, display: "block" }} role="img" aria-label="Complexity against usage, bubble size = data size">
-        <line x1={x(50)} y1={y(0)} x2={x(50)} y2={y(100)} stroke="var(--line, #ddd)" strokeDasharray="4 4" />
-        <line x1={x(0)} y1={y(50)} x2={x(100)} y2={y(50)} stroke="var(--line, #ddd)" strokeDasharray="4 4" />
+        <line x1={x(50)} y1={y(0)} x2={x(50)} y2={y(100)} stroke="var(--border)" strokeDasharray="4 4" />
+        <line x1={x(0)} y1={y(50)} x2={x(100)} y2={y(50)} stroke="var(--border)" strokeDasharray="4 4" />
         <line x1={x(0)} y1={y(0)} x2={x(100)} y2={y(0)} stroke="currentColor" opacity={0.4} />
         <line x1={x(0)} y1={y(0)} x2={x(0)} y2={y(100)} stroke="currentColor" opacity={0.4} />
         <text x={x(100)} y={H - 8} textAnchor="end" fontSize={11} fill="currentColor" opacity={0.7}>Complexity index</text>
@@ -279,7 +279,7 @@ function UsageWorkspacesContent({ filters, goTo, onVerdict }: LooseProps) {
         <div className="pqgs-cards-grid">
           {byClass.map((c) => (
             <button key={c.k} type="button" className="card" onClick={() => toTables({ cls: c.k })}
-              style={{ textAlign: "left", cursor: "pointer", padding: 14, border: "1px solid var(--line, #E4E1D8)", borderTop: `4px solid ${CLASS_META[c.k].color}`, borderRadius: 10, background: "var(--card, #fff)" }}>
+              style={{ textAlign: "left", cursor: "pointer", padding: 14, border: "1px solid var(--border)", borderTop: `4px solid ${CLASS_META[c.k].color}`, borderRadius: 10, background: "var(--surface)" }}>
               <div style={{ fontWeight: 600 }}>{CLASS_META[c.k].label}</div>
               <div className="pqgs-card-value">{noSizes ? fmtInt(c.n) : fmtBytes(c.bytes)}</div>
               <div className="muted">{noSizes ? `tables · ${fmtPct(share(c), 0)} of tables` : `${fmtInt(c.n)} tables · ${fmtPct(share(c), 0)}`}</div>
@@ -401,28 +401,32 @@ function UsageTablesContent({ filters, goTo, onVerdict }: LooseProps) {
   const key = JSON.stringify([filters.window, filters.workspaceIds, filters.envs, Api.tagParams()]);
   const tb = useApi(() => Api.tables(filters.workspaceIds, filters.envs, filters.window), key);
   const [cls, setCls] = React.useState<string>(handoff.cls || "all");
-  const [wsPick, setWsPick] = React.useState<string>(handoff.workspace || "");
+  const [wsPick, setWsPick] = React.useState<string[]>(handoff.workspace ? [handoff.workspace] : []);
+  // picked workspaces are counted by the server, so the class counts and largest tables cover all their tables
+  const tp = useApi(() => (wsPick.length ? Api.tables(wsPick, filters.envs, filters.window) : Promise.resolve(null)),
+    JSON.stringify([filters.window, wsPick, filters.envs, Api.tagParams()]));
   const [q, setQ] = React.useState("");
   const [page, setPage] = React.useState(1);
   const [open, setOpen] = React.useState<string | null>(handoff.table || null);
   React.useEffect(() => { handoff.cls = null; handoff.workspace = null; handoff.table = null; }, []);
-  const t = tb.phase === "ready" ? tb.data : null;
+  const src = wsPick.length ? tp : tb;
+  const t = src.phase === "ready" ? src.data : null;
+  const base: any[] = tb.phase === "ready" && tb.data && tb.data.outcome !== "not_assessed" ? tb.data.rows || [] : [];
   const all: any[] = t && t.outcome !== "not_assessed" ? t.rows || [] : [];
   if (t && t.as_of) asOf = t.as_of;
   const verdict = all.length ? "Sorted by what needs attention: written but never read first, then idle, then cooling. Click a table for who reads and writes it." : "Loading tables...";
   React.useEffect(() => { if (onVerdict) onVerdict(verdict); }, [verdict, onVerdict]);
   if (open) return <TableDetail name={open} window={filters.window} goTo={goTo} onBack={() => setOpen(null)} />;
-  if (tb.phase === "loading") return <span className="muted">Loading tables...</span>;
+  if (tb.phase === "loading" || src.phase === "loading") return <span className="muted">Loading tables...</span>;
   if (!t || t.outcome === "not_assessed") return <span className="muted">Table sizes are not in this export: export again.</span>;
-  const inWs = all.filter((r) => !wsPick || r.workspace_id === wsPick);
   const clsOf = (k: string) => ((t.classes || []).find((c: any) => c.key === k) || { tables: 0 }).tables;
-  // with no workspace picked the counts cover every table; the list holds the biggest of each class
-  const chips = [{ k: "all", label: "All", n: wsPick ? inWs.length : t.total }, ...CLASS_ORDER.map((k) => ({ k, label: CLASS_META[k].label, n: wsPick ? inWs.filter((r) => r.usage_class === k).length : clsOf(k) })),
-    { k: "sensitive", label: "Sensitive data", n: wsPick ? inWs.filter((r) => r.sensitive && r.sensitive.length).length : (t.totals || {}).sensitive_tables || 0 }];
-  const rows = inWs.filter((r) => (cls === "all" || (cls === "sensitive" ? r.sensitive && r.sensitive.length : r.usage_class === cls))
+  // the counts cover every table in the workspaces shown; the list holds the biggest of each class
+  const chips = [{ k: "all", label: "All", n: t.total }, ...CLASS_ORDER.map((k) => ({ k, label: CLASS_META[k].label, n: clsOf(k) })),
+    { k: "sensitive", label: "Sensitive data", n: (t.totals || {}).sensitive_tables || 0 }];
+  const rows = all.filter((r) => (cls === "all" || (cls === "sensitive" ? r.sensitive && r.sensitive.length : r.usage_class === cls))
     && (!q || r.table_full_name.toLowerCase().includes(q.toLowerCase())));
   const max = Math.max(1, ...rows.map((r) => (r.reads || 0) + (r.writes || 0)));
-  const wsOptions = Array.from(new Map(all.filter((r) => r.workspace_id).map((r) => [r.workspace_id, r.workspace_name])).entries());
+  const wsOptions = Array.from(new Map(base.filter((r) => r.workspace_id).map((r) => [r.workspace_id, r.workspace_name])).entries());
   const shown = rows.slice(0, page * PAGE);
   const sum = (k: string) => rows.reduce((a, r) => a + (r[k] || 0), 0);
   const totalSize = (t.totals || {}).size_in_bytes || 0;
@@ -432,11 +436,8 @@ function UsageTablesContent({ filters, goTo, onVerdict }: LooseProps) {
       <div className="ws-actions" style={{ flexWrap: "wrap" }}>
         {chips.map((c) => <button key={c.k} type="button" className={cls === c.k ? "on" : ""} onClick={() => { setCls(c.k); setPage(1); }}>{`${c.label} · ${fmtInt(c.n)}`}</button>)}
         <input type="search" placeholder="Search catalog.schema.table" value={q} onChange={(e) => { setQ(e.target.value); setPage(1); }}
-          style={{ marginLeft: 8, padding: "6px 10px", borderRadius: 8, border: "1px solid var(--line, #E4E1D8)", minWidth: 220 }} aria-label="Search tables" />
-        <select value={wsPick} onChange={(e) => { setWsPick(e.target.value); setPage(1); }} aria-label="Workspace" style={{ padding: "6px 8px", borderRadius: 8 }}>
-          <option value="">Workspace: all</option>
-          {wsOptions.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
-        </select>
+          style={{ marginLeft: 8, padding: "6px 10px", borderRadius: 8, border: "1px solid var(--border)", minWidth: 220 }} aria-label="Search tables" />
+        <WsMulti options={wsOptions} picked={wsPick} onChange={(ids) => { setWsPick(ids); setPage(1); }} />
         <button type="button" className="csv-download-btn" onClick={() => csv([["table", "workspace", "env", "class", "size_bytes", "reads", "writes", "last_read", "last_write", "readers", "writers", "sensitive"],
           ...rows.map((r) => [r.table_full_name, r.workspace_name, r.env, r.usage_class, r.size_in_bytes, r.reads, r.writes, r.last_read, r.last_write, r.readers, r.writers, (r.sensitive || []).join("; ")])])}>Export CSV</button>
       </div>
@@ -447,23 +448,21 @@ function UsageTablesContent({ filters, goTo, onVerdict }: LooseProps) {
         <Card title={`Reads · ${t.window_days}d`}><div className="pqgs-card-value" style={{ color: READ }}>{fmtInt(sum("reads"))}</div><PqgsNote facts={[{ label: "From", value: "lineage read events" }]} /></Card>
         <Card title={`Writes · ${t.window_days}d`}><div className="pqgs-card-value" style={{ color: WRITE }}>{fmtInt(sum("writes"))}</div><PqgsNote facts={[{ label: "From", value: "inserts, merges, overwrites" }]} /></Card>
       </div>
-      {!wsPick && (
-        <div className="grid-2">
-          <Card title="Tables by class" right={<span className="muted">every table, not only the list below</span>}>
-            <HBarList items={CLASS_ORDER.map((k) => ({ name: CLASS_META[k].label, value: clsOf(k), color: CLASS_META[k].color }))}
-              valueFmt={(v) => `${fmtInt(v)} tables`} />
-            <div className="metric-note">{`${fmtBytes((t.totals || {}).size_in_bytes || 0)} measured in ${fmtInt((t.totals || {}).sized || 0)} of ${fmtInt(t.total)} tables; the rest weren't described.`}</div>
-          </Card>
-          <Card title="Largest tables" right={<span className="muted">colour = class</span>}>
-            {(t.largest || []).length ? <HBarList items={(t.largest || []).map((r: any) => ({ name: r.table_full_name, value: r.size_in_bytes || 0, color: CLASS_META[r.usage_class].color }))}
-              valueFmt={(v) => fmtBytes(v)} /> : <span className="muted">No table sizes in this export: run the sizes step.</span>}
-          </Card>
-        </div>
-      )}
-      <Card title={`Most active tables · ${t.window_days}d`} right={<span className="muted">{wsPick || cls !== "all" || q ? "the tables shown below · click one" : "every table · click one"}</span>}>
-        <MostUsed open={setOpen} rows={topUsed(wsPick || cls !== "all" || q ? rows : t.most_used || [], (r) => r.table_full_name, rwSub)} />
+      <div className="grid-2">
+        <Card title="Tables by class" right={<span className="muted">every table, not only the list below</span>}>
+          <HBarList items={CLASS_ORDER.map((k) => ({ name: CLASS_META[k].label, value: clsOf(k), color: CLASS_META[k].color }))}
+            valueFmt={(v) => `${fmtInt(v)} tables`} />
+          <div className="metric-note">{`${fmtBytes((t.totals || {}).size_in_bytes || 0)} measured in ${fmtInt((t.totals || {}).sized || 0)} of ${fmtInt(t.total)} tables; the rest weren't described.`}</div>
+        </Card>
+        <Card title="Largest tables" right={<span className="muted">colour = class</span>}>
+          {(t.largest || []).length ? <HBarList items={(t.largest || []).map((r: any) => ({ name: r.table_full_name, value: r.size_in_bytes || 0, color: CLASS_META[r.usage_class].color }))}
+            valueFmt={(v) => fmtBytes(v)} /> : <span className="muted">No table sizes in this export: run the sizes step.</span>}
+        </Card>
+      </div>
+      <Card title={`Most active tables · ${t.window_days}d`} right={<span className="muted">{cls !== "all" || q ? "the tables shown below · click one" : "every table · click one"}</span>}>
+        <MostUsed open={setOpen} rows={topUsed(cls !== "all" || q ? rows : t.most_used || [], (r) => r.table_full_name, rwSub)} />
       </Card>
-      <SchemaBreakdown workspaceId={wsPick} name={(wsOptions.find(([id]) => id === wsPick) || [])[1] || wsPick} window={filters.window} />
+      {wsPick.length < 2 ? <SchemaBreakdown workspaceId={wsPick[0] || ""} name={(wsOptions.find(([id]) => id === wsPick[0]) || [])[1] || wsPick[0]} window={filters.window} /> : null}
       <Card title="Tables" right={<span className="muted">click one for its detail</span>}>
         <div className="data-table-wrap">
           <table className="data">
@@ -496,6 +495,35 @@ function UsageTablesContent({ filters, goTo, onVerdict }: LooseProps) {
           <div className="metric-note">{`Could not describe: ${t.not_described.slice(0, 5).map((f: any) => `${f.table_catalog}.${f.table_schema} (${fmtInt(f.tables)}, ${f.error})`).join(" · ")}`}</div>
         ) : null}
       </Card>
+    </div>
+  );
+}
+
+// Pick one or more workspaces: a checkbox list; none picked = every workspace in the top-bar filter.
+function WsMulti({ options, picked, onChange }: { options: [string, string][]; picked: string[]; onChange: (ids: string[]) => void }) {
+  const [open, setOpen] = React.useState(false);
+  const ref = React.useRef<HTMLDivElement>(null);
+  React.useEffect(() => {
+    if (!open) return undefined;
+    const close = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
+  }, [open]);
+  const label = !picked.length ? "all" : picked.length === 1 ? (options.find(([id]) => id === picked[0]) || [])[1] || picked[0] : `${picked.length} picked`;
+  return (
+    <div className="ws-picker" ref={ref}>
+      <button type="button" className="ws-trigger" onClick={() => setOpen((o) => !o)}>{`Workspace: ${label}`}<span className="caret">▾</span></button>
+      {open && (
+        <div className="ws-pop">
+          <div className="ws-actions"><button type="button" onClick={() => onChange([])}>All</button></div>
+          <div className="ws-list">{options.map(([id, name]) => (
+            <label key={id} className="ws-row">
+              <input type="checkbox" checked={picked.includes(id)} onChange={() => onChange(picked.includes(id) ? picked.filter((x) => x !== id) : [...picked, id])} />
+              <span className="ws-name">{name || id}</span>
+            </label>
+          ))}</div>
+        </div>
+      )}
     </div>
   );
 }
@@ -566,8 +594,8 @@ function Mirror({ daily, window }: { daily: any[]; window: number }) {
 function Node({ n, here }: { n: any; here?: boolean }) {
   const m = n.usage_class ? CLASS_META[n.usage_class] : null;
   return (
-    <div style={{ border: `1px solid ${here ? "#1A1A1A" : "#E4E1D8"}`, borderRadius: 8, padding: "6px 10px", margin: "4px 0", background: "var(--card, #fff)", fontSize: 13 }}>
-      <div className="mono">{n.name}</div>
+    <div style={{ border: `1px solid ${here ? "var(--text)" : "var(--border)"}`, borderRadius: 8, padding: "6px 10px", margin: "4px 0", background: "var(--surface)", fontSize: 13 }}>
+      <div className="mono" style={{ overflowWrap: "anywhere" }}>{n.name}</div>
       <div className="muted" style={{ fontSize: 12 }}>{m ? m.label : here ? "this table" : "not sized"}{n.events ? ` · ${fmtInt(n.events)} events` : ""}</div>
     </div>
   );
@@ -800,7 +828,7 @@ function TableDetail({ name, window, goTo, onBack }: { name: string; window: num
             </table></div>
           ) : <span className="muted">Nobody read or wrote it in the window.</span>}
           {d.unused_grants && d.unused_grants.length ? (
-            <div style={{ marginTop: 10, padding: 10, borderRadius: 8, background: "#FAF9F6", border: "1px solid #E4E1D8" }}>
+            <div style={{ marginTop: 10, padding: 10, borderRadius: 8, background: "var(--surface-2)", border: "1px solid var(--border)" }}>
               <div style={{ fontWeight: 600 }}>{"Can read it, but never did in the window"}</div>
               {d.unused_grants.map((g: any) => <div key={g.grantee} style={{ fontSize: 13 }}>{`${g.grantee} · ${g.privilege} (direct grant)`}</div>)}
               <div className="muted" style={{ fontSize: 12 }}>Good candidates to revoke. Grants through a schema, catalog or group aren't listed.</div>
@@ -819,7 +847,7 @@ function TableDetail({ name, window, goTo, onBack }: { name: string; window: num
       </div>
       <Card title="Where it comes from, where it goes">
         {d.has_edges ? (
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 30px 1fr 30px 1fr", alignItems: "center" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) 30px minmax(0, 1fr) 30px minmax(0, 1fr)", alignItems: "center" }}>
             <div><div className="muted" style={{ fontSize: 12 }}>Upstream</div>{(d.upstream || []).length ? d.upstream.map((n: any) => <Node key={n.name} n={n} />) : <span className="muted">none in the window</span>}</div>
             <div style={{ textAlign: "center" }}>→</div>
             <div><Node n={{ name, usage_class: d.usage_class, events: d.writes }} here /></div>
@@ -1028,7 +1056,7 @@ function UsagePeopleContent({ filters, goTo, onVerdict }: LooseProps) {
               <td>{p.sensitive_tables.length ? <PiiChip text={`${p.sensitive_tables.length}: ${p.sensitive_tables.slice(0, 2).map((n: string) => n.split(".").pop()).join(", ")}${p.sensitive_tables.length > 2 ? "…" : ""}`} /> : "—"}</td>
               <td><When v={p.last_seen} /></td>
             </tr>
-            {open === p.identity && <tr><td colSpan={9} style={{ background: "var(--bg-2, #FAF9F6)" }}><PersonTables identity={p.identity} window={filters.window} goTo={goTo} /></td></tr>}
+            {open === p.identity && <tr><td colSpan={9} style={{ background: "var(--surface-2)" }}><PersonTables identity={p.identity} window={filters.window} goTo={goTo} /></td></tr>}
             </React.Fragment>
           ))}</tbody>
         </table></div>

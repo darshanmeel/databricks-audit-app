@@ -545,7 +545,7 @@ SELECT table_catalog || '.' || table_schema || '.' || table_name AS table_full_n
        privilege_type AS privilege
 FROM system.information_schema.table_privileges
 WHERE privilege_type IN ('SELECT', 'ALL PRIVILEGES')
-  AND table_catalog NOT IN ('system', 'samples', '__databricks_internal') AND table_schema <> 'information_schema'
+  AND table_catalog NOT IN ('system', 'samples', '__databricks_internal') AND NOT startswith(table_catalog, '__databricks_internal') AND table_schema <> 'information_schema'
 """
 
 
@@ -568,7 +568,7 @@ WITH found AS (
 {names}
     END, 'name', 3
   FROM system.information_schema.columns
-  WHERE table_schema <> 'information_schema' AND table_catalog NOT IN ('system', 'samples', '__databricks_internal')
+  WHERE table_schema <> 'information_schema' AND table_catalog NOT IN ('system', 'samples', '__databricks_internal') AND NOT startswith(table_catalog, '__databricks_internal')
 )
 SELECT f.c || '.' || f.s || '.' || f.t AS table_full_name, f.column_name, f.pii_type, f.method,
        cm.mask_name IS NOT NULL AS masked

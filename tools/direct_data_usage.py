@@ -72,7 +72,7 @@ seen AS (
 home AS (
   SELECT c.catalog_name AS catalog, max_by(s.workspace_id, s.events) AS workspace_id
   FROM system.information_schema.catalogs c LEFT JOIN seen s ON s.catalog = c.catalog_name
-  WHERE c.catalog_name NOT IN ({_SKIP})
+  WHERE c.catalog_name NOT IN ({_SKIP}) AND NOT startswith(c.catalog_name, '__databricks_internal')
   GROUP BY c.catalog_name
 ),
 place AS (
@@ -91,14 +91,14 @@ def _sensitive() -> str:
   SELECT catalog_name AS c, schema_name AS s, table_name AS t, column_name,
          COALESCE(NULLIF(tag_value, ''), tag_name) AS pii_type, 1 AS rnk
   FROM system.information_schema.column_tags
-  WHERE lower(tag_name) RLIKE '{SENSITIVE_TAGS}' AND catalog_name NOT IN ({_SKIP})
+  WHERE lower(tag_name) RLIKE '{SENSITIVE_TAGS}' AND catalog_name NOT IN ({_SKIP}) AND NOT startswith(catalog_name, '__databricks_internal')
   UNION ALL
   SELECT table_catalog, table_schema, table_name, column_name,
          CASE
 {names}
          END, 2
   FROM system.information_schema.columns
-  WHERE table_catalog NOT IN ({_SKIP}) AND table_schema <> 'information_schema'
+  WHERE table_catalog NOT IN ({_SKIP}) AND NOT startswith(table_catalog, '__databricks_internal') AND table_schema <> 'information_schema'
 ),
 sens_col AS (
   SELECT f.c || '.' || f.s || '.' || f.t AS full_name, f.column_name, f.pii_type, cm.mask_name IS NOT NULL AS masked
@@ -141,7 +141,7 @@ t AS (
   SELECT table_catalog AS catalog, table_schema AS sch, table_name, table_type, table_owner, created,
          table_catalog || '.' || table_schema || '.' || table_name AS full_name
   FROM system.information_schema.tables
-  WHERE table_catalog NOT IN ({_SKIP}) AND table_schema <> 'information_schema'
+  WHERE table_catalog NOT IN ({_SKIP}) AND NOT startswith(table_catalog, '__databricks_internal') AND table_schema <> 'information_schema'
 ),
 lin AS (
   SELECT source_table_full_name AS full_name, 1 AS is_read, 0 AS is_write, event_time, lower(created_by) AS who
@@ -453,7 +453,7 @@ def volumes() -> Dataset:
 v AS (
   SELECT volume_catalog AS catalog, volume_schema AS sch, volume_name, volume_type, created,
          volume_catalog || '.' || volume_schema || '.' || volume_name AS full_name
-  FROM system.information_schema.volumes WHERE volume_catalog NOT IN ({_SKIP})
+  FROM system.information_schema.volumes WHERE volume_catalog NOT IN ({_SKIP}) AND NOT startswith(volume_catalog, '__databricks_internal')
 ),
 ev AS (
   SELECT regexp_extract(COALESCE(request_params['path'], request_params['file_path'], request_params['directory_path']),
@@ -559,7 +559,7 @@ grants AS (
          COUNT(DISTINCT CASE WHEN se.full_name IS NOT NULL THEN p.table_catalog || '.' || p.table_schema || '.' || p.table_name END) AS sensitive_grants
   FROM system.information_schema.table_privileges p
   LEFT JOIN sens se ON se.full_name = p.table_catalog || '.' || p.table_schema || '.' || p.table_name
-  WHERE p.privilege_type IN ('SELECT', 'ALL PRIVILEGES') AND p.table_catalog NOT IN ({_SKIP})
+  WHERE p.privilege_type IN ('SELECT', 'ALL PRIVILEGES') AND p.table_catalog NOT IN ({_SKIP}) AND NOT startswith(p.table_catalog, '__databricks_internal')
   GROUP BY 1
 ),
 ids AS (
@@ -675,7 +675,7 @@ FROM (
   WHERE event_date >= {START} AND event_date < {END} AND target_table_full_name IS NOT NULL
 ) l
 LEFT JOIN place p ON p.catalog = l.catalog
-WHERE l.catalog NOT IN ({_SKIP})
+WHERE l.catalog NOT IN ({_SKIP}) AND NOT startswith(l.catalog, '__databricks_internal')
 GROUP BY 1, 2, 3, 4""",
         "Table reads and writes per day in the window, per table and its home workspace (lineage events).",
         "The daily charts on Overview, Workspace detail and Table detail.",
@@ -696,7 +696,7 @@ cols AS (
   FROM system.information_schema.columns c
   JOIN system.information_schema.tables t
     ON t.table_catalog = c.table_catalog AND t.table_schema = c.table_schema AND t.table_name = c.table_name
-  WHERE c.table_catalog NOT IN ({_SKIP}) AND c.table_schema <> 'information_schema'
+  WHERE c.table_catalog NOT IN ({_SKIP}) AND NOT startswith(c.table_catalog, '__databricks_internal') AND c.table_schema <> 'information_schema'
   GROUP BY 1
 ),
 vols AS (
@@ -705,7 +705,7 @@ vols AS (
   FROM system.information_schema.volumes v
   LEFT JOIN {_sized('volume_sizes')} vs
     ON vs.catalog = v.volume_catalog AND vs.schema = v.volume_schema AND vs.volume_name = v.volume_name
-  WHERE v.volume_catalog NOT IN ({_SKIP})
+  WHERE v.volume_catalog NOT IN ({_SKIP}) AND NOT startswith(v.volume_catalog, '__databricks_internal')
   GROUP BY 1
 ),
 sch AS (
@@ -1697,7 +1697,7 @@ cap = int(dbutils.widgets.get("max_entries_per_volume"))
 now = datetime.datetime.utcnow()
 cats = [c.strip() for c in dbutils.widgets.get("catalogs").split(",") if c.strip()] or [
     r.catalog_name for r in spark.sql("SELECT catalog_name FROM system.information_schema.catalogs "
-                                      "WHERE catalog_name NOT IN ({_SKIP})").collect()]
+                                      "WHERE catalog_name NOT IN ({_SKIP}) AND NOT startswith(catalog_name, '__databricks_internal')").collect()]
 q = lambda s: "`" + s.replace("`", "``") + "`"
 print(f"{{len(cats)}} catalogs")
 
