@@ -279,12 +279,12 @@ function UsageWorkspacesContent({ filters, goTo, onVerdict }: LooseProps) {
         <div className="pqgs-cards-grid">
           {byClass.map((c) => (
             <button key={c.k} type="button" className="card" onClick={() => toTables({ cls: c.k })}
-              style={{ textAlign: "left", cursor: "pointer", padding: 14, border: "1px solid var(--border)", borderTop: `4px solid ${CLASS_META[c.k].color}`, borderRadius: 10, background: "var(--surface)" }}>
+              style={{ textAlign: "left", cursor: "pointer", padding: 14, border: "1px solid var(--border)", borderTop: `4px solid ${CLASS_META[c.k].color}`, borderRadius: 10, background: "var(--surface)", color: "var(--text)", font: "inherit" }}>
               <div style={{ fontWeight: 600 }}>{CLASS_META[c.k].label}</div>
               <div className="pqgs-card-value">{noSizes ? fmtInt(c.n) : fmtBytes(c.bytes)}</div>
               <div className="muted">{noSizes ? `tables · ${fmtPct(share(c), 0)} of tables` : `${fmtInt(c.n)} tables · ${fmtPct(share(c), 0)}`}</div>
-              <div style={{ marginTop: 6, fontSize: 12.5, color: "var(--ink-2, #3D3B37)" }}>{(t.classes.find((x: any) => x.key === c.k) || {}).meaning}</div>
-              <div style={{ marginTop: 6, fontSize: 12.5, color: "#1F4E99" }}>{`${CLASS_META[c.k].action} →`}</div>
+              <div style={{ marginTop: 6, fontSize: 12.5, color: "var(--text-2)" }}>{(t.classes.find((x: any) => x.key === c.k) || {}).meaning}</div>
+              <div style={{ marginTop: 6, fontSize: 12.5, color: "var(--link)" }}>{`${CLASS_META[c.k].action} →`}</div>
             </button>
           ))}
         </div>
@@ -1008,8 +1008,16 @@ function VolumeDetail({ v, wsNames, window, goTo }: { v: any; wsNames: Map<strin
 
 // ─────────── People ───────────
 function UsagePeopleContent({ filters, goTo, onVerdict }: LooseProps) {
-  const key = JSON.stringify([filters.window, filters.workspaceIds, filters.envs]);
-  const st = useApi(() => Api.people(filters.window, filters.workspaceIds, filters.envs), key);
+  const [wsPick, setWsPick] = React.useState<string[]>([]);
+  const ids = wsPick.length ? wsPick : filters.workspaceIds;
+  const key = JSON.stringify([filters.window, ids, filters.envs]);
+  const st = useApi(() => Api.people(filters.window, ids, filters.envs), key);
+  const wl = useApi(() => Api.workspaces(), "workspaces");
+  // the picker offers the workspaces of the top-bar filter
+  const wsOptions: [string, string][] = (wl.phase === "ready" ? wl.data || [] : [])
+    .filter((w: any) => !filters.workspaceIds.length || filters.workspaceIdSet.has(w.workspace_id))
+    .map((w: any) => [w.workspace_id, w.name || w.workspace_id] as [string, string])
+    .sort((a: [string, string], b: [string, string]) => a[1].localeCompare(b[1]));
   const [open, setOpen] = React.useState<string | null>(handoff.person || null);
   const [all, setAll] = React.useState(false);
   React.useEffect(() => { handoff.person = null; }, []);
@@ -1021,12 +1029,14 @@ function UsagePeopleContent({ filters, goTo, onVerdict }: LooseProps) {
     ? `${fmtInt(d.active_people)} people and ${fmtInt(d.service_principals)} service principals were active. ${fmtInt(d.touched_sensitive)} touched tables with sensitive data; ${fmtInt(inactive.length)} more have not been seen in ${d.inactive_days}+ days.`
     : "Loading people...";
   React.useEffect(() => { if (onVerdict) onVerdict(verdict); }, [verdict, onVerdict]);
-  if (st.phase === "loading") return <span className="muted">Loading people...</span>;
-  if (!people.length) return <span className="muted">{!d || d.outcome === "not_assessed" ? "Activity is not in this export: export again." : "Nobody active in the workspaces shown."}</span>;
+  const picker = <div className="ws-actions"><WsMulti options={wsOptions} picked={wsPick} onChange={setWsPick} /></div>;
+  if (st.phase === "loading") return <div>{picker}<span className="muted">Loading people...</span></div>;
+  if (!people.length) return <div>{picker}<span className="muted">{!d || d.outcome === "not_assessed" ? "Activity is not in this export: export again." : "Nobody active in the workspaces shown."}</span></div>;
   const max = Math.max(1, ...people.map((p) => (p.reads || 0) + (p.writes || 0)));
   const shown = all ? people : people.slice(0, PAGE).concat(people.slice(PAGE).filter((p) => p.identity === open));
   return (
     <div>
+      {picker}
       <div className="pqgs-cards-grid">
         <Card title="Active people"><div className="pqgs-card-value">{fmtInt(d.active_people)}</div><PqgsNote facts={[{ label: "Did", value: "signed in, queried or used a table" }]} /></Card>
         <Card title="Service principals"><div className="pqgs-card-value">{fmtInt(d.service_principals)}</div>
