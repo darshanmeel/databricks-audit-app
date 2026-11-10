@@ -37,7 +37,7 @@ billing_pairs AS (
     SELECT b.workspace_id, b.usage_date, b.usage_quantity, e.key AS raw_key,
            {{ norm_tag_key('e.key') }} AS tag_key, trim(e.value) AS tag_value
     FROM billing_rows b, unnest(map_entries(b.custom_tags)) AS x(e)
-    WHERE e.key IS NOT NULL AND e.value IS NOT NULL AND {{ norm_tag_key('e.key') }} <> ''
+    WHERE e.key IS NOT NULL AND e.value IS NOT NULL AND trim(e.value) <> '' AND {{ norm_tag_key('e.key') }} <> ''
     QUALIFY ROW_NUMBER() OVER (PARTITION BY b.rid, {{ norm_tag_key('e.key') }} ORDER BY e.key) = 1
 ),
 src_billing_custom_tags AS (
@@ -86,7 +86,7 @@ query_pairs AS (
     SELECT q.workspace_id, q.statement_id, CAST(q.start_time AS DATE) AS stmt_date,
            e.key AS raw_key, {{ norm_tag_key('e.key') }} AS tag_key, trim(e.value) AS tag_value
     FROM {{ source('system_query', 'history') }} q, unnest(map_entries(q.query_tags)) AS x(e)
-    WHERE e.key IS NOT NULL AND e.value IS NOT NULL AND {{ norm_tag_key('e.key') }} <> ''
+    WHERE e.key IS NOT NULL AND e.value IS NOT NULL AND trim(e.value) <> '' AND {{ norm_tag_key('e.key') }} <> ''
     QUALIFY ROW_NUMBER() OVER (PARTITION BY q.statement_id, {{ norm_tag_key('e.key') }} ORDER BY e.key) = 1
 ),
 src_query_tags AS (
@@ -107,7 +107,7 @@ attributed_pairs AS (
            e.key AS raw_key, {{ norm_tag_key('e.key') }} AS tag_key, trim(e.value) AS tag_value
     FROM {{ source('system_billing', 'attributed_usage') }} a,
          unnest(map_entries(a.granular_tags.query_tags)) AS x(e)
-    WHERE e.key IS NOT NULL AND e.value IS NOT NULL AND {{ norm_tag_key('e.key') }} <> ''
+    WHERE e.key IS NOT NULL AND e.value IS NOT NULL AND trim(e.value) <> '' AND {{ norm_tag_key('e.key') }} <> ''
     QUALIFY ROW_NUMBER() OVER (PARTITION BY a.record_id, {{ norm_tag_key('e.key') }} ORDER BY e.key) = 1
 ),
 src_attributed_query_tags AS (
@@ -142,7 +142,7 @@ ai_gateway_pairs AS (
            CAST(g.event_time AS DATE) AS ev_date,
            e.key AS raw_key, {{ norm_tag_key('e.key') }} AS tag_key, trim(e.value) AS tag_value
     FROM {{ source('system_ai_gateway', 'usage') }} g, unnest(map_entries(g.endpoint_tags)) AS x(e)
-    WHERE e.key IS NOT NULL AND e.value IS NOT NULL AND {{ norm_tag_key('e.key') }} <> ''
+    WHERE e.key IS NOT NULL AND e.value IS NOT NULL AND trim(e.value) <> '' AND {{ norm_tag_key('e.key') }} <> ''
     QUALIFY ROW_NUMBER() OVER (PARTITION BY g.request_id, {{ norm_tag_key('e.key') }} ORDER BY e.key) = 1
 ),
 src_ai_gateway_endpoint_tags AS (

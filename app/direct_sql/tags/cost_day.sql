@@ -4,7 +4,7 @@ WITH priced AS (
     SELECT u.workspace_id, u.usage_date, u.cloud, u.sku_name, u.billing_origin_product, u.usage_unit,
            COALESCE(u.product_features.is_serverless, FALSE) AS is_serverless,
            COALESCE(u.product_features.is_photon, FALSE) AS is_photon,
-           u.product_features.performance_target IS NOT NULL AS is_perf_optimized,
+           COALESCE(upper(u.product_features.performance_target) = 'PERFORMANCE_OPTIMIZED', FALSE) AS is_perf_optimized,
            COALESCE(cardinality(u.custom_tags) > 0, FALSE) AS has_custom_tags,
            u.usage_quantity, u.custom_tags,
            u.usage_metadata.warehouse_id AS warehouse_id,

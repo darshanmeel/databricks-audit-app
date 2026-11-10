@@ -259,3 +259,24 @@ export function getCheckLabel(queryId: string, fallbackTitle?: string | null): C
   if (known) return known;
   return { title: fallbackTitle || queryId, why: null };
 }
+
+// billing_origin_product -> screen name and the kind the Chargeback workspace bars split by
+export const PRODUCT_LABELS: Record<string, string> = {
+  ALL_PURPOSE: "All-purpose clusters", INTERACTIVE: "Serverless notebooks", JOBS: "Jobs", SQL: "SQL warehouses",
+  DBSQL: "Databricks SQL", DLT: "Delta Live Tables", LAKEFLOW_PIPELINES: "Lakeflow pipelines",
+  MODEL_SERVING: "Model serving", MODEL_SERVING_V2: "Model serving", VECTOR_SEARCH: "Vector Search", MODEL_TRAINING: "Model training",
+  GENIE: "Genie", SERVERLESS_GENIE: "Genie", LAKEHOUSE_MONITORING: "Lakehouse Monitoring",
+  PREDICTIVE_OPTIMIZATION: "Predictive optimization", STORAGE: "Storage",
+};
+export function productLabel(code: unknown): string {
+  if (!code) return "(unlabeled product)";
+  return PRODUCT_LABELS[String(code)] || String(code).replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+}
+export const PRODUCT_KINDS = ["SQL warehouses", "Jobs", "Pipelines", "Clusters & notebooks", "AI & serving", "Other"];
+export const PRODUCT_KIND_OF: Record<string, string> = {
+  SQL: "SQL warehouses", DBSQL: "SQL warehouses", JOBS: "Jobs", DLT: "Pipelines", LAKEFLOW_PIPELINES: "Pipelines", LAKEFLOW_CONNECT: "Pipelines",
+  ALL_PURPOSE: "Clusters & notebooks", INTERACTIVE: "Clusters & notebooks",
+  MODEL_SERVING: "AI & serving", MODEL_SERVING_V2: "AI & serving", VECTOR_SEARCH: "AI & serving", AI_GATEWAY: "AI & serving",
+  AI_RUNTIME: "AI & serving", AI_FUNCTIONS: "AI & serving", FOUNDATION_MODEL_TRAINING: "AI & serving", MODEL_TRAINING: "AI & serving",
+  AGENT_EVALUATION: "AI & serving", AGENT_BRICKS: "AI & serving", ONLINE_TABLES: "AI & serving",
+};

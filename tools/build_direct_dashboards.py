@@ -46,16 +46,19 @@ WINDOW = [
 ]
 # Ages measured from today, not from the window: serving's 90-day request history, stale jobs' 90 days.
 KEEP_TODAY = ["datediff(current_date(), rh.earliest_request_time)", "dateadd(day, -90, current_date())"]
+# Fixed thresholds that look like the window: stale jobs warn at 30 days whatever the window.
+KEEP_BY_ID = {"lakeflow_stale_zombie_jobs": ["dateadd(day, -30, current_date())"]}
 
 
 def windowed(query_id: str) -> str:
     sql = bdd.read_check(query_id)
+    keep = KEEP_TODAY + KEEP_BY_ID.get(query_id, [])
+    for i, k in enumerate(keep):
+        sql = sql.replace(k, f"@@{i}@@")
     for old, new in WINDOW:
         sql = sql.replace(old, new)
-    for i, k in enumerate(KEEP_TODAY):
-        sql = sql.replace(k, f"@@{i}@@")
     sql = sql.replace("current_date()", END)
-    for i, k in enumerate(KEEP_TODAY):
+    for i, k in enumerate(keep):
         sql = sql.replace(f"@@{i}@@", k)
     return "\n".join(l for l in sql.strip().splitlines() if not l.startswith("-- generated from"))
 

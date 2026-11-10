@@ -16,7 +16,33 @@ priced AS (
     LEFT JOIN (
         SELECT sku_name, cloud, usage_unit, price_start_time, price_end_time,
                CAST(pricing.effective_list.default AS DOUBLE) AS list_rate
-        FROM `system`.`billing`.`list_prices`
+        -- de-duplicated list_prices (dbt/macros/list_prices.sql), written out by hand: overlapping
+        -- rows fan out this join.
+        FROM (
+            SELECT account_id, sku_name, cloud, currency_code, usage_unit, pricing,
+                   price_start_time, effective_end AS price_end_time
+            FROM (
+                SELECT account_id, sku_name, cloud, currency_code, usage_unit, pricing,
+                       price_start_time, price_end_time, next_start_time,
+                       CASE
+                           WHEN price_end_time IS NULL THEN next_start_time
+                           WHEN next_start_time IS NULL THEN price_end_time
+                           WHEN price_end_time <= next_start_time THEN price_end_time
+                           ELSE next_start_time
+                       END AS effective_end
+                FROM (
+                    SELECT account_id, sku_name, cloud, currency_code, usage_unit, pricing,
+                           price_start_time, price_end_time,
+                           LEAD(price_start_time) OVER (
+                               PARTITION BY sku_name, cloud, usage_unit
+                               ORDER BY price_start_time, price_end_time NULLS LAST
+                           ) AS next_start_time
+                    FROM `system`.`billing`.`list_prices`
+                    WHERE currency_code = 'USD'
+                ) ranked
+            ) capped
+            WHERE effective_end IS NULL OR effective_end > price_start_time
+        ) list_prices
     ) lp
       ON u.sku_name = lp.sku_name AND u.cloud = lp.cloud AND u.usage_unit = lp.usage_unit
      AND u.usage_end_time >= lp.price_start_time
@@ -141,7 +167,7 @@ compute_pairs AS (
            regexp_replace(lower(raw_key), '[ _-]+', '') AS tag_key, trim(raw_value) AS tag_value
     FROM unit_totals ut
     LATERAL VIEW explode(ut.custom_tags) x AS raw_key, raw_value
-    WHERE raw_key IS NOT NULL AND raw_value IS NOT NULL
+    WHERE raw_key IS NOT NULL AND raw_value IS NOT NULL AND trim(raw_value) <> ''
       AND regexp_replace(lower(raw_key), '[ _-]+', '') <> ''
     QUALIFY ROW_NUMBER() OVER (
         PARTITION BY ut.window_days, ut.unit_id, regexp_replace(lower(raw_key), '[ _-]+', '') ORDER BY raw_key
@@ -207,7 +233,7 @@ work_job_pairs AS (
     FROM work_jp_units u
     JOIN job_tags_latest jt ON jt.workspace_id = u.workspace_id AND jt.job_id = u.work_id
     LATERAL VIEW explode(jt.tags) x AS raw_key, raw_value
-    WHERE u.work_kind = 'job' AND raw_key IS NOT NULL AND raw_value IS NOT NULL
+    WHERE u.work_kind = 'job' AND raw_key IS NOT NULL AND raw_value IS NOT NULL AND trim(raw_value) <> ''
       AND regexp_replace(lower(raw_key), '[ _-]+', '') <> ''
     QUALIFY ROW_NUMBER() OVER (
         PARTITION BY u.window_days, u.unit_id, regexp_replace(lower(raw_key), '[ _-]+', '') ORDER BY raw_key
@@ -220,7 +246,7 @@ work_pipeline_pairs AS (
     FROM work_jp_units u
     JOIN pipeline_tags_latest pt ON pt.workspace_id = u.workspace_id AND pt.pipeline_id = u.work_id
     LATERAL VIEW explode(pt.tags) x AS raw_key, raw_value
-    WHERE u.work_kind = 'pipeline' AND raw_key IS NOT NULL AND raw_value IS NOT NULL
+    WHERE u.work_kind = 'pipeline' AND raw_key IS NOT NULL AND raw_value IS NOT NULL AND trim(raw_value) <> ''
       AND regexp_replace(lower(raw_key), '[ _-]+', '') <> ''
     QUALIFY ROW_NUMBER() OVER (
         PARTITION BY u.window_days, u.unit_id, regexp_replace(lower(raw_key), '[ _-]+', '') ORDER BY raw_key
@@ -259,7 +285,7 @@ attr_pairs AS (
            regexp_replace(lower(raw_key), '[ _-]+', '') AS tag_key, trim(raw_value) AS tag_value
     FROM attr_rows ar
     LATERAL VIEW explode(ar.query_tags) x AS raw_key, raw_value
-    WHERE raw_key IS NOT NULL AND raw_value IS NOT NULL
+    WHERE raw_key IS NOT NULL AND raw_value IS NOT NULL AND trim(raw_value) <> ''
       AND regexp_replace(lower(raw_key), '[ _-]+', '') <> ''
     QUALIFY ROW_NUMBER() OVER (
         PARTITION BY ar.window_days, ar.arid, regexp_replace(lower(raw_key), '[ _-]+', '') ORDER BY raw_key

@@ -177,9 +177,7 @@ export function fmtDurationMs(ms: unknown): string {
   return isNumericValue(ms) ? fmtDuration(Number(ms) / 1000) : "-";
 }
 
-// "15 Sep" -- a bare YYYY-MM-DD calendar day, no year (a chart axis tick or a short table cell);
-// fmtDate above is the year-carrying form for everywhere else. UTC-parsed, same reasoning as
-// fmtDate's own comment: a calendar day is never reinterpreted through the viewer's time zone.
+// "Sep 15" for chart axis ticks; prose uses fmtDayMonth ("15 Sep"). UTC, so the day never shifts.
 export function fmtDayShort(dateStr: unknown): string {
   const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(dateStr || ""));
   if (!m) return String(dateStr || "");

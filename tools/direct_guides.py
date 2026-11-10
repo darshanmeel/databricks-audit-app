@@ -1154,7 +1154,7 @@ _DU = {
     "touched_sensitive": "1 when it read or wrote a sensitive table.", "active_person": "1 for an active person.",
     "active_sp": "1 for an active service principal.", "identities": "Always 1: counts people and service principals.",
     "access": "Reads, Writes, or both.", "last_access": "The latest of them.", "pairs": "Always 1: counts identity-table pairs.",
-    "direction": "Reads or Writes; on lineage, Upstream or Downstream.", "events": "Lineage events.", "day": "The day.",
+    "direction": "Reads or Writes; on lineage, Upstream or Downstream.", "day": "The day.",
     "other_table": "The table on the other end.", "other_class": "Its usage class.",
     "grantee": "Who holds the grant.", "privilege": "SELECT or ALL PRIVILEGES.", "used": "Whether the grantee read it in the window.",
     "unused": "1 when never read in the window.", "grants": "Always 1: counts grants.",

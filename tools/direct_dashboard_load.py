@@ -59,10 +59,21 @@ all_work AS (
   GROUP BY 1, 2
 ),
 price AS (
-  SELECT sku_name, cloud, usage_unit, price_start_time, price_end_time,
-         CAST(pricing.effective_list.default AS DOUBLE) AS list_rate
-  FROM system.billing.list_prices
-  WHERE currency_code = 'USD'
+  -- overlapping price rows end where the next one starts, so no usage row is priced twice
+  SELECT sku_name, cloud, usage_unit, price_start_time, price_end_time, list_rate
+  FROM (
+    SELECT sku_name, cloud, usage_unit, price_start_time,
+           CAST(pricing.effective_list.default AS DOUBLE) AS list_rate,
+           CASE WHEN price_end_time IS NULL THEN nxt WHEN nxt IS NULL THEN price_end_time
+                ELSE least(price_end_time, nxt) END AS price_end_time
+    FROM (
+      SELECT *, LEAD(price_start_time) OVER (PARTITION BY sku_name, cloud, usage_unit
+                                             ORDER BY price_start_time, price_end_time NULLS LAST) AS nxt
+      FROM system.billing.list_prices
+      WHERE currency_code = 'USD'
+    )
+  )
+  WHERE price_end_time IS NULL OR price_end_time > price_start_time
 ),
 bill AS (
   -- those warehouses' billed $ per hour, at list price

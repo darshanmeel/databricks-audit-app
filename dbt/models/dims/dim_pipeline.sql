@@ -9,10 +9,7 @@
 -- alone" -- so this dim is partitioned (and joined onto a finding frame, app/ui/data.add_names)
 -- on (workspace_id, pipeline_id), never pipeline_id alone.
 --
--- created_by / run_as are deliberately left off this dim: system.lakeflow.pipelines carries them
--- raw (lakeflow_pipelines_inventory_tier.sql selects created_by/run_as straight off the source
--- with no xx****@**** masking at all, unlike identity_metadata.run_as elsewhere, DEC-48) -- this
--- task resolves OBJECT names only, never a person, so they are left out entirely.
+-- created_by and run_as are carried raw (unmasked) by design.
 --
 -- OWNER / RUN-AS COLUMNS ARE CARRIED UNMASKED (DEC-55, your decision 2026-09-22). These are raw
 -- identity fields at the source -- system.lakeflow.jobs / compute.clusters / compute.warehouses /

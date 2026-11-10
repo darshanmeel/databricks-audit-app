@@ -31,7 +31,7 @@
                {{ norm_tag_key('e.key') }} AS tag_key, trim(e.value) AS tag_value,
                b.usage_quantity, b.source
         FROM {{ base_cte }} b, unnest(map_entries(b.custom_tags)) AS x(e)
-        WHERE e.key IS NOT NULL AND e.value IS NOT NULL AND {{ norm_tag_key('e.key') }} <> ''
+        WHERE e.key IS NOT NULL AND e.value IS NOT NULL AND trim(e.value) <> '' AND {{ norm_tag_key('e.key') }} <> ''
         QUALIFY ROW_NUMBER() OVER (PARTITION BY b.rid, {{ norm_tag_key('e.key') }} ORDER BY e.key) = 1
     ),
     per_value AS (

@@ -15,7 +15,33 @@ WITH priced AS (
     LEFT JOIN (
         SELECT sku_name, cloud, usage_unit, price_start_time, price_end_time,
                CAST(pricing.effective_list.default AS DOUBLE) AS list_rate
-        FROM `system`.`billing`.`list_prices`
+        -- de-duplicated list_prices (dbt/macros/list_prices.sql), written out by hand: overlapping
+        -- rows fan out this join.
+        FROM (
+            SELECT account_id, sku_name, cloud, currency_code, usage_unit, pricing,
+                   price_start_time, effective_end AS price_end_time
+            FROM (
+                SELECT account_id, sku_name, cloud, currency_code, usage_unit, pricing,
+                       price_start_time, price_end_time, next_start_time,
+                       CASE
+                           WHEN price_end_time IS NULL THEN next_start_time
+                           WHEN next_start_time IS NULL THEN price_end_time
+                           WHEN price_end_time <= next_start_time THEN price_end_time
+                           ELSE next_start_time
+                       END AS effective_end
+                FROM (
+                    SELECT account_id, sku_name, cloud, currency_code, usage_unit, pricing,
+                           price_start_time, price_end_time,
+                           LEAD(price_start_time) OVER (
+                               PARTITION BY sku_name, cloud, usage_unit
+                               ORDER BY price_start_time, price_end_time NULLS LAST
+                           ) AS next_start_time
+                    FROM `system`.`billing`.`list_prices`
+                    WHERE currency_code = 'USD'
+                ) ranked
+            ) capped
+            WHERE effective_end IS NULL OR effective_end > price_start_time
+        ) list_prices
     ) lp
       ON u.sku_name = lp.sku_name AND u.cloud = lp.cloud AND u.usage_unit = lp.usage_unit
      AND u.usage_end_time >= lp.price_start_time

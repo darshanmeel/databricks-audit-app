@@ -844,65 +844,72 @@ def get_abac_policies() -> dict:
 @app.get("/api/workspace_usage")
 def get_workspace_usage(
     request: Request,
-    window: int = Query(default=30),
+    window: int | None = Query(default=None),
     workspace_ids: list[str] = Query(default=[]),
     env: list[str] = Query(default=[]),
     tag: list[str] = Query(default=[]),
 ) -> dict:
+    window = window if window is not None else app_config.load_settings()["default_window"]
     attributes = _read_attribute_filters(request, _canonical_keys()) or None
     scope = app_rollup._resolve_workspace_scope(workspace_ids or None, env or None, attributes)
     return app_core_data.read_workspaces(window, scope, _parse_tag_filter(None, None, tag))
 
 
 @app.get("/api/workspace_schemas")
-def get_workspace_schemas(workspace_id: str | None = Query(default=None), window: int = Query(default=30)) -> dict:
+def get_workspace_schemas(workspace_id: str | None = Query(default=None), window: int | None = Query(default=None)) -> dict:
+    window = window if window is not None else app_config.load_settings()["default_window"]
     return app_core_data.read_workspace_schemas(workspace_id, window)
 
 
 @app.get("/api/activity")
 def get_activity(
     request: Request,
-    window: int = Query(default=30),
+    window: int | None = Query(default=None),
     workspace_ids: list[str] = Query(default=[]),
     env: list[str] = Query(default=[]),
     workspace_id: str | None = Query(default=None),
 ) -> dict:
+    window = window if window is not None else app_config.load_settings()["default_window"]
     attributes = _read_attribute_filters(request, _canonical_keys()) or None
     scope = app_rollup._resolve_workspace_scope(workspace_ids or None, env or None, attributes)
     return app_core_data.read_activity(window, scope, workspace_id)
 
 
 @app.get("/api/person_tables")
-def get_person_tables(identity: str = Query(...), window: int = Query(default=30)) -> dict:
+def get_person_tables(identity: str = Query(...), window: int | None = Query(default=None)) -> dict:
+    window = window if window is not None else app_config.load_settings()["default_window"]
     return app_core_data.read_person_tables(identity, window)
 
 
 @app.get("/api/volumes")
 def get_volumes(
     request: Request,
-    window: int = Query(default=30),
+    window: int | None = Query(default=None),
     workspace_ids: list[str] = Query(default=[]),
     env: list[str] = Query(default=[]),
     tag: list[str] = Query(default=[]),
 ) -> dict:
+    window = window if window is not None else app_config.load_settings()["default_window"]
     attributes = _read_attribute_filters(request, _canonical_keys()) or None
     scope = app_rollup._resolve_workspace_scope(workspace_ids or None, env or None, attributes)
     return app_core_data.read_volumes(scope, _parse_tag_filter(None, None, tag), window)
 
 
 @app.get("/api/volume_users")
-def get_volume_users(volume: str = Query(...), window: int = Query(default=30)) -> dict:
+def get_volume_users(volume: str = Query(...), window: int | None = Query(default=None)) -> dict:
+    window = window if window is not None else app_config.load_settings()["default_window"]
     return app_core_data.read_volume_users(volume, window)
 
 
 @app.get("/api/tables")
 def get_tables(
     request: Request,
-    window: int = Query(default=30),
+    window: int | None = Query(default=None),
     workspace_ids: list[str] = Query(default=[]),
     env: list[str] = Query(default=[]),
     tag: list[str] = Query(default=[]),
 ) -> dict:
+    window = window if window is not None else app_config.load_settings()["default_window"]
     attributes = _read_attribute_filters(request, _canonical_keys()) or None
     # "none": tables whose catalog no workspace read or wrote in the window
     no_home = "none" in workspace_ids
@@ -916,10 +923,11 @@ def get_tables(
 @app.get("/api/people")
 def get_people(
     request: Request,
-    window: int = Query(default=30),
+    window: int | None = Query(default=None),
     workspace_ids: list[str] = Query(default=[]),
     env: list[str] = Query(default=[]),
 ) -> dict:
+    window = window if window is not None else app_config.load_settings()["default_window"]
     attributes = _read_attribute_filters(request, _canonical_keys()) or None
     scope = app_rollup._resolve_workspace_scope(workspace_ids or None, env or None, attributes)
     return app_core_data.read_people(window, scope)
@@ -927,22 +935,25 @@ def get_people(
 @app.get("/api/warehouses")
 def get_warehouses(
     request: Request,
-    window: int = Query(default=30),
+    window: int | None = Query(default=None),
     workspace_ids: list[str] = Query(default=[]),
     env: list[str] = Query(default=[]),
 ) -> dict:
+    window = window if window is not None else app_config.load_settings()["default_window"]
     attributes = _read_attribute_filters(request, _canonical_keys()) or None
     scope = app_rollup._resolve_workspace_scope(workspace_ids or None, env or None, attributes)
     return app_core_data.read_warehouses(window, scope)
 
 
 @app.get("/api/warehouse")
-def get_warehouse(warehouse_id: str = Query(...), window: int = Query(default=30)) -> dict:
+def get_warehouse(warehouse_id: str = Query(...), window: int | None = Query(default=None)) -> dict:
+    window = window if window is not None else app_config.load_settings()["default_window"]
     return app_core_data.read_warehouse(warehouse_id, window)
 
 
 @app.get("/api/table")
-def get_table(name: str = Query(...), window: int = Query(default=30)) -> dict:
+def get_table(name: str = Query(...), window: int | None = Query(default=None)) -> dict:
+    window = window if window is not None else app_config.load_settings()["default_window"]
     return app_core_data.read_table(name, window)
 
 
@@ -1113,7 +1124,11 @@ def _findings_answer(eff_window: int, workspace_ids: list[str], env: list[str], 
         ],
     }
     if len(_FINDINGS_CACHE) >= _FINDINGS_CACHE_MAX:
-        _FINDINGS_CACHE.pop(next(iter(_FINDINGS_CACHE)))
+        # requests run on a thread pool: another one may have evicted first
+        try:
+            _FINDINGS_CACHE.pop(next(iter(_FINDINGS_CACHE), None), None)
+        except RuntimeError:
+            pass
     _FINDINGS_CACHE[cache_key] = out
     return out
 
@@ -1140,7 +1155,11 @@ def _cached(key: tuple, compute):
         return _ANSWER_CACHE[full]
     out = compute()
     if len(_ANSWER_CACHE) >= _ANSWER_CACHE_MAX:
-        _ANSWER_CACHE.pop(next(iter(_ANSWER_CACHE)))
+        # requests run on a thread pool: another one may have evicted first
+        try:
+            _ANSWER_CACHE.pop(next(iter(_ANSWER_CACHE), None), None)
+        except RuntimeError:
+            pass
     _ANSWER_CACHE[full] = out
     return out
 

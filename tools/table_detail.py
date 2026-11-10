@@ -224,6 +224,7 @@ def export(connect_fn: Callable, out_dir: Path, *, previous: Path | None = None,
             out.append(row)
         collected = max((s["collected_at"] for s in sizes.values() if s.get("collected_at")), default=None)
         log(f"table sizes: {len(tables)} tables{seen}, read from {stored['table_sizes']} (collected {collected})")
+        _mask_people(out, hist, mask)
         return _write_tables(out, hist, out_dir, **source, collected_at=collected, history_error=history_error,
                              history_from=stored["table_history"], seconds=round(time.perf_counter() - t0, 1))
 
@@ -301,8 +302,18 @@ def export(connect_fn: Callable, out_dir: Path, *, previous: Path | None = None,
             c.conn.close()
         except Exception:  # noqa: BLE001
             pass
+    _mask_people(out, hist, mask)
     return _write_tables(out, hist, out_dir, **source, threads=threads, max_tables=max_tables,
                          seconds=round(time.perf_counter() - t0, 1))
+
+
+def _mask_people(out: list[dict], hist: list[dict], mask: Callable[[str], str]) -> None:
+    for r in out:
+        if r.get("owner"):
+            r["owner"] = mask(str(r["owner"]))
+    for h in hist:
+        if h.get("user_name"):
+            h["user_name"] = mask(str(h["user_name"]))
 
 
 def _write_tables(out: list[dict], hist: list[dict], out_dir: Path, **info) -> dict:

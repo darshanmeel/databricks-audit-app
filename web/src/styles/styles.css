@@ -228,16 +228,11 @@ button { font-family: inherit; }
   font-family: var(--f-mono); padding: 2px 8px; border-radius: 999px;
   border: 1px solid var(--border); color: var(--text-dim); white-space: nowrap;
 }
-.badge.solid { color: #16130c; font-weight: 700; border-color: transparent; }
 .badge.critical { color: var(--st-crit-ink); border-color: var(--st-crit); }
 .badge.warn { color: var(--st-warn-ink); border-color: var(--st-warn); }
 .badge.ok { color: var(--st-ok-ink); border-color: var(--st-ok); }
 .badge.not_assessed { color: var(--st-na-ink); border-color: var(--st-na); }
 .badge.error { color: var(--st-crit-ink); border-color: var(--st-crit); }
-.badge.solid.critical { background: var(--st-crit); }
-.badge.solid.warn { background: var(--st-warn); }
-.badge.solid.ok { background: var(--st-ok); }
-.badge.solid.not_assessed { background: var(--st-na); }
 
 /* Facts: labelled fact list under a KPI number (components/primitives.tsx). */
 .facts { display: grid; grid-template-columns: auto 1fr; column-gap: 8px; row-gap: 3px; margin-top: 6px; }

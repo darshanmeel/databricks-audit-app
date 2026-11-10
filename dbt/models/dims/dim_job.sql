@@ -2,7 +2,7 @@
 -- T-40. Latest row per (workspace_id, job_id) from system.lakeflow.jobs (SCD2, latest row by
 -- change_time) -- exactly the join app/queries/vendored/cost/cost_by_job.sql's own caveat
 -- names: "Names/owner are not here - join job_id -> system.lakeflow.jobs (SCD2, take the latest
--- row by change_time) for the job name and run_as." Only the job NAME is carried onto this dim.
+-- row by change_time) for the job name and run_as."
 --
 -- job_id is unique only WITHIN a workspace (every vendored query that joins on it says so --
 -- e.g. lakeflow_job_ownership_orphans.sql, lakeflow_failed_jobs_wasted_dbus.sql), so the ROW_

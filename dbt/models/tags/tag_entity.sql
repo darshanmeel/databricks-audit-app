@@ -57,7 +57,7 @@ warehouse_pairs AS (
     SELECT w.warehouse_id, w.workspace_id, e.key AS raw_key,
            {{ norm_tag_key('e.key') }} AS tag_key, trim(e.value) AS tag_value
     FROM warehouse_latest w, unnest(map_entries(w.tags)) AS x(e)
-    WHERE w.rn = 1 AND e.key IS NOT NULL AND e.value IS NOT NULL AND {{ norm_tag_key('e.key') }} <> ''
+    WHERE w.rn = 1 AND e.key IS NOT NULL AND e.value IS NOT NULL AND trim(e.value) <> '' AND {{ norm_tag_key('e.key') }} <> ''
     QUALIFY ROW_NUMBER() OVER (PARTITION BY w.warehouse_id, {{ norm_tag_key('e.key') }} ORDER BY e.key) = 1
 ),
 warehouse_entity AS (
@@ -80,7 +80,7 @@ pool_pairs AS (
     SELECT p.instance_pool_id, p.workspace_id, e.key AS raw_key,
            {{ norm_tag_key('e.key') }} AS tag_key, trim(e.value) AS tag_value
     FROM pool_latest p, unnest(map_entries(p.tags)) AS x(e)
-    WHERE p.rn = 1 AND e.key IS NOT NULL AND e.value IS NOT NULL AND {{ norm_tag_key('e.key') }} <> ''
+    WHERE p.rn = 1 AND e.key IS NOT NULL AND e.value IS NOT NULL AND trim(e.value) <> '' AND {{ norm_tag_key('e.key') }} <> ''
     QUALIFY ROW_NUMBER() OVER (PARTITION BY p.instance_pool_id, {{ norm_tag_key('e.key') }} ORDER BY e.key) = 1
 ),
 pool_entity AS (
@@ -104,7 +104,7 @@ cluster_own_pairs AS (
     SELECT c.cluster_id, c.workspace_id, e.key AS raw_key,
            {{ norm_tag_key('e.key') }} AS tag_key, trim(e.value) AS tag_value
     FROM cluster_latest c, unnest(map_entries(c.tags)) AS x(e)
-    WHERE c.rn = 1 AND e.key IS NOT NULL AND e.value IS NOT NULL AND {{ norm_tag_key('e.key') }} <> ''
+    WHERE c.rn = 1 AND e.key IS NOT NULL AND e.value IS NOT NULL AND trim(e.value) <> '' AND {{ norm_tag_key('e.key') }} <> ''
     QUALIFY ROW_NUMBER() OVER (PARTITION BY c.cluster_id, {{ norm_tag_key('e.key') }} ORDER BY e.key) = 1
 ),
 cluster_pool_fallback AS (
@@ -161,7 +161,7 @@ job_pairs AS (
     SELECT j.job_id, j.workspace_id, e.key AS raw_key,
            {{ norm_tag_key('e.key') }} AS tag_key, trim(e.value) AS tag_value
     FROM job_latest j, unnest(map_entries(j.tags)) AS x(e)
-    WHERE j.rn = 1 AND e.key IS NOT NULL AND e.value IS NOT NULL AND {{ norm_tag_key('e.key') }} <> ''
+    WHERE j.rn = 1 AND e.key IS NOT NULL AND e.value IS NOT NULL AND trim(e.value) <> '' AND {{ norm_tag_key('e.key') }} <> ''
     QUALIFY ROW_NUMBER() OVER (
         PARTITION BY j.workspace_id, j.job_id, {{ norm_tag_key('e.key') }} ORDER BY e.key
     ) = 1
@@ -182,7 +182,7 @@ pipeline_pairs AS (
     SELECT p.pipeline_id, p.workspace_id, e.key AS raw_key,
            {{ norm_tag_key('e.key') }} AS tag_key, trim(e.value) AS tag_value
     FROM pipeline_latest p, unnest(map_entries(p.tags)) AS x(e)
-    WHERE p.rn = 1 AND e.key IS NOT NULL AND e.value IS NOT NULL AND {{ norm_tag_key('e.key') }} <> ''
+    WHERE p.rn = 1 AND e.key IS NOT NULL AND e.value IS NOT NULL AND trim(e.value) <> '' AND {{ norm_tag_key('e.key') }} <> ''
     QUALIFY ROW_NUMBER() OVER (
         PARTITION BY p.workspace_id, p.pipeline_id, {{ norm_tag_key('e.key') }} ORDER BY e.key
     ) = 1
@@ -203,7 +203,7 @@ statement_pairs AS (
     SELECT q.statement_id, q.workspace_id, e.key AS raw_key,
            {{ norm_tag_key('e.key') }} AS tag_key, trim(e.value) AS tag_value
     FROM {{ source('system_query', 'history') }} q, unnest(map_entries(q.query_tags)) AS x(e)
-    WHERE e.key IS NOT NULL AND e.value IS NOT NULL AND {{ norm_tag_key('e.key') }} <> ''
+    WHERE e.key IS NOT NULL AND e.value IS NOT NULL AND trim(e.value) <> '' AND {{ norm_tag_key('e.key') }} <> ''
     QUALIFY ROW_NUMBER() OVER (
         PARTITION BY q.statement_id, {{ norm_tag_key('e.key') }} ORDER BY e.key
     ) = 1
@@ -225,7 +225,7 @@ uc_table_pairs AS (
     SELECT lower(t.catalog_name) || '.' || lower(t.schema_name) || '.' || lower(t.table_name) AS entity_id,
            t.tag_name AS raw_key, {{ norm_tag_key('t.tag_name') }} AS tag_key, trim(t.tag_value) AS tag_value
     FROM {{ source('system_information_schema', 'table_tags') }} t
-    WHERE t.tag_name IS NOT NULL AND t.tag_value IS NOT NULL AND {{ norm_tag_key('t.tag_name') }} <> ''
+    WHERE t.tag_name IS NOT NULL AND t.tag_value IS NOT NULL AND trim(t.tag_value) <> '' AND {{ norm_tag_key('t.tag_name') }} <> ''
     QUALIFY ROW_NUMBER() OVER (
         PARTITION BY lower(t.catalog_name), lower(t.schema_name), lower(t.table_name), {{ norm_tag_key('t.tag_name') }}
         ORDER BY t.tag_name
@@ -242,7 +242,7 @@ uc_schema_pairs AS (
     SELECT lower(s.catalog_name) || '.' || lower(s.schema_name) AS entity_id,
            s.tag_name AS raw_key, {{ norm_tag_key('s.tag_name') }} AS tag_key, trim(s.tag_value) AS tag_value
     FROM {{ source('system_information_schema', 'schema_tags') }} s
-    WHERE s.tag_name IS NOT NULL AND s.tag_value IS NOT NULL AND {{ norm_tag_key('s.tag_name') }} <> ''
+    WHERE s.tag_name IS NOT NULL AND s.tag_value IS NOT NULL AND trim(s.tag_value) <> '' AND {{ norm_tag_key('s.tag_name') }} <> ''
     QUALIFY ROW_NUMBER() OVER (
         PARTITION BY lower(s.catalog_name), lower(s.schema_name), {{ norm_tag_key('s.tag_name') }}
         ORDER BY s.tag_name
@@ -260,7 +260,7 @@ uc_column_pairs AS (
                || lower(c.column_name) AS entity_id,
            c.tag_name AS raw_key, {{ norm_tag_key('c.tag_name') }} AS tag_key, trim(c.tag_value) AS tag_value
     FROM {{ source('system_information_schema', 'column_tags') }} c
-    WHERE c.tag_name IS NOT NULL AND c.tag_value IS NOT NULL AND {{ norm_tag_key('c.tag_name') }} <> ''
+    WHERE c.tag_name IS NOT NULL AND c.tag_value IS NOT NULL AND trim(c.tag_value) <> '' AND {{ norm_tag_key('c.tag_name') }} <> ''
     QUALIFY ROW_NUMBER() OVER (
         PARTITION BY lower(c.catalog_name), lower(c.schema_name), lower(c.table_name), lower(c.column_name),
                      {{ norm_tag_key('c.tag_name') }}
@@ -278,7 +278,7 @@ uc_volume_pairs AS (
     SELECT lower(v.catalog_name) || '.' || lower(v.schema_name) || '.' || lower(v.volume_name) AS entity_id,
            v.tag_name AS raw_key, {{ norm_tag_key('v.tag_name') }} AS tag_key, trim(v.tag_value) AS tag_value
     FROM {{ source('system_information_schema', 'volume_tags') }} v
-    WHERE v.tag_name IS NOT NULL AND v.tag_value IS NOT NULL AND {{ norm_tag_key('v.tag_name') }} <> ''
+    WHERE v.tag_name IS NOT NULL AND v.tag_value IS NOT NULL AND trim(v.tag_value) <> '' AND {{ norm_tag_key('v.tag_name') }} <> ''
     QUALIFY ROW_NUMBER() OVER (
         PARTITION BY lower(v.catalog_name), lower(v.schema_name), lower(v.volume_name), {{ norm_tag_key('v.tag_name') }}
         ORDER BY v.tag_name

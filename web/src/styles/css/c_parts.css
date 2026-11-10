@@ -131,3 +131,5 @@ table.findings .ck-actions { flex-direction: row; justify-content: flex-end; gap
 
 /* Tags: own tag and bill disagree */
 .tag-conflicts { margin-top: 14px; }
+
+:root[data-theme="dark"] .shb-seg { color: var(--bg); }

@@ -73,7 +73,7 @@ cluster_tag_pairs AS (
     SELECT workspace_id, cluster_id, raw_key,
            {{ norm_tag_key('raw_key') }} AS tag_key, trim(raw_value) AS tag_value, source
     FROM cluster_tag_candidates
-    WHERE raw_key IS NOT NULL AND raw_value IS NOT NULL AND {{ norm_tag_key('raw_key') }} <> ''
+    WHERE raw_key IS NOT NULL AND raw_value IS NOT NULL AND trim(raw_value) <> '' AND {{ norm_tag_key('raw_key') }} <> ''
     QUALIFY ROW_NUMBER() OVER (PARTITION BY workspace_id, cluster_id, {{ norm_tag_key('raw_key') }} ORDER BY priority, raw_key) = 1
 ),
 warehouse_pairs AS (
@@ -84,7 +84,7 @@ warehouse_pairs AS (
     JOIN warehouse_tags_latest wt
       ON wt.workspace_id = u.workspace_id AND u.compute_kind = 'warehouse' AND wt.warehouse_id = u.compute_id
     , LATERAL (SELECT e.key AS raw_key, e.value AS raw_value FROM unnest(map_entries(wt.tags)) AS y(e)) x
-    WHERE x.raw_key IS NOT NULL AND x.raw_value IS NOT NULL AND {{ norm_tag_key('x.raw_key') }} <> ''
+    WHERE x.raw_key IS NOT NULL AND x.raw_value IS NOT NULL AND trim(x.raw_value) <> '' AND {{ norm_tag_key('x.raw_key') }} <> ''
     QUALIFY ROW_NUMBER() OVER (PARTITION BY u.window_days, u.unit_id, {{ norm_tag_key('x.raw_key') }} ORDER BY x.raw_key) = 1
 ),
 cluster_pairs AS (
@@ -145,7 +145,7 @@ stmt_pairs AS (
     FROM hashed h, LATERAL (
         SELECT e.key AS raw_key, e.value AS raw_value FROM unnest(map_entries(h.query_tags)) AS y(e)
     ) x
-    WHERE x.raw_key IS NOT NULL AND x.raw_value IS NOT NULL AND {{ norm_tag_key('x.raw_key') }} <> ''
+    WHERE x.raw_key IS NOT NULL AND x.raw_value IS NOT NULL AND trim(x.raw_value) <> '' AND {{ norm_tag_key('x.raw_key') }} <> ''
     QUALIFY ROW_NUMBER() OVER (PARTITION BY h.window_days, h.srid, {{ norm_tag_key('x.raw_key') }} ORDER BY x.raw_key) = 1
 ),
 work_level AS (

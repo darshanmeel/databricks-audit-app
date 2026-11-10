@@ -485,7 +485,7 @@ def _export_names(cur, names_sql: dict[str, str], out_dir: Path, mask_users: boo
             exported[name] = {"exported": True, "error": None, **result}
             available.append(name)
         except Exception as exc:  # noqa: BLE001 -- one bad names query must not stop the rest
-            exported[name] = {"exported": False, "error": str(exc)}
+            exported[name] = {"exported": False, "error": _redact(str(exc))}
 
     missing = [n for n in DIM_TABLE_NAMES if n not in available]
     return {
@@ -781,7 +781,7 @@ def _export_tags(
                 exported[name]["sources_not_exported"] = substituted
             available.append(name)
         except Exception as exc:  # noqa: BLE001 -- one bad tags query must not stop the rest
-            exported[name] = {"exported": False, "error": str(exc)}
+            exported[name] = {"exported": False, "error": _redact(str(exc))}
 
     missing = [n for n in TAG_TABLE_NAMES if n not in available]
     return {
@@ -1360,7 +1360,7 @@ def _export_volumes(connect, work_dir: Path, out_dir: Path, cfg: dict, token: st
 
 
 def export_sizes_only(out_dir: Path, *, connect_fn: Callable | None = None, env: dict | None = None,
-                      volumes: bool | None = None) -> dict:
+                      volumes: bool | None = None, mask_users: bool = False) -> dict:
     """Table sizes, history and volume files only, into out_dir/storage; the rest of out_dir stays."""
     if datasource.inside_repo(out_dir):
         raise ExportConfigError(
@@ -1377,7 +1377,7 @@ def export_sizes_only(out_dir: Path, *, connect_fn: Callable | None = None, env:
         shutil.rmtree(work)
     detail = table_detail.export(connect, work, previous=out_dir / "storage" / table_detail.FILE,
                                  threads=cfg["threads"], max_tables=cfg["max_tables"], redact=redact,
-                                 host=env.get(ENV_HOST), mask=_mask_user if masking_enabled() else str)
+                                 host=env.get(ENV_HOST), mask=_mask_user if mask_users or masking_enabled() else str)
     if not detail.get("exported"):
         shutil.rmtree(work, ignore_errors=True)
         raise ExportConfigError(f"table sizes not exported: {detail.get('error')}")
@@ -1460,6 +1460,10 @@ def main(argv: list[str] | None = None) -> int:
     if args.threads <= 0:
         print("error: --threads must be a positive integer", file=sys.stderr)
         return 2
+    # a partial run swaps the whole folder, so it would replace the full export the app reads
+    if (args.only or args.domain or args.tags) and not args.out:
+        print("error: --only, --domain and --tags need their own --out folder", file=sys.stderr)
+        return 2
 
     if args.storage_from and not (Path(args.storage_from) / "storage").is_dir():
         print(f"error: no storage/ folder in {args.storage_from}; run --sizes-only --out {args.storage_from} first",
@@ -1467,7 +1471,7 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     if args.sizes_only:
         try:
-            done = export_sizes_only(out_dir, volumes=False if args.no_volumes else None)
+            done = export_sizes_only(out_dir, volumes=False if args.no_volumes else None, mask_users=args.mask_users)
         except ExportConfigError as e:
             print(f"error: {e}", file=sys.stderr)
             return 2

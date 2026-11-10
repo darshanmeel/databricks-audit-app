@@ -24,7 +24,7 @@ models:
     description: >
       One row per job_id (unique within a workspace, so keyed on workspace_id + job_id) --
       the latest known name from system.lakeflow.jobs (SCD2, latest row by change_time).
-      Object name only; no identity column (creator/run_as and friends) is carried here.
+      Carries run_as and creator raw (unmasked).
     columns:
       - name: workspace_id
         data_tests:
@@ -43,7 +43,7 @@ models:
     description: >
       One row per cluster_id (a globally-unique GUID, so keyed on cluster_id alone) -- the
       latest known cluster_name/cluster_source from system.compute.clusters (SCD2, latest row
-      by change_time). Object name only; owned_by is not carried here.
+      by change_time). Carries owned_by raw (unmasked).
     columns:
       - name: cluster_id
         data_tests:
@@ -58,7 +58,7 @@ models:
     description: >
       One row per warehouse_id (a globally-unique GUID, so keyed on warehouse_id alone) --
       the latest known warehouse_name from system.compute.warehouses (SCD2, latest row by
-      change_time). Object name only; created_by is not carried here.
+      change_time). Carries created_by raw (unmasked).
     columns:
       - name: warehouse_id
         data_tests:
@@ -73,7 +73,7 @@ models:
     description: >
       One row per pipeline_id (unique within a workspace, so keyed on workspace_id +
       pipeline_id) -- the latest known pipeline_name from system.lakeflow.pipelines (SCD2,
-      latest row by change_time). Object name only; created_by/run_as are not carried here.
+      latest row by change_time). Carries created_by and run_as raw (unmasked).
     columns:
       - name: workspace_id
         data_tests:

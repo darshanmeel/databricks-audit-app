@@ -76,6 +76,9 @@ def money_column(columns) -> tuple[str, str] | None:
     """(column, kind) for this table's headline dollar figure, or None. A column MONEY_COLUMN_KIND
     names explicitly wins; else the first money-shaped column reads "spend"."""
     cols = list(columns or [])
+    # one row per (tag_key, value): every key repeats the same dollars, so a sum counts them once per key
+    if "tag_key" in cols:
+        return None
     for name in cols:
         if name in MONEY_COLUMN_KIND:
             return name, MONEY_COLUMN_KIND[name]

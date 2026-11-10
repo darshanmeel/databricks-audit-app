@@ -912,11 +912,13 @@ export default function App() {
 
   React.useEffect(() => {
     if (workspaceIdSet === null) return;
+    let cancelled = false;
     setFindings(null);
     setRegionGap(null);
     Api.findings(window_, workspaceIds, envs)
-      .then((d) => { setFindings(d.findings); setRegionGap(d.region_gap || null); })
-      .catch((e) => setLoadError(String(e)));
+      .then((d) => { if (!cancelled) { setFindings(d.findings); setRegionGap(d.region_gap || null); } })
+      .catch((e) => { if (!cancelled) setLoadError(String(e)); });
+    return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [window_, JSON.stringify(workspaceIds), workspaceIdSet === null, envs.join(","), Api.tagFilterKey()]);
 

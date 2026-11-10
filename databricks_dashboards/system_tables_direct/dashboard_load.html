@@ -167,12 +167,23 @@ all_work AS (
   WHERE start_time &gt;= CAST(:time_range.min AS DATE) AND start_time &lt; date_add(:time_range.max, 1)
     AND CAST(compute.warehouse_id AS STRING) IN (SELECT warehouse_id FROM q)
   GROUP BY 1, 2
-)</code></pre></details></li><li><code>price</code>: List price of every SKU over time.<details><summary>Its SQL (7 lines)</summary><pre><code><span class="c">-- List price of every SKU over time.</span>
+)</code></pre></details></li><li><code>price</code>: List price of every SKU over time.<details><summary>Its SQL (18 lines)</summary><pre><code><span class="c">-- List price of every SKU over time.</span>
 price AS (
-  SELECT sku_name, cloud, usage_unit, price_start_time, price_end_time,
-         CAST(pricing.effective_list.default AS DOUBLE) AS list_rate
-  FROM system.billing.list_prices
-  WHERE currency_code = &#x27;USD&#x27;
+<span class="c">  -- overlapping price rows end where the next one starts, so no usage row is priced twice</span>
+  SELECT sku_name, cloud, usage_unit, price_start_time, price_end_time, list_rate
+  FROM (
+    SELECT sku_name, cloud, usage_unit, price_start_time,
+           CAST(pricing.effective_list.default AS DOUBLE) AS list_rate,
+           CASE WHEN price_end_time IS NULL THEN nxt WHEN nxt IS NULL THEN price_end_time
+                ELSE least(price_end_time, nxt) END AS price_end_time
+    FROM (
+      SELECT *, LEAD(price_start_time) OVER (PARTITION BY sku_name, cloud, usage_unit
+                                             ORDER BY price_start_time, price_end_time NULLS LAST) AS nxt
+      FROM system.billing.list_prices
+      WHERE currency_code = &#x27;USD&#x27;
+    )
+  )
+  WHERE price_end_time IS NULL OR price_end_time &gt; price_start_time
 )</code></pre></details></li><li><code>bill</code>: Those warehouses&#x27; billed $ per hour at list price. A query&#x27;s estimated $ is the hour&#x27;s $ times its share of the hour&#x27;s work.<details><summary>Its SQL (13 lines)</summary><pre><code><span class="c">-- Those warehouses&#x27; billed $ per hour at list price. A query&#x27;s estimated $ is the hour&#x27;s $ times its share of the hour&#x27;s work.</span>
 bill AS (
 <span class="c">  -- those warehouses&#x27; billed $ per hour, at list price</span>
@@ -188,7 +199,7 @@ bill AS (
 )</code></pre></details></li></ol>
   <h4>3. Final query</h4><p>One row per dashboard, tab, day, identity and warehouse; newest first.</p>
   <h4>4. Columns it returns</h4><div class='table-wrap'><table><tr><th>Column</th><th>Meaning</th></tr><tr><td><code>dashboard</code></td><td>The dashboard, by title: query_tags[&#x27;dashboard&#x27;] matched to the dashboards of this set.</td></tr><tr><td><code>tab</code></td><td>The page the query belongs to: query_tags[&#x27;tab&#x27;].</td></tr><tr><td><code>day</code></td><td>The day the queries started (UTC).</td></tr><tr><td><code>run_as</code></td><td>Who ran them: the dashboard&#x27;s owner when credentials are embedded, else the viewer.</td></tr><tr><td><code>warehouse</code></td><td>The SQL warehouse, by name.</td></tr><tr><td><code>queries</code></td><td>Queries in the row.</td></tr><tr><td><code>failed</code></td><td>Of them, failed.</td></tr><tr><td><code>cached</code></td><td>Of them, answered from the result cache: no compute.</td></tr><tr><td><code>hours</code></td><td>Their run time, summed, in hours.</td></tr><tr><td><code>queued_hours</code></td><td>Time they waited for a free slot on the warehouse, summed, in hours.</td></tr><tr><td><code>slowest_s</code></td><td>The longest single query in the row, in seconds.</td></tr><tr><td><code>gb_read</code></td><td>Data they read, in GB.</td></tr><tr><td><code>est_usd</code></td><td>Estimated $ at list price: each query&#x27;s share of its warehouse&#x27;s bill in that hour, by task time.</td></tr></table></div>
-  <details><summary>SQL with comments (90 lines)</summary><pre><code><span class="c">-- Dashboard load: the queries of every dashboard in this set, per tab, from their query tags. List price; dates from the Time Window.</span>
+  <details><summary>SQL with comments (101 lines)</summary><pre><code><span class="c">-- Dashboard load: the queries of every dashboard in this set, per tab, from their query tags. List price; dates from the Time Window.</span>
 <span class="c">-- Warehouse id to name: the latest row per warehouse.</span>
 WITH wh AS (
   SELECT CAST(warehouse_id AS STRING) AS warehouse_id, warehouse_name FROM system.compute.warehouses
@@ -249,10 +260,21 @@ all_work AS (
 ),
 <span class="c">-- List price of every SKU over time.</span>
 price AS (
-  SELECT sku_name, cloud, usage_unit, price_start_time, price_end_time,
-         CAST(pricing.effective_list.default AS DOUBLE) AS list_rate
-  FROM system.billing.list_prices
-  WHERE currency_code = &#x27;USD&#x27;
+<span class="c">  -- overlapping price rows end where the next one starts, so no usage row is priced twice</span>
+  SELECT sku_name, cloud, usage_unit, price_start_time, price_end_time, list_rate
+  FROM (
+    SELECT sku_name, cloud, usage_unit, price_start_time,
+           CAST(pricing.effective_list.default AS DOUBLE) AS list_rate,
+           CASE WHEN price_end_time IS NULL THEN nxt WHEN nxt IS NULL THEN price_end_time
+                ELSE least(price_end_time, nxt) END AS price_end_time
+    FROM (
+      SELECT *, LEAD(price_start_time) OVER (PARTITION BY sku_name, cloud, usage_unit
+                                             ORDER BY price_start_time, price_end_time NULLS LAST) AS nxt
+      FROM system.billing.list_prices
+      WHERE currency_code = &#x27;USD&#x27;
+    )
+  )
+  WHERE price_end_time IS NULL OR price_end_time &gt; price_start_time
 ),
 <span class="c">-- Those warehouses&#x27; billed $ per hour at list price. A query&#x27;s estimated $ is the hour&#x27;s $ times its share of the hour&#x27;s work.</span>
 bill AS (

@@ -6,7 +6,7 @@ import React from "react";
 
 import { estLabel, fmtDbu, fmtInt, fmtMoney, fmtPct } from "../format";
 import { DbxLink, resolveName, useNames, wsPhrase } from "../components/names";
-import { groupsToEntries, numOrZero, regroupByKeyIndex, useFindingAgg, useFindingData } from "../components/hooks";
+import { groupsToEntries, netEntries, numOrZero, regroupByKeyIndex, useFindingAgg, useFindingData } from "../components/hooks";
 import { COST_MONEY_COL } from "../components/tab_registry";
 import { AreaContent, Card, CaveatNote, LinkOut, MetricCard, MetricGrid, NoDataBlock, RowStatusPill, StatusPill, bandPillKind, isUnderFloor } from "../components/primitives";
 import { ChartNote, shortId } from "../components/charts";
@@ -79,8 +79,8 @@ function MlaiSpendContent({ filters, maxCat, onExternalJump, onVerdict }: LooseP
   })() : null;
 
   const modeWsReady = modeWsAgg.phase === "ready" && modeWsAgg.outcome === "ok_rows";
-  const modeByEndpoint = modeWsReady ? groupsToEntries(modeWsAgg.data, (k) => endpointLabel(k && k[1], k && k[0])) : null;
-  const vsItems = vsReady ? groupsToEntries(vsAgg.data, (k) => endpointLabel(k && k[1], k && k[0])) : null;
+  const modeByEndpoint = modeWsReady ? netEntries(modeWsAgg.data, (k) => endpointLabel(k && k[1], k && k[0])) : null;
+  const vsItems = vsReady ? netEntries(vsAgg.data, (k) => endpointLabel(k && k[1], k && k[0])) : null;
 
   const verdictSentence = spendSettled && (modeReady || vsReady)
     ? `${fmtMoney(totalSpend * (1 - (prodReady ? prodDisc : disc)), 0)} on model serving and Vector Search over the last ${filters.window} days${launchPct != null ? `; ${fmtPct(launchPct, 0)} of model-serving $ is scale-from-zero` : ""}.`

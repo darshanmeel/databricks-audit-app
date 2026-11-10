@@ -172,6 +172,12 @@ export function groupsToEntries(data: AggregateData | null, keyFmt: (key: AggKey
   return entries;
 }
 
+// groupsToEntries at the effective price: the server returns list-price sums plus discount_pct.
+export function netEntries(data: AggregateData | null, keyFmt: (key: AggKey[]) => string, otherLabel?: string): Entry[] {
+  const net = 1 - numOrZero(data && data.discount_pct);
+  return groupsToEntries(data, keyFmt, otherLabel).map((e) => ({ ...e, value: e.value * net }));
+}
+
 // Collapse a 2-group-column aggregate response onto ONE of its key columns, re-summing across the
 // other -- one server round trip covers two chart breakdowns that share a source table (e.g.
 // cost_usage_policy_coverage grouped by [policy_coverage, tag_coverage] in one call, then this
@@ -253,9 +259,14 @@ export function useMultiFindingData(queryIds: string[] | null, windowDays: numbe
     let cancelled = false;
     setState({ phase: "loading", byId: {} });
     if (!ids.length) { setState({ phase: "ready", byId: {} }); return undefined; }
+    const workspaceActive = !!((workspaceIds && workspaceIds.length > 0) || (envs && envs.length > 0));
+    const tagActive = Api.tagFilterKey() !== "";
     Promise.all(ids.map((id) =>
       Api.finding(id, windowDays, workspaceIds, envs, lim, 0, undefined, statuses)
-        .then((d): [string, FindingState] => [id, { phase: "ready", outcome: d.outcome, data: d, error: null }])
+        .then((d): [string, FindingState] => {
+          if (!cancelled) reportIgnoredFilters(id, workspaceActive, tagActive, d.scope);
+          return [id, { phase: "ready", outcome: d.outcome, data: d, error: null }];
+        })
         .catch((e): [string, FindingState] => [id, { phase: "error", outcome: null, data: null, error: e.message || String(e) }])
     )).then((pairs) => {
       if (cancelled) return;

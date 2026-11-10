@@ -633,9 +633,9 @@ def export(connect_fn: Callable, out_dir: Path, *, end: dt.date, windows: list[i
                     if key != "sensitive_columns":
                         raise
                     rows = _rows(cur, sensitive_columns_sql(classification=False))
-                if mask is not None and "identity" in schema.names:
-                    rows = [{**r, "identity": None if r.get("identity") is None else mask(str(r["identity"]))}
-                            for r in rows]
+                people = [c for c in ("identity", "grantee") if c in schema.names]
+                if mask is not None and people:
+                    rows = [{**r, **{c: None if r.get(c) is None else mask(str(r[c])) for c in people}} for r in rows]
                 _write(folder, name, rows, schema)
                 info[key] = {"rows": len(rows), "error": None}
             except Exception as exc:  # noqa: BLE001 -- e.g. no access to lineage: activity still counts

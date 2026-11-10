@@ -11,9 +11,8 @@ import { AreaContent, Card, CaveatNote } from "../components/primitives";
 import { ChartNote, shortId } from "../components/charts";
 import { Columns } from "../components/charts_more";
 import { csvField } from "../components/findings_table";
-import { enumLabel } from "../components/labels";
+import { enumLabel, productLabel } from "../components/labels";
 import { COST_MONEY_COL } from "../components/tab_registry";
-import { productWords } from "./tab_money";
 import type { AggState, AggregateData, Filters } from "../types";
 import type { TabProps } from "../components/primitives";
 
@@ -266,7 +265,7 @@ function WhatChanged({ level, rowKey, name, fix, days, nBefore, nAfter, filters 
     const net = isReady(productAgg) ? 1 - numOrZero(productAgg.data.discount_pct) : 1;
     drivers = [...aggMaps(productAgg, days, net, null, 0, 1).entries()].map(([p, m]) => {
       const s = sides(m, fix);
-      return { label: productWords(p === "account" ? null : p), kind: "money" as Kind, mv: move(s.b / nBefore, s.a / nAfter) };
+      return { label: productLabel(p === "account" ? null : p), kind: "money" as Kind, mv: move(s.b / nBefore, s.a / nAfter) };
     }).sort((x, y) => Math.abs(y.mv.change || 0) - Math.abs(x.mv.change || 0));
     const top = drivers[0];
     if (top && dirOf("money", top.mv) !== 0) readings.push(`Mostly ${top.label}: ${changeText("money", top.mv)} a day.`);

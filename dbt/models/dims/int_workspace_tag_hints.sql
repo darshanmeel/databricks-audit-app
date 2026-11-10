@@ -45,10 +45,11 @@ WITH tag_pairs AS (
 -- 1. tag_hint -- T-23's original four env-ish keys, unchanged keys, now DBU-ranked.
 -- ---------------------------------------------------------------------------------------------
 env_hint_agg AS (
-    SELECT workspace_id, raw_value AS tag_value, SUM(usage_quantity) AS dbus
+    SELECT workspace_id, trim(raw_value) AS tag_value, SUM(usage_quantity) AS dbus
     FROM tag_pairs
-    WHERE raw_key IN ('env', 'environment', 'stage', 'tier')
-    GROUP BY workspace_id, raw_value
+    WHERE {{ norm_tag_key('raw_key') }} IN ('env', 'environment', 'stage', 'tier')
+      AND trim(raw_value) <> ''
+    GROUP BY workspace_id, trim(raw_value)
 ),
 env_hint_ranked AS (
     SELECT workspace_id, tag_value, dbus,

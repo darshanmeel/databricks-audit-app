@@ -889,12 +889,12 @@
                   "datasetName": "d7657478",
                   "fields": [
                     {
-                      "name": "workspace_class",
-                      "expression": "`workspace_class`"
-                    },
-                    {
                       "name": "user_name",
                       "expression": "`user_name`"
+                    },
+                    {
+                      "name": "workspace_class",
+                      "expression": "`workspace_class`"
                     }
                   ],
                   "disaggregated": true
@@ -913,8 +913,8 @@
               "encodings": {
                 "columns": [
                   {
-                    "fieldName": "workspace_class",
-                    "title": "Class",
+                    "fieldName": "user_name",
+                    "title": "User name",
                     "type": "string",
                     "displayAs": "string",
                     "order": 0,
@@ -940,22 +940,23 @@
                     "imageHeight": ""
                   },
                   {
-                    "fieldName": "user_name",
-                    "title": "Active users",
-                    "type": "float",
-                    "displayAs": "number",
+                    "fieldName": "workspace_class",
+                    "title": "Class",
+                    "type": "string",
+                    "displayAs": "string",
                     "order": 1,
                     "visible": true,
-                    "alignContent": "right",
-                    "numberFormat": "0,0.[00]",
+                    "alignContent": "left",
                     "allowHTML": false,
+                    "allowSearch": true,
+                    "useMonospaceFont": false,
                     "preserveWhitespace": false,
                     "highlightLinks": false,
                     "booleanValues": [
                       "false",
                       "true"
                     ],
-                    "useMonospaceFont": false,
+                    "dateTimeFormat": "YYYY-MM-DD",
                     "linkUrlTemplate": "{{ @ }}",
                     "linkTextTemplate": "{{ @ }}",
                     "linkTitleTemplate": "{{ @ }}",

@@ -32,7 +32,7 @@ warehouse_pairs AS (
            regexp_replace(lower(raw_key), '[ _-]+', '') AS tag_key, trim(raw_value) AS tag_value
     FROM warehouse_latest w
     LATERAL VIEW explode(w.tags) x AS raw_key, raw_value
-    WHERE w.rn = 1 AND raw_key IS NOT NULL AND raw_value IS NOT NULL
+    WHERE w.rn = 1 AND raw_key IS NOT NULL AND raw_value IS NOT NULL AND trim(raw_value) <> ''
       AND regexp_replace(lower(raw_key), '[ _-]+', '') <> ''
     QUALIFY ROW_NUMBER() OVER (
         PARTITION BY w.warehouse_id, regexp_replace(lower(raw_key), '[ _-]+', '') ORDER BY raw_key
@@ -58,7 +58,7 @@ pool_pairs AS (
            regexp_replace(lower(raw_key), '[ _-]+', '') AS tag_key, trim(raw_value) AS tag_value
     FROM pool_latest p
     LATERAL VIEW explode(p.tags) x AS raw_key, raw_value
-    WHERE p.rn = 1 AND raw_key IS NOT NULL AND raw_value IS NOT NULL
+    WHERE p.rn = 1 AND raw_key IS NOT NULL AND raw_value IS NOT NULL AND trim(raw_value) <> ''
       AND regexp_replace(lower(raw_key), '[ _-]+', '') <> ''
     QUALIFY ROW_NUMBER() OVER (
         PARTITION BY p.instance_pool_id, regexp_replace(lower(raw_key), '[ _-]+', '') ORDER BY raw_key
@@ -84,7 +84,7 @@ cluster_own_pairs AS (
            regexp_replace(lower(raw_key), '[ _-]+', '') AS tag_key, trim(raw_value) AS tag_value
     FROM cluster_latest c
     LATERAL VIEW explode(c.tags) x AS raw_key, raw_value
-    WHERE c.rn = 1 AND raw_key IS NOT NULL AND raw_value IS NOT NULL
+    WHERE c.rn = 1 AND raw_key IS NOT NULL AND raw_value IS NOT NULL AND trim(raw_value) <> ''
       AND regexp_replace(lower(raw_key), '[ _-]+', '') <> ''
     QUALIFY ROW_NUMBER() OVER (
         PARTITION BY c.cluster_id, regexp_replace(lower(raw_key), '[ _-]+', '') ORDER BY raw_key
@@ -141,7 +141,7 @@ job_pairs AS (
            regexp_replace(lower(raw_key), '[ _-]+', '') AS tag_key, trim(raw_value) AS tag_value
     FROM job_latest j
     LATERAL VIEW explode(j.tags) x AS raw_key, raw_value
-    WHERE j.rn = 1 AND raw_key IS NOT NULL AND raw_value IS NOT NULL
+    WHERE j.rn = 1 AND raw_key IS NOT NULL AND raw_value IS NOT NULL AND trim(raw_value) <> ''
       AND regexp_replace(lower(raw_key), '[ _-]+', '') <> ''
     QUALIFY ROW_NUMBER() OVER (
         PARTITION BY j.workspace_id, j.job_id, regexp_replace(lower(raw_key), '[ _-]+', '') ORDER BY raw_key
@@ -163,7 +163,7 @@ pipeline_pairs AS (
            regexp_replace(lower(raw_key), '[ _-]+', '') AS tag_key, trim(raw_value) AS tag_value
     FROM pipeline_latest p
     LATERAL VIEW explode(p.tags) x AS raw_key, raw_value
-    WHERE p.rn = 1 AND raw_key IS NOT NULL AND raw_value IS NOT NULL
+    WHERE p.rn = 1 AND raw_key IS NOT NULL AND raw_value IS NOT NULL AND trim(raw_value) <> ''
       AND regexp_replace(lower(raw_key), '[ _-]+', '') <> ''
     QUALIFY ROW_NUMBER() OVER (
         PARTITION BY p.workspace_id, p.pipeline_id, regexp_replace(lower(raw_key), '[ _-]+', '') ORDER BY raw_key
@@ -184,7 +184,7 @@ statement_pairs AS (
            regexp_replace(lower(raw_key), '[ _-]+', '') AS tag_key, trim(raw_value) AS tag_value
     FROM `system`.`query`.`history` q
     LATERAL VIEW explode(q.query_tags) x AS raw_key, raw_value
-    WHERE raw_key IS NOT NULL AND raw_value IS NOT NULL
+    WHERE raw_key IS NOT NULL AND raw_value IS NOT NULL AND trim(raw_value) <> ''
       AND regexp_replace(lower(raw_key), '[ _-]+', '') <> ''
     QUALIFY ROW_NUMBER() OVER (
         PARTITION BY q.statement_id, regexp_replace(lower(raw_key), '[ _-]+', '') ORDER BY raw_key
@@ -206,7 +206,7 @@ uc_table_pairs AS (
            t.tag_name AS raw_key, regexp_replace(lower(t.tag_name), '[ _-]+', '') AS tag_key,
            trim(t.tag_value) AS tag_value
     FROM __SRC_UC_TABLE_TAGS__ t
-    WHERE t.tag_name IS NOT NULL AND t.tag_value IS NOT NULL
+    WHERE t.tag_name IS NOT NULL AND t.tag_value IS NOT NULL AND trim(t.tag_value) <> ''
       AND regexp_replace(lower(t.tag_name), '[ _-]+', '') <> ''
     QUALIFY ROW_NUMBER() OVER (
         PARTITION BY lower(t.catalog_name), lower(t.schema_name), lower(t.table_name),
@@ -225,7 +225,7 @@ uc_schema_pairs AS (
            s.tag_name AS raw_key, regexp_replace(lower(s.tag_name), '[ _-]+', '') AS tag_key,
            trim(s.tag_value) AS tag_value
     FROM __SRC_UC_SCHEMA_TAGS__ s
-    WHERE s.tag_name IS NOT NULL AND s.tag_value IS NOT NULL
+    WHERE s.tag_name IS NOT NULL AND s.tag_value IS NOT NULL AND trim(s.tag_value) <> ''
       AND regexp_replace(lower(s.tag_name), '[ _-]+', '') <> ''
     QUALIFY ROW_NUMBER() OVER (
         PARTITION BY lower(s.catalog_name), lower(s.schema_name), regexp_replace(lower(s.tag_name), '[ _-]+', '')
@@ -244,7 +244,7 @@ uc_column_pairs AS (
            c.tag_name AS raw_key, regexp_replace(lower(c.tag_name), '[ _-]+', '') AS tag_key,
            trim(c.tag_value) AS tag_value
     FROM __SRC_UC_COLUMN_TAGS__ c
-    WHERE c.tag_name IS NOT NULL AND c.tag_value IS NOT NULL
+    WHERE c.tag_name IS NOT NULL AND c.tag_value IS NOT NULL AND trim(c.tag_value) <> ''
       AND regexp_replace(lower(c.tag_name), '[ _-]+', '') <> ''
     QUALIFY ROW_NUMBER() OVER (
         PARTITION BY lower(c.catalog_name), lower(c.schema_name), lower(c.table_name), lower(c.column_name),
@@ -263,7 +263,7 @@ uc_volume_pairs AS (
            v.tag_name AS raw_key, regexp_replace(lower(v.tag_name), '[ _-]+', '') AS tag_key,
            trim(v.tag_value) AS tag_value
     FROM __SRC_UC_VOLUME_TAGS__ v
-    WHERE v.tag_name IS NOT NULL AND v.tag_value IS NOT NULL
+    WHERE v.tag_name IS NOT NULL AND v.tag_value IS NOT NULL AND trim(v.tag_value) <> ''
       AND regexp_replace(lower(v.tag_name), '[ _-]+', '') <> ''
     QUALIFY ROW_NUMBER() OVER (
         PARTITION BY lower(v.catalog_name), lower(v.schema_name), lower(v.volume_name),
@@ -346,7 +346,7 @@ billed_pairs AS (
            ba.usage_quantity, ba.source
     FROM billed_all ba
     LATERAL VIEW explode(ba.custom_tags) x AS raw_key, raw_value
-    WHERE raw_key IS NOT NULL AND raw_value IS NOT NULL
+    WHERE raw_key IS NOT NULL AND raw_value IS NOT NULL AND trim(raw_value) <> ''
       AND regexp_replace(lower(raw_key), '[ _-]+', '') <> ''
     QUALIFY ROW_NUMBER() OVER (
         PARTITION BY ba.entity_type, ba.rid, regexp_replace(lower(raw_key), '[ _-]+', '') ORDER BY raw_key

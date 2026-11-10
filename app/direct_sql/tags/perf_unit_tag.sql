@@ -90,7 +90,7 @@ cluster_tag_pairs AS (
     SELECT workspace_id, cluster_id, raw_key,
            regexp_replace(lower(raw_key), '[ _-]+', '') AS tag_key, trim(raw_value) AS tag_value, source
     FROM cluster_tag_candidates
-    WHERE raw_key IS NOT NULL AND raw_value IS NOT NULL
+    WHERE raw_key IS NOT NULL AND raw_value IS NOT NULL AND trim(raw_value) <> ''
       AND regexp_replace(lower(raw_key), '[ _-]+', '') <> ''
     QUALIFY ROW_NUMBER() OVER (
         PARTITION BY workspace_id, cluster_id, regexp_replace(lower(raw_key), '[ _-]+', '')
@@ -105,7 +105,7 @@ warehouse_pairs AS (
     JOIN warehouse_tags_latest wt
       ON wt.workspace_id = u.workspace_id AND u.compute_kind = 'warehouse' AND wt.warehouse_id = u.compute_id
     LATERAL VIEW explode(wt.tags) x AS raw_key, raw_value
-    WHERE raw_key IS NOT NULL AND raw_value IS NOT NULL
+    WHERE raw_key IS NOT NULL AND raw_value IS NOT NULL AND trim(raw_value) <> ''
       AND regexp_replace(lower(raw_key), '[ _-]+', '') <> ''
     QUALIFY ROW_NUMBER() OVER (
         PARTITION BY u.window_days, u.unit_id, regexp_replace(lower(raw_key), '[ _-]+', '') ORDER BY raw_key
@@ -138,7 +138,7 @@ stmt_pairs AS (
            regexp_replace(lower(raw_key), '[ _-]+', '') AS tag_key, trim(raw_value) AS tag_value
     FROM hashed h
     LATERAL VIEW explode(h.query_tags) x AS raw_key, raw_value
-    WHERE raw_key IS NOT NULL AND raw_value IS NOT NULL
+    WHERE raw_key IS NOT NULL AND raw_value IS NOT NULL AND trim(raw_value) <> ''
       AND regexp_replace(lower(raw_key), '[ _-]+', '') <> ''
     QUALIFY ROW_NUMBER() OVER (
         PARTITION BY h.window_days, h.srid, regexp_replace(lower(raw_key), '[ _-]+', '') ORDER BY raw_key

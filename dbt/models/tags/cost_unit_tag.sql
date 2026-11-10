@@ -32,7 +32,7 @@ priced_{{ w }} AS (
     LEFT JOIN (
         SELECT sku_name, cloud, usage_unit, price_start_time, price_end_time,
                CAST(pricing.effective_list.default AS DOUBLE) AS list_rate
-        FROM {{ source('system_billing', 'list_prices') }}
+        FROM {{ list_prices() }} list_prices
     ) lp
       ON u.sku_name = lp.sku_name AND u.cloud = lp.cloud AND u.usage_unit = lp.usage_unit
      AND u.usage_end_time >= lp.price_start_time
@@ -175,7 +175,7 @@ compute_pairs AS (
     FROM unit_totals ut, LATERAL (
         SELECT e.key AS raw_key, e.value AS raw_value FROM unnest(map_entries(ut.custom_tags)) AS y(e)
     ) x
-    WHERE x.raw_key IS NOT NULL AND x.raw_value IS NOT NULL AND {{ norm_tag_key('x.raw_key') }} <> ''
+    WHERE x.raw_key IS NOT NULL AND x.raw_value IS NOT NULL AND trim(x.raw_value) <> '' AND {{ norm_tag_key('x.raw_key') }} <> ''
     QUALIFY ROW_NUMBER() OVER (PARTITION BY ut.window_days, ut.unit_id, {{ norm_tag_key('x.raw_key') }} ORDER BY x.raw_key) = 1
 ),
 compute_level AS (
@@ -237,7 +237,7 @@ work_job_pairs AS (
     FROM work_jp_units u
     JOIN job_tags_latest jt ON jt.workspace_id = u.workspace_id AND jt.job_id = u.work_id
     , LATERAL (SELECT e.key AS raw_key, e.value AS raw_value FROM unnest(map_entries(jt.tags)) AS y(e)) x
-    WHERE u.work_kind = 'job' AND x.raw_key IS NOT NULL AND x.raw_value IS NOT NULL
+    WHERE u.work_kind = 'job' AND x.raw_key IS NOT NULL AND x.raw_value IS NOT NULL AND trim(x.raw_value) <> ''
       AND {{ norm_tag_key('x.raw_key') }} <> ''
     QUALIFY ROW_NUMBER() OVER (PARTITION BY u.window_days, u.unit_id, {{ norm_tag_key('x.raw_key') }} ORDER BY x.raw_key) = 1
 ),
@@ -247,7 +247,7 @@ work_pipeline_pairs AS (
     FROM work_jp_units u
     JOIN pipeline_tags_latest pt ON pt.workspace_id = u.workspace_id AND pt.pipeline_id = u.work_id
     , LATERAL (SELECT e.key AS raw_key, e.value AS raw_value FROM unnest(map_entries(pt.tags)) AS y(e)) x
-    WHERE u.work_kind = 'pipeline' AND x.raw_key IS NOT NULL AND x.raw_value IS NOT NULL
+    WHERE u.work_kind = 'pipeline' AND x.raw_key IS NOT NULL AND x.raw_value IS NOT NULL AND trim(x.raw_value) <> ''
       AND {{ norm_tag_key('x.raw_key') }} <> ''
     QUALIFY ROW_NUMBER() OVER (PARTITION BY u.window_days, u.unit_id, {{ norm_tag_key('x.raw_key') }} ORDER BY x.raw_key) = 1
 ),
@@ -298,7 +298,7 @@ attr_pairs AS (
     FROM attr_rows ar, LATERAL (
         SELECT e.key AS raw_key, e.value AS raw_value FROM unnest(map_entries(ar.query_tags)) AS y(e)
     ) x
-    WHERE x.raw_key IS NOT NULL AND x.raw_value IS NOT NULL AND {{ norm_tag_key('x.raw_key') }} <> ''
+    WHERE x.raw_key IS NOT NULL AND x.raw_value IS NOT NULL AND trim(x.raw_value) <> '' AND {{ norm_tag_key('x.raw_key') }} <> ''
     QUALIFY ROW_NUMBER() OVER (PARTITION BY ar.window_days, ar.arid, {{ norm_tag_key('x.raw_key') }} ORDER BY x.raw_key) = 1
 ),
 attr_value_by_day AS (

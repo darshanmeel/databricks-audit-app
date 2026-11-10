@@ -363,9 +363,9 @@ qgap AS (
   -- time from one busy stretch's end to the next one's start: what an auto-stop setting acts on;
   -- the last stretch's gap runs to the end of its running period, so the final tail is replayed too
   SELECT p.workspace_id, p.warehouse_id,
-         COALESCE(LEAD(p.bs) OVER (PARTITION BY p.workspace_id, p.warehouse_id ORDER BY p.bs), r.run_end_s) - p.be AS g,
+         COALESCE(LEAD(p.bs) OVER (PARTITION BY p.workspace_id, p.warehouse_id, p.run_no ORDER BY p.bs), r.run_end_s) - p.be AS g,
          -- the final tail has no next query, so stopping after it costs no cold start
-         LEAD(p.bs) OVER (PARTITION BY p.workspace_id, p.warehouse_id ORDER BY p.bs) IS NULL AS is_tail
+         LEAD(p.bs) OVER (PARTITION BY p.workspace_id, p.warehouse_id, p.run_no ORDER BY p.bs) IS NULL AS is_tail
   FROM pb p
   JOIN running r
     ON r.workspace_id = p.workspace_id AND r.warehouse_id = p.warehouse_id AND r.run_no = p.run_no

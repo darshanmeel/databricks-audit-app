@@ -9,11 +9,11 @@ import { TONE_COLOR, TONE_DAYS, toneColors, trendTones } from "../components/tre
 import { Api } from "../api";
 import { estLabel, fmtChange, fmtDate, fmtDayMonth, fmtDayShort, fmtDbu, fmtInt, fmtMoney, fmtMoneyShort, fmtPct } from "../format";
 import { Ref, resolveName, useNames, warehouseInWorkspace, wsPhrase } from "../components/names";
-import { SPIKE_PCT, buildMonthBars, cappedRowsNote, clusterName, excludedNoWorkspaceNote, fillDays, fmtChangePct, groupSum, groupsToEntries, jobName, numOrZero, regroupByKeyIndex, sumBy, topNWithOther, totalSpikeDays, useFindingAgg, useFindingData, warehouseName } from "../components/hooks";
+import { SPIKE_PCT, buildMonthBars, cappedRowsNote, clusterName, excludedNoWorkspaceNote, fillDays, fmtChangePct, groupSum, groupsToEntries, jobName, netEntries, numOrZero, regroupByKeyIndex, sumBy, topNWithOther, totalSpikeDays, useFindingAgg, useFindingData, warehouseName } from "../components/hooks";
 import { tagValueLabel } from "../components/tag_picker";
 import { COST_MONEY_COL } from "../components/tab_registry";
 import { AreaContent, Card, CaveatNote, LinkOut, MetricCard, MetricGrid, StatusPill } from "../components/primitives";
-import { enumLabel } from "../components/labels";
+import { PRODUCT_KINDS, PRODUCT_KIND_OF, enumLabel, productLabel } from "../components/labels";
 import { ChartNote, Donut, HBarList, SubTabNav, paletteColor, shortId } from "../components/charts";
 import { DAY_ROWS_MAX, GrainSwitch, MONTH_ROWS_MAX, fmtMonth, latest, monthOf } from "../components/grain";
 import type { Grain } from "../components/grain";
@@ -21,8 +21,6 @@ import { TagRollupView, TopTagSwitch, allocBars, allocSplit, normalizeTagKeyLike
 import { Columns, DivergingBars, RankedBars } from "../components/charts_more";
 import { isNotBuilt } from "../components/scope";
 import { aggregateGroupTileProps, aggregateTileProps, singleIdTileProps, windowFacts } from "../components/overview_tile";
-import { productLabel } from "./tab_overview";
-import { productWords } from "./tab_money";
 import { TrendByCard } from "./cost_trend_by";
 import type { AggKey, AggregateData, AggState, Entry, Filters, FindingState, FindingSummary, Id, Row, WorkspaceTagRow, WorkspaceTagsAnswer } from "../types";
 import type { MonthBar } from "../components/hooks";
@@ -102,7 +100,8 @@ export function MonthChart({ months }: { months: MonthBar[] }) {
 // The bars' values in one line: this month so far, the last full month with its change, and the high.
 function MonthChartSummary({ months }: { months: MonthBar[] | null }) {
   if (!months || !months.length) return null;
-  const current = months.find((m) => m.partial);
+  // the month in progress is the last one; an earlier partial month is where history starts
+  const current = months[months.length - 1].partial ? months[months.length - 1] : null;
   const full = months.filter((m) => !m.partial);
   const last = full.length ? full[full.length - 1] : null;
   const high = full.length ? full.reduce((a, b) => (b.total > a.total ? b : a)) : null;
@@ -121,7 +120,7 @@ function CostMonthBars({ months }: { months: MonthBar[] }) {
   const max = Math.max(1, ...months.map((m) => m.total));
   return (
     <div className="month-bars">
-      {months.map((m) => (
+      {months.map((m, i) => (
         <div className="month-bar-col" key={m.month}>
           <div className="month-bar-track">
             <div
@@ -130,7 +129,8 @@ function CostMonthBars({ months }: { months: MonthBar[] }) {
               title={`${m.label}: ${fmtMoney(m.total, 0)}${m.partial ? " (in progress)" : m.changePct != null ? ` (${fmtChangePct(m.changePct)} vs trailing 3-mo avg)` : " (fewer than 3 full months on record)"}`}
             />
           </div>
-          <div className="month-bar-label">{m.shortLabel}</div>
+          {/* past a year, every other month is labelled so the names don't run together; the latest always is */}
+          <div className="month-bar-label">{months.length > 12 && (months.length - 1 - i) % 2 ? "" : m.shortLabel}</div>
         </div>
       ))}
     </div>
@@ -217,9 +217,9 @@ function ChangeBreakdownCard({ periodState, filters, maxCat }: { periodState: Fi
   if (!lv.qid && periodData && periodRows) {
     const net = 1 - numOrZero(periodData.discount_pct);
     const valueOf = (r: Row) => numOrZero(isSpend ? r.est_current_usd_list : r.est_change_usd_list) * net;
-    items = level === "product" ? periodRowsBy(periodRows, (r: Row) => productWords(r.billing_origin_product), valueOf)
+    items = level === "product" ? periodRowsBy(periodRows, (r: Row) => productLabel(r.billing_origin_product), valueOf)
       : level === "workspace" ? periodRowsBy(periodRows, (r: Row) => wsPhrase(r.workspace_id), valueOf)
-      : periodRowsBy(periodRows, (r: Row) => `${productWords(r.billing_origin_product)} · ${wsPhrase(r.workspace_id)}`, valueOf);
+      : periodRowsBy(periodRows, (r: Row) => `${productLabel(r.billing_origin_product)} · ${wsPhrase(r.workspace_id)}`, valueOf);
   } else if (lv.qid) {
     state = resState;
     const resData = resState.phase === "ready" && resState.outcome === "ok_rows" ? resState.data : null;
@@ -294,7 +294,7 @@ function CostTrendContent({ findings, filters, meta, maxCat, onVerdict }: TabPro
   // the daily average and misaligns the spike scan's "7 days before" window.
   const daily = dailyReady
     ? fillDays(
-        dailyAgg.data.groups.map((g) => ({ day: String(g.key[0]).slice(0, 10), value: numOrZero(g.value) })),
+        dailyAgg.data.groups.map((g) => ({ day: String(g.key[0]).slice(0, 10), value: numOrZero(g.value) * (1 - numOrZero(dailyAgg.data.discount_pct)) })),
         meta && meta.as_of_date, filters.window, meta && meta.snapshot_days
       )
     : null;
@@ -424,8 +424,8 @@ function CostTrendContent({ findings, filters, meta, maxCat, onVerdict }: TabPro
         <MetricCard label="Vs previous period" value={periodTile.value} facts={periodTile.facts} note={tileNote(periodTile)} tone={tileTone(periodTile)} />
         <MetricCard label="Spike days" value={daily ? fmtInt(totalSpikes.length) : "-"} tone={totalSpikes.length ? "warn" : null} facts={daily ? [
           worstSpike ? { label: "Worst", value: fmtDayShort(worstSpike.day), detail: `${fmtMoney(worstSpike.value, 0)}, ${fmtChange(worstSpike.value, worstSpike.median, true)}`, tone: "warn" } : null,
-          { label: "Rule", value: `day's total ${SPIKE_PCT}%+ over the 7-day median` },
-          spikeDaysReady ? { label: "In one workspace & product", value: `${fmtInt(spikeDaysCount)} days`, detail: "a line 2x its own median" } : null,
+          { label: "Rule", value: `${SPIKE_PCT}%+ over 7-day median` },
+          spikeDaysReady ? { label: "One line", value: `${fmtInt(spikeDaysCount)} days`, detail: "a workspace and product at 2x its median" } : null,
         ].filter((f) => f != null) : null} />
         <MetricCard label="Last full month" value={lastFull ? fmtMoney(lastFull.total, 0) : "-"} facts={lastFull ? [{ label: "Month", value: lastFull.label }] : null} />
       </MetricGrid>
@@ -488,7 +488,7 @@ function CostProductContent({ filters, maxCat, onVerdict }: TabProps) {
   const skuTrendState = useFindingData("cost_sku_trend_12m", filters.window, filters.workspaceIds, filters.envs);
 
   const skuReady = skuAgg.phase === "ready" && skuAgg.outcome === "ok_rows";
-  const skuItems = skuReady ? groupsToEntries(skuAgg.data, (k) => String((k && k[0]) || "(unlabeled SKU)")) : null;
+  const skuItems = skuReady ? netEntries(skuAgg.data, (k) => String((k && k[0]) || "(unlabeled SKU)")) : null;
   const topShare = skuReady && skuAgg.data.total_value > 0 ? (numOrZero(skuAgg.data.groups[0] && skuAgg.data.groups[0].value) / numOrZero(skuAgg.data.total_value)) * 100 : null;
 
   const prodReady = prodState.phase === "ready" && prodState.outcome === "ok_rows";
@@ -1107,8 +1107,8 @@ function CostResourceContent({ filters, dims, maxCat, onExternalJump, onVerdict 
   const genaiReady = genaiAgg.phase === "ready" && genaiAgg.outcome === "ok_rows";
   const genaiUsd = genaiUsdReady
     // Per-token use with no endpoint (Genie, AI functions) is named by its product instead.
-    ? groupSum(genaiUsdAgg.data.groups.map((g) => ({ endpoint_name: g.key && g.key[0], product: g.key && g.key[1], value: numOrZero(g.value) })),
-      (r) => r.endpoint_name || `${productWords(r.product)} (no endpoint)`, "value")
+    ? groupSum(genaiUsdAgg.data.groups.map((g) => ({ endpoint_name: g.key && g.key[0], product: g.key && g.key[1], value: numOrZero(g.value) * (1 - numOrZero(genaiUsdAgg.data.discount_pct)) })),
+      (r) => r.endpoint_name || `${productLabel(r.product)} (no endpoint)`, "value")
     : null;
   const genaiDbuGroups = genaiReady ? genaiAgg.data.groups.filter((g) => g.key && g.key[1] === "DBU") : null;
   const genaiDbu = genaiDbuGroups
@@ -1123,7 +1123,7 @@ function CostResourceContent({ filters, dims, maxCat, onExternalJump, onVerdict 
   const whTop = whPriced ? [...whPriced].sort((a, b) => numOrZero(b.est_usd_list) - numOrZero(a.est_usd_list)).slice(0, 10) : null;
   // The dot is the warehouse's own idle-time verdict; the bar stays the spend.
   const whItems = whTop ? whTop.map((r) => ({
-    name: warehouseName(dims, r.warehouse_id), id: r.warehouse_id, value: numOrZero(r.est_usd_list),
+    name: warehouseName(dims, r.warehouse_id), id: r.warehouse_id, value: numOrZero(r.est_usd_list) * (1 - numOrZero(whState.data?.discount_pct)),
     status: r.status === "CRITICAL" ? "crit" as const : r.status === "WARN" ? "warn" as const : null,
   })) : null;
   const whIdleFlagged = whTop ? whTop.filter((r) => r.status === "CRITICAL" || r.status === "WARN").length : 0;
@@ -1147,7 +1147,7 @@ function CostResourceContent({ filters, dims, maxCat, onExternalJump, onVerdict 
           {resReady && cappedRowsNote(resAgg.data, "resource rows") && <div className="metric-note" style={{ marginTop: 6 }}>{cappedRowsNote(resAgg.data, "resource rows")}</div>}
         </Card>
       </div>
-      <Card title="Top warehouses by cost" right={<span className="muted">list price (effective)</span>}>
+      <Card title="Top warehouses by cost" right={<span className="muted">{whReady ? estLabel(whState.data.discount_pct) : "list price (effective)"}</span>}>
         {whItems ? (
           <div>
             <RankedBars items={whItems} n={10} valueFmt={(v) => fmtMoney(v, 0)} unitLabel="$" emptyText="No SQL warehouse billed in this window." />
@@ -1222,7 +1222,9 @@ function ContractBurndownCard({ filters, meta }: { filters: Filters; meta: TabPr
     const inside = captured > 0 ? Math.max(0, Math.min(m1, stop) - Math.max(m0, start)) / captured : 0;
     spent += numOrZero(g.value) * net * inside;
   });
-  const days = (dData.groups || []).length;
+  // every day of the window counts, billed or not
+  const days = fillDays((dData.groups || []).map((g) => ({ day: String(g.key && g.key[0]).slice(0, 10), value: 0 })),
+    meta && meta.as_of_date, filters.window, meta && meta.snapshot_days).length;
   const perDay = days ? (dData.groups || []).reduce((s, g) => s + numOrZero(g.value), 0) * (1 - numOrZero(dData.discount_pct)) / days : 0;
   const left = c.commit_usd - spent;
   const from = Math.max(asOf, start);  // a contract that hasn't started burns from its start
@@ -1297,7 +1299,7 @@ function CostPricingContent({ filters, meta, maxCat, onVerdict }: TabProps) {
     ? egressAgg.data.groups.map((g) => ({ name: `${g.key[0]} (${g.key[1] || "unit n/a"})`, value: numOrZero(g.value) }))
     : null;
   const infraReady = infraAgg.phase === "ready" && infraAgg.outcome === "ok_rows";
-  const infraTotal = infraReady ? numOrZero(infraAgg.data.total_value) : null;
+  const infraTotal = infraReady ? numOrZero(infraAgg.data.total_value) * (1 - numOrZero(infraAgg.data.discount_pct)) : null;
 
   const verdictSentence = covReady
     ? `${fmtDbu(uncoveredWs, 0)} of serverless usage has no usage/budget policy attached${restatementPct != null ? `; ${fmtPct(restatementPct, 1)} of prior-month usage was later retracted` : ""}.`
@@ -1340,7 +1342,7 @@ function CostPricingContent({ filters, meta, maxCat, onVerdict }: TabProps) {
           </div>
           <div>
             <div className="chart-card-title">Spend by cloud</div>
-            {infraReady ? <HBarList items={groupsToEntries(infraAgg.data, (k) => String((k && k[0]) || "(unknown)"))} valueFmt={(v) => fmtMoney(v, 0)} /> : <ChartNote state={infraAgg} label="cost_cloud_infra" />}
+            {infraReady ? <HBarList items={netEntries(infraAgg.data, (k) => String((k && k[0]) || "(unknown)"))} valueFmt={(v) => fmtMoney(v, 0)} /> : <ChartNote state={infraAgg} label="cost_cloud_infra" />}
             <div className="metric-note" style={{ marginTop: 6 }}>Databricks usage by cloud, not your cloud provider's bill.</div>
           </div>
         </div>
@@ -1653,16 +1655,6 @@ function TagKeyPickers({ wsOptions, ws, onWs, keyStats, active, onKey }: {
   );
 }
 
-// billing_origin_product -> the kind of spend the Workspace cut splits each bar into; the rest is Other
-const CB_KINDS = ["SQL warehouses", "Jobs", "Pipelines", "Clusters & notebooks", "AI & serving", "Other"];
-const CB_KIND_OF: Record<string, string> = {
-  SQL: "SQL warehouses", JOBS: "Jobs", DLT: "Pipelines", LAKEFLOW_CONNECT: "Pipelines",
-  ALL_PURPOSE: "Clusters & notebooks", INTERACTIVE: "Clusters & notebooks",
-  MODEL_SERVING: "AI & serving", VECTOR_SEARCH: "AI & serving", AI_GATEWAY: "AI & serving", AI_RUNTIME: "AI & serving",
-  AI_FUNCTIONS: "AI & serving", FOUNDATION_MODEL_TRAINING: "AI & serving", AGENT_EVALUATION: "AI & serving",
-  AGENT_BRICKS: "AI & serving", ONLINE_TABLES: "AI & serving",
-};
-
 // One bar per workspace split by kind of spend, biggest total first; the tail folds into Other.
 function KindBars({ rows, n }: { rows: { name: string; parts: Record<string, number> }[]; n: number }) {
   const total = (p: Record<string, number>) => Object.values(p).reduce((t, v) => t + v, 0);
@@ -1673,8 +1665,8 @@ function KindBars({ rows, n }: { rows: { name: string; parts: Record<string, num
   const shown = tail.length ? [...sorted.slice(0, n), { name: `Other (${tail.length})`, parts: tailParts }] : sorted;
   if (!shown.length) return <div className="chart-note ok"><div className="chart-note-text">No spend by workspace in this window.</div></div>;
   const max = Math.max(1, ...shown.map((r) => total(r.parts)));
-  const kinds = CB_KINDS.filter((k) => shown.some((r) => (r.parts[k] || 0) > 0));
-  const color = (k: string) => (k === "Other" ? "var(--c-other)" : paletteColor(CB_KINDS.indexOf(k)));
+  const kinds = PRODUCT_KINDS.filter((k) => shown.some((r) => (r.parts[k] || 0) > 0));
+  const color = (k: string) => (k === "Other" ? "var(--c-other)" : paletteColor(PRODUCT_KINDS.indexOf(k)));
   return (
     <div>
       <div className="hbar-list">
@@ -1808,7 +1800,7 @@ function CostChargebackContent({ filters, maxCat, meta, onVerdict }: TabProps) {
     prodState.data.rows.forEach((r: Row) => {
       const k = r.workspace_id == null ? "" : String(r.workspace_id);
       const e = m.get(k) || {};
-      const kind = CB_KIND_OF[String(r.billing_origin_product)] || "Other";
+      const kind = PRODUCT_KIND_OF[String(r.billing_origin_product)] || "Other";
       e[kind] = (e[kind] || 0) + numOrZero(cbMoney(sDim, r, sDisc).cur);
       m.set(k, e);
     });
@@ -1820,14 +1812,14 @@ function CostChargebackContent({ filters, maxCat, meta, onVerdict }: TabProps) {
     const m = new Map<string, { part: number; all: number }>();
     rows.forEach((r) => {
       // the check's pooled tail without a workspace keeps its own bar
-      const k = r.workspace_id != null ? String(r.workspace_id) : r.is_other ? " other" : "";
+      const k = r.workspace_id != null ? String(r.workspace_id) : r.is_other ? "__pooled__" : "";
       const e = m.get(k) || { part: 0, all: 0 };
       const cur = numOrZero(cbMoney(dim, r, disc).cur);
       e.all += cur;
       if (!cbIsNotAttributed(dim, r)) e.part += cur;
       m.set(k, e);
     });
-    return [...m.entries()].map(([k, e]) => ({ name: k === " other" ? `Smaller ${dim.noun}s pooled` : k ? wsPhrase(k) : "Account-level (no workspace)", value: e.part, whole: e.all }))
+    return [...m.entries()].map(([k, e]) => ({ name: k === "__pooled__" ? `Smaller ${dim.noun}s pooled` : k ? wsPhrase(k) : "Account-level (no workspace)", value: e.part, whole: e.all }))
       .filter((e) => e.whole > 0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fold, rows, dim.key, disc]);

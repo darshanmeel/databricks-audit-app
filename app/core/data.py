@@ -348,15 +348,20 @@ def _file_cached(path_fn):
             key = (str(path), st.st_mtime_ns, st.st_size, rls.scope_key(),
                    repr([a for a in args if not isinstance(a, duckdb.DuckDBPyConnection)]),
                    repr(sorted(kwargs.items())))
-            if key not in cache:
-                if len(cache) > 4096:
-                    cache.clear()
-                cache[key] = fn(*args, **kwargs)
-            return copy.deepcopy(cache[key])
+            if key in cache:
+                return copy.deepcopy(cache[key])
+            if len(cache) > 4096:
+                cache.clear()
+            value = cache[key] = fn(*args, **kwargs)
+            return copy.deepcopy(value)
 
         wrapper.cache_clear = cache.clear
         return wrapper
     return deco
+
+
+# One tag filter resolves to the same cells for every check and tile on one database.
+app_tag_spend.matching_cells = _file_cached(lambda: _db_path())(app_tag_spend.matching_cells)
 
 
 # ---------------------------------------------------------------------------------------------

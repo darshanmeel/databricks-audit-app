@@ -754,10 +754,13 @@ def _chart_columns(widget: dict) -> list[tuple[str, str, str]]:
     out: dict[str, tuple[str, str, str]] = {}
 
     def add(enc: dict) -> None:
-        kind = "number" if (enc.get("scale") or {}).get("type") == "quantitative" else "string"
-        for col in _BACKTICKED.findall(exprs.get(enc["fieldName"], "")):
+        expr = exprs.get(enc["fieldName"], "")
+        # COUNT(DISTINCT `user_name`) plots a number, but the column itself is the raw names
+        counted = expr.strip().upper().startswith("COUNT(")
+        kind = "number" if (enc.get("scale") or {}).get("type") == "quantitative" and not counted else "string"
+        for col in _BACKTICKED.findall(expr):
             if col != "*" and col not in out:
-                title = enc.get("displayName") or col
+                title = col if counted else enc.get("displayName") or col
                 out[col] = (col, col.replace("_", " ").capitalize() if title == col else title, kind)
 
     for enc in widget["spec"].get("encodings", {}).values():

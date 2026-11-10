@@ -14,10 +14,7 @@
 -- (compute_idle_node_ratio, node_timeline_utilization) reads bare cluster_id with no name or
 -- placement context at all; cluster_source (UI/JOB/API/...) is a cheap, useful companion.
 --
--- owned_by is deliberately left off this dim: every vendored query that selects it
--- (classic_clusters_config_current.sql) partial-masks it in-SQL (xx****@****, DEC-48) because it
--- is a raw identity column on the source table, not an object name -- this task resolves OBJECT
--- names only, never a person, so it is left out entirely rather than carried unmasked.
+-- owned_by is carried raw (unmasked) by design.
 --
 -- OWNER / RUN-AS COLUMNS ARE CARRIED UNMASKED (DEC-55, your decision 2026-09-22). These are raw
 -- identity fields at the source -- system.lakeflow.jobs / compute.clusters / compute.warehouses /

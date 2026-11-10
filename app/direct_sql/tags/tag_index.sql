@@ -19,7 +19,7 @@ billing_pairs AS (
            regexp_replace(lower(raw_key), '[ _-]+', '') AS tag_key, trim(raw_value) AS tag_value
     FROM billing_rows b
     LATERAL VIEW explode(b.custom_tags) x AS raw_key, raw_value
-    WHERE raw_key IS NOT NULL AND raw_value IS NOT NULL
+    WHERE raw_key IS NOT NULL AND raw_value IS NOT NULL AND trim(raw_value) <> ''
       AND regexp_replace(lower(raw_key), '[ _-]+', '') <> ''
     QUALIFY ROW_NUMBER() OVER (
         PARTITION BY b.rid, regexp_replace(lower(raw_key), '[ _-]+', '') ORDER BY raw_key
@@ -66,7 +66,7 @@ warehouse_pairs AS (
            'warehouse_tags' AS source
     FROM warehouse_latest w
     LATERAL VIEW explode(w.tags) x AS raw_key, raw_value
-    WHERE w.rn = 1 AND raw_key IS NOT NULL AND raw_value IS NOT NULL
+    WHERE w.rn = 1 AND raw_key IS NOT NULL AND raw_value IS NOT NULL AND trim(raw_value) <> ''
       AND regexp_replace(lower(raw_key), '[ _-]+', '') <> ''
     QUALIFY ROW_NUMBER() OVER (
         PARTITION BY w.warehouse_id, regexp_replace(lower(raw_key), '[ _-]+', '') ORDER BY raw_key
@@ -82,7 +82,7 @@ pool_pairs AS (
            regexp_replace(lower(raw_key), '[ _-]+', '') AS tag_key, trim(raw_value) AS tag_value
     FROM pool_latest p
     LATERAL VIEW explode(p.tags) x AS raw_key, raw_value
-    WHERE p.rn = 1 AND raw_key IS NOT NULL AND raw_value IS NOT NULL
+    WHERE p.rn = 1 AND raw_key IS NOT NULL AND raw_value IS NOT NULL AND trim(raw_value) <> ''
       AND regexp_replace(lower(raw_key), '[ _-]+', '') <> ''
     QUALIFY ROW_NUMBER() OVER (
         PARTITION BY p.instance_pool_id, regexp_replace(lower(raw_key), '[ _-]+', '') ORDER BY raw_key
@@ -102,7 +102,7 @@ cluster_own_pairs AS (
            regexp_replace(lower(raw_key), '[ _-]+', '') AS tag_key, trim(raw_value) AS tag_value
     FROM cluster_latest c
     LATERAL VIEW explode(c.tags) x AS raw_key, raw_value
-    WHERE c.rn = 1 AND raw_key IS NOT NULL AND raw_value IS NOT NULL
+    WHERE c.rn = 1 AND raw_key IS NOT NULL AND raw_value IS NOT NULL AND trim(raw_value) <> ''
       AND regexp_replace(lower(raw_key), '[ _-]+', '') <> ''
     QUALIFY ROW_NUMBER() OVER (
         PARTITION BY c.cluster_id, regexp_replace(lower(raw_key), '[ _-]+', '') ORDER BY raw_key
@@ -150,7 +150,7 @@ resource_entity AS (
             FROM __SRC_LAKEFLOW_JOBS__
         ) j
         LATERAL VIEW explode(j.tags) x AS raw_key, raw_value
-        WHERE j.rn = 1 AND raw_key IS NOT NULL AND raw_value IS NOT NULL
+        WHERE j.rn = 1 AND raw_key IS NOT NULL AND raw_value IS NOT NULL AND trim(raw_value) <> ''
           AND regexp_replace(lower(raw_key), '[ _-]+', '') <> ''
         QUALIFY ROW_NUMBER() OVER (
             PARTITION BY j.workspace_id, j.job_id, regexp_replace(lower(raw_key), '[ _-]+', '') ORDER BY raw_key
@@ -166,7 +166,7 @@ resource_entity AS (
             FROM __SRC_LAKEFLOW_PIPELINES__
         ) p
         LATERAL VIEW explode(p.tags) x AS raw_key, raw_value
-        WHERE p.rn = 1 AND raw_key IS NOT NULL AND raw_value IS NOT NULL
+        WHERE p.rn = 1 AND raw_key IS NOT NULL AND raw_value IS NOT NULL AND trim(raw_value) <> ''
           AND regexp_replace(lower(raw_key), '[ _-]+', '') <> ''
         QUALIFY ROW_NUMBER() OVER (
             PARTITION BY p.workspace_id, p.pipeline_id, regexp_replace(lower(raw_key), '[ _-]+', '') ORDER BY raw_key
@@ -190,7 +190,7 @@ query_pairs AS (
            regexp_replace(lower(raw_key), '[ _-]+', '') AS tag_key, trim(raw_value) AS tag_value
     FROM `system`.`query`.`history` q
     LATERAL VIEW explode(q.query_tags) x AS raw_key, raw_value
-    WHERE raw_key IS NOT NULL AND raw_value IS NOT NULL
+    WHERE raw_key IS NOT NULL AND raw_value IS NOT NULL AND trim(raw_value) <> ''
       AND regexp_replace(lower(raw_key), '[ _-]+', '') <> ''
     QUALIFY ROW_NUMBER() OVER (
         PARTITION BY q.statement_id, regexp_replace(lower(raw_key), '[ _-]+', '') ORDER BY raw_key
@@ -213,7 +213,7 @@ attributed_pairs AS (
            regexp_replace(lower(raw_key), '[ _-]+', '') AS tag_key, trim(raw_value) AS tag_value
     FROM __SRC_BILLING_ATTRIBUTED_USAGE__ a
     LATERAL VIEW explode(a.granular_tags.query_tags) x AS raw_key, raw_value
-    WHERE raw_key IS NOT NULL AND raw_value IS NOT NULL
+    WHERE raw_key IS NOT NULL AND raw_value IS NOT NULL AND trim(raw_value) <> ''
       AND regexp_replace(lower(raw_key), '[ _-]+', '') <> ''
     QUALIFY ROW_NUMBER() OVER (
         PARTITION BY a.record_id, regexp_replace(lower(raw_key), '[ _-]+', '') ORDER BY raw_key
@@ -235,7 +235,7 @@ uc_entity AS (
            t.tag_name AS raw_key, regexp_replace(lower(t.tag_name), '[ _-]+', '') AS tag_key,
            trim(t.tag_value) AS tag_value, 'uc_table_tags' AS source
     FROM __SRC_UC_TABLE_TAGS__ t
-    WHERE t.tag_name IS NOT NULL AND t.tag_value IS NOT NULL
+    WHERE t.tag_name IS NOT NULL AND t.tag_value IS NOT NULL AND trim(t.tag_value) <> ''
       AND regexp_replace(lower(t.tag_name), '[ _-]+', '') <> ''
     QUALIFY ROW_NUMBER() OVER (
         PARTITION BY lower(t.catalog_name), lower(t.schema_name), lower(t.table_name),
@@ -249,7 +249,7 @@ uc_entity AS (
            s.tag_name AS raw_key, regexp_replace(lower(s.tag_name), '[ _-]+', '') AS tag_key,
            trim(s.tag_value) AS tag_value, 'uc_schema_tags' AS source
     FROM __SRC_UC_SCHEMA_TAGS__ s
-    WHERE s.tag_name IS NOT NULL AND s.tag_value IS NOT NULL
+    WHERE s.tag_name IS NOT NULL AND s.tag_value IS NOT NULL AND trim(s.tag_value) <> ''
       AND regexp_replace(lower(s.tag_name), '[ _-]+', '') <> ''
     QUALIFY ROW_NUMBER() OVER (
         PARTITION BY lower(s.catalog_name), lower(s.schema_name), regexp_replace(lower(s.tag_name), '[ _-]+', '')
@@ -263,7 +263,7 @@ uc_entity AS (
            c.tag_name AS raw_key, regexp_replace(lower(c.tag_name), '[ _-]+', '') AS tag_key,
            trim(c.tag_value) AS tag_value, 'uc_column_tags' AS source
     FROM __SRC_UC_COLUMN_TAGS__ c
-    WHERE c.tag_name IS NOT NULL AND c.tag_value IS NOT NULL
+    WHERE c.tag_name IS NOT NULL AND c.tag_value IS NOT NULL AND trim(c.tag_value) <> ''
       AND regexp_replace(lower(c.tag_name), '[ _-]+', '') <> ''
     QUALIFY ROW_NUMBER() OVER (
         PARTITION BY lower(c.catalog_name), lower(c.schema_name), lower(c.table_name), lower(c.column_name),
@@ -277,7 +277,7 @@ uc_entity AS (
            v.tag_name AS raw_key, regexp_replace(lower(v.tag_name), '[ _-]+', '') AS tag_key,
            trim(v.tag_value) AS tag_value, 'uc_volume_tags' AS source
     FROM __SRC_UC_VOLUME_TAGS__ v
-    WHERE v.tag_name IS NOT NULL AND v.tag_value IS NOT NULL
+    WHERE v.tag_name IS NOT NULL AND v.tag_value IS NOT NULL AND trim(v.tag_value) <> ''
       AND regexp_replace(lower(v.tag_name), '[ _-]+', '') <> ''
     QUALIFY ROW_NUMBER() OVER (
         PARTITION BY lower(v.catalog_name), lower(v.schema_name), lower(v.volume_name),
@@ -302,7 +302,7 @@ ai_gateway_pairs AS (
            regexp_replace(lower(raw_key), '[ _-]+', '') AS tag_key, trim(raw_value) AS tag_value
     FROM __SRC_AI_GATEWAY_USAGE__ g
     LATERAL VIEW explode(g.endpoint_tags) x AS raw_key, raw_value
-    WHERE raw_key IS NOT NULL AND raw_value IS NOT NULL
+    WHERE raw_key IS NOT NULL AND raw_value IS NOT NULL AND trim(raw_value) <> ''
       AND regexp_replace(lower(raw_key), '[ _-]+', '') <> ''
     QUALIFY ROW_NUMBER() OVER (
         PARTITION BY g.request_id, regexp_replace(lower(raw_key), '[ _-]+', '') ORDER BY raw_key

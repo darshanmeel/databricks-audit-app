@@ -27,7 +27,7 @@ wsh_pairs AS (
            regexp_replace(lower(raw_key), '[ _-]+', '') AS tag_key, trim(raw_value) AS tag_value
     FROM wsh_billed b
     LATERAL VIEW explode(b.custom_tags) x AS raw_key, raw_value
-    WHERE raw_key IS NOT NULL AND raw_value IS NOT NULL
+    WHERE raw_key IS NOT NULL AND raw_value IS NOT NULL AND trim(raw_value) <> ''
       AND regexp_replace(lower(raw_key), '[ _-]+', '') <> ''
     QUALIFY ROW_NUMBER() OVER (
         PARTITION BY b.rid, regexp_replace(lower(raw_key), '[ _-]+', '') ORDER BY raw_key

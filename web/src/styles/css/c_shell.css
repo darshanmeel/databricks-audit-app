@@ -164,10 +164,6 @@
 .badge.not_assessed { background: transparent; color: var(--st-na-ink); border: 1px dashed var(--st-na); }
 .badge.reference, .badge.ranked, .badge.inventory { background: var(--surface-3); color: var(--text-2); }
 .badge.info { background: var(--link-tint); color: var(--link); }
-.badge.solid.critical { background: var(--st-crit); color: #fff; }
-.badge.solid.warn { background: var(--st-warn); color: #fff; }
-.badge.solid.ok { background: var(--st-ok); color: #fff; }
-.badge.solid.not_assessed { background: var(--st-na); color: #fff; border-style: solid; }
 
 table.findings > thead > tr > th, table.data th {
   background: var(--surface-2); color: var(--text-3); font-weight: 500;

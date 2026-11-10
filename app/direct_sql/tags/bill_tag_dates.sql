@@ -49,7 +49,7 @@ pairs AS (
            regexp_replace(lower(x.raw_key), '[ _-]+', '') AS tag_key
     FROM entities e
     LATERAL VIEW explode(e.custom_tags) x AS raw_key, raw_value
-    WHERE x.raw_key IS NOT NULL AND x.raw_value IS NOT NULL
+    WHERE x.raw_key IS NOT NULL AND x.raw_value IS NOT NULL AND trim(x.raw_value) <> ''
       AND regexp_replace(lower(x.raw_key), '[ _-]+', '') <> ''
 ),
 -- settings export_tag_keys, filled in at export time: TRUE keeps every tag

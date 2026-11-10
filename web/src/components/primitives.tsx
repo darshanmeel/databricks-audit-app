@@ -106,13 +106,9 @@ export function StatusPill({ kind, word, count, compact = false }: { kind: strin
   );
 }
 
-// Badge keeps its exact exported name and props (kind/solid/children) so every existing caller
-// (Tip wrappers, finding_detail.tsx chips, tab_jobs.tsx verdicts, ...) keeps working unchanged;
-// only its rendering changed -- a kind that names one of our five statuses (or Badge's own
-// "error") now draws StatusIcon ahead of the word, so a status is never colour alone. A kind like
-// "info" (a plain chip: domain, tier, query id, ...) draws no icon, exactly as before.
-export function Badge({ kind = "info", solid = false, children }: { kind?: string; solid?: boolean; children?: React.ReactNode }) {
-  const cls = ["badge", solid ? "solid" : "", kind].filter(Boolean).join(" ");
+// A status kind draws its icon ahead of the word, so a status is never colour alone.
+export function Badge({ kind = "info", children }: { kind?: string; children?: React.ReactNode }) {
+  const cls = ["badge", kind].filter(Boolean).join(" ");
   return (
     <span className={cls}>
       <StatusIcon kind={kind} />

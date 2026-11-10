@@ -79,6 +79,7 @@ const DRIVER_CODES = new Set(["DRIVER_ERROR", "CLUSTER_ERROR", "DRIVER_UNREACHAB
 function terminationBucket(code: any) {
   if (code === "SUCCESS") return "success";
   if (isCancelledCode(code)) return "cancelled";
+  if (code === "SKIPPED") return "skipped";
   if (code === "TIMED_OUT" || code === "TIMEDOUT") return "timedout";
   if (DRIVER_CODES.has(code)) return "driver";
   return "execution";
@@ -99,7 +100,7 @@ function RunsByResult({ taxonomyRows, windowDays }: LooseProps) {
   // The same failures by their own termination code: which one cause dominates.
   const byCode = new Map<string, number>();
   taxonomyRows.forEach((r: any) => {
-    if (["success", "cancelled"].includes(terminationBucket(r.termination_code))) return;
+    if (["success", "cancelled", "skipped"].includes(terminationBucket(r.termination_code))) return;
     const label = enumLabel(r.termination_code) || String(r.termination_code || "no code recorded");
     byCode.set(label, (byCode.get(label) || 0) + numOrZero(r.run_rows));
   });

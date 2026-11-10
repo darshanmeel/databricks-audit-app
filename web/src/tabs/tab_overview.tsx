@@ -7,12 +7,13 @@ import React from "react";
 import { TONE_DAYS, toneColors, trendTones } from "../components/trend_tone";
 
 import { Api } from "../api";
-import { estLabel, fmtChangeVs, fmtDayShort, fmtDbu, fmtInt, fmtMoney, fmtMoneyShort, fmtPct } from "../format";
+import { estLabel, fmtChangeVs, fmtDayMonth, fmtDayShort, fmtDbu, fmtInt, fmtMoney, fmtMoneyShort, fmtPct } from "../format";
 import { useNames, wsPhrase } from "../components/names";
 import { FLAGGED_STATUSES, SPIKE_PCT, belowFloorNoteText, buildMonthBars, clusterName, excludedNoWorkspaceNote, fillDays, jobName, numOrZero, pipelineName, sumBy, topNWithOther, totalSpikeDays, useFindingAgg, useFindingData, useMultiFindingData, warehouseName } from "../components/hooks";
 import { AREA_REGISTRY, COST_MONEY_COL, EST_SPEND_CAVEAT, OVERVIEW_IDS, WASTE_IDS, bandOf, homeForQuery } from "../components/tab_registry";
 import { AreaContent, Card, ErrorBoundary, Facts, StatusPill, assessedCounts, bandPillKind, isUncertainBand, noDataText } from "../components/primitives";
-import { enumLabel, getCheckLabel } from "../components/labels";
+import { enumLabel, getCheckLabel, productLabel } from "../components/labels";
+export { productLabel };
 import { ChartNote } from "../components/charts";
 import { Columns, RankedBars } from "../components/charts_more";
 import { SummaryTileDelta, SummaryTileSpark, firstAction, windowShortLabel } from "../components/overview_tile";
@@ -242,19 +243,6 @@ function verdictSentence({ ready, windowDays, estSpend, pcd, worklistReady, pric
 // a real name; an unrecognised one is title-cased rather than left as a shouting enum value, so a
 // product this pass never anticipated still reads as words, not a code (product must work on any
 // customer's account, not just the ones whose product mix this pass has seen).
-const PRODUCT_LABELS: Record<string, string> = {
-  ALL_PURPOSE: "All-purpose clusters", INTERACTIVE: "Serverless notebooks", JOBS: "Jobs", SQL: "SQL warehouses",
-  DLT: "Delta Live Tables", LAKEFLOW_PIPELINES: "Lakeflow pipelines",
-  MODEL_SERVING: "Model serving", VECTOR_SEARCH: "Vector Search", MODEL_TRAINING: "Model training",
-  GENIE: "Genie", LAKEHOUSE_MONITORING: "Lakehouse Monitoring",
-  PREDICTIVE_OPTIMIZATION: "Predictive optimization", STORAGE: "Storage", SERVERLESS_GENIE: "Genie",
-  DBSQL: "Databricks SQL", MODEL_SERVING_V2: "Model serving",
-};
-export function productLabel(code: any) {
-  if (!code) return "(unlabeled product)";
-  if (PRODUCT_LABELS[code]) return PRODUCT_LABELS[code];
-  return String(code).replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
-}
 
 // Short name for a WASTE_ITEMS id on the "Possible waste" split bar and the Fix-first list's area
 // column -- the resource TYPE the check watches, not the check's own longer display title.
@@ -671,7 +659,7 @@ function SpendOverviewContent({ filters, dims, meta, goTo, setVerdict, allFindin
   const daily = dailyAggReady
     ? (() => {
         const filled = fillDays(
-          dailyAgg.data.groups.map((g) => ({ day: String(g.key[0]).slice(0, 10), value: numOrZero(g.value) })),
+          dailyAgg.data.groups.map((g) => ({ day: String(g.key[0]).slice(0, 10), value: numOrZero(g.value) * (1 - numOrZero(dailyAgg.data.discount_pct)) })),
           meta && meta.as_of_date, filters.window, meta && meta.snapshot_days
         );
         return { days: filled.map((d) => d.day), values: filled.map((d) => d.value) };
@@ -685,8 +673,8 @@ function SpendOverviewContent({ filters, dims, meta, goTo, setVerdict, allFindin
   // Spike days: cost_daily_spikes emits only WARN/NOT_ASSESSED rows (never OK) -- a WARN row is a
   // real, priced jump; group by day so a day with several spiking workspaces/products marks once.
   const spikeReady = spikesState.phase === "ready" && spikesState.outcome === "ok_rows";
-  const spikeRows = spikeReady ? spikesState.data.rows.filter((r) => r.status === "WARN") : [];
   const spikeByDay = React.useMemo(() => {
+    const spikeRows = spikeReady ? spikesState.data.rows.filter((r) => r.status === "WARN") : [];
     const m = new Map();
     spikeRows.forEach((r) => {
       const day = String(r.usage_date).slice(0, 10);
@@ -696,7 +684,7 @@ function SpendOverviewContent({ filters, dims, meta, goTo, setVerdict, allFindin
       m.set(day, cur);
     });
     return m;
-  }, [spikeRows]);
+  }, [spikeReady, spikesState]);
   // Triangles judge the day's total (the bar); the per-line spikes explain what drove a marked day.
   const totalSpikes = daily ? totalSpikeDays(daily.days.map((day, i) => ({ day, value: daily.values[i] }))) : [];
   const markers = totalSpikes.map((s) => ({ day: s.day, label: `Spike: ${fmtMoney(s.value, 0)}, +${fmtPct(s.pct, 0)} on the 7-day median` }));
@@ -705,13 +693,13 @@ function SpendOverviewContent({ filters, dims, meta, goTo, setVerdict, allFindin
   const spikeCaption = totalSpikes.length > 0
     ? `${fmtInt(totalSpikes.length)} spike day${totalSpikes.length === 1 ? "" : "s"} (${SPIKE_PCT}%+ over the 7-day median): ${topSpikes.map((s) => {
         const r = driverOf(s.day);
-        return `${fmtDayShort(s.day)} ${fmtMoney(s.value, 0)} (+${fmtPct(s.pct, 0)})${r ? `, mostly ${productLabel(r.billing_origin_product)} in ${wsPhrase(r.workspace_id)}` : ""}`;
+        return `${fmtDayMonth(s.day)} ${fmtMoney(s.value, 0)} (+${fmtPct(s.pct, 0)})${r ? `, mostly ${productLabel(r.billing_origin_product)} in ${wsPhrase(r.workspace_id)}` : ""}`;
       }).join("; ")}.`
     : (dailyAggReady ? `No day ${SPIKE_PCT}% or more above the median of the 7 days before it.` : null);
 
   // By product, in dollars, plain names -- the same aggregate the ML & AI card reads, unfiltered.
   const productEntries = mlaiAggReady
-    ? mlaiAgg.data.groups.map((g) => ({ name: productLabel(g.key && g.key[0]), value: numOrZero(g.value) }))
+    ? mlaiAgg.data.groups.map((g) => ({ name: productLabel(g.key && g.key[0]), value: numOrZero(g.value) * (1 - numOrZero(mlaiAgg.data.discount_pct)) }))
     : [];
   const productTotal = productEntries.reduce((s, e) => s + e.value, 0);
 

@@ -52,11 +52,7 @@ pairs AS (
     SELECT b.entity_type, b.workspace_id, b.entity_id, b.usage_date, b.has_policy, e.key AS raw_key, trim(e.value) AS raw_value,
            {{ norm_tag_key('e.key') }} AS tag_key
     FROM entities b, unnest(map_entries(b.custom_tags)) AS x(e)
-    WHERE e.key IS NOT NULL AND e.value IS NOT NULL AND {{ norm_tag_key('e.key') }} <> ''
-),
--- every key is kept locally; the export filters by settings export_tag_keys
-keyed AS (
-    SELECT * FROM pairs
+    WHERE e.key IS NOT NULL AND e.value IS NOT NULL AND trim(e.value) <> '' AND {{ norm_tag_key('e.key') }} <> ''
 ),
 dated AS (
     SELECT entity_type, workspace_id, entity_id, tag_key,
@@ -65,13 +61,13 @@ dated AS (
            MAX(usage_date) AS last_date,
            -- a usage policy put the key there on its last day: the policy's value, even when it equals the workspace's
            COALESCE(MAX(CASE WHEN has_policy THEN usage_date END) = MAX(usage_date), FALSE) AS from_policy
-    FROM keyed
+    FROM pairs
     GROUP BY entity_type, workspace_id, entity_id, tag_key
 ),
 -- Days the key carried its latest value.
 current_days AS (
     SELECT DISTINCT k.entity_type, k.workspace_id, k.entity_id, k.tag_key, k.usage_date
-    FROM keyed k
+    FROM pairs k
     JOIN dated d
         ON d.entity_type = k.entity_type AND d.workspace_id = k.workspace_id
        AND d.entity_id = k.entity_id AND d.tag_key = k.tag_key AND k.raw_value = d.last_value

@@ -270,9 +270,9 @@ idle AS (
 <span class="c">    -- time from one busy stretch&#x27;s end to the next one&#x27;s start: what an auto-stop setting acts on;</span>
 <span class="c">    -- the last stretch&#x27;s gap runs to the end of its running period, so the final tail is replayed too</span>
     SELECT p.workspace_id, p.warehouse_id,
-           COALESCE(LEAD(p.bs) OVER (PARTITION BY p.workspace_id, p.warehouse_id ORDER BY p.bs), r.run_end_s) - p.be AS g,
+           COALESCE(LEAD(p.bs) OVER (PARTITION BY p.workspace_id, p.warehouse_id, p.run_no ORDER BY p.bs), r.run_end_s) - p.be AS g,
 <span class="c">           -- the final tail has no next query, so stopping after it costs no cold start</span>
-           LEAD(p.bs) OVER (PARTITION BY p.workspace_id, p.warehouse_id ORDER BY p.bs) IS NULL AS is_tail
+           LEAD(p.bs) OVER (PARTITION BY p.workspace_id, p.warehouse_id, p.run_no ORDER BY p.bs) IS NULL AS is_tail
     FROM pb p
     JOIN running r
       ON r.workspace_id = p.workspace_id AND r.warehouse_id = p.warehouse_id AND r.run_no = p.run_no
@@ -1668,9 +1668,9 @@ WITH idle AS (
 <span class="c">    -- time from one busy stretch&#x27;s end to the next one&#x27;s start: what an auto-stop setting acts on;</span>
 <span class="c">    -- the last stretch&#x27;s gap runs to the end of its running period, so the final tail is replayed too</span>
     SELECT p.workspace_id, p.warehouse_id,
-           COALESCE(LEAD(p.bs) OVER (PARTITION BY p.workspace_id, p.warehouse_id ORDER BY p.bs), r.run_end_s) - p.be AS g,
+           COALESCE(LEAD(p.bs) OVER (PARTITION BY p.workspace_id, p.warehouse_id, p.run_no ORDER BY p.bs), r.run_end_s) - p.be AS g,
 <span class="c">           -- the final tail has no next query, so stopping after it costs no cold start</span>
-           LEAD(p.bs) OVER (PARTITION BY p.workspace_id, p.warehouse_id ORDER BY p.bs) IS NULL AS is_tail
+           LEAD(p.bs) OVER (PARTITION BY p.workspace_id, p.warehouse_id, p.run_no ORDER BY p.bs) IS NULL AS is_tail
     FROM pb p
     JOIN running r
       ON r.workspace_id = p.workspace_id AND r.warehouse_id = p.warehouse_id AND r.run_no = p.run_no
@@ -3091,9 +3091,9 @@ idle AS (
 <span class="c">    -- time from one busy stretch&#x27;s end to the next one&#x27;s start: what an auto-stop setting acts on;</span>
 <span class="c">    -- the last stretch&#x27;s gap runs to the end of its running period, so the final tail is replayed too</span>
     SELECT p.workspace_id, p.warehouse_id,
-           COALESCE(LEAD(p.bs) OVER (PARTITION BY p.workspace_id, p.warehouse_id ORDER BY p.bs), r.run_end_s) - p.be AS g,
+           COALESCE(LEAD(p.bs) OVER (PARTITION BY p.workspace_id, p.warehouse_id, p.run_no ORDER BY p.bs), r.run_end_s) - p.be AS g,
 <span class="c">           -- the final tail has no next query, so stopping after it costs no cold start</span>
-           LEAD(p.bs) OVER (PARTITION BY p.workspace_id, p.warehouse_id ORDER BY p.bs) IS NULL AS is_tail
+           LEAD(p.bs) OVER (PARTITION BY p.workspace_id, p.warehouse_id, p.run_no ORDER BY p.bs) IS NULL AS is_tail
     FROM pb p
     JOIN running r
       ON r.workspace_id = p.workspace_id AND r.warehouse_id = p.warehouse_id AND r.run_no = p.run_no
@@ -3607,9 +3607,9 @@ WITH idle AS (
 <span class="c">    -- time from one busy stretch&#x27;s end to the next one&#x27;s start: what an auto-stop setting acts on;</span>
 <span class="c">    -- the last stretch&#x27;s gap runs to the end of its running period, so the final tail is replayed too</span>
     SELECT p.workspace_id, p.warehouse_id,
-           COALESCE(LEAD(p.bs) OVER (PARTITION BY p.workspace_id, p.warehouse_id ORDER BY p.bs), r.run_end_s) - p.be AS g,
+           COALESCE(LEAD(p.bs) OVER (PARTITION BY p.workspace_id, p.warehouse_id, p.run_no ORDER BY p.bs), r.run_end_s) - p.be AS g,
 <span class="c">           -- the final tail has no next query, so stopping after it costs no cold start</span>
-           LEAD(p.bs) OVER (PARTITION BY p.workspace_id, p.warehouse_id ORDER BY p.bs) IS NULL AS is_tail
+           LEAD(p.bs) OVER (PARTITION BY p.workspace_id, p.warehouse_id, p.run_no ORDER BY p.bs) IS NULL AS is_tail
     FROM pb p
     JOIN running r
       ON r.workspace_id = p.workspace_id AND r.warehouse_id = p.warehouse_id AND r.run_no = p.run_no
@@ -4168,9 +4168,9 @@ idle AS (
 <span class="c">    -- time from one busy stretch&#x27;s end to the next one&#x27;s start: what an auto-stop setting acts on;</span>
 <span class="c">    -- the last stretch&#x27;s gap runs to the end of its running period, so the final tail is replayed too</span>
     SELECT p.workspace_id, p.warehouse_id,
-           COALESCE(LEAD(p.bs) OVER (PARTITION BY p.workspace_id, p.warehouse_id ORDER BY p.bs), r.run_end_s) - p.be AS g,
+           COALESCE(LEAD(p.bs) OVER (PARTITION BY p.workspace_id, p.warehouse_id, p.run_no ORDER BY p.bs), r.run_end_s) - p.be AS g,
 <span class="c">           -- the final tail has no next query, so stopping after it costs no cold start</span>
-           LEAD(p.bs) OVER (PARTITION BY p.workspace_id, p.warehouse_id ORDER BY p.bs) IS NULL AS is_tail
+           LEAD(p.bs) OVER (PARTITION BY p.workspace_id, p.warehouse_id, p.run_no ORDER BY p.bs) IS NULL AS is_tail
     FROM pb p
     JOIN running r
       ON r.workspace_id = p.workspace_id AND r.warehouse_id = p.warehouse_id AND r.run_no = p.run_no
@@ -4687,9 +4687,9 @@ WITH idle AS (
 <span class="c">    -- time from one busy stretch&#x27;s end to the next one&#x27;s start: what an auto-stop setting acts on;</span>
 <span class="c">    -- the last stretch&#x27;s gap runs to the end of its running period, so the final tail is replayed too</span>
     SELECT p.workspace_id, p.warehouse_id,
-           COALESCE(LEAD(p.bs) OVER (PARTITION BY p.workspace_id, p.warehouse_id ORDER BY p.bs), r.run_end_s) - p.be AS g,
+           COALESCE(LEAD(p.bs) OVER (PARTITION BY p.workspace_id, p.warehouse_id, p.run_no ORDER BY p.bs), r.run_end_s) - p.be AS g,
 <span class="c">           -- the final tail has no next query, so stopping after it costs no cold start</span>
-           LEAD(p.bs) OVER (PARTITION BY p.workspace_id, p.warehouse_id ORDER BY p.bs) IS NULL AS is_tail
+           LEAD(p.bs) OVER (PARTITION BY p.workspace_id, p.warehouse_id, p.run_no ORDER BY p.bs) IS NULL AS is_tail
     FROM pb p
     JOIN running r
       ON r.workspace_id = p.workspace_id AND r.warehouse_id = p.warehouse_id AND r.run_no = p.run_no
@@ -5221,9 +5221,9 @@ idle AS (
 <span class="c">    -- time from one busy stretch&#x27;s end to the next one&#x27;s start: what an auto-stop setting acts on;</span>
 <span class="c">    -- the last stretch&#x27;s gap runs to the end of its running period, so the final tail is replayed too</span>
     SELECT p.workspace_id, p.warehouse_id,
-           COALESCE(LEAD(p.bs) OVER (PARTITION BY p.workspace_id, p.warehouse_id ORDER BY p.bs), r.run_end_s) - p.be AS g,
+           COALESCE(LEAD(p.bs) OVER (PARTITION BY p.workspace_id, p.warehouse_id, p.run_no ORDER BY p.bs), r.run_end_s) - p.be AS g,
 <span class="c">           -- the final tail has no next query, so stopping after it costs no cold start</span>
-           LEAD(p.bs) OVER (PARTITION BY p.workspace_id, p.warehouse_id ORDER BY p.bs) IS NULL AS is_tail
+           LEAD(p.bs) OVER (PARTITION BY p.workspace_id, p.warehouse_id, p.run_no ORDER BY p.bs) IS NULL AS is_tail
     FROM pb p
     JOIN running r
       ON r.workspace_id = p.workspace_id AND r.warehouse_id = p.warehouse_id AND r.run_no = p.run_no
@@ -5755,9 +5755,9 @@ WITH idle AS (
 <span class="c">    -- time from one busy stretch&#x27;s end to the next one&#x27;s start: what an auto-stop setting acts on;</span>
 <span class="c">    -- the last stretch&#x27;s gap runs to the end of its running period, so the final tail is replayed too</span>
     SELECT p.workspace_id, p.warehouse_id,
-           COALESCE(LEAD(p.bs) OVER (PARTITION BY p.workspace_id, p.warehouse_id ORDER BY p.bs), r.run_end_s) - p.be AS g,
+           COALESCE(LEAD(p.bs) OVER (PARTITION BY p.workspace_id, p.warehouse_id, p.run_no ORDER BY p.bs), r.run_end_s) - p.be AS g,
 <span class="c">           -- the final tail has no next query, so stopping after it costs no cold start</span>
-           LEAD(p.bs) OVER (PARTITION BY p.workspace_id, p.warehouse_id ORDER BY p.bs) IS NULL AS is_tail
+           LEAD(p.bs) OVER (PARTITION BY p.workspace_id, p.warehouse_id, p.run_no ORDER BY p.bs) IS NULL AS is_tail
     FROM pb p
     JOIN running r
       ON r.workspace_id = p.workspace_id AND r.warehouse_id = p.warehouse_id AND r.run_no = p.run_no
@@ -8683,7 +8683,7 @@ stale AS (
      AND (p.price_end_time IS NULL OR u.usage_end_time &lt; p.price_end_time)
     WHERE upper(u.usage_unit) = &#x27;DBU&#x27;
       AND u.usage_metadata.job_id IS NOT NULL
-      AND u.usage_date &gt;= CAST(:time_range.min AS DATE)
+      AND u.usage_date &gt;= dateadd(day, -30, current_date())
       AND u.usage_date &lt;  date_add(:time_range.max, 1)
     GROUP BY u.workspace_id, u.usage_metadata.job_id
   )
@@ -8693,7 +8693,7 @@ stale AS (
          j.create_time,
          COALESCE(cf.capture_floor_days, 0) AS capture_floor_days,
          CASE WHEN r.last_run_start IS NULL
-                OR r.last_run_start &lt; CAST(:time_range.min AS DATE)
+                OR r.last_run_start &lt; dateadd(day, -30, current_date())
               THEN 1 ELSE 0 END AS is_stale,
          COALESCE(cr.net_dbus, 0)     AS net_dbus,
          COALESCE(cr.est_usd_list, 0) AS est_usd_list,
@@ -8704,17 +8704,17 @@ stale AS (
          CASE
            WHEN r.last_run_start IS NULL
                 AND (COALESCE(cf.capture_floor_days, 0) &lt; 30
-                     OR j.create_time &gt; CAST(:time_range.min AS DATE))
+                     OR j.create_time &gt; dateadd(day, -30, current_date()))
                 THEN &#x27;NOT_ASSESSED&#x27;
            WHEN r.last_run_start IS NULL THEN &#x27;WARN&#x27;   -- confirmed no run in a long-enough capture window
            WHEN r.last_run_start &lt; dateadd(day, -90, current_date()) THEN &#x27;CRITICAL&#x27;
-           WHEN r.last_run_start &lt; CAST(:time_range.min AS DATE) THEN &#x27;WARN&#x27;
+           WHEN r.last_run_start &lt; dateadd(day, -30, current_date()) THEN &#x27;WARN&#x27;
            ELSE &#x27;OK&#x27;
          END AS status,
          CASE
            WHEN r.last_run_start IS NULL
                 AND (COALESCE(cf.capture_floor_days, 0) &lt; 30
-                     OR j.create_time &gt; CAST(:time_range.min AS DATE))
+                     OR j.create_time &gt; dateadd(day, -30, current_date()))
                 THEN &#x27;too_young_to_call_stale&#x27;
          END AS not_assessed_reason
   FROM latest_jobs j
@@ -8812,7 +8812,7 @@ WITH stale AS (
      AND (p.price_end_time IS NULL OR u.usage_end_time &lt; p.price_end_time)
     WHERE upper(u.usage_unit) = &#x27;DBU&#x27;
       AND u.usage_metadata.job_id IS NOT NULL
-      AND u.usage_date &gt;= CAST(:time_range.min AS DATE)
+      AND u.usage_date &gt;= dateadd(day, -30, current_date())
       AND u.usage_date &lt;  date_add(:time_range.max, 1)
     GROUP BY u.workspace_id, u.usage_metadata.job_id
   )
@@ -8822,7 +8822,7 @@ WITH stale AS (
          j.create_time,
          COALESCE(cf.capture_floor_days, 0) AS capture_floor_days,
          CASE WHEN r.last_run_start IS NULL
-                OR r.last_run_start &lt; CAST(:time_range.min AS DATE)
+                OR r.last_run_start &lt; dateadd(day, -30, current_date())
               THEN 1 ELSE 0 END AS is_stale,
          COALESCE(cr.net_dbus, 0)     AS net_dbus,
          COALESCE(cr.est_usd_list, 0) AS est_usd_list,
@@ -8833,17 +8833,17 @@ WITH stale AS (
          CASE
            WHEN r.last_run_start IS NULL
                 AND (COALESCE(cf.capture_floor_days, 0) &lt; 30
-                     OR j.create_time &gt; CAST(:time_range.min AS DATE))
+                     OR j.create_time &gt; dateadd(day, -30, current_date()))
                 THEN &#x27;NOT_ASSESSED&#x27;
            WHEN r.last_run_start IS NULL THEN &#x27;WARN&#x27;   -- confirmed no run in a long-enough capture window
            WHEN r.last_run_start &lt; dateadd(day, -90, current_date()) THEN &#x27;CRITICAL&#x27;
-           WHEN r.last_run_start &lt; CAST(:time_range.min AS DATE) THEN &#x27;WARN&#x27;
+           WHEN r.last_run_start &lt; dateadd(day, -30, current_date()) THEN &#x27;WARN&#x27;
            ELSE &#x27;OK&#x27;
          END AS status,
          CASE
            WHEN r.last_run_start IS NULL
                 AND (COALESCE(cf.capture_floor_days, 0) &lt; 30
-                     OR j.create_time &gt; CAST(:time_range.min AS DATE))
+                     OR j.create_time &gt; dateadd(day, -30, current_date()))
                 THEN &#x27;too_young_to_call_stale&#x27;
          END AS not_assessed_reason
   FROM latest_jobs j

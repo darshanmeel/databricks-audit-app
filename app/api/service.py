@@ -721,7 +721,7 @@ def load_aggregate(
     except app_core_tags.TagModelsNotBuiltError:
         info = dict(base.status_info or {})
         info["not_built_reason"] = _TAG_MODELS_NOT_BUILT_REASON
-        return AggregateOutcome(OUTCOME_NOT_ASSESSED, base.spec, base.window_days, status_info=info)
+        return AggregateOutcome(OUTCOME_NOT_ASSESSED, base.spec, base.window_days, status_info=info, scope=base.scope)
     except (duckdb.Error, OSError) as exc:
         return AggregateOutcome(
             OUTCOME_ERROR, base.spec, base.window_days, status_info=base.status_info, error=str(exc)
@@ -1119,10 +1119,6 @@ def records(df: pd.DataFrame, kinds: dict[str, dict[str, str | None]]) -> list[d
                 rec[col] = _json_scalar(val)
         out.append(rec)
     return out
-
-
-def discount_pct() -> float:
-    return float(app_config.load_settings()["discount_pct"])
 
 
 # ---------------------------------------------------------------------------------------------

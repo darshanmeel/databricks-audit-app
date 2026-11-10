@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Repo review 2026-11-10</title>
+<style>
+:root{--bg:#F6F6F3;--card:#fff;--line:#D9DBDF;--ink:#17191D;--mute:#5d636e;--must:#b42318;--should:#b54708;--other:#475467;--accent:#1f4fa3}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 "IBM Plex Sans",system-ui,sans-serif}
+main{max-width:1100px;margin:0 auto;padding:28px 16px 60px}
+h1{font-size:24px;margin:0 0 4px}h2{font-size:17px;margin:28px 0 10px}
+.eyebrow,code,.tag,.loc{font-family:"IBM Plex Mono",ui-monospace,monospace}
+.eyebrow{font-size:11px;letter-spacing:.08em;color:var(--mute);text-transform:uppercase}
+.card{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:14px 16px;margin:10px 0}
+.kv{display:grid;grid-template-columns:150px 1fr;gap:4px 12px}.kv b{font-weight:600}
+table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line)}
+th,td{text-align:left;vertical-align:top;padding:7px 10px;border-top:1px solid var(--line)}
+th{font-size:12px;color:var(--mute);font-weight:600;background:#fafaf8}
+.tag{display:inline-block;font-size:11px;border:1px solid var(--line);border-radius:3px;padding:0 5px;white-space:nowrap}
+.loc{font-size:12px;color:var(--accent);word-break:break-all}
+.must h2{color:var(--must)}.should h2{color:var(--should)}.other h2{color:var(--other)}
+td:nth-child(1){width:90px}td:nth-child(2){width:230px}
+ul{margin:4px 0;padding-left:20px}
+@media print{body{background:#fff}.card,table{break-inside:avoid}}
+</style></head><body><main>
+<div class="eyebrow">databricks-audit-app · whole repo · main @ dda0df6</div>
+<h1>Repo review</h1>
+
+<div class="card kv">
+<b>Verdict</b><span>Approve with changes</span>
+<b>Checks run</b><span>tsc --noEmit → pass · pyflakes app tools → 1 duplicate dict key, 1 unused import · customer-name grep → clean · pytest/dbt → not run (tests only on request) · browser: 103 screens (CTO summaries, every data-engineer sub-page, dark mode, phone width), 0 console errors, 0 NaN/undefined, 0 page-level horizontal scroll · code: 5 area finders + 1 verify pass each (53 findings kept, 3 dropped)</span>
+<b>Screenshots</b><span><code>.playwright-mcp/review/</code> (git-ignored)</span>
+</div>
+
+<section><h2>Status after fixes</h2>
+<div class="card"><ul>
+<li><b>Fixed:</b> all six must-fix items. Should-fix items fixed:
+  <ul>
+  <li>Cancel guard on the findings fetch, burndown pace, env key case, blank tag values, stale-job threshold.</li>
+  <li>Email column type, partial-export guard, masking of owner / user_name / grantee, one product map, tag filter cache, ignored-filter notes.</li>
+  <li>Comments and visual items: dead dim comments, the duplicate key, unused import and code, and dark-mode contrast. Month labels, the failed-queries spacing, the Spike days text, and the "so far" month on By calendar month (it named the first partial month instead of the current one).</li>
+  </ul></li>
+<li><b>Not done, needs a decision first:</b>
+  <ul>
+  <li>People and warehouse counts per window (changes the export format, so a new export is needed).</li>
+  <li>Merging the two dollar-by-tag pipelines (a redesign).</li>
+  <li>Moving the seed test row into the test setup (needs a dbt test-harness change; 2222 is not a real-format workspace id).</li>
+  <li>Removing the dead <code>databricks</code> dbt target (it regenerates 160 models and the tests).</li>
+  <li>The vendored query fixes (each needs a lock refresh, and the lock already has 2 old mismatches).</li>
+  <li>The task-id comment cleanup, the server-side attribute filter, paging, and the threshold resolver.</li>
+  </ul></li>
+<li><b>Left as is:</b> Top queries table: it scrolls inside its card, and shortening it would break the "name (id)" rule.</li>
+</ul></div></section>
+
+<section class="must"><h2>Must fix: wrong numbers</h2>
+<table><tr><th>Area</th><th>Where</th><th>Problem → fix</th></tr>
+<tr><td><span class="tag">Data</span></td><td class="loc">dbt/models/tags/cost_unit_tag.sql:35 · app/direct_sql/tags/cost_unit_tag.sql:19 · app/direct_sql/tags/cost_reconciliation.sql:18 · tools/direct_dashboard_load.py:64</td><td>Joins raw <code>system.billing.list_prices</code> with no USD filter and no overlap cap. A usage row matching two price rows is counted twice, which inflates per-tag $ and the reconciliation gap. The Dashboard load CTE is from the last session. <b>Fix:</b> use <code>{{ list_prices() }}</code> in dbt, and the de-duplicated block from <code>tags/cost_unit.sql:16-40</code> in the direct SQL and the dashboard.</td></tr>
+<tr><td><span class="tag">Data</span></td><td class="loc">app/direct_sql/tags/cost_day.sql:7</td><td><code>is_perf_optimized = performance_target IS NOT NULL</code>, but dbt (<code>cost_day.sql:19</code>) uses <code>= 'PERFORMANCE_OPTIMIZED'</code>. Direct and local modes disagree on that split. <b>Fix:</b> <code>COALESCE(upper(...performance_target) = 'PERFORMANCE_OPTIMIZED', FALSE)</code> in both.</td></tr>
+<tr><td><span class="tag">Correctness</span></td><td class="loc">app/queries/app/compute/compute_warehouse_idle_minutes.sql:232,234</td><td><code>LEAD(p.bs)</code> is partitioned without <code>run_no</code>. The last busy stretch of each running period measures its gap to the next period's first query and is never <code>is_tail</code>, so idle minutes and waste $ are wrong. Line 251 already partitions by <code>run_no</code>. <b>Fix:</b> add <code>p.run_no</code> to both partitions, then regenerate the f_/d_ models and direct SQL.</td></tr>
+<tr><td><span class="tag">Correctness</span></td><td class="loc">web/src/tabs/tab_cost.tsx:297,491 · tab_mlai.tsx:82 · tab_overview.tsx:674 · tab_money.tsx:566</td><td>Charts headed "effective" show list price while the cards beside them apply the discount: Cost daily series and spike markers, Spend by SKU, ML serving and Vector Search by endpoint, Overview daily and product bars, and Money unnamed spend. Invisible on acme (no discount), wrong for any customer with one. <b>Fix:</b> use Money's <code>netEntries</code> (move it to <code>hooks.ts</code>), or multiply by <code>1 - discount_pct</code>.</td></tr>
+<tr><td><span class="tag">Correctness</span></td><td class="loc">web/src/tabs/tab_jobs.tsx:79-84</td><td>Visual: <code>terminationBucket</code> puts unknown codes, SKIPPED included, under "Execution errors". Jobs › Failures shows "Execution error 36 · Skipped 2", then a bar of "Execution errors 38". Skipped is not a failure. <b>Fix:</b> bucket <code>SKIPPED</code> with cancelled (not a failure), or give it its own bucket.</td></tr>
+<tr><td><span class="tag">Correctness</span></td><td class="loc">app/core/finding_columns.py:15 · cost_chargeback_by_tag_value</td><td>Visual: Cost › Chargeback › Checks shows "Chargeback by tag value · $140,049 change" against $22,681 total spend. That cut has one row per (tag_key, value), so summing <code>change_usd_list</code> counts the same $ once per key. <b>Fix:</b> give this check no headline $, or sum one key only (the parent-dedupe map in <code>finding_columns.py</code> already does this for other checks).</td></tr>
+</table></section>
+
+<section class="should"><h2>Should fix</h2>
+<table><tr><th>Area</th><th>Where</th><th>Problem → fix</th></tr>
+<tr><td><span class="tag">Correctness</span></td><td class="loc">web/src/App.tsx:913</td><td>The findings fetch has no cancel guard. Change a filter mid-request and the older response can land last and overwrite the newer one. <b>Fix:</b> a <code>cancelled</code> flag, the same pattern as <code>useFindingData</code>.</td></tr>
+<tr><td><span class="tag">Correctness</span></td><td class="loc">app/core/data.py:2852,1906,2975</td><td>People "queries / tables read", workspace people, and warehouse users / tables / slow cover the whole export span, while the reads and minutes beside them follow the picked window. <b>Fix:</b> export per <code>window_days</code> like <code>user_tables</code>, or label the span on screen.</td></tr>
+<tr><td><span class="tag">Data</span></td><td class="loc">tools/export_direct_results.py:1330</td><td><code>--only</code> or <code>--domain</code> without <code>--out</code> swaps the whole results folder. The full export the app reads is replaced by a partial one. <b>Fix:</b> refuse a partial run unless <code>--out</code> is given.</td></tr>
+<tr><td><span class="tag">Correctness</span></td><td class="loc">tools/table_detail.py:239,283 · tools/workspace_activity.py:636</td><td>With masking on, table owners, DESCRIBE HISTORY <code>user_name</code> and grantees still go out unmasked. Masking is supposed to cover user emails. <b>Fix:</b> apply <code>mask</code> to those columns.</td></tr>
+<tr><td><span class="tag">Data</span></td><td class="loc">tools/build_direct_dashboards.py:39</td><td>The window rewrite also replaces the fixed 30-day stale threshold in <code>lakeflow_stale_zombie_jobs</code>, so on a 7-day window a job idle for 8 days reads WARN. <b>Fix:</b> keep that expression, with the same <code>@@KEEP@@</code> trick <code>KEEP_TODAY</code> uses.</td></tr>
+<tr><td><span class="tag">Correctness</span></td><td class="loc">tools/build_databricks_dashboards.py:757</td><td>A <code>COUNT(DISTINCT user_name)</code> axis types the raw email column as a number titled "Active users" in workspace_usage's rows table. <b>Fix:</b> don't treat COUNT(...) fields as the column type.</td></tr>
+<tr><td><span class="tag">Correctness</span></td><td class="loc">web/src/tabs/tab_cost.tsx:1225</td><td>Commit burndown pace divides by the days that have rows, not the window's days, so the pace is overstated on sparse accounts. <b>Fix:</b> divide by <code>fillDays(...).length</code>.</td></tr>
+<tr><td><span class="tag">Data</span></td><td class="loc">dbt/models/dims/int_workspace_tag_hints.sql:50</td><td>The env hint matches raw keys case-sensitively, so <code>Environment</code> or <code>Env</code> never match. <b>Fix:</b> <code>norm_tag_key('raw_key')</code>, like every other tag model.</td></tr>
+<tr><td><span class="tag">Data</span></td><td class="loc">dbt/models/tags/tag_workspace_history.sql:45 (+ tag_entity, cost_unit_tag, perf_unit_tag, bill_tag_dates, tag_index)</td><td>Blank tag values are kept here, but <code>cost_day</code> drops them, so screens disagree. <b>Fix:</b> <code>AND trim(e.value) &lt;&gt; ''</code>.</td></tr>
+<tr><td><span class="tag">Design</span></td><td class="loc">dbt/models/tags/cost_unit.sql:71 vs cost_day</td><td>Two dollar-by-tag pipelines re-implement the split, classification and price join. They have already drifted (the first two must-fix rows). <b>Fix:</b> build cost_unit / cost_unit_tag from cost_day's rows.</td></tr>
+<tr><td><span class="tag">Design</span></td><td class="loc">web/src/tabs/tab_overview.tsx:245 · tab_money.tsx:49,113 · tab_cost.tsx CB_KIND_OF</td><td>Four product-code maps give different labels: "SQL warehouses" vs "SQL", "Delta Live Tables" vs "DLT". <b>Fix:</b> one map in <code>components/labels.ts</code>.</td></tr>
+<tr><td><span class="tag">Performance</span></td><td class="loc">app/core/tag_spend.py:203 · app/api/service.py:703</td><td>Under a tag filter, <code>matching_cells</code> rescans cost_day and inlines a VALUES list on every SQL build, and every tile runs <code>read_finding</code> before aggregating. Slow on big accounts. <b>Fix:</b> memoize per db and filter, and use <code>count_finding</code> for the gate.</td></tr>
+<tr><td><span class="tag">Correctness</span></td><td class="loc">web/src/components/hooks.ts:246</td><td><code>useMultiFindingData</code> never calls <code>reportIgnoredFilters</code>, so its tiles don't say a filter was ignored. <b>Fix:</b> call it per id, as the other two hooks do.</td></tr>
+<tr><td><span class="tag">Obvious</span></td><td class="loc">dbt/seeds/workspace_env_overrides.csv:2</td><td>The shipped seed contains a test row (<code>2222,uat,…T-23 parity test</code>) that every install loads. <b>Fix:</b> keep only the header and write the row from the test.</td></tr>
+<tr><td><span class="tag">Size</span></td><td class="loc">dbt/profiles.yml:60 · dbt/macros/direct_check.sql</td><td>The <code>databricks</code> target and its 161-line macro serve <code>tools/verify_databricks.py</code>, which no longer exists. <b>Fix:</b> delete them and the <code>materialized=direct_check</code> config.</td></tr>
+<tr><td><span class="tag">Slop</span></td><td class="loc">web/src/format.tsx:25 (and about 140 comment lines in web/src)</td><td>Multi-paragraph comments repeat the code and carry T-/DEC-/review ids. <b>Fix:</b> cut each to one line of why.</td></tr>
+</table></section>
+
+<section><h2>Questions</h2>
+<div class="card"><ul>
+<li><span class="loc">tools/deploy_app.py:149</span>: with <code>run_as: user</code>, the PAT is written as plain text into the synced <code>app.yaml</code>. You ruled security work out; flagging it because the token sits in a workspace file. A secret-scope resource would fix it.</li>
+<li>Cost › When you spend: hour 00:00 is the deepest red every day (55% of spend). Is that only the fake data, or do daily-granularity billing rows land at 00:00? If they do, real accounts would show the same false peak.</li>
+<li><span class="loc">app/direct_sql/overview_spend_estimate.sql:59</span>: tag tables filter on <code>ingestion_date &lt; as_of</code> but checks don't. They match today only because <code>include_today</code> defaults to true. Keep both rules or drop the tag one?</li>
+</ul></div></section>
+
+<p class="card"><b>Areas checked with no issues:</b> injection in API routes, query tags on direct SQL, customer names, type safety (tsc).<br><b>Net size:</b> about 400 lines could go: dead direct_check path, Streamlit leftovers, the server-side attribute filter, duplicate .env/redact helpers, and comment blocks.</p>
+
+<section class="other"><h2>Other findings</h2>
+<table><tr><th>Area</th><th>Where</th><th>Item</th></tr>
+<tr><td><span class="tag">Visual</span></td><td class="loc">Cost › By calendar month</td><td>Month axis labels run together (AugSepOct…) at desktop width.</td></tr>
+<tr><td><span class="tag">Visual</span></td><td class="loc">Overview › Failed or cancelled queries</td><td>The y-axis "6" collides with the per-env list above the chart, and a large empty area sits under the chart.</td></tr>
+<tr><td><span class="tag">Visual</span></td><td class="loc">Queries › Heavy › Top queries by $</td><td>The table is wider than its card, so the last column (files read) is cut off.</td></tr>
+<tr><td><span class="tag">Visual</span></td><td class="loc">Cost › Spike days card</td><td>The rule text wraps to 1-2 words a line in the narrow value column.</td></tr>
+<tr><td><span class="tag">Visual</span></td><td class="loc">web/src/styles/css/c_parts.css:54</td><td>White <code>.shb-seg</code> text on the dark-mode palette has about 2:1 contrast.</td></tr>
+<tr><td><span class="tag">Obvious</span></td><td class="loc">tools/direct_guides.py:1157,1174</td><td>Dict key <code>events</code> appears twice, so "Lineage events." is overwritten.</td></tr>
+<tr><td><span class="tag">Size</span></td><td class="loc">app/core/rls.py:17</td><td>Unused <code>OrderedDict</code> import.</td></tr>
+<tr><td><span class="tag">Correctness</span></td><td class="loc">app/api/app.py:1116,1143 · data.py:352</td><td>Cache eviction can race on the threadpool (KeyError), but only when the cache is full.</td></tr>
+<tr><td><span class="tag">Performance</span></td><td class="loc">app/api/app.py:1289</td><td>"Load more" re-reads every earlier page. Use LIMIT/OFFSET.</td></tr>
+<tr><td><span class="tag">Correctness</span></td><td class="loc">app/api/app.py:845</td><td>About 11 usage and warehouse routes default to <code>window=30</code> and ignore the settings <code>default_window</code>.</td></tr>
+<tr><td><span class="tag">Correctness</span></td><td class="loc">app/api/service.py:724</td><td>NOT_ASSESSED rows for unbuilt tag models lack <code>scope</code> and <code>not_assessed</code>.</td></tr>
+<tr><td><span class="tag">Design</span></td><td class="loc">app/core/tag_spend.py:188 vs service.py:145</td><td>Two threshold resolvers parse quoted or bool values differently.</td></tr>
+<tr><td><span class="tag">Size</span></td><td class="loc">app/api/service.py:1124</td><td><code>discount_pct</code> is read in six places; <code>service.discount_pct</code> is dead.</td></tr>
+<tr><td><span class="tag">Size</span></td><td class="loc">app/core/data.py:604 · app/api/app.py:326</td><td>Streamlit leftovers (<code>tag</code> param, <code>count_finding_ex</code>, <code>is_regional</code>, empty <code>NON_DISCOUNT_MONEY_LABELS</code>), and a server-side attribute filter the UI never sends.</td></tr>
+<tr><td><span class="tag">Size</span></td><td class="loc">web/src/components/hooks.ts:402 · primitives.tsx:114</td><td><code>filterByIds</code> is unused. Badge <code>solid</code> is never passed, and its two CSS blocks conflict.</td></tr>
+<tr><td><span class="tag">Obvious</span></td><td class="loc">web/src/format.tsx:180</td><td><code>fmtDayShort</code> says "15 Sep" but prints "Sep 15"; prose should use <code>fmtDayMonth</code>.</td></tr>
+<tr><td><span class="tag">Obvious</span></td><td class="loc">web/src/tabs/tab_money.tsx:631 · tab_overview.tsx:689</td><td>The env colour cycles past 5 (use <code>paletteColor</code>), and the <code>spikeByDay</code> memo never caches.</td></tr>
+<tr><td><span class="tag">Data</span></td><td class="loc">app/queries/vendored/cost/cost_actual_vs_list_by_sku.sql:32</td><td>The only date-granular price join; use the shared timestamp join.</td></tr>
+<tr><td><span class="tag">Data</span></td><td class="loc">app/queries/vendored/compute/compute_warehouse_autoscale_churn.sql</td><td>The event window has no upper bound and uses the timestamp, while the cost uses whole days.</td></tr>
+<tr><td><span class="tag">Correctness</span></td><td class="loc">tools/export_direct_results.py:1380,488,784</td><td><code>--sizes-only --mask-users</code> ignores the flag. Two error paths store <code>str(exc)</code> unredacted in the manifest.</td></tr>
+<tr><td><span class="tag">Design</span></td><td class="loc">tools/build_direct_dashboards.py:172 · build_databricks_dashboards.py:451</td><td>The $50/30-day materiality floor is hard-coded, not read from <code>config/materiality.yml</code>.</td></tr>
+<tr><td><span class="tag">Size</span></td><td class="loc">tools/export_direct_results.py:808 · tools/gate.py:61</td><td>The .env and redact helpers duplicate <code>snapshot.py</code>. The gate's existence probes are dead, and the fixtures step always skips silently.</td></tr>
+<tr><td><span class="tag">Size</span></td><td class="loc">dbt/models/dims/dim_list_prices.sql · bill_tag_dates.sql:58 · dim_cluster.sql:17</td><td><code>dim_list_prices</code> is unused. <code>bill_tag_dates</code> has a pass-through CTE. Dim comments say the owner columns are "left off" while the SQL selects them.</td></tr>
+</table></section>
+</main></body></html>

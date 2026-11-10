@@ -42,7 +42,7 @@ pairs AS (
     SELECT b.workspace_id, b.usage_date, b.usage_quantity, e.key AS raw_key,
            {{ norm_tag_key('e.key') }} AS tag_key, trim(e.value) AS tag_value
     FROM billed b, unnest(map_entries(b.custom_tags)) AS x(e)
-    WHERE e.key IS NOT NULL AND e.value IS NOT NULL AND {{ norm_tag_key('e.key') }} <> ''
+    WHERE e.key IS NOT NULL AND e.value IS NOT NULL AND trim(e.value) <> '' AND {{ norm_tag_key('e.key') }} <> ''
     QUALIFY ROW_NUMBER() OVER (PARTITION BY b.rid, {{ norm_tag_key('e.key') }} ORDER BY e.key) = 1
 ),
 day_values AS (

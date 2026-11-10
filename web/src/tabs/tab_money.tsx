@@ -10,9 +10,10 @@ import React from "react";
 import { GrainLines, GrainSwitch, MONTH_ROWS_MAX } from "../components/grain";
 import type { Grain } from "../components/grain";
 
-import { estLabel, fmtChange, fmtChangeVs, fmtDayShort, fmtDuration, fmtInt, fmtMoney, fmtMoneyShort, fmtPct } from "../format";
+import { estLabel, fmtChange, fmtChangeVs, fmtDayMonth, fmtDayShort, fmtDuration, fmtInt, fmtMoney, fmtMoneyShort, fmtPct } from "../format";
 import { Names, resolveName, useNames, warehouseInWorkspace, wsPhrase } from "../components/names";
-import { FLAGGED_STATUSES, IgnoredFilterTracker, buildMonthBars, excludedNoWorkspaceNote, filledDailySeries, groupsToEntries, numOrZero, sumBy, useFindingAgg, useFindingData, useMultiFindingData } from "../components/hooks";
+import { FLAGGED_STATUSES, IgnoredFilterTracker, buildMonthBars, excludedNoWorkspaceNote, filledDailySeries, groupsToEntries, netEntries, numOrZero, sumBy, useFindingAgg, useFindingData, useMultiFindingData } from "../components/hooks";
+import { productLabel } from "../components/labels";
 import { COST_MONEY_COL, EST_SPEND_CAVEAT, WASTE_IDS } from "../components/tab_registry";
 import { Card, Facts, FilterReachNote, PageFooter, PageIntro, TagOriginNote } from "../components/primitives";
 import { ChartNote, Donut, Kpi, KpiRow, paletteColor } from "../components/charts";
@@ -47,13 +48,6 @@ interface WaterfallRow {
 // every other code falls back to the plain title-cased reading tab_overview.tsx's own productLabel
 // uses -- good enough for a CFO's chart label without duplicating that file's whole dictionary.
 // INTERACTIVE is serverless notebooks; classic all-purpose clusters bill as ALL_PURPOSE.
-const PRODUCT_WORD_EXCEPTIONS: Record<string, string> = { DBSQL: "Databricks SQL", SQL: "SQL", DLT: "DLT", INTERACTIVE: "Serverless notebooks", ALL_PURPOSE: "All-purpose clusters" };
-export function productWords(code: unknown): string {
-  if (!code) return "(unlabeled product)";
-  if (PRODUCT_WORD_EXCEPTIONS[String(code)]) return PRODUCT_WORD_EXCEPTIONS[String(code)];
-  return String(code).replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
-}
-
 // dims.dim_workspace.env (Names.workspaceRecord) -- the SAME env value the top-bar Env filter
 // already groups workspaces by, never a second guess at what "prod" means on this account.
 const ENV_LABEL: Record<string, string> = { prod: "Prod", dev: "Dev", test: "Test", uat: "UAT", unknown: "Unknown" };
@@ -115,12 +109,6 @@ const RESOURCE_FAMILY: Record<string, string> = {
   MODEL_SERVING: "Model serving", GENIE: "Genie", VECTOR_SEARCH: "Vector Search", DLT: "Pipeline (DLT)",
   APPS: "Apps", LAKEBASE: "Lakebase",
 };
-
-// Aggregate groups come back at list price; net them of the discount like the Spend total.
-function netEntries(data: AggregateData, keyFmt: (k: AggKey[]) => string): Entry[] {
-  const net = 1 - numOrZero(data && data.discount_pct);
-  return groupsToEntries(data, keyFmt).map((e) => ({ ...e, value: e.value * net }));
-}
 
 function donutSegments(entries: Entry[]): Segment[] {
   const list = entries.filter((e) => e.value > 0).sort((a, b) => b.value - a.value);
@@ -513,7 +501,7 @@ export function MoneyTab({ filters, meta, findingsById, goTo, showPerformance, o
   const monthsForBars = monthReady ? buildMonthBars(monthAgg.data.groups, monthAgg.data.discount_pct, MONTH_ROWS_MAX) : null;
 
   const prodReady = prodAgg.phase === "ready" && prodAgg.outcome === "ok_rows";
-  const prodItems = prodReady ? netEntries(prodAgg.data, (k) => productWords(k && k[0])) : null;
+  const prodItems = prodReady ? netEntries(prodAgg.data, (k) => productLabel(k && k[0])) : null;
 
   const wsReady = wsAgg.phase === "ready" && wsAgg.outcome === "ok_rows";
   const multiEnvWs = wsReady && new Set((wsAgg.data.groups || []).filter((g) => numOrZero(g.value) > 0).map((g) => wsEnv(g.key[0]))).size > 1;
@@ -537,7 +525,7 @@ export function MoneyTab({ filters, meta, findingsById, goTo, showPerformance, o
   const multiEnv = envOrder.length > 1;
   const prodEnvAgg = useFindingAgg(multiEnv ? "cost_dollarized_by_sku_day" : null, filters.window, filters.workspaceIds, filters.envs, ["billing_origin_product", "workspace_id"], "sum", COST_MONEY_COL);
   const prodEnvRows = multiEnv && prodEnvAgg.phase === "ready" && prodEnvAgg.outcome === "ok_rows"
-    ? splitByEnv(prodEnvAgg.data.groups, prodEnvAgg.data.discount_pct, productWords) : null;
+    ? splitByEnv(prodEnvAgg.data.groups, prodEnvAgg.data.discount_pct, productLabel) : null;
 
   const unusedFinding = findingsById && findingsById.storage_unused_table_cost;
   const unusedState = useFindingData(unusedFinding ? "storage_unused_table_cost" : null, filters.window, filters.workspaceIds, filters.envs);
@@ -563,7 +551,7 @@ export function MoneyTab({ filters, meta, findingsById, goTo, showPerformance, o
   // own Money cell sums (MoneyCell, findings_table.tsx) -- summing every row here (including an OK
   // one the checks table never counts) silently disagreed with that same number.
   const unnamedFlagged = unnamedReady ? unnamedRows.filter((r) => r.status === "CRITICAL" || r.status === "WARN") : [];
-  const unnamedSpend = unnamedReady ? sumBy(unnamedFlagged, "net_list_cost_usd_365d") : null;
+  const unnamedSpend = unnamedReady ? sumBy(unnamedFlagged, "net_list_cost_usd_365d") * (1 - discountPct) : null;
   const unnamedBilling = unnamedReady ? unnamedRows.filter((r) => numOrZero(r.net_list_cost_usd) > 0) : [];
   const unnamedActive = unnamedBilling.length;
   const unnamedWindowUsd = sumBy(unnamedBilling, "net_list_cost_usd") * (1 - discountPct);
@@ -628,7 +616,7 @@ export function MoneyTab({ filters, meta, findingsById, goTo, showPerformance, o
           perDay.set(day, (perDay.get(day) || 0) + numOrZero(g.value));
           failedQByEnv[env] = (failedQByEnv[env] || 0) + numOrZero(g.value);
         });
-        return { label: envLabel(env), color: `var(--c${(i % 5) + 1})`, data: failedQByDay.days.map((d) => perDay.get(d) || 0) };
+        return { label: envLabel(env), color: paletteColor(i), data: failedQByDay.days.map((d) => perDay.get(d) || 0) };
       })
     : null;
   const [failGrain, setFailGrain] = React.useState<Grain>("day");
@@ -890,13 +878,13 @@ export function MoneyTab({ filters, meta, findingsById, goTo, showPerformance, o
             <Card title={`Failed or cancelled queries per ${failGrain}`} right={<span className="card-right-row"><GrainSwitch value={failGrain} onChange={setFailGrain} /><button type="button" className="ov-link-btn" onClick={() => jump({ tab: "queries" })}>{"Queries →"}</button></span>}>
               <div className="money-perf-line">
                 {failedQByDay
-                  ? `${fmtInt(failedQTotal)} failed or canceled quer${failedQTotal === 1 ? "y" : "ies"} ${perfRange}${failedQWorstIdx >= 0 ? `, worst day ${fmtDayShort(failedQByDay.days[failedQWorstIdx])} (${fmtInt(failedQByDay.values[failedQWorstIdx])})` : ""}.`
+                  ? `${fmtInt(failedQTotal)} failed or canceled quer${failedQTotal === 1 ? "y" : "ies"} ${perfRange}${failedQWorstIdx >= 0 ? `, worst day ${fmtDayMonth(failedQByDay.days[failedQWorstIdx])} (${fmtInt(failedQByDay.values[failedQWorstIdx])})` : ""}.`
                   : "Loading..."}
               </div>
               {failedQSeries && <Facts items={envFacts(envOrder, failedQByEnv, fmtInt)} />}
               {failedQByDay ? (
                 failedQByDay.days.length > 1
-                  ? <GrainLines grain={failGrain} days={failedQByDay.days} series={failedQSeries || [{ label: "failed or cancelled", color: "var(--st-crit)", data: failedQByDay.values }]} />
+                  ? <div style={{ marginTop: 12 }}><GrainLines grain={failGrain} days={failedQByDay.days} series={failedQSeries || [{ label: "failed or cancelled", color: "var(--st-crit)", data: failedQByDay.values }]} /></div>
                   : <div className="chart-note ok"><div className="chart-note-text">Only one day of data in this window -- not enough to draw a trend.</div></div>
               ) : <ChartNote state={failedQAgg} label="query_failed_queries_daily" />}
             </Card>

@@ -678,7 +678,7 @@ def test_main_out_defaults_to_the_data_folder(monkeypatch, tmp_path, capsys):
         }
 
     monkeypatch.setattr(edr, "run_export", fake_run_export)
-    rc = edr.main(["--only", "cost_by_job"])
+    rc = edr.main([])
     assert rc == 0
     assert captured["out_dir"] == edr.datasource.results_dir()
     assert captured["out_dir"] == tmp_path / "results"
@@ -705,9 +705,15 @@ def test_main_out_explicit_flag_still_works(monkeypatch, tmp_path):
     assert captured["out_dir"] == (tmp_path / "custom").resolve()
 
 
+def test_main_refuses_a_partial_run_into_the_default_folder(monkeypatch, tmp_path):
+    monkeypatch.setenv("AUDIT_DATA_DIR", str(tmp_path))
+    monkeypatch.setattr(edr, "run_export", lambda *a, **k: (_ for _ in ()).throw(AssertionError("must not run")))
+    assert edr.main(["--only", "cost_by_job"]) == 2
+
+
 def test_main_refuses_a_data_folder_inside_the_repo(monkeypatch):
     monkeypatch.setenv("AUDIT_DATA_DIR", str(ROOT / "some_stray_data_dir"))
-    rc = edr.main(["--only", "cost_by_job"])
+    rc = edr.main([])
     assert rc == 2
 
 

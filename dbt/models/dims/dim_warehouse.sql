@@ -9,11 +9,7 @@
 -- on warehouse_id ALONE, never workspace_id + warehouse_id. workspace_id is still carried as a
 -- plain column (every source row has one) for a caller that wants to filter/scope by it.
 --
--- created_by is deliberately left off this dim: every vendored query that selects it
--- (sql_warehouse_config_current.sql does not, but the source column is the same raw, unmasked
--- identity field task_cluster_utilization/classic_clusters_config_current's owned_by is) is a
--- raw identity column on the source table, not an object name -- this task resolves OBJECT names
--- only, never a person, so it is left out entirely rather than carried unmasked.
+-- created_by is carried raw (unmasked) by design.
 --
 -- OWNER / RUN-AS COLUMNS ARE CARRIED UNMASKED (DEC-55, your decision 2026-09-22). These are raw
 -- identity fields at the source -- system.lakeflow.jobs / compute.clusters / compute.warehouses /
