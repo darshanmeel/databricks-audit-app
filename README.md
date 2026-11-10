@@ -162,6 +162,8 @@ storage part takes long, the volume listing most. On a cluster the same statemen
   Reads, writes and people come from `system.*` and don't need them.
 - **Left out:** the `system` and `samples` catalogs and Databricks' internal ones (`__databricks_internal…`),
   in the app, the export and the Data usage dashboard.
+- **Which tables:** the ones `information_schema` lists for the token's identity, in catalogs bound to
+  the `.env` workspace. Another identity or workspace can see more; the export log says how many it found.
 - **Grants:** `USE CATALOG`, `USE SCHEMA`, `SELECT` on the tables and `READ VOLUME` on the volumes, for the
   identity that measures (`BROWSE` isn't enough). A catalog it can't read shows under "Could not describe",
   and its tables show GB as `-`.
