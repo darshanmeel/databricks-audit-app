@@ -140,7 +140,8 @@ export function sortByWasteThenMoney<T extends { row: FindingSummary; band: Band
 
 export function csvField(value: unknown): string {
   if (value === null || value === undefined) return "";
-  const s = String(value);
+  // A text cell starting =, +, -, @ runs as a formula in Excel; numbers stay numbers.
+  const s = typeof value === "string" && /^[=+\-@\t\r]/.test(value) ? `'${value}` : String(value);
   return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 

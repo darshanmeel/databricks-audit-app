@@ -112,14 +112,17 @@ def test_a_cap_describes_the_most_recently_changed_first(tmp_path):
 def test_a_failed_listing_is_reported_not_raised(tmp_path):
     def bad():
         raise RuntimeError("no warehouse")
-    assert table_detail.export(bad, tmp_path, log=lambda m: None) == {"exported": False, "error": "no warehouse"}
+    got = table_detail.export(bad, tmp_path, log=lambda m: None)
+    assert (got["exported"], got["error"]) == (False, "no warehouse")
 
 
 def test_table_sizes_setting_is_checked():
     from app.core import config
 
-    assert config._validate_table_sizes(None) == {"enabled": True, "threads": 16, "max_tables": 20000, "volumes": True,
-                                                  "volume_max_entries": 50000, "volume_full_days": 7}
+    assert config._validate_table_sizes(None) == {
+        "enabled": True, "threads": 16, "max_tables": 20000, "volumes": True, "volume_max_entries": 50000,
+        "volume_full_days": 7, "source": "describe", "tables_from": "system.information_schema.tables",
+        "columns_from": "system.information_schema.columns", "volumes_from": "system.information_schema.volumes"}
     assert config._validate_table_sizes({"threads": 32})["threads"] == 32
     for bad in ({"threads": 0}, {"threads": 65}, {"max_tables": -1}, {"enabled": "yes"}, {"other": 1},
                 {"volumes": 1}, {"volume_max_entries": 10}, {"volume_full_days": 400}):
@@ -190,6 +193,16 @@ def test_volumes_are_listed_through_their_folders_and_a_failure_is_kept(tmp_path
     assert rows["raw"]["files"] == 2 and rows["raw"]["size_in_bytes"] == 150 and not rows["raw"]["truncated"]
     assert rows["locked"]["detail"] == "failed: [INSUFFICIENT_PERMISSIONS] no READ VOLUME"
     assert info["listed"] == 1 and info["failed"] == 1
+
+
+def test_a_quote_in_a_folder_name_is_escaped_in_list():
+    assert table_detail._sq("/Volumes/c/s/v/O'Brien/") == "'/Volumes/c/s/v/O\\'Brien/'"
+    assert table_detail._sq("a\\b") == "'a\\\\b'"
+    sent = []
+    cur = type("Q", (), {"description": [("path",), ("name",), ("size",)], "fetchall": lambda self: [],
+                         "execute": lambda self, sql: sent.append(sql)})()
+    table_detail._list_volume(cur, "/Volumes/c/s/v/O'Brien/", 10)
+    assert sent == ["LIST '/Volumes/c/s/v/O\\'Brien/'"]
 
 
 def test_a_volume_over_the_cap_reads_truncated(tmp_path):

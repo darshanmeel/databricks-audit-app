@@ -77,30 +77,33 @@
         "SET QUERY_TAGS['tab'] = 'overview';\n",
         "WITH src AS (\n",
         "  SELECT 'Warehouse idle time' AS source_label, workspace_id, warehouse_id AS entity_id, 'warehouse' AS entity_kind,\n",
-        "         status, ROUND(est_wasted_usd_list * (1.0 - 0.0), 2) AS wasted, est_wasted_usd_list AS floor_value, window_days\n",
+        "         status, ROUND(est_wasted_usd_list * (1.0 - 0.0), 2) AS wasted, est_wasted_usd_list AS floor_value, window_days,\n",
+        "         (CASE WHEN window_days > 0 THEN 50 * window_days / 30.0 ELSE 50 END) AS floor_min\n",
         "  FROM databricks_audit_dashboard.compute_warehouse_idle_minutes\n",
         "  UNION ALL\n",
         "  SELECT 'Idle cluster nodes', dc.workspace_id, w.cluster_id, 'cluster',\n",
-        "         w.status, ROUND(w.est_wasted_usd_list * (1.0 - 0.0), 2), w.est_wasted_usd_list, w.window_days\n",
+        "         w.status, ROUND(w.est_wasted_usd_list * (1.0 - 0.0), 2), w.est_wasted_usd_list, w.window_days,\n",
+        "         (CASE WHEN w.window_days > 0 THEN 50 * w.window_days / 30.0 ELSE 50 END)\n",
         "  FROM databricks_audit_dashboard.compute_idle_node_ratio w\n",
         "  LEFT JOIN databricks_audit_dashboard.dim_cluster dc ON dc.cluster_id = w.cluster_id\n",
         "  UNION ALL\n",
         "  SELECT 'Compute burned on failed runs', workspace_id, job_id, 'job',\n",
-        "         status, ROUND(est_wasted_usd_list * (1.0 - 0.0), 2), CAST(NULL AS DOUBLE), window_days\n",
+        "         status, ROUND(est_wasted_usd_list * (1.0 - 0.0), 2), CAST(NULL AS DOUBLE), window_days, CAST(NULL AS DOUBLE)\n",
         "  FROM databricks_audit_dashboard.lakeflow_failed_jobs_wasted_dbus\n",
         "  UNION ALL\n",
         "  SELECT 'Compute burned on failed statements', workspace_id, warehouse_id, 'warehouse',\n",
-        "         status, ROUND(est_wasted_usd_list * (1.0 - 0.0), 2), est_wasted_usd_list, window_days\n",
+        "         status, ROUND(est_wasted_usd_list * (1.0 - 0.0), 2), est_wasted_usd_list, window_days,\n",
+        "         (CASE WHEN window_days > 0 THEN 50 * window_days / 30.0 ELSE 50 END)\n",
         "  FROM databricks_audit_dashboard.cost_failed_statement_waste\n",
         "  UNION ALL\n",
         "  SELECT 'Endpoints billed with no requests', workspace_id, endpoint_id, 'endpoint',\n",
-        "         status, ROUND(est_wasted_usd_list * (1.0 - 0.0), 2), est_usd_list, window_days\n",
+        "         status, ROUND(est_wasted_usd_list * (1.0 - 0.0), 2), est_usd_list, window_days,\n",
+        "         (CASE WHEN window_days > 0 THEN 50 * window_days / 30.0 ELSE 50 END)\n",
         "  FROM databricks_audit_dashboard.compute_serving_endpoint_cost_status\n",
         "),\n",
         "eff AS (\n",
         "  SELECT *,\n",
-        "         CASE WHEN status IN ('CRITICAL', 'WARN') AND floor_value IS NOT NULL\n",
-        "                   AND floor_value < 50.0 * window_days / 30.0\n",
+        "         CASE WHEN status IN ('CRITICAL', 'WARN') AND floor_value < floor_min\n",
         "              THEN 'OK' ELSE status END AS eff_status\n",
         "  FROM src\n",
         "),\n",
@@ -334,30 +337,33 @@
         "SET QUERY_TAGS['tab'] = 'overview';\n",
         "WITH src AS (\n",
         "  SELECT 'Warehouse idle time' AS source_label, workspace_id, warehouse_id AS entity_id, 'warehouse' AS entity_kind,\n",
-        "         status, ROUND(est_wasted_usd_list * (1.0 - 0.0), 2) AS wasted, est_wasted_usd_list AS floor_value, window_days\n",
+        "         status, ROUND(est_wasted_usd_list * (1.0 - 0.0), 2) AS wasted, est_wasted_usd_list AS floor_value, window_days,\n",
+        "         (CASE WHEN window_days > 0 THEN 50 * window_days / 30.0 ELSE 50 END) AS floor_min\n",
         "  FROM databricks_audit_dashboard.compute_warehouse_idle_minutes\n",
         "  UNION ALL\n",
         "  SELECT 'Idle cluster nodes', dc.workspace_id, w.cluster_id, 'cluster',\n",
-        "         w.status, ROUND(w.est_wasted_usd_list * (1.0 - 0.0), 2), w.est_wasted_usd_list, w.window_days\n",
+        "         w.status, ROUND(w.est_wasted_usd_list * (1.0 - 0.0), 2), w.est_wasted_usd_list, w.window_days,\n",
+        "         (CASE WHEN w.window_days > 0 THEN 50 * w.window_days / 30.0 ELSE 50 END)\n",
         "  FROM databricks_audit_dashboard.compute_idle_node_ratio w\n",
         "  LEFT JOIN databricks_audit_dashboard.dim_cluster dc ON dc.cluster_id = w.cluster_id\n",
         "  UNION ALL\n",
         "  SELECT 'Compute burned on failed runs', workspace_id, job_id, 'job',\n",
-        "         status, ROUND(est_wasted_usd_list * (1.0 - 0.0), 2), CAST(NULL AS DOUBLE), window_days\n",
+        "         status, ROUND(est_wasted_usd_list * (1.0 - 0.0), 2), CAST(NULL AS DOUBLE), window_days, CAST(NULL AS DOUBLE)\n",
         "  FROM databricks_audit_dashboard.lakeflow_failed_jobs_wasted_dbus\n",
         "  UNION ALL\n",
         "  SELECT 'Compute burned on failed statements', workspace_id, warehouse_id, 'warehouse',\n",
-        "         status, ROUND(est_wasted_usd_list * (1.0 - 0.0), 2), est_wasted_usd_list, window_days\n",
+        "         status, ROUND(est_wasted_usd_list * (1.0 - 0.0), 2), est_wasted_usd_list, window_days,\n",
+        "         (CASE WHEN window_days > 0 THEN 50 * window_days / 30.0 ELSE 50 END)\n",
         "  FROM databricks_audit_dashboard.cost_failed_statement_waste\n",
         "  UNION ALL\n",
         "  SELECT 'Endpoints billed with no requests', workspace_id, endpoint_id, 'endpoint',\n",
-        "         status, ROUND(est_wasted_usd_list * (1.0 - 0.0), 2), est_usd_list, window_days\n",
+        "         status, ROUND(est_wasted_usd_list * (1.0 - 0.0), 2), est_usd_list, window_days,\n",
+        "         (CASE WHEN window_days > 0 THEN 50 * window_days / 30.0 ELSE 50 END)\n",
         "  FROM databricks_audit_dashboard.compute_serving_endpoint_cost_status\n",
         "),\n",
         "eff AS (\n",
         "  SELECT *,\n",
-        "         CASE WHEN status IN ('CRITICAL', 'WARN') AND floor_value IS NOT NULL\n",
-        "                   AND floor_value < 50.0 * window_days / 30.0\n",
+        "         CASE WHEN status IN ('CRITICAL', 'WARN') AND floor_value < floor_min\n",
         "              THEN 'OK' ELSE status END AS eff_status\n",
         "  FROM src\n",
         "),\n",
@@ -3275,7 +3281,8 @@
               "frame": {
                 "title": "Daily spend: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -3377,7 +3384,8 @@
               "frame": {
                 "title": "Spend by product: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -3510,7 +3518,8 @@
               "frame": {
                 "title": "Jobs and pipelines by day: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -3612,7 +3621,8 @@
               "frame": {
                 "title": "Queued queries by day: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -3714,7 +3724,8 @@
               "frame": {
                 "title": "Biggest movers vs the previous period: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },

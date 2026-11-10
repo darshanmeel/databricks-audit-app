@@ -767,10 +767,10 @@ function TagShareByDayCard({ filters, topTags }: { filters: Filters; topTags: { 
 // ways, show up without knowing them first (Databricks' own keys left out).
 function TagKeysBySpendCard({ filters, maxCat }: { filters: Filters; maxCat: number }) {
   const keysState = useRollupKeys("cost", filters.window);
-  const keys = (keysState.keys || []).filter((k) => !k.platform && numOrZero(k.compute && k.compute.usd) > 0);
+  const keys = (keysState.keys || []).filter((k) => !k.platform && numOrZero(k.compute && (k.compute.usd_disc ?? k.compute.usd)) > 0);
   const items = keys.map((k) => ({
     name: `${k.display_key || k.tag_key}${k.mandatory ? " (mandatory)" : ""}`,
-    value: numOrZero(k.compute && k.compute.usd),
+    value: numOrZero(k.compute && (k.compute.usd_disc ?? k.compute.usd)),
   }));
   const variants = keys.filter((k) => (k.spellings || []).length > 1).slice(0, 5);
   return (
@@ -856,7 +856,7 @@ function CostAllocationContent({ filters, meta, dims, maxCat, onVerdict }: TabPr
   const unnamedRows = unnamedReady ? unnamedState.data.rows : null;
   // Query orders CRITICAL (still billing) first, so rows[0] is already the worst one.
   const unnamedBilled = (unnamedRows || []).filter((r) => numOrZero(r.net_list_cost_usd) > 0);
-  const unnamedBilledUsd = sumBy(unnamedBilled, "net_list_cost_usd");
+  const unnamedBilledUsd = sumBy(unnamedBilled, "net_list_cost_usd") * (1 - numOrZero(unnamedState.data?.discount_pct));
 
   // Not run is a dash with its reason, never $0.
   const allocPendingValue = ccView.phase === "loading" ? "..." : "-";
@@ -874,8 +874,8 @@ function CostAllocationContent({ filters, meta, dims, maxCat, onVerdict }: TabPr
         <MetricCard label={`No ${ccLabel}`} value={allocReady ? fmtMoney(missingTotal, 0) : allocPendingValue} facts={!allocReady ? allocPendingFacts : grandTotal > 0 ? [
           { label: "Share", value: fmtPct(missingPct, 0), detail: "of spend", tone: missingPct >= 50 ? "crit" : missingPct >= 20 ? "warn" : undefined },
           ...(untaggedSplit && missingTotal > 0 ? [
-            { label: "Other tags", value: fmtMoney(numOrZero(untaggedSplit.other_tags.usd), 0), detail: "add this key" },
-            { label: "No tags", value: fmtMoney(numOrZero(untaggedSplit.no_tags.usd), 0), detail: "tag them" },
+            { label: "Other tags", value: fmtMoney(numOrZero(untaggedSplit.other_tags.usd_disc ?? untaggedSplit.other_tags.usd), 0), detail: "add this key" },
+            { label: "No tags", value: fmtMoney(numOrZero(untaggedSplit.no_tags.usd_disc ?? untaggedSplit.no_tags.usd), 0), detail: "tag them" },
           ] : []),
         ] : null} tone={missingPct >= 50 ? "crit" : missingPct >= 20 ? "warn" : null} />
         <MetricCard

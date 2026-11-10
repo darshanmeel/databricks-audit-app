@@ -439,10 +439,9 @@ def _slice_counts(con, window_days, keep, own_tags, bills, ws_vals, bill_ws) -> 
             raw = {}
         own, own_keys = {}, set()
         for k, v in (raw or {}).items():
-            if v is not None and norm_key(k):
+            if v is not None and norm_key(k) and str(v).strip():
                 own_keys.add(norm_key(k))
-                if str(v).strip():
-                    own.setdefault(norm_key(k), str(v).strip())
+                own.setdefault(norm_key(k), str(v).strip())
         levels = [own]
         for kind_of, oid in (("job", job_id), ("pipeline", pipeline_id)):
             if oid is not None:

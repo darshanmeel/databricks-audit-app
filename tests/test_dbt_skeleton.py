@@ -248,27 +248,34 @@ def test_build_vars_test_target_omits_as_of():
 
 
 def test_load_coverage_floor_reads_settings_yml(tmp_path, monkeypatch):
-    settings = tmp_path / "settings.yml"
-    settings.write_text("tag_coverage_floor: 0.42\n", encoding="utf-8")
-    monkeypatch.setattr(dbt_run, "SETTINGS_PATH", settings)
+    (tmp_path / "settings.yml").write_text("tag_coverage_floor: 0.42\n", encoding="utf-8")
+    monkeypatch.setenv("AUDIT_CONFIG_DIR", str(tmp_path))
     assert dbt_run.load_coverage_floor() == 0.42
 
 
 def test_load_coverage_floor_default_when_missing(tmp_path, monkeypatch):
-    monkeypatch.setattr(dbt_run, "SETTINGS_PATH", tmp_path / "does_not_exist.yml")
-    assert dbt_run.load_coverage_floor() == dbt_run.DEFAULT_COVERAGE_FLOOR
+    monkeypatch.setenv("AUDIT_CONFIG_DIR", str(tmp_path))
+    assert dbt_run.load_coverage_floor() == 0.5
 
 
 def test_load_mask_user_identities_reads_settings_yml(tmp_path, monkeypatch):
-    settings = tmp_path / "settings.yml"
-    settings.write_text("privacy:\n  mask_user_identities: true\n", encoding="utf-8")
-    monkeypatch.setattr(dbt_run, "SETTINGS_PATH", settings)
+    (tmp_path / "settings.yml").write_text("privacy:\n  mask_user_identities: true\n", encoding="utf-8")
+    monkeypatch.setenv("AUDIT_CONFIG_DIR", str(tmp_path))
     assert dbt_run.load_mask_user_identities() is True
 
 
 def test_load_mask_user_identities_default_when_missing(tmp_path, monkeypatch):
-    monkeypatch.setattr(dbt_run, "SETTINGS_PATH", tmp_path / "does_not_exist.yml")
-    assert dbt_run.load_mask_user_identities() is dbt_run.DEFAULT_MASK_USER_IDENTITIES
+    monkeypatch.setenv("AUDIT_CONFIG_DIR", str(tmp_path))
+    assert dbt_run.load_mask_user_identities() is False
+
+
+def test_settings_local_yml_wins_for_mask_and_floors(tmp_path, monkeypatch):
+    (tmp_path / "settings.yml").write_text("tag_share_floor: 0.6\n", encoding="utf-8")
+    (tmp_path / "settings.local.yml").write_text(
+        "privacy:\n  mask_user_identities: true\ntag_share_floor: 0.3\ntag_coverage_floor: 0.2\n", encoding="utf-8")
+    monkeypatch.setenv("AUDIT_CONFIG_DIR", str(tmp_path))
+    v = dbt_run.build_vars("test")
+    assert v["mask_user_identities"] is True and v["share_floor"] == 0.3 and v["coverage_floor"] == 0.2
 
 
 def test_build_vars_dev_target_includes_as_of_when_manifest_present(tmp_path, monkeypatch):

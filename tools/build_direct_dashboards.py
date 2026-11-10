@@ -148,31 +148,35 @@ WASTE = Dataset(
     f"""src AS (
   SELECT 'Warehouse idle time' AS source, 'SQL warehouse' AS kind, CAST(workspace_id AS STRING) AS workspace_id,
          CAST(warehouse_id AS STRING) AS entity_id, CAST(NULL AS STRING) AS name_hint,
-         status, est_wasted_usd_list AS wasted, est_wasted_usd_list AS floor_value, window_days
+         status, est_wasted_usd_list AS wasted, est_wasted_usd_list AS floor_value, window_days,
+         {bdd.floor_min_sql("compute_warehouse_idle_minutes")} AS floor_min
   FROM idle
   UNION ALL
   SELECT 'Idle cluster nodes', 'Cluster', cl.workspace_id, CAST(n.cluster_id AS STRING), NULL,
-         n.status, n.est_wasted_usd_list, n.est_wasted_usd_list, n.window_days
+         n.status, n.est_wasted_usd_list, n.est_wasted_usd_list, n.window_days,
+         {bdd.floor_min_sql("compute_idle_node_ratio", "n.window_days")}
   FROM nodes n LEFT JOIN cl ON cl.cluster_id = CAST(n.cluster_id AS STRING)
   UNION ALL
   -- no floor on failed runs: a job that keeps failing counts even when it is cheap
   SELECT 'Failed job runs', 'Job', CAST(workspace_id AS STRING), CAST(job_id AS STRING), NULL,
-         status, est_wasted_usd_list, CAST(NULL AS DOUBLE), window_days
+         status, est_wasted_usd_list, CAST(NULL AS DOUBLE), window_days, CAST(NULL AS DOUBLE)
   FROM failed_jobs
   UNION ALL
   SELECT 'Failed SQL statements', 'SQL warehouse', CAST(workspace_id AS STRING), CAST(warehouse_id AS STRING), NULL,
-         status, est_wasted_usd_list, est_wasted_usd_list, window_days
+         status, est_wasted_usd_list, est_wasted_usd_list, window_days,
+         {bdd.floor_min_sql("cost_failed_statement_waste")}
   FROM failed_stmts
   UNION ALL
   SELECT 'Serving endpoints with no requests', 'Serving endpoint', CAST(workspace_id AS STRING),
          CAST(endpoint_id AS STRING), endpoint_name,
-         status, est_wasted_usd_list, est_usd_list, window_days
+         status, est_wasted_usd_list, est_usd_list, window_days,
+         {bdd.floor_min_sql("compute_serving_endpoint_cost_status")}
   FROM serving
 ),
 flagged AS (
   SELECT * FROM src
   WHERE status IN ('CRITICAL', 'WARN') AND wasted > 0
-    AND (floor_value IS NULL OR floor_value >= 50.0 * window_days / 30.0)
+    AND (floor_value IS NULL OR floor_min IS NULL OR floor_value >= floor_min)
 ),
 named AS (
   SELECT f.source, f.kind, f.status, f.entity_id, ROUND(f.wasted, 2) AS possible_usd,
@@ -199,7 +203,7 @@ ORDER BY possible_usd DESC""",
     "One row per flagged resource: source, \"name (id)\", kind, workspace, status, $; the top 10 keep their "
     "name for the chart, the rest read All others; the top 3 also fill top3_usd.",
     {"src": "The five checks stacked into one list: source, kind, workspace, id, status, $ and the window's days.",
-     "flagged": "Only Critical or Warn rows with $ above 0 and at least $50 per 30 days (failed job runs: no floor).",
+     "flagged": "Only Critical or Warn rows with $ above 0 and at or over the check's config/materiality.yml floor (failed job runs: no floor).",
      "named": "Ids turned into names: workspace, and warehouse, cluster, job or endpoint by kind.",
      "ranked": "Numbered from the most $ down, for the top 10 and the top 3."},
 )

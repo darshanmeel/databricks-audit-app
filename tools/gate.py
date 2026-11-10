@@ -3,7 +3,8 @@
 
     python tools/gate.py --quick     lint + sync_queries --check + generate_models --check +
                                       web type check and tests + pytest
-    python tools/gate.py             full: fixtures + dbt build --target test + pytest +
+    python tools/gate.py             full: lint + sync_queries --check + generator --checks +
+                                      fixtures + dbt build --target test + pytest +
                                       fixture_coverage --check
 
 Every step below PROBES for its dependency's presence at runtime (a file-existence check) instead
@@ -11,11 +12,12 @@ of hard-importing or hard-requiring it up front. A dependency that is not presen
 with a `skip: ...` note and does not fail the gate; once the dependency exists, the step runs for
 real.
 
-Stdlib only.
+Stdlib only (the --quick stale-DB check loads tests/conftest.py, so it needs pytest + duckdb).
 """
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import shutil
 import subprocess
 import sys
@@ -115,9 +117,27 @@ def step_web(steps: list[Step]) -> bool:
     return rc == 0
 
 
-def step_pytest(steps: list[Step]) -> bool:
+def _stale_test_db() -> list[Path]:
+    """tests/conftest.py's own _stale_sources (its module level has no side effects beyond sys.path)."""
+    spec = importlib.util.spec_from_file_location("gate_conftest", ROOT / "tests" / "conftest.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod._stale_sources()
+
+
+def step_pytest(steps: list[Step], need_fresh_db: bool = False) -> bool:
     """Always run. Exit code 5 ('no tests collected') is non-fatal: tests/ is intentionally
-    empty until T-02 adds tests/test_sync_queries.py (DEC-04 / DEC-05)."""
+    empty until T-02 adds tests/test_sync_queries.py (DEC-04 / DEC-05). need_fresh_db (--quick,
+    which never builds the test DB) fails the step up front when the DB is older than its sources,
+    so a passing run can never hide SQL that was never built."""
+    if need_fresh_db:
+        newer = _stale_test_db()
+        if newer:
+            names = ", ".join(p.relative_to(ROOT).as_posix() for p in newer[:5])
+            print(f"stale test DB - run the full gate (python tools/gate.py); newer than: {names}"
+                  + (f" ... (+{len(newer) - 5} more)" if len(newer) > 5 else ""))
+            steps.append(Step("pytest", "fail", "stale test DB"))
+            return False
     rc = _run([sys.executable, "-m", "pytest", "-q"])
     if rc == 5:
         print("no tests collected yet")
@@ -188,13 +208,18 @@ def quick() -> int:
     ok &= step_generate_direct_models(steps)
     ok &= step_build_direct_sql(steps)
     ok &= step_web(steps)
-    ok &= step_pytest(steps)
+    ok &= step_pytest(steps, need_fresh_db=True)
     return _finish(steps, ok)
 
 
 def full() -> int:
     steps: list[Step] = []
     ok = True
+    ok &= step_lint_headers(steps)
+    ok &= step_sync_queries(steps)
+    ok &= step_generate_models(steps)
+    ok &= step_generate_direct_models(steps)
+    ok &= step_build_direct_sql(steps)
     ok &= step_build_fixtures(steps)
     ok &= step_dbt_build_test(steps)
     ok &= step_pytest(steps)

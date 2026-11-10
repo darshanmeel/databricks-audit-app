@@ -136,8 +136,8 @@ other_usage AS (
     AND (p.price_end_time IS NULL OR u.usage_end_time < p.price_end_time)
   LEFT JOIN latest_clusters lc
     ON  lc.workspace_id = u.workspace_id AND lc.cluster_id = u.usage_metadata.cluster_id
-  WHERE u.usage_metadata.warehouse_id IS NULL
-    AND u.usage_metadata.job_id IS NULL
+  WHERE (upper(u.usage_unit) <> 'DBU'
+         OR (u.usage_metadata.warehouse_id IS NULL AND u.usage_metadata.job_id IS NULL))
     AND u.usage_date >= ({{ audit_today() }} - (({{ w }} * 2)) * INTERVAL 1 DAY)
     AND u.usage_date <  {{ audit_today() }}
 ),
@@ -457,8 +457,8 @@ other_usage AS (
     AND (p.price_end_time IS NULL OR u.usage_end_time < p.price_end_time)
   LEFT JOIN latest_clusters lc
     ON  lc.workspace_id = u.workspace_id AND lc.cluster_id = u.usage_metadata.cluster_id
-  WHERE u.usage_metadata.warehouse_id IS NULL
-    AND u.usage_metadata.job_id IS NULL
+  WHERE (upper(u.usage_unit) <> 'DBU'
+         OR (u.usage_metadata.warehouse_id IS NULL AND u.usage_metadata.job_id IS NULL))
     AND u.usage_date >= dateadd(day, -({{ w }} * 2), {{ audit_today() }})
     AND u.usage_date <  {{ audit_today() }}
 ),

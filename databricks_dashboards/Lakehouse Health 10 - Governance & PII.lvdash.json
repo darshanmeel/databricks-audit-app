@@ -4393,7 +4393,8 @@
               "frame": {
                 "title": "Grants by privilege type: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -4495,7 +4496,8 @@
               "frame": {
                 "title": "Sign-in events by principal: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -5498,7 +5500,8 @@
               "frame": {
                 "title": "Admin and permission change events by actor: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -8671,7 +8674,8 @@
               "frame": {
                 "title": "Outside tagged tables, by object type: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -8773,7 +8777,8 @@
               "frame": {
                 "title": "Column masks by name: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -11494,7 +11499,8 @@
               "frame": {
                 "title": "Downstream access events by class: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -11596,7 +11602,8 @@
               "frame": {
                 "title": "PII propagating into untagged columns: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },

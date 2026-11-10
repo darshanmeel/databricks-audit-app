@@ -1071,11 +1071,15 @@ def rollup_keys(area: str, window_days: int) -> dict:
             ).fetchall()
             ws_map = dict(ws_rows)
             mandatory = _mandatory_keys()
+            try:
+                discount_pct = float(app_config.load_settings().get("discount_pct", 0.0))
+            except Exception:  # pragma: no cover
+                discount_pct = 0.0
             keys = [
                 {
                     "tag_key": tag_key, "display_key": display_key or tag_key,
-                    "compute": {"usd": round(compute_usd or 0, 2)},
-                    "work": {"usd": round(work_usd or 0, 2)},
+                    "compute": _round_metrics({"usd": compute_usd}, discount_pct, "cost"),
+                    "work": _round_metrics({"usd": work_usd}, discount_pct, "cost"),
                     "allocating_workspaces": int(ws_map.get(tag_key, 0)),
                     # how the key is written on the bill: more than one = variants to merge
                     "spellings": [k for k in (spellings or []) if k],

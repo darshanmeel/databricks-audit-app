@@ -6,7 +6,8 @@ import React from "react";
 
 import { estLabel, fmtDayShort, fmtDbu, fmtDuration, fmtInt, fmtMoney, fmtMoneyShort } from "../format";
 import { resolveName, useNames, wsPhrase } from "../components/names";
-import { fillDays, fmtChangePct, numOrZero, useFindingAgg } from "../components/hooks";
+import { fmtChangePct, numOrZero, useFindingAgg } from "../components/hooks";
+import { finishedDays } from "./job_state";
 import { AreaContent, Card, CaveatNote } from "../components/primitives";
 import { ChartNote, shortId } from "../components/charts";
 import { Columns } from "../components/charts_more";
@@ -353,12 +354,10 @@ function CostBeforeAfterContent({ filters, meta, onVerdict }: TabProps) {
   const net = m.kind === "money" && isReady(numAgg) ? 1 - numOrZero(numAgg.data.discount_pct) : 1;
   const fmt = (v: number | null) => fmtKind(m.kind, v);
 
-  // Every calendar day of the window, so a day with no usage counts as zero in an average.
-  const days = React.useMemo(() => {
-    const filled = fillDays([], meta && meta.as_of_date, filters.window, meta && meta.snapshot_days).map((d) => d.day);
-    if (filled.length || !isReady(numAgg)) return filled;
-    return [...new Set(numAgg.data.groups.map((g) => String(g.key[2]).slice(0, 10)))].sort();
-  }, [meta, filters.window, numAgg]);
+  // Every finished calendar day of the window (today's partial day would read as a drop), so a day
+  // with no usage counts as zero in an average.
+  const days = React.useMemo(() => finishedDays(meta, filters.window,
+    isReady(numAgg) ? numAgg.data.groups.map((g) => String(g.key[2])) : []), [meta, filters.window, numAgg]);
   // Default split: the last 7 days are "after", or half the window when it is shorter.
   const defaultFix = days.length > 1 ? days[days.length > 14 ? days.length - 7 : Math.floor(days.length / 2)] : null;
   const fix = fixDay && days.length > 1 && fixDay > days[0] && fixDay <= days[days.length - 1] ? fixDay : defaultFix;

@@ -28,10 +28,38 @@ def full_db(tmp_path_factory):
         "principal": [g[0] for g in GRANTS], "workspace_id": [g[1] for g in GRANTS],
         "warehouse_id": [None] * len(GRANTS), "environment": [None] * len(GRANTS)}), str(d / "e.parquet"))
     con = duckdb.connect(str(db))
+    _add_usage(con)
     rls.add_columns(con)
     rls.load_entitlements(con, d / "e.parquet", {"user": "ops@x.com"}, rls.Rls(True, "a.b.c", ("workspace",), "query"))
     con.close()
     return db
+
+
+def _add_usage(con):
+    """usage, storage and warehouse rows in workspaces 1111 (cat1, u1@x.com) and 2222 (cat2, u2@x.com)."""
+    for s in ("usage", "storage", "warehouse"):
+        con.execute(f"CREATE SCHEMA IF NOT EXISTS {s}")
+    con.execute("CREATE TABLE usage.workspace_activity_info AS SELECT '{\"end\": \"2026-01-31\"}' AS info")
+    con.execute("CREATE TABLE usage.catalog_workspace AS SELECT * FROM (VALUES ('cat1', '1111', 5), ('cat2', '2222', 5)) "
+                "v(catalog, workspace_id, events)")
+    con.execute("CREATE TABLE usage.user_access AS SELECT 30 AS window_days, * FROM (VALUES "
+                "('1111', 'u1@x.com', '2026-01-30', 3, 1, 1), ('2222', 'u2@x.com', '2026-01-30', 4, 1, 1)) "
+                "v(workspace_id, identity, last_seen, queries, tables_read, tables_written)")
+    con.execute("CREATE TABLE usage.user_tables AS SELECT 30 AS window_days, * FROM (VALUES "
+                "('1111', 'u1@x.com', 'cat1.s.t1', 2, 1), ('2222', 'u2@x.com', 'cat2.s.t2', 2, 1)) "
+                "v(workspace_id, identity, table_full_name, reads, writes)")
+    con.execute("CREATE TABLE usage.user_last_seen AS SELECT * FROM (VALUES ('1111', 'u1@x.com', '2025-01-01', NULL), "
+                "('2222', 'u2@x.com', '2025-01-01', NULL)) v(workspace_id, identity, last_seen, last_login)")
+    con.execute("CREATE TABLE usage.table_grants AS SELECT 'cat2.s.t2' AS table_full_name, 'u2@x.com' AS grantee, "
+                "'SELECT' AS privilege")
+    con.execute("CREATE TABLE usage.table_access AS SELECT 30 AS window_days, * FROM (VALUES "
+                "('1111', 'cat1.s.t1', '2026-01-30', NULL, 2, 0, 1), ('2222', 'cat2.s.t2', '2026-01-30', NULL, 2, 0, 1)) "
+                "v(workspace_id, table_full_name, last_read, last_write, reads, writes, readers)")
+    con.execute("CREATE TABLE storage.table_detail AS SELECT *, 'DELTA' AS data_source_format, 3 AS column_count, "
+                "1 AS num_files, NULL AS last_modified, 'described' AS detail FROM (VALUES ('cat1', 's', 't1', 'MANAGED', 10), "
+                "('cat2', 's', 't2', 'MANAGED', 20)) v(table_catalog, table_schema, table_name, table_type, size_in_bytes)")
+    con.execute("CREATE TABLE warehouse.warehouse_daily AS SELECT * FROM (VALUES ('1111', 'w1', '2026-01-30', 5.0), "
+                "('2222', 'w2', '2026-01-30', 6.0)) v(workspace_id, warehouse_id, day, up_minutes)")
 
 
 def _env(monkeypatch, tmp_path, db, apply, enabled=True):
@@ -167,8 +195,8 @@ def test_unit_keyed_and_reference_tables_keep_the_right_rows(monkeypatch, tmp_pa
         "SELECT count(*) FROM tags.cost_unit_tag t JOIN tags.cost_unit u USING (window_days, unit_id) "
         "WHERE u.workspace_id = '1111'").fetchone()[0]
     assert want > 0 and got.execute("SELECT count(*) FROM tags.cost_unit_tag").fetchone()[0] == want
-    assert got.execute("SELECT count(*) FROM dims.dim_list_prices").fetchone()[0] == \
-        src.execute("SELECT count(*) FROM dims.dim_list_prices").fetchone()[0] > 0
+    assert got.execute("SELECT count(*) FROM findings.f_overview_list_prices_raw").fetchone()[0] == \
+        src.execute("SELECT count(*) FROM findings.f_overview_list_prices_raw").fetchone()[0] > 0
     assert got.execute("SELECT count(*) FROM tags.cost_reconciliation").fetchone()[0] == 0
     full_idx = src.execute("SELECT count(*) FROM tags.tag_index").fetchone()[0]
     idx = got.execute("SELECT count(*), sum(object_count) FROM tags.tag_index").fetchone()
@@ -218,3 +246,23 @@ def test_disabled_changes_nothing_for_tags_and_rollups(monkeypatch, tmp_path, fu
     assert _get("/api/findings", None, window=30)["findings"]
     assert _get("/api/tags", None, limit_keys=200)["keys"]
     assert _get("/api/rollup/keys", None, window=30)["keys"]
+
+
+def test_usage_storage_and_warehouse_rows_follow_the_grants(monkeypatch, tmp_path, full_db):
+    _env(monkeypatch, tmp_path, full_db, "query")
+    for who, want in (("alice@x.com", 1), ("carol@x.com", 2), ("nobody@x.com", 0)):
+        people = _get("/api/people", who, window=30)
+        assert people.get("total", 0) == want, who
+    assert len(_get("/api/people", "alice@x.com", window=30)["inactive"]) == 1
+    assert len(_get("/api/people", "carol@x.com", window=30)["inactive"]) == 2
+    assert "cat2" not in str(_get("/api/people", "alice@x.com", window=30))  # u2's grant on cat2.s.t2
+    assert {r["table_full_name"] for r in _get("/api/tables", "alice@x.com", window=30)["rows"]} == {"cat1.s.t1"}
+    assert {r["table_full_name"] for r in _get("/api/tables", "carol@x.com", window=30)["rows"]} == {"cat1.s.t1", "cat2.s.t2"}
+    out = tmp_path / "alice-usage.duckdb"
+    rls.filter_into(full_db, out, [("1111", "*", "*")], "alice@x.com", ("workspace",))
+    got = duckdb.connect(str(out), read_only=True)
+    assert got.execute("SELECT DISTINCT workspace_id FROM warehouse.warehouse_daily").fetchall() == [("1111",)]
+    assert got.execute("SELECT count(*) FROM storage.table_detail").fetchone()[0] == 0  # no workspace: full grants only
+    assert got.execute("SELECT count(*) FROM usage.table_grants").fetchone()[0] == 0
+    assert got.execute("SELECT count(*) FROM usage.workspace_activity_info").fetchone()[0] == 1
+    assert "workspace_id" not in [r[0] for r in got.execute("DESCRIBE storage.table_detail").fetchall()]

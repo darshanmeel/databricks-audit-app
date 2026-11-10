@@ -8,7 +8,7 @@ export interface ActionTemplate {
   waste?: string;
   checks: string[];
   noun: [string, string];
-  title: (n: string, w: string) => string;
+  title: (n: string, w: string, tag?: string) => string;
   effort: string;
   how: string;
   /** The statement to run, only where the fix really is SQL (most Databricks fixes are settings). */
@@ -48,8 +48,8 @@ export const ACTION_TEMPLATES: ActionTemplate[] = [
     how: "Serving → the endpoint → Edit: turn on scale to zero, or delete it if nothing calls it." },
   // The check flags workspace × usage-unit lines, not workspaces, so the count names lines.
   { key: "untagged", kind: "policy", team: "FinOps", checks: ["cost_chargeback_by_allocation_tag"],
-    noun: ["untagged spend line", "untagged spend lines"], title: (n, w) => `Tag ${n} ${w} with a cost center`, effort: "1 day",
-    how: "Require the cost_center tag in cluster policies, serverless budget policies and warehouse settings." },
+    noun: ["untagged spend line", "untagged spend lines"], title: (n, w, tag = "a cost center") => `Tag ${n} ${w} with ${tag}`, effort: "1 day",
+    how: "Require the tag in cluster policies, serverless budget policies and warehouse settings." },
   { key: "jobs_on_all_purpose", kind: "hygiene", team: "Platform", checks: ["lakeflow_jobs_on_all_purpose"],
     noun: ["job", "jobs"], title: (n, w) => `Move ${n} scheduled ${w} off all-purpose clusters`, effort: "10 min each",
     how: "Job → Compute → a new job cluster or serverless. Job compute costs less per DBU than all-purpose." },

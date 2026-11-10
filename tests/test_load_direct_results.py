@@ -936,3 +936,28 @@ def test_workspace_activity_loads_with_what_the_export_did(tmp_path):
         assert json.loads(con.execute("SELECT info FROM usage.workspace_activity_info").fetchone()[0])["windows"] == [30]
     finally:
         con.close()
+
+
+def test_masking_on_at_load_masks_people_in_storage_usage_and_warehouse(tmp_path, monkeypatch):
+    import pyarrow.parquet as pq
+    export_dir = _make_export(tmp_path)  # exported with masking off
+    for folder, stem, row in (
+        ("storage", "table_detail", {"table_name": "orders", "owner": "alice@example.com"}),
+        ("storage", "table_history", {"table_name": "orders", "user_name": "alice@example.com"}),
+        ("usage", "user_access", {"identity": "alice@example.com", "grantee": "bob@example.com", "n": 1}),
+        ("usage", "user_last_seen", {"identity": "etl-sp", "n": 1}),
+        ("warehouse", "warehouse_users", {"identity": "alice@example.com", "n": 1}),
+    ):
+        (export_dir / folder).mkdir(exist_ok=True)
+        pq.write_table(pa.Table.from_pylist([row]), export_dir / folder / f"{stem}.parquet")
+    monkeypatch.setattr(ldr.app_identity, "masking_enabled", lambda: True)
+    ldr.load_folder(export_dir, tmp_path / "loaded.duckdb")
+    con = duckdb.connect(str(tmp_path / "loaded.duckdb"), read_only=True)
+    try:
+        got = [con.execute(sql).fetchone() for sql in (
+            "SELECT owner FROM storage.table_detail", "SELECT user_name FROM storage.table_history",
+            "SELECT identity, grantee FROM usage.user_access", "SELECT identity FROM warehouse.warehouse_users")]
+        assert all("@" not in v and v.endswith(("al***", "bo***")) for r in got for v in r), got
+        assert con.execute("SELECT identity FROM usage.user_last_seen").fetchone() == ("etl-sp",)  # not an email
+    finally:
+        con.close()

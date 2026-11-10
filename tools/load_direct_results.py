@@ -32,7 +32,7 @@ if str(ROOT) not in sys.path:
 from app.core import datasource  # noqa: E402
 from app.core import identity as app_identity  # noqa: E402
 from app.core import rls as app_rls  # noqa: E402
-from tools.export_direct_results import _is_windowed, apply_masking  # noqa: E402
+from tools.export_direct_results import _is_windowed, _mask_user, apply_masking  # noqa: E402
 
 _QUERY_ID_RE = re.compile(r"[a-z][a-z0-9_]*")
 _VALID_WINDOW_DAYS = {0, 7, 30, 90}
@@ -142,6 +142,21 @@ def _create_from_parquet(con: duckdb.DuckDBPyConnection, target: str, path: Path
     con.execute(f"CREATE OR REPLACE TABLE {target} AS SELECT *{replace} FROM read_parquet('{_sql_path(path)}')"
                 + (f" WHERE {where}" if where else ""))
     return schema.names
+
+
+def _mask_people(con: duckdb.DuckDBPyConnection, target: str, columns: list[str], people: tuple[str, ...]) -> None:
+    """Mask user emails in `target`'s person columns in place, so an export made with masking off
+    shows no raw emails once the setting is on. Masks each distinct value once, not each row."""
+    for c in (c for c in people if c in columns):
+        rows = con.execute(f"SELECT DISTINCT \"{c}\" FROM {target} WHERE \"{c}\" LIKE '%@%'").fetchall()
+        pairs = [(v, _mask_user(v)) for (v,) in rows]
+        pairs = [p for p in pairs if p[0] != p[1]]
+        if not pairs:
+            continue
+        con.execute("CREATE OR REPLACE TEMP TABLE _mask_map (raw VARCHAR, masked VARCHAR)")
+        con.executemany("INSERT INTO _mask_map VALUES (?, ?)", pairs)
+        con.execute(f'UPDATE {target} AS t SET "{c}" = m.masked FROM _mask_map m WHERE t."{c}" = m.raw')
+        con.execute("DROP TABLE _mask_map")
 
 
 def _tag_entity_keys(con: duckdb.DuckDBPyConnection, entity_path: Path, index_path: Path | None, settings: dict) -> list[str] | None:
@@ -740,7 +755,9 @@ def _load_root(root: Path, db_path: Path, *, zip_as_of: str | None = None) -> di
                             [json.dumps(detail_info)])
             if det_path is not None:
                 try:
-                    _create_from_parquet(con, "storage.table_detail", det_path)
+                    columns = _create_from_parquet(con, "storage.table_detail", det_path)
+                    if mask:
+                        _mask_people(con, "storage.table_detail", columns, ("owner",))
                     if not detail_info:  # files copied in from another export: count from the file itself
                         con.execute("CREATE OR REPLACE TABLE storage.table_detail_info AS SELECT ? AS info",
                                     [json.dumps(_counted_info(con, "storage.table_detail", "tables"))])
@@ -750,7 +767,9 @@ def _load_root(root: Path, db_path: Path, *, zip_as_of: str | None = None) -> di
             if hist_path is not None:
                 try:
                     con.execute("CREATE SCHEMA IF NOT EXISTS storage")
-                    _create_from_parquet(con, "storage.table_history", hist_path)
+                    columns = _create_from_parquet(con, "storage.table_history", hist_path)
+                    if mask:
+                        _mask_people(con, "storage.table_history", columns, ("user_name",))
                 except Exception as exc:  # noqa: BLE001
                     print(f"warning: could not read {hist_path} ({exc}) -- storage.table_history not built", file=sys.stderr)
             vol_path = _find_data_file(root / "storage", "volume_detail") if (root / "storage").is_dir() else None
@@ -782,7 +801,9 @@ def _load_root(root: Path, db_path: Path, *, zip_as_of: str | None = None) -> di
                 if path is None:
                     continue
                 try:
-                    _create_from_parquet(con, f"usage.{name}", path)
+                    columns = _create_from_parquet(con, f"usage.{name}", path)
+                    if mask:  # the same columns the export masks (workspace_activity.export)
+                        _mask_people(con, f"usage.{name}", columns, ("identity", "grantee"))
                 except Exception as exc:  # noqa: BLE001 -- a bad usage file must not crash the load
                     print(f"warning: could not read {path} ({exc}) -- usage.{name} not built", file=sys.stderr)
 
@@ -798,7 +819,9 @@ def _load_root(root: Path, db_path: Path, *, zip_as_of: str | None = None) -> di
                     if path is None:
                         continue
                     try:
-                        _create_from_parquet(con, f"warehouse.{name}", path)
+                        columns = _create_from_parquet(con, f"warehouse.{name}", path)
+                        if mask:
+                            _mask_people(con, f"warehouse.{name}", columns, ("identity",))
                     except Exception as exc:  # noqa: BLE001 -- a bad file must not crash the load
                         print(f"warning: could not read {path} ({exc}) -- warehouse.{name} not built", file=sys.stderr)
             if rls_info and rls_info.get("enabled"):

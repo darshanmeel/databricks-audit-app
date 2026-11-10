@@ -89,6 +89,16 @@ def test_rollup_keys_tgcc_not_fanned_out_by_workspace_count():
     assert abs(keys["tgcc"]["work"]["usd"] - 136.0) < 0.005
 
 
+def test_rollup_keys_carries_discounted_usd(monkeypatch):
+    from app.core import rollup
+    settings = rollup.app_config.load_settings()
+    monkeypatch.setattr(rollup.app_config, "load_settings", lambda: {**settings, "discount_pct": 0.25})
+    keys = {k["tag_key"]: k for k in rollup.rollup_keys("cost", 30)["keys"]}
+    assert abs(keys["tgcc"]["compute"]["usd"] - 530.0) < 0.005
+    assert abs(keys["tgcc"]["compute"]["usd_disc"] - 397.5) < 0.005
+    assert abs(keys["tgcc"]["work"]["usd_disc"] - 102.0) < 0.005
+
+
 def test_rollup_keys_bad_area_is_422():
     r = client.get("/api/rollup/keys", params={"area": "nope"})
     assert r.status_code == 422

@@ -12,7 +12,7 @@ WITH history AS (
            COALESCE(q.compute.warehouse_id, q.compute.cluster_id) AS compute_id,
            CASE WHEN q.query_tags IS NULL THEN ''
                 ELSE array_join(array_sort(array_distinct(filter(
-                         transform(map_keys(map_filter(q.query_tags, (k, v) -> v IS NOT NULL)),
+                         transform(map_keys(map_filter(q.query_tags, (k, v) -> v IS NOT NULL AND trim(v) <> '')),
                                    k -> regexp_replace(lower(k), '[ _-]+', '')),
                          k -> k <> ''))), ',')
            END AS own_keys,

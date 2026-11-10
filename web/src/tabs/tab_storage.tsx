@@ -52,7 +52,8 @@ function UnreadTablesCard({ filters, meta }: LooseProps) {
   const sorted = [...list].sort((a, b) => numOrZero(b.est_total_usd_month) - numOrZero(a.est_total_usd_month)
     || numOrZero(gbOf(b)) - numOrZero(gbOf(a)) || age(b) - age(a));
   const shown = sorted.slice(0, showAll ? UNREAD_MAX : UNREAD_SHOWN);
-  const usd = (xs: any[] | null) => (xs ? xs.reduce((a, r) => a + numOrZero(r.est_total_usd_month), 0) : 0);
+  const net = 1 - numOrZero(state.data?.discount_pct);
+  const usd = (xs: any[] | null) => (xs ? xs.reduce((a, r) => a + numOrZero(r.est_total_usd_month), 0) * net : 0);
   const priced = (xs: any[] | null) => (xs ? xs.filter((r) => r.est_total_usd_month != null).length : 0);
   // A table with no size on record has no $ figure: unknown, not $0.
   const usdText = (xs: any[] | null) => (!xs || !xs.length ? "" : !priced(xs) ? "No size on record for these, so no $ figure."
@@ -62,7 +63,7 @@ function UnreadTablesCard({ filters, meta }: LooseProps) {
     return d == null ? "none on record" : numOrZero(d) === 0 ? "today" : `${fmtInt(d)} day${numOrZero(d) === 1 ? "" : "s"} ago`;
   };
   return (
-    <Card title={`Tables nobody read in the last ${fmtInt(days)} days`} right={real && priced(real) ? <span className="muted">{`${fmtMoney(usd(real) + numOrZero(sys && sys.est_total_usd_month), 0)} a month storage and upkeep`}</span> : null}>
+    <Card title={`Tables nobody read in the last ${fmtInt(days)} days`} right={real && priced(real) ? <span className="muted">{`${fmtMoney(usd(real) + numOrZero(sys && sys.est_total_usd_month) * net, 0)} a month storage and upkeep`}</span> : null}>
       {real ? (
         <React.Fragment>
           <div className="ws-actions">
@@ -86,7 +87,7 @@ function UnreadTablesCard({ filters, meta }: LooseProps) {
                       <td className="muted">{r.table_type ? String(r.table_type).charAt(0) + String(r.table_type).slice(1).toLowerCase() : ""}</td>
                       <td>{lastWrite(r)}</td>
                       <td className="num mono">{gbOf(r) != null ? fmtGb(gbOf(r)) : "-"}</td>
-                      <td className="num mono">{r.est_total_usd_month != null ? fmtMoney(r.est_total_usd_month, r.est_total_usd_month < 10 ? 2 : 0) : "-"}</td>
+                      <td className="num mono">{r.est_total_usd_month != null ? fmtMoney(r.est_total_usd_month * net, r.est_total_usd_month * net < 10 ? 2 : 0) : "-"}</td>
                       <td className="muted">{r.table_owner || ""}</td>
                     </tr>
                   ))}
@@ -99,7 +100,7 @@ function UnreadTablesCard({ filters, meta }: LooseProps) {
               {showAll ? `Show the ${UNREAD_SHOWN} biggest` : sorted.length > UNREAD_MAX ? `Show the ${UNREAD_MAX} biggest of ${fmtInt(sorted.length)}` : `Show all ${fmtInt(sorted.length)}`}
             </button>
           )}
-          {sys && <div className="metric-note">{`Not listed: ${fmtInt(sys.pooled_count)} Databricks-owned tables (samples, System user)${sys.est_total_usd_month != null ? ` · ${fmtMoney(sys.est_total_usd_month, 0)} a month, counted in the total` : ""}.`}</div>}
+          {sys && <div className="metric-note">{`Not listed: ${fmtInt(sys.pooled_count)} Databricks-owned tables (samples, System user)${sys.est_total_usd_month != null ? ` · ${fmtMoney(sys.est_total_usd_month * net, 0)} a month, counted in the total` : ""}.`}</div>}
           <div className="metric-note">Reads outside Unity Catalog lineage don't show here -- confirm with the owner before dropping anything. A read through a view counts for its tables, not the view.</div>
         </React.Fragment>
       ) : <ChartNote state={state} label="storage_unused_table_cost" />}

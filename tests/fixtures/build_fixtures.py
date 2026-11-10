@@ -40,6 +40,7 @@ Stdlib + duckdb + pyarrow only.
 from __future__ import annotations
 
 import importlib.util
+import shutil
 import sys
 import tempfile
 from pathlib import Path
@@ -167,6 +168,8 @@ def _self_check_isolation(ddl, base, keys: list[str]) -> None:
 
 
 def main() -> int:
+    # Start clean: a renamed or removed builder's old parquet would otherwise keep being unioned in.
+    shutil.rmtree(PARQUET_DIR, ignore_errors=True)
     ddl = _load(FIXTURES_DIR / "ddl.py", "ddl")
     base = _load(FIXTURES_DIR / "base.py", "base")
 

@@ -6,7 +6,7 @@
 -- clusters are left out (one per run); their job or pipeline carries the dates. A serverless
 -- notebook's bill carries its usage policy's tags.
 WITH billed AS (
-    SELECT usage_date, workspace_id, custom_tags,
+    SELECT usage_date, usage_end_time, workspace_id, custom_tags,
            usage_metadata.warehouse_id AS warehouse_id,
            usage_metadata.cluster_id AS cluster_id,
            usage_metadata.job_id AS job_id,
@@ -18,19 +18,19 @@ WITH billed AS (
       AND usage_date < __AS_OF_DATE__ AND ingestion_date < __AS_OF_DATE__
 ),
 entities AS (
-    SELECT 'billed_warehouse' AS entity_type, workspace_id, warehouse_id AS entity_id, usage_date, custom_tags, has_policy
+    SELECT 'billed_warehouse' AS entity_type, workspace_id, warehouse_id AS entity_id, usage_date, usage_end_time, custom_tags, has_policy
     FROM billed WHERE warehouse_id IS NOT NULL
     UNION ALL
-    SELECT 'billed_cluster', workspace_id, cluster_id, usage_date, custom_tags, has_policy
+    SELECT 'billed_cluster', workspace_id, cluster_id, usage_date, usage_end_time, custom_tags, has_policy
     FROM billed WHERE cluster_id IS NOT NULL AND job_id IS NULL AND dlt_pipeline_id IS NULL
     UNION ALL
-    SELECT 'billed_job', workspace_id, job_id, usage_date, custom_tags, has_policy
+    SELECT 'billed_job', workspace_id, job_id, usage_date, usage_end_time, custom_tags, has_policy
     FROM billed WHERE job_id IS NOT NULL
     UNION ALL
-    SELECT 'billed_pipeline', workspace_id, dlt_pipeline_id, usage_date, custom_tags, has_policy
+    SELECT 'billed_pipeline', workspace_id, dlt_pipeline_id, usage_date, usage_end_time, custom_tags, has_policy
     FROM billed WHERE dlt_pipeline_id IS NOT NULL
     UNION ALL
-    SELECT 'billed_notebook', workspace_id, notebook_id, usage_date, custom_tags, has_policy
+    SELECT 'billed_notebook', workspace_id, notebook_id, usage_date, usage_end_time, custom_tags, has_policy
     FROM billed
     WHERE notebook_id IS NOT NULL AND warehouse_id IS NULL AND cluster_id IS NULL
       AND job_id IS NULL AND dlt_pipeline_id IS NULL
@@ -45,7 +45,7 @@ entity_last AS (
     GROUP BY entity_type, workspace_id, entity_id
 ),
 pairs AS (
-    SELECT e.entity_type, e.workspace_id, e.entity_id, e.usage_date, e.has_policy, x.raw_key, trim(x.raw_value) AS raw_value,
+    SELECT e.entity_type, e.workspace_id, e.entity_id, e.usage_date, e.usage_end_time, e.has_policy, x.raw_key, trim(x.raw_value) AS raw_value,
            regexp_replace(lower(x.raw_key), '[ _-]+', '') AS tag_key
     FROM entities e
     LATERAL VIEW explode(e.custom_tags) x AS raw_key, raw_value
@@ -58,7 +58,9 @@ keyed AS (
 ),
 dated AS (
     SELECT entity_type, workspace_id, entity_id, tag_key,
-           max_by(raw_key, usage_date) AS raw_key, max_by(raw_value, usage_date) AS last_value,
+           -- latest billing row wins; value then key break a same-hour tie, so both come from one row
+           max_by(raw_key, struct(usage_end_time, raw_value, raw_key)) AS raw_key,
+           max_by(raw_value, struct(usage_end_time, raw_value, raw_key)) AS last_value,
            array_sort(collect_set(raw_value)) AS all_values,
            MAX(usage_date) AS last_date,
            -- a usage policy put the key there on its last day: the policy's value, even when it equals the workspace's

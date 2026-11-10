@@ -9,6 +9,7 @@ import { fmtBytes, fmtDayShort, fmtDurationMs, fmtInt, fmtPct } from "../format"
 import { AreaContent, Card, PqgsNote } from "../components/primitives";
 import { HBarList, paletteColor } from "../components/charts";
 import { Columns } from "../components/charts_more";
+import { csvField } from "../components/findings_table";
 
 const READ = "#2456A6";
 const WRITE = "#D27A2C";
@@ -129,9 +130,8 @@ function ClassLegend() {
 }
 
 function csv(rows: any[][]): void {
-  const esc = (v: any) => { const s = v == null ? "" : String(v); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
   const a = document.createElement("a");
-  a.href = URL.createObjectURL(new Blob([rows.map((r) => r.map(esc).join(",")).join("\n")], { type: "text/csv;charset=utf-8;" }));
+  a.href = URL.createObjectURL(new Blob([rows.map((r) => r.map(csvField).join(",")).join("\n")], { type: "text/csv;charset=utf-8;" }));
   a.download = "tables.csv";
   a.click();
   URL.revokeObjectURL(a.href);

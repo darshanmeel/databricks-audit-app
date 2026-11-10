@@ -21,7 +21,7 @@ def _wait():
 def test_refresh_runs_both_steps_and_switches_the_db(monkeypatch, tmp_path):
     calls = []
 
-    def fake_call(args):
+    def fake_call(args, timeout):
         calls.append(args[0])
         if args[0] == "tools/load_direct_results.py":
             Path(args[args.index("--db") + 1]).touch()  # the real loader writes the db file
@@ -57,14 +57,15 @@ def test_refresh_switches_the_shared_connection_and_closes_the_old_one(monkeypat
     monkeypatch.delenv("AUDIT_DB", raising=False)
     monkeypatch.setattr(app_core_data, "share_connection", True)
     monkeypatch.setattr(app_core_data, "_SHARED_CONS", {})
+    monkeypatch.setattr(app_core_data, "_RETIRED", [])
 
     old_db = tmp_path / "audit-old.duckdb"
     duckdb.connect(str(old_db)).close()
     refresh.datasource.set_current_db(old_db)
-    app_core_data._connect()  # populates the shared connection on the old db
+    in_flight = app_core_data._connect()  # populates the shared connection on the old db
     old_base = next(iter(app_core_data._SHARED_CONS.values()))
 
-    def fake_call(args):
+    def fake_call(args, timeout):
         if args[0] == "tools/load_direct_results.py":
             db_arg = Path(args[args.index("--db") + 1])
             duckdb.connect(str(db_arg)).close()
@@ -79,6 +80,10 @@ def test_refresh_switches_the_shared_connection_and_closes_the_old_one(monkeypat
 
     app_core_data._connect()
     assert [k[0] for k in app_core_data._SHARED_CONS] == [str(new_db)]
+    # a request still reading through the old handle keeps working; the handle closes after the grace
+    assert in_flight.execute("SELECT 1").fetchone() == (1,)
+    monkeypatch.setattr(app_core_data, "_RETIRE_AFTER_S", -1)
+    app_core_data._retire(None)
     with pytest.raises(duckdb.Error):
         old_base.execute("SELECT 1")
 
@@ -87,7 +92,7 @@ def test_refresh_failure_is_reported_and_keeps_the_db(monkeypatch, tmp_path):
     monkeypatch.setattr(refresh.datasource, "data_dir", lambda: tmp_path)
     monkeypatch.setenv("AUDIT_DB", "keep.duckdb")
 
-    def boom(args):
+    def boom(args, timeout):
         raise RuntimeError("no credentials")
 
     monkeypatch.setattr(refresh, "_call", boom)
@@ -104,7 +109,7 @@ def test_refresh_builds_per_user_files_only_for_the_app_with_apply_export(monkey
 
     built = []
 
-    def fake_call(args):
+    def fake_call(args, timeout):
         if args[0] == "tools/load_direct_results.py":
             Path(args[args.index("--db") + 1]).touch()
 
@@ -130,3 +135,66 @@ def test_refresh_builds_per_user_files_only_for_the_app_with_apply_export(monkey
     if expect_split:
         names = {p.name for p in tmp_path.glob("audit-*")}
         assert any("rls-abc.duckdb" in n for n in names) and any("rls-abc.run_results.json" in n for n in names)
+
+
+def test_refresh_step_that_hangs_times_out_and_fails(monkeypatch, tmp_path):
+    import subprocess
+
+    seen = []
+
+    def hang(cmd, **kw):
+        seen.append(kw["timeout"])
+        raise subprocess.TimeoutExpired(cmd, kw["timeout"])
+
+    monkeypatch.setattr(refresh.datasource, "data_dir", lambda: tmp_path)
+    monkeypatch.setattr(refresh.subprocess, "run", hang)
+    refresh.start(30)
+    s = _wait()
+
+    assert seen == [refresh.EXPORT_TIMEOUT_S]
+    assert s["step"] == "failed" and "timed out" in s["error"]
+
+
+def _app_env(monkeypatch, tmp_path, rls_enabled):
+    import os
+    import shutil
+
+    cfg = tmp_path / "config"
+    shutil.copytree(os.environ["AUDIT_CONFIG_DIR"], cfg)
+    (cfg / "app.local.yml").write_text(
+        f"rls:\n  enabled: {str(rls_enabled).lower()}\n  apply: query\n  columns: [workspace]\n"
+        "refresh:\n  admins: [Ops@X.com]\n", encoding="utf-8")
+    monkeypatch.setenv("AUDIT_CONFIG_DIR", str(cfg))
+    monkeypatch.setenv("DATABRICKS_APP_PORT", "8000")
+    grants = {"alice@x.com": [("1111", "*", "*")], "carol@x.com": [("*", "*", "*")]}
+    monkeypatch.setattr(refresh.rls, "principal_grants", lambda base, who: grants.get(who, []))
+    started = []
+    monkeypatch.setattr(refresh, "start", lambda days: started.append(days) or {"running": True})
+    return started
+
+
+def _post(email):
+    from fastapi.testclient import TestClient
+
+    from app.api.app import app
+
+    return TestClient(app).post("/api/refresh", params={"days": 7},
+                                headers={"x-forwarded-email": email} if email else {})
+
+
+def test_refresh_with_rls_is_limited_to_admins_and_unrestricted_users(monkeypatch, tmp_path):
+    started = _app_env(monkeypatch, tmp_path, rls_enabled=True)
+    for email in ("alice@x.com", "nobody@x.com", None):
+        r = _post(email)
+        assert r.status_code == 403 and "refresh.admins" in r.json()["detail"]
+    assert started == []
+    assert _post("carol@x.com").status_code == 200
+    assert _post("ops@x.com").status_code == 200
+    assert started == [7, 7]
+
+
+def test_refresh_without_rls_is_open_to_everyone(monkeypatch, tmp_path):
+    started = _app_env(monkeypatch, tmp_path, rls_enabled=False)
+    assert _post(None).status_code == 200
+    assert _post("alice@x.com").status_code == 200
+    assert started == [7, 7]

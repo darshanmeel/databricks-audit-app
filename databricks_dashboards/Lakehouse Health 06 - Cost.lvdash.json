@@ -7644,7 +7644,8 @@
               "frame": {
                 "title": "Biggest movers vs previous period: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -7746,7 +7747,8 @@
               "frame": {
                 "title": "Spend by workspace: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -7879,7 +7881,8 @@
               "frame": {
                 "title": "Daily spend by product: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -8012,7 +8015,8 @@
               "frame": {
                 "title": "Monthly spend by product: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -10213,7 +10217,8 @@
               "frame": {
                 "title": "Spend by SKU: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -10315,7 +10320,8 @@
               "frame": {
                 "title": "DBUs by product: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -13138,7 +13144,8 @@
               "frame": {
                 "title": "Spend by chargeback tag: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -13240,7 +13247,8 @@
               "frame": {
                 "title": "Untagged share by workspace: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -18293,7 +18301,8 @@
               "frame": {
                 "title": "Spend by workspace: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -18395,7 +18404,8 @@
               "frame": {
                 "title": "Biggest movers by workspace: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -21283,7 +21293,8 @@
               "frame": {
                 "title": "Top warehouses by cost: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -21385,7 +21396,8 @@
               "frame": {
                 "title": "Notebooks by DBU: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -21487,7 +21499,8 @@
               "frame": {
                 "title": "DBUs by job: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -21589,7 +21602,8 @@
               "frame": {
                 "title": "DBUs by compute resource: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -24351,7 +24365,8 @@
               "frame": {
                 "title": "Warehouses by change, $ a day: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -26929,7 +26944,8 @@
               "frame": {
                 "title": "Effective list price by SKU (rate gap): rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -27031,7 +27047,8 @@
               "frame": {
                 "title": "Spend by cloud: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -27133,7 +27150,8 @@
               "frame": {
                 "title": "Usage policy coverage, serverless DBUs: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -27235,7 +27253,8 @@
               "frame": {
                 "title": "Tag coverage, serverless DBUs: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },

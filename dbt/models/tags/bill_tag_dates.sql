@@ -11,7 +11,7 @@
 {% endif %}
 
 WITH billed AS (
-    SELECT usage_date, workspace_id, custom_tags,
+    SELECT usage_date, usage_end_time, workspace_id, custom_tags,
            usage_metadata.warehouse_id AS warehouse_id,
            usage_metadata.cluster_id AS cluster_id,
            usage_metadata.job_id AS job_id,
@@ -22,19 +22,19 @@ WITH billed AS (
     WHERE usage_unit = 'DBU' AND workspace_id IS NOT NULL AND usage_date < {{ audit_today() }}
 ),
 entities AS (
-    SELECT 'billed_warehouse' AS entity_type, workspace_id, warehouse_id AS entity_id, usage_date, custom_tags, has_policy
+    SELECT 'billed_warehouse' AS entity_type, workspace_id, warehouse_id AS entity_id, usage_date, usage_end_time, custom_tags, has_policy
     FROM billed WHERE warehouse_id IS NOT NULL
     UNION ALL
-    SELECT 'billed_cluster', workspace_id, cluster_id, usage_date, custom_tags, has_policy
+    SELECT 'billed_cluster', workspace_id, cluster_id, usage_date, usage_end_time, custom_tags, has_policy
     FROM billed WHERE cluster_id IS NOT NULL AND job_id IS NULL AND dlt_pipeline_id IS NULL
     UNION ALL
-    SELECT 'billed_job', workspace_id, job_id, usage_date, custom_tags, has_policy
+    SELECT 'billed_job', workspace_id, job_id, usage_date, usage_end_time, custom_tags, has_policy
     FROM billed WHERE job_id IS NOT NULL
     UNION ALL
-    SELECT 'billed_pipeline', workspace_id, dlt_pipeline_id, usage_date, custom_tags, has_policy
+    SELECT 'billed_pipeline', workspace_id, dlt_pipeline_id, usage_date, usage_end_time, custom_tags, has_policy
     FROM billed WHERE dlt_pipeline_id IS NOT NULL
     UNION ALL
-    SELECT 'billed_notebook', workspace_id, notebook_id, usage_date, custom_tags, has_policy
+    SELECT 'billed_notebook', workspace_id, notebook_id, usage_date, usage_end_time, custom_tags, has_policy
     FROM billed
     WHERE notebook_id IS NOT NULL AND warehouse_id IS NULL AND cluster_id IS NULL
       AND job_id IS NULL AND dlt_pipeline_id IS NULL
@@ -49,14 +49,16 @@ entity_last AS (
     GROUP BY entity_type, workspace_id, entity_id
 ),
 pairs AS (
-    SELECT b.entity_type, b.workspace_id, b.entity_id, b.usage_date, b.has_policy, e.key AS raw_key, trim(e.value) AS raw_value,
+    SELECT b.entity_type, b.workspace_id, b.entity_id, b.usage_date, b.usage_end_time, b.has_policy, e.key AS raw_key, trim(e.value) AS raw_value,
            {{ norm_tag_key('e.key') }} AS tag_key
     FROM entities b, unnest(map_entries(b.custom_tags)) AS x(e)
     WHERE e.key IS NOT NULL AND e.value IS NOT NULL AND trim(e.value) <> '' AND {{ norm_tag_key('e.key') }} <> ''
 ),
 dated AS (
     SELECT entity_type, workspace_id, entity_id, tag_key,
-           max_by(raw_key, usage_date) AS raw_key, max_by(raw_value, usage_date) AS last_value,
+           -- latest billing row wins; value then key break a same-hour tie, so both come from one row
+           max_by(raw_key, row(usage_end_time, raw_value, raw_key)) AS raw_key,
+           max_by(raw_value, row(usage_end_time, raw_value, raw_key)) AS last_value,
            list_sort(list_distinct(list(raw_value))) AS all_values,
            MAX(usage_date) AS last_date,
            -- a usage policy put the key there on its last day: the policy's value, even when it equals the workspace's

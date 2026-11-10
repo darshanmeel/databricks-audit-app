@@ -11,10 +11,10 @@ What this wrapper adds over a raw `dbt build --project-dir dbt --profiles-dir db
       * `thresholds`  -- loaded from config/thresholds.yml
       * `windows`     -- from dbt/dbt_project.yml's own `vars.windows`, or [7, 30, 90] if absent
       * `tag_aliases` -- config/tag_aliases.yml's `top_tags` keys, as {key: []}
-      * `share_floor` -- config/settings.yml's `tag_share_floor`, default 0.6 (T-63/DEC-60)
-      * `coverage_floor` -- config/settings.yml's `tag_coverage_floor`, default 0.5 (P4-T/DEC-63)
-      * `mask_user_identities` -- config/settings.yml's `privacy.mask_user_identities`, default
-        False
+      * `share_floor` -- settings `tag_share_floor`, default 0.6 (T-63/DEC-60)
+      * `coverage_floor` -- settings `tag_coverage_floor`, default 0.5 (P4-T/DEC-63)
+      * `mask_user_identities` -- settings `privacy.mask_user_identities`, default False
+      (these three read app/core/config.load_settings: AUDIT_CONFIG_DIR, settings.local.yml wins)
       * `grain_severity` -- `warn` for `--target dev` ONLY (DEC-48; the `unique_grain` generic
         test reads it, default `error`)
       * `as_of_date` / `as_of_ts` -- for `--target dev` ONLY, read from snapshot/manifest.json's
@@ -53,7 +53,7 @@ exit code alone:
 propagates dbt's own exit code unchanged -- a fixture build that errors is a bug in this repo's
 own code and the gate must still fail hard on it.
 
-Stdlib + pyyaml only.
+Stdlib + pyyaml, plus app.core for the merged settings (floors, masking).
 """
 from __future__ import annotations
 
@@ -82,15 +82,6 @@ DEFAULT_WINDOWS = [7, 30, 90]
 # has no "read an arbitrary file" Jinja call). dbt/models/dims/int_workspace_tag_hints.sql is the
 # sole consumer of both vars.
 TAG_ALIASES_PATH = ROOT / "config" / "tag_aliases.yml"
-SETTINGS_PATH = ROOT / "config" / "settings.yml"
-DEFAULT_SHARE_FLOOR = 0.6
-# P4-T (tasks/P4-T-SPEC.md 5.1/DEC-63): config/settings.yml's `tag_coverage_floor`, fed to dbt the
-# same way DEFAULT_SHARE_FLOOR already is -- dbt/models/tags/tag_workspace.sql (and
-# tag_entity.sql's billed_* inference) is the sole consumer.
-DEFAULT_COVERAGE_FLOOR = 0.5
-# config/settings.yml's privacy.mask_user_identities, fed to dbt the same way the two floors
-# above are -- dbt/macros/mask_user.sql is the sole consumer.
-DEFAULT_MASK_USER_IDENTITIES = False
 
 try:
     sys.stdout.reconfigure(line_buffering=True)
@@ -137,45 +128,35 @@ def load_tag_aliases() -> dict:
     return {key: [] for key in top} if isinstance(top, dict) else {}
 
 
-def load_share_floor() -> float:
-    """config/settings.yml's `tag_share_floor` (T-63/DEC-60 rule 3), defaulting to
-    DEFAULT_SHARE_FLOOR when the file or key is absent -- never raises."""
-    if not SETTINGS_PATH.exists():
-        return DEFAULT_SHARE_FLOOR
-    data = yaml.safe_load(SETTINGS_PATH.read_text(encoding="utf-8")) or {}
-    floor = data.get("tag_share_floor", DEFAULT_SHARE_FLOOR)
-    return float(floor) if isinstance(floor, (int, float)) else DEFAULT_SHARE_FLOOR
-
-
-def load_coverage_floor() -> float:
-    """config/settings.yml's `tag_coverage_floor` (P4-T/DEC-63), defaulting to
-    DEFAULT_COVERAGE_FLOOR when the file or key is absent -- never raises. Mirrors
-    load_share_floor() exactly."""
-    if not SETTINGS_PATH.exists():
-        return DEFAULT_COVERAGE_FLOOR
-    data = yaml.safe_load(SETTINGS_PATH.read_text(encoding="utf-8")) or {}
-    floor = data.get("tag_coverage_floor", DEFAULT_COVERAGE_FLOOR)
-    return float(floor) if isinstance(floor, (int, float)) else DEFAULT_COVERAGE_FLOOR
-
-
-def load_query_source() -> str:
-    """settings query_source (a settings.local.yml value wins): the tag cost_audit_self_usage matches."""
+def _app_config():
     if str(ROOT) not in sys.path:
         sys.path.insert(0, str(ROOT))
     from app.core import config as app_config
 
-    return app_config.query_source()
+    return app_config
+
+
+def load_share_floor() -> float:
+    """settings `tag_share_floor` (T-63/DEC-60 rule 3; a settings.local.yml value wins)."""
+    return float(_app_config().load_settings()["tag_share_floor"])
+
+
+def load_coverage_floor() -> float:
+    """settings `tag_coverage_floor` (P4-T/DEC-63; a settings.local.yml value wins)."""
+    return float(_app_config().load_settings()["tag_coverage_floor"])
+
+
+def load_query_source() -> str:
+    """settings query_source (a settings.local.yml value wins): the tag cost_audit_self_usage matches."""
+    return _app_config().query_source()
 
 
 def load_mask_user_identities() -> bool:
-    """config/settings.yml's `privacy.mask_user_identities`, defaulting to False when the file or
-    key is absent -- never raises."""
-    if not SETTINGS_PATH.exists():
-        return DEFAULT_MASK_USER_IDENTITIES
-    data = yaml.safe_load(SETTINGS_PATH.read_text(encoding="utf-8")) or {}
-    privacy = data.get("privacy")
-    value = privacy.get("mask_user_identities") if isinstance(privacy, dict) else None
-    return bool(value) if isinstance(value, bool) else DEFAULT_MASK_USER_IDENTITIES
+    """settings `privacy.mask_user_identities` (a settings.local.yml value wins), as the app reads it."""
+    _app_config()
+    from app.core import identity
+
+    return identity.masking_enabled()
 
 
 def load_windows() -> list[int]:
@@ -352,7 +333,8 @@ def run_build(target: str, select: str | None, exclude: str | None) -> int:
     env = os.environ.copy()
     env["AUDIT_SNAPSHOT_DIR"] = resolve_snapshot_dir(target, env)
     if target == "test":
-        env["AUDIT_SEED_DIR"] = str(ROOT / "tests" / "fixtures" / "seeds")
+        # Relative to dbt/: an absolute seed path makes dbt write compiled seed SQL over the CSV.
+        env["AUDIT_SEED_DIR"] = "../tests/fixtures/seeds"
     # T-89 (F4): read the as_of anchor from THIS build's own snapshot folder, not always the
     # hard-coded default ROOT/snapshot -- a `first_run.py --out <folder>` snapshot otherwise left
     # the as_of window silently anchored on a stale (or absent) ./snapshot/manifest.json. A

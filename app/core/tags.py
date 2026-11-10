@@ -224,16 +224,22 @@ def read_tag_index(
             key_rows, key=lambda r: (-(r[4] or 0), -(r[5] or 0), (r[1] or r[0]))
         )
 
+        # One query for every key's values: under rls query mode tags.tag_index is a view that
+        # re-aggregates on each read.
+        values_by_key: dict[str, list] = {}
+        for tag_key_row, *value_row in con.execute(
+            f"""
+            SELECT tag_key, tag_value, source, object_count, workspace_count, dbus
+            FROM tags.tag_index
+            {where_sql}
+            ORDER BY tag_key, object_count DESC, tag_value, source
+            """,
+            params,
+        ).fetchall():
+            values_by_key.setdefault(tag_key_row, []).append(tuple(value_row))
+
         for tag_key_norm, display_key, raw_keys, sources, total_dbus, total_objects in candidate_keys:
-            value_rows = con.execute(
-                """
-                SELECT tag_value, source, object_count, workspace_count, dbus
-                FROM tags.tag_index
-                WHERE tag_key = ?
-                ORDER BY object_count DESC, tag_value, source
-                """,
-                [tag_key_norm],
-            ).fetchall()
+            value_rows = values_by_key.get(tag_key_norm, [])
 
             key_spelling_matches = _matches_key(display_key, raw_keys)
             value_matches = [v for v in value_rows if needle and needle in (v[0] or "").lower()]
@@ -263,20 +269,12 @@ def read_tag_index(
                 )
                 by_value[api_value]["object_count"] += object_count
 
-            if not norm_key:
-                # A bare search (no tag_key given): only the top values are listed for each
-                # matching key, ranked so a matching value surfaces first.
-                order = sorted(
-                    order,
-                    key=lambda v: (0 if needle and needle in v.lower() else 1, -by_value[v]["object_count"]),
-                )
-                values_out = order[:limit_values]
-            else:
-                order = sorted(
-                    order,
-                    key=lambda v: (0 if needle and needle in v.lower() else 1, -by_value[v]["object_count"]),
-                )
-                values_out = order[:limit_values]
+            # A matching value surfaces first, then by object_count.
+            order = sorted(
+                order,
+                key=lambda v: (0 if needle and needle in v.lower() else 1, -by_value[v]["object_count"]),
+            )
+            values_out = order[:limit_values]
 
             keys_out.append(
                 {

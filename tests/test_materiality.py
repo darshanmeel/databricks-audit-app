@@ -400,7 +400,7 @@ class TestApiFloor:
             f"/api/finding/{NO_FLOOR_QUERY_ID}/aggregate",
             params={"window": WINDOW, "agg": "count", "status": ["WARN", "CRITICAL"]},
         )
-        # 9 CRITICAL + 25 WARN (test_findings_no_floor_check_unchanged above).
+        # 12 CRITICAL + 25 WARN (test_findings_no_floor_check_unchanged above).
         assert resp.json()["matched_rows"] == 37
 
 
@@ -432,6 +432,7 @@ class TestSeverityCap:
             pytest.skip("no rows in this fixture window")
         assert not any(r["status"] == "CRITICAL" for r in body["rows"])
         raw_critical = [r for r in body["rows"] if r.get("status_raw") == "CRITICAL"]
+        assert raw_critical, "fixture must carry a raw CRITICAL row"
         assert all(r["status"] == "WARN" for r in raw_critical)
 
 

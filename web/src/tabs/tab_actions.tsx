@@ -32,7 +32,7 @@ export function roleSeesCheck(allowedAreas: any, row: any) {
 
 // One action per template with at least one flagged check the role can see. N comes from the
 // main check's own "N of M" count, so the title never counts rows.
-function buildActions(templates: any, index: any, worklist: any, allowedAreas: any, wasteReady: any) {
+function buildActions(templates: any, index: any, worklist: any, allowedAreas: any, wasteReady: any, tag?: string) {
   const wasteById: Record<string, any> = {};
   (worklist || []).forEach((w: any) => { wasteById[w.id] = w; });
   return templates.map((t: any) => {
@@ -50,7 +50,7 @@ function buildActions(templates: any, index: any, worklist: any, allowedAreas: a
     return {
       ...t, rows: flagged, main, n, usd, spendUsd, critical, wasteEntry: w,
       pending: t.kind === "saving" && !!t.waste && !wasteReady,
-      label: n != null ? t.title(fmtInt(n), word) : t.title("", t.noun[1]).replace(/\s+/g, " "),
+      label: n != null ? t.title(fmtInt(n), word, tag) : t.title("", t.noun[1], tag).replace(/\s+/g, " "),
       checkCount: flagged.length,
     };
   }).filter(Boolean);
@@ -164,22 +164,23 @@ function ActionDetail({ action, filters, dims, goTo, wasteState }: LooseProps) {
   );
 }
 
-function ActionsPanel({ filters, dims, allFindingsIndex, goTo, roleAreas, onVerdict }: LooseProps) {
+function ActionsPanel({ filters, dims, meta, allFindingsIndex, goTo, roleAreas, onVerdict }: LooseProps) {
   const allowedAreas = React.useMemo(() => new Set(roleAreas && roleAreas.length ? roleAreas : AREA_ORDER), [roleAreas]);
   const multiWaste = useMultiFindingData(WASTE_IDS, filters.window, filters.workspaceIds, filters.envs, 5000, FLAGGED_STATUSES);
   const index = allFindingsIndex || {};
   const worklist = React.useMemo(() => buildWasteWorklist(index, multiWaste), [index, multiWaste]);
   const wasteReady = multiWaste.phase === "ready";
-  // All spend no cost_center reaches at any level (query, job, compute or workspace tag), small
+  // All spend the configured top tag reaches at no level (query, job, compute or workspace tag), small
   // lines included -- the Overview's own untagged figure; the flagged lines are those over the $ floor.
-  const untaggedRoll = useRollupTop("cost", "cost_center", filters.window, filters.workspaceIds, filters.envs, 1);
+  const topTag = meta && meta.top_tags && meta.top_tags.length ? meta.top_tags[0] : null;
+  const untaggedRoll = useRollupTop("cost", topTag ? topTag.key : null, filters.window, filters.workspaceIds, filters.envs, 1);
   const untaggedAll = untaggedRoll.phase === "ready" && untaggedRoll.data && untaggedRoll.data.outcome === "ok_rows"
     ? numOrZero(untaggedRoll.data.untagged.metrics.usd_disc)
     : null;
   const actions = React.useMemo(
-    () => buildActions(ACTION_TEMPLATES, index, worklist, allowedAreas, wasteReady)
+    () => buildActions(ACTION_TEMPLATES, index, worklist, allowedAreas, wasteReady, topTag ? `the ${topTag.label} tag` : undefined)
       .map((a: any) => (a.key === "untagged" && untaggedAll != null ? { ...a, spendUsd: untaggedAll } : a)),
-    [index, worklist, allowedAreas, wasteReady, untaggedAll],
+    [index, worklist, allowedAreas, wasteReady, untaggedAll, topTag],
   );
 
   const [kind, setKind] = React.useState<any>(null);

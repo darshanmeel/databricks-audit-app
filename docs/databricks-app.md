@@ -101,6 +101,9 @@ GRANT USE SCHEMA, SELECT ON SCHEMA system.compute TO `<service principal id>`;
 Off by default: everyone who opens the app sees everything its principal can read. Turn it on in
 `config/app.yml` (or `config/app.local.yml`); the deploy carries the `rls:` block into the app.
 
+With it on, Refresh is limited to people with a grant to everything and to emails listed under
+`refresh: admins:` in the same file; the deploy carries that list too.
+
 - **Entitlements table:** one row per grant, columns `principal` (the person's email),
   `workspace_id`, `warehouse_id`, `environment`. `*` or empty in a column means all.
 - **`rls.enabled`:** `false` by default.

@@ -1176,11 +1176,18 @@ _DU = {
     "compacted_at": "When the compaction ran.", "reads_before": "Reads in the 7 days before.", "reads_after": "Reads in the 7 days after.",
     "seconds_before": "Average seconds per read before.", "seconds_after": "After.", "time_change_pct": "Change in time per read.",
     "files_per_read_before": "Average files per read before.", "files_per_read_after": "After.",
+    "statement_id": "The query's id in query history.", "gb_spilled": "GB spilled to disk while it ran.",
+    "wait_seconds": "Seconds it waited for compute or in the queue.", "profile_link": "Opens its query profile.",
+    "table_name": "The table, as catalog.schema.table.", "query_hours": "Hours queries spent reading or writing it.",
+    "read_hours": "Of those, hours reading.", "write_hours": "Hours writing.", "read_queries": "Queries that read it.",
+    "write_queries": "Queries that wrote it.", "gb_read": "GB those reads read.",
+    "full_scans": "Reads that pruned no file.", "size_gb": "Its size in GB.", "table_link": "Opens it in Catalog Explorer.",
+    "name": "The table.", "direction": "Reading or Writing.", "hours": "Query hours in that direction.",
 }
 for _key in ("wd_workspaces", "wd_tables", "wd_cleanup", "wd_largest", "wd_volumes", "wd_people", "wd_inactive", "wd_daily",
              "wd_schemas", "wd_access", "wd_edges", "wd_changes", "wd_columns", "wd_grants", "wd_top_workspaces",
              "wd_top_tables", "wd_top_tables_ws", "wd_top_people", "wd_top_people_ws", "wd_top_volumes_ws", "wd_daily_top",
-             "wd_table_queries", "wd_table_scans", "wd_table_other", "wd_compaction_effect", "wd_table_people", "wd_person_tables"):
+             "wd_table_queries", "wd_heavy_tables", "wd_heavy_top", "wd_heavy_top_ws", "wd_table_scans", "wd_table_other", "wd_compaction_effect", "wd_table_people", "wd_person_tables"):
     COLUMNS[_key] = {**_DU, **COLUMNS.get(_key, {})}
 
 WHY.update({
@@ -1197,6 +1204,9 @@ WHY.update({
     "wd_schemas": "Whole schemas to clean up, not table by table.",
     "wd_changes": "What changed a table, when and who, and whether its upkeep runs: OPTIMIZE merges small files, VACUUM frees storage.",
     "wd_table_queries": "The queries that cost the most time on a table; a full scan is the one to fix first.",
+    "wd_heavy_tables": "Where query time goes, table by table: the first tables to tune or cluster.",
+    "wd_heavy_top": "The few tables that take most query hours, split into reading and writing.",
+    "wd_heavy_top_ws": "The same inside one workspace.",
     "wd_table_scans": "How often a table is read, how long it takes and how many reads skip nothing.",
     "wd_table_other": "Jobs and notebooks on classic compute use the table too: who and how often, even without query details.",
     "wd_compaction_effect": "Whether compacting a table made its reads faster.",

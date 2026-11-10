@@ -10,9 +10,9 @@ import React from "react";
 import { GrainLines, GrainSwitch, MONTH_ROWS_MAX } from "../components/grain";
 import type { Grain } from "../components/grain";
 
-import { estLabel, fmtChange, fmtChangeVs, fmtDayMonth, fmtDayShort, fmtDuration, fmtInt, fmtMoney, fmtMoneyShort, fmtPct } from "../format";
+import { estLabel, fmtChange, fmtChangeVs, fmtDayMonth, fmtDuration, fmtInt, fmtMoney, fmtMoneyShort, fmtPct } from "../format";
 import { Names, resolveName, useNames, warehouseInWorkspace, wsPhrase } from "../components/names";
-import { FLAGGED_STATUSES, IgnoredFilterTracker, buildMonthBars, excludedNoWorkspaceNote, filledDailySeries, groupsToEntries, netEntries, numOrZero, sumBy, useFindingAgg, useFindingData, useMultiFindingData } from "../components/hooks";
+import { FLAGGED_STATUSES, IgnoredFilterTracker, buildMonthBars, excludedNoWorkspaceNote, filledDailySeries, netEntries, numOrZero, sumBy, useFindingAgg, useFindingData, useMultiFindingData } from "../components/hooks";
 import { productLabel } from "../components/labels";
 import { COST_MONEY_COL, EST_SPEND_CAVEAT, WASTE_IDS } from "../components/tab_registry";
 import { Card, Facts, FilterReachNote, PageFooter, PageIntro, TagOriginNote } from "../components/primitives";
@@ -493,6 +493,8 @@ export function MoneyTab({ filters, meta, findingsById, goTo, showPerformance, o
   // own waterfall already sorts by, so the two can never name a different workspace.
   const movers = periodReady ? buildSpendMovers(periodState.data.rows, periodState.data.discount_pct) : null;
   const biggestMover = movers && movers.top.length ? movers.top[0] : null;
+  // No movers means nothing was judged, not a measured zero (same test as SpendMoversCard).
+  const moverNoPrev = periodReady && !movers && (periodState.data.rows || []).some((r) => r.not_assessed_reason === "previous_window_not_covered");
 
   const monthReady = monthAgg.phase === "ready" && monthAgg.outcome === "ok_rows";
   // buildMonthBars/CostMonthBars (tab_cost.tsx, loaded first): the SAME colouring function Cost's
@@ -775,8 +777,8 @@ export function MoneyTab({ filters, meta, findingsById, goTo, showPerformance, o
             next to the other low-urgency cleanup items. */}
         <Kpi
           label="Biggest mover"
-          value={biggestMover ? `${biggestMover.delta >= 0 ? "+" : "−"}${fmtMoney(Math.abs(biggestMover.delta), 0)}` : !periodReady ? "-" : "No change"}
-          sub={biggestMover ? `${moneyWsName(biggestMover.id)}${biggestMover.prev < 1 && biggestMover.cur >= 1 ? " · new" : ""}` : periodReady ? "Nothing moved $1 or more" : "Loading..."}
+          value={biggestMover ? `${biggestMover.delta >= 0 ? "+" : "−"}${fmtMoney(Math.abs(biggestMover.delta), 0)}` : movers ? "No change" : "-"}
+          sub={biggestMover ? `${moneyWsName(biggestMover.id)}${biggestMover.prev < 1 && biggestMover.cur >= 1 ? " · new" : ""}` : !periodReady ? "Loading..." : movers ? "Nothing moved $1 or more" : moverNoPrev ? "No previous period to compare" : "No list price in one of the periods"}
         />
       </KpiRow>
       {excludedNote && <div className="caveat-note">{excludedNote}</div>}

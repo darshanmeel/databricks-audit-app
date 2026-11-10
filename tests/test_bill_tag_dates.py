@@ -22,7 +22,7 @@ def _sql() -> str:
 
 def test_since_restarts_after_a_value_change_or_a_day_without_the_tag():
     con = duckdb.connect()
-    con.execute("CREATE TABLE usage (usage_date DATE, workspace_id VARCHAR, usage_unit VARCHAR, "
+    con.execute("CREATE TABLE usage (usage_date DATE, usage_end_time TIMESTAMP, workspace_id VARCHAR, usage_unit VARCHAR, "
                 "custom_tags MAP(VARCHAR, VARCHAR), usage_metadata STRUCT(warehouse_id VARCHAR, cluster_id VARCHAR, "
                 "job_id VARCHAR, dlt_pipeline_id VARCHAR, notebook_id VARCHAR, budget_policy_id VARCHAR, usage_policy_id VARCHAR))")
     days = [
@@ -35,13 +35,26 @@ def test_since_restarts_after_a_value_change_or_a_day_without_the_tag():
     ]
     for day, cc, dom in days:
         tags = {"domain": dom, **({"cost-center": cc} if cc else {})}
-        con.execute("INSERT INTO usage VALUES (?, 'w1', 'DBU', ?, {'warehouse_id': 'wh1', 'cluster_id': NULL, "
-                    "'job_id': NULL, 'dlt_pipeline_id': NULL, 'notebook_id': NULL, 'budget_policy_id': NULL, 'usage_policy_id': NULL})", [day, tags])
+        con.execute("INSERT INTO usage VALUES (?, CAST(? AS DATE) + INTERVAL 1 HOUR, 'w1', 'DBU', ?, {'warehouse_id': 'wh1', 'cluster_id': NULL, "
+                    "'job_id': NULL, 'dlt_pipeline_id': NULL, 'notebook_id': NULL, 'budget_policy_id': NULL, 'usage_policy_id': NULL})", [day, day, tags])
     # Billed again on 09-06 with no tags: both keys are gone after 09-05.
-    con.execute("INSERT INTO usage VALUES ('2026-09-06', 'w1', 'DBU', MAP {}, {'warehouse_id': 'wh1', "
+    con.execute("INSERT INTO usage VALUES ('2026-09-06', TIMESTAMP '2026-09-06 01:00', 'w1', 'DBU', MAP {}, {'warehouse_id': 'wh1', "
                 "'cluster_id': NULL, 'job_id': NULL, 'dlt_pipeline_id': NULL, 'notebook_id': NULL, 'budget_policy_id': NULL, 'usage_policy_id': NULL})")
     rows = {r[0]: r[1:] for r in con.execute(
         f"SELECT tag_key, last_value, all_values, CAST(first_date AS VARCHAR), CAST(last_date AS VARCHAR), "
         f"CAST(entity_last_date AS VARCHAR) FROM ({_sql()}) WHERE entity_id = 'wh1'").fetchall()}
     assert rows["costcenter"] == ("B", ["A", "B"], "2026-09-04", "2026-09-05", "2026-09-06")
     assert rows["domain"] == ("d1", ["d1"], "2026-09-01", "2026-09-05", "2026-09-06")
+
+
+def test_a_retag_on_the_last_day_takes_the_later_hours_value_and_key():
+    con = duckdb.connect()
+    con.execute("CREATE TABLE usage (usage_date DATE, usage_end_time TIMESTAMP, workspace_id VARCHAR, usage_unit VARCHAR, "
+                "custom_tags MAP(VARCHAR, VARCHAR), usage_metadata STRUCT(warehouse_id VARCHAR, cluster_id VARCHAR, "
+                "job_id VARCHAR, dlt_pipeline_id VARCHAR, notebook_id VARCHAR, budget_policy_id VARCHAR, usage_policy_id VARCHAR))")
+    # Retagged mid-day: 'zz' (old, sorts last) at 01:00, then 'Team' = 'aa' at 02:00.
+    for end, key, val in [("2026-09-01 01:00", "team", "zz"), ("2026-09-01 02:00", "Team", "aa")]:
+        con.execute("INSERT INTO usage VALUES (DATE '2026-09-01', ?, 'w1', 'DBU', MAP {?: ?}, {'warehouse_id': 'wh1', "
+                    "'cluster_id': NULL, 'job_id': NULL, 'dlt_pipeline_id': NULL, 'notebook_id': NULL, "
+                    "'budget_policy_id': NULL, 'usage_policy_id': NULL})", [end, key, val])
+    assert con.execute(f"SELECT raw_key, last_value FROM ({_sql()})").fetchall() == [("Team", "aa")]

@@ -1,9 +1,11 @@
 """app/core/rls.py -- row-level access from an entitlements table (config/app.yml `rls:`).
 
 Off by default. The export reads the entitlements table once into rls.entitlements; every table in
-findings, dims and tags gets workspace_id, warehouse_id and env when it lacks them, and a row is
-visible to a user when ONE of their grants passes every configured column. A filtered db is built
-by copying into a fresh file, so no other user's rows stay in the file's bytes.
+findings, dims, tags, usage, storage and warehouse gets workspace_id, warehouse_id and env when it
+lacks them, and a row is visible to a user when ONE of their grants passes every configured column.
+A table with no workspace dimension (storage.table_detail, usage.table_grants, ...) keeps NULL there,
+so only a user granted every workspace sees it. A filtered db is built by copying into a fresh file,
+so no other user's rows stay in the file's bytes.
 """
 from __future__ import annotations
 
@@ -24,13 +26,16 @@ from app.core import config as app_config
 
 COLUMN_MAP = {"workspace": "workspace_id", "warehouse": "warehouse_id", "environment": "env"}
 APPLY = ("query", "export")
-FILTERED_SCHEMAS = ("findings", "dims", "tags")
+FILTERED_SCHEMAS = ("findings", "dims", "tags", "usage", "storage", "warehouse")
 ADDED_COLUMNS = ("workspace_id", "warehouse_id", "env")
 ALL = "*"
-# Reference tables with no workspace dimension: every user sees all rows.
-REFERENCE = {("dims", "dim_list_prices"), ("findings", "f_cost_account_prices_raw"),
+# Reference tables with no workspace dimension: every user sees all rows. The *_info tables say only
+# what the export did (windows, end date), which pages need to render.
+REFERENCE = {("findings", "f_cost_account_prices_raw"),
              ("findings", "f_overview_list_prices_raw"), ("findings", "f_pricing_list_prices_raw"),
-             ("findings", "f_node_types_reference")}
+             ("findings", "f_node_types_reference"), ("usage", "workspace_activity_info"),
+             ("storage", "table_detail_info"), ("storage", "volume_detail_info"),
+             ("warehouse", "warehouse_activity_info")}
 # Chargeback tables whose share is built over the account: (spend column, extra partition columns).
 SHARE_COLUMN = "share_of_total_pct"
 SHARE_TABLES = {
@@ -160,7 +165,7 @@ def _cols(con, schema: str, table: str) -> list[str]:
 
 
 def add_columns(con) -> int:
-    """workspace_id, warehouse_id and env on every findings, dims and tags table that lacks them:
+    """workspace_id, warehouse_id and env on every FILTERED_SCHEMAS table that lacks them:
     the workspace from dim_warehouse / dim_cluster, env from dim_workspace, NULL where unknowable.
     Recorded in rls.added so the filtered files leave them out."""
     con.execute("CREATE SCHEMA IF NOT EXISTS rls")
@@ -382,7 +387,7 @@ def _cap_connection(con) -> None:
 def filter_into(src_path, dst_path, grants, user: str | None, columns=None) -> dict[str, int]:
     """Copy src into a fresh dst with only the rows `grants` let through. A fresh file, not a
     DELETE, so nothing of the other rows stays in the bytes. Returns the rows kept per
-    findings/dims/tags table."""
+    filtered-schema table."""
     columns = columns or load().columns
     dst = Path(dst_path)
     for p in (dst, dst.with_name(dst.name + ".wal")):
@@ -590,9 +595,8 @@ def scoped_connection(base, principal: str) -> duckdb.DuckDBPyConnection:
     key = "p_" + grant_key(cols, grants)
     with _LOCK:
         if _SHARED.get("ident") != ident:
-            old = _SHARED.get("con")
-            if old is not None:
-                old.close()  # a newer db file: drop the old handle so it can be deleted
+            with data._SHARED_LOCK:
+                data._retire(_SHARED.get("con"))  # a newer db file: close the old handle once readers are done
             con = duckdb.connect(":memory:")
             data._cap(con)
             alias = "src_" + os.urandom(6).hex()

@@ -19,7 +19,7 @@ history_{{ w }} AS (
            COALESCE(q.compute.warehouse_id, q.compute.cluster_id) AS compute_id,
            CASE WHEN q.query_tags IS NULL THEN ''
                 ELSE array_to_string(list_sort(list_distinct(list_filter(
-                         list_transform(list_filter(map_entries(q.query_tags), e -> e.value IS NOT NULL),
+                         list_transform(list_filter(map_entries(q.query_tags), e -> e.value IS NOT NULL AND trim(e.value) <> ''),
                                         e -> regexp_replace(lower(e.key), '[ _-]+', '', 'g')),
                          k -> k <> ''))), ',')
            END AS own_keys,

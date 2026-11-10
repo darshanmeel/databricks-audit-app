@@ -506,14 +506,16 @@ def _export_names(cur, names_sql: dict[str, str], out_dir: Path, mask_users: boo
 # Databricks names the columns "Policy Name", "Policy Type", "Catalog", "Schema", "Table", "Comment".
 POLICY_COLUMNS = ("policy_name", "policy_type", "catalog", "schema", "table_name", "comment")
 POLICY_SCHEMAS_MAX = 5000
+POLICY_THREADS = 4
 
 
 def _quote_ident(name: str) -> str:
     return "`" + str(name).replace("`", "``") + "`"
 
 
-def _export_policies(cur, out_dir: Path) -> dict:
-    """SHOW POLICIES on the metastore, each catalog and each schema -> policies/abac_policies.parquet."""
+def _export_policies(cur, out_dir: Path, connect: Callable | None = None) -> dict:
+    """SHOW POLICIES on the metastore, each catalog and each schema -> policies/abac_policies.parquet.
+    With `connect`, the schema statements run on POLICY_THREADS connections of their own."""
     def rows_of(sql: str) -> list[dict]:
         t = _fetch_rows_arrow(cur, sql)
         return t.to_pylist() if t is not None else []
@@ -530,17 +532,44 @@ def _export_policies(cur, out_dir: Path) -> dict:
     targets: list[tuple[str, tuple[str, ...]]] = [("METASTORE", ())]
     targets += [("CATALOG", (c,)) for c in catalogs]
     targets += [("SCHEMA", cs) for cs in schemas[:POLICY_SCHEMAS_MAX]]
+    local, lock, conns = threading.local(), threading.Lock(), []
+
+    def ask(target: tuple[str, tuple[str, ...]], pooled: bool = False):
+        on_type, parts = target
+        sql = f"SHOW POLICIES ON {on_type}" + (" " + ".".join(_quote_ident(x) for x in parts) if parts else "")
+        try:
+            if not pooled:
+                return rows_of(sql)
+            if not hasattr(local, "cur"):
+                c = connect()
+                with lock:
+                    conns.append(c)
+                local.cur = c.conn.cursor()
+            t = _fetch_rows_arrow(local.cur, sql)
+            return t.to_pylist() if t is not None else []
+        except Exception as exc:  # noqa: BLE001 -- one securable it cannot read must not stop the rest
+            return exc
+
+    if connect is None:
+        results = [ask(t) for t in targets]
+    else:
+        n = 1 + len(catalogs)
+        results = [ask(t) for t in targets[:n]]
+        with concurrent.futures.ThreadPoolExecutor(max_workers=POLICY_THREADS) as pool:
+            results += pool.map(functools.partial(ask, pooled=True), targets[n:])
+        for c in conns:
+            try:
+                c.conn.close()
+            except Exception:  # noqa: BLE001
+                pass
     found: list[dict] = []
     seen: set[tuple] = set()
     errors, first_error, metastore_ok = 0, None, False
-    for on_type, parts in targets:
-        sql = f"SHOW POLICIES ON {on_type}" + (" " + ".".join(_quote_ident(x) for x in parts) if parts else "")
-        try:
-            got = rows_of(sql)
-        except Exception as exc:  # noqa: BLE001 -- one securable it cannot read must not stop the rest
+    for (on_type, parts), got in zip(targets, results):
+        if isinstance(got, Exception):
             if on_type != "METASTORE":
                 errors += 1
-                first_error = first_error or _redact(str(exc))
+                first_error = first_error or _redact(str(got))
             continue
         metastore_ok = metastore_ok or on_type == "METASTORE"
         for r in got:
@@ -1180,7 +1209,7 @@ def run_export(
         try:
             side["dims"] = _export_names(probe.conn.cursor(), names_sql, work_dir, mask_users)
             side["tags"] = _export_tags(probe.conn.cursor(), tags_sql, work_dir, mask_users, sources)
-            side["policies"] = None if partial else _export_policies(probe.conn.cursor(), work_dir)
+            side["policies"] = None if partial else _export_policies(probe.conn.cursor(), work_dir, connect)
             if rls_cfg.enabled and not partial:
                 side["rls"] = _export_entitlements(probe.conn.cursor(), rls_cfg, work_dir)
         except BaseException as exc:  # noqa: BLE001 -- re-raised on the main thread below
@@ -1220,14 +1249,15 @@ def run_export(
     dims_info, tags_info, policies_info = side["dims"], side["tags"], side.get("policies")
     # After the checks, not beside them: its own connections would slow them down.
     detail_info = None
+    prev_storage = _previous_storage(out_dir)
     if sizes_on and not partial:
         detail_info = table_detail.export(
-            connect, work_dir, previous=out_dir / "storage" / table_detail.FILE,
+            connect, work_dir, previous=prev_storage / table_detail.FILE,
             threads=sizes_cfg["threads"], max_tables=sizes_cfg["max_tables"],
             redact=lambda text: _redact(text, token), host=host, mask=_mask_user if mask_users else str)
     volume_info = None
     if sizes_on and not partial and (sizes_cfg["volumes"] if volumes is None else volumes):
-        volume_info = _export_volumes(connect, work_dir, out_dir, sizes_cfg, token)
+        volume_info = _export_volumes(connect, work_dir, prev_storage, sizes_cfg, token)
     activity_info = None
     if not partial:
         activity_info = workspace_activity.export(
@@ -1323,8 +1353,8 @@ def run_export(
     )
 
     # Sizes or volumes not taken this run: keep the files --sizes-only (maybe as another account) wrote,
-    # here or in storage_from.
-    _keep_storage((storage_from or out_dir) / "storage", work_dir / "storage")
+    # here (or in the newest export beside it) or in storage_from.
+    _keep_storage(storage_from / "storage" if storage_from else prev_storage, work_dir / "storage")
 
     total_bytes = sum(p.stat().st_size for p in work_dir.rglob("*") if p.is_file())
 
@@ -1335,7 +1365,12 @@ def run_export(
         shutil.rmtree(old_dir)
     if out_dir.exists():
         os.rename(out_dir, old_dir)
-    os.rename(work_dir, out_dir)
+    try:
+        os.rename(work_dir, out_dir)
+    except OSError:
+        if old_dir.exists():
+            os.rename(old_dir, out_dir)
+        raise
     if old_dir.exists():
         shutil.rmtree(old_dir, ignore_errors=True)
 
@@ -1360,10 +1395,20 @@ def _keep_storage(kept: Path, into: Path) -> None:
             shutil.copy2(f, into / f.name)
 
 
-def _export_volumes(connect, work_dir: Path, out_dir: Path, cfg: dict, token: str | None) -> dict:
+def _previous_storage(out_dir: Path) -> Path:
+    """out_dir/storage; for a new folder (Refresh and first_run write one each run) the newest
+    finished export's beside it, where last run's sizes and listings sit."""
+    if out_dir.exists():
+        return out_dir / "storage"
+    from tools import load_direct_results  # imports this module at its top
+
+    return load_direct_results.newest_export(out_dir.parent) / "storage"
+
+
+def _export_volumes(connect, work_dir: Path, prev_storage: Path, cfg: dict, token: str | None) -> dict:
     return table_detail.export_volumes(
         connect, work_dir, threads=cfg["threads"], max_entries=cfg["volume_max_entries"],
-        previous=out_dir / "storage" / table_detail.VOLUME_FILE, full_days=cfg["volume_full_days"],
+        previous=prev_storage / table_detail.VOLUME_FILE, full_days=cfg["volume_full_days"],
         redact=lambda text: _redact(text, token))
 
 
@@ -1383,13 +1428,14 @@ def export_sizes_only(out_dir: Path, *, connect_fn: Callable | None = None, env:
     work = out_dir.with_name(out_dir.name + ".sizes.tmp")
     if work.exists():
         shutil.rmtree(work)
-    detail = table_detail.export(connect, work, previous=out_dir / "storage" / table_detail.FILE,
+    prev_storage = _previous_storage(out_dir)
+    detail = table_detail.export(connect, work, previous=prev_storage / table_detail.FILE,
                                  threads=cfg["threads"], max_tables=cfg["max_tables"], redact=redact,
                                  host=env.get(ENV_HOST), mask=_mask_user if mask_users or masking_enabled() else str)
     if not detail.get("exported"):
         shutil.rmtree(work, ignore_errors=True)
         raise ExportConfigError(f"table sizes not exported: {detail.get('error')}")
-    vol_info = _export_volumes(connect, work, out_dir, cfg, token) \
+    vol_info = _export_volumes(connect, work, prev_storage, cfg, token) \
         if (cfg["volumes"] if volumes is None else volumes) else None
     if vol_info and not vol_info.get("exported") and cfg["source"] == "stored":
         shutil.rmtree(work, ignore_errors=True)
@@ -1401,7 +1447,12 @@ def export_sizes_only(out_dir: Path, *, connect_fn: Callable | None = None, env:
         shutil.rmtree(old)
     if (out_dir / "storage").exists():
         os.rename(out_dir / "storage", old)
-    os.rename(work / "storage", out_dir / "storage")
+    try:
+        os.rename(work / "storage", out_dir / "storage")
+    except OSError:
+        if old.exists():
+            os.rename(old, out_dir / "storage")
+        raise
     shutil.rmtree(old, ignore_errors=True)
     shutil.rmtree(work, ignore_errors=True)
     # a full export's manifest in the same folder now describes these sizes

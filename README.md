@@ -101,6 +101,9 @@ so the last hours before a run can be missing. To export complete days only, set
 - It keeps the newest two results folders and deletes older ones, including those from
   `first_run.py`.
 - It keeps up to 500,000 rows per check; `first_run.py` keeps 50,000.
+- It stops a step that hangs: the export after 4 hours, the load after 30 minutes.
+- With row-level access on in the Databricks App, only people listed under `refresh: admins:` in
+  `config/app.yml`, or with a grant to everything, can start it; others get 403.
 
 **Export options.** `first_run.py` takes only `--windows`. For the rest, run the two steps by hand:
 
@@ -225,6 +228,8 @@ from an entitlements table you keep in Databricks. Off by default.
   in a configured column (account-level data) need `*` for it.
 - **Laptop:** the load keeps only the token user's rows. **Databricks App:** `apply: query` (default)
   filters per signed-in user while they browse; `apply: export` builds one data file per grant set.
+- It covers findings, people, tables, storage and warehouses. Rows with no workspace (table sizes,
+  grants on tables) show only to people granted every workspace.
 - The table is read once per refresh, so a grant change shows after the next refresh. No grant, or a
   table that can't be read, means no rows and a "No access" line.
 
@@ -744,7 +749,8 @@ python tools/gate.py            # full: test database, dbt build, pytest (about 
 python tools/gate.py --quick    # lint, generated files, UI type check and tests, pytest
 ```
 
-`--quick` needs the test database a full run builds (`tests/db_audit_test.duckdb`). The UI checks
+`--quick` needs the test database a full run builds (`tests/db_audit_test.duckdb`), and fails when
+fixture or dbt files are newer than it. The full run also checks headers and generated files first. The UI checks
 run when `web/node_modules` is installed; on their own: `cd web && npm ci && npm run typecheck && npm test`.
 
 After changing the UI in `web/`, rebuild it with `cd web && npm ci && npm run build` and commit

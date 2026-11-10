@@ -158,6 +158,17 @@ def discount_factor_sql() -> str:
     return f"(1.0 - {discount_pct()!r})"
 
 
+def floor_min_sql(query_id: str, window_days: str = "window_days") -> str:
+    """This check's floor from config/materiality.yml as SQL, scaled like app/core/materiality.py's
+    _min_sql (a USD floor is per 30 days); NULL when the check has no floor."""
+    floor = app_config.load_materiality().get(query_id)
+    if floor is None:
+        return "CAST(NULL AS DOUBLE)"
+    if floor["unit"] != "USD":
+        return f"{floor['min']}"
+    return f"(CASE WHEN {window_days} > 0 THEN {floor['min']} * {window_days} / 30.0 ELSE {floor['min']} END)"
+
+
 QUERY_TAGS_OVERRIDE: dict[str, str] | None = None  # --query-tags of build_direct_dashboards
 
 
@@ -413,9 +424,9 @@ PRODUCT_LABEL_CASE_SQL = """CASE {col}
 def waste_cte(schema: str) -> str:
     """The 5 priced waste checks, floored, discounted and named -- shared by every Waste & savings
     dataset so the floor logic (config/materiality.yml) and the discount (config/settings.yml
-    discount_pct) each live in one place. 50.0 * window_days / 30.0 mirrors app/core/materiality.py's
-    USD-floor scaling; the floor itself always compares the RAW (undiscounted) dollar figure, same
-    as materiality.py -- only the figures this CTE hands callers (`wasted`) are discounted.
+    discount_pct) each live in one place. floor_min is each check's own floor (floor_min_sql, scaled
+    like app/core/materiality.py); it always compares the RAW (undiscounted) dollar figure, same as
+    materiality.py -- only the figures this CTE hands callers (`wasted`) are discounted.
 
     `named_all` carries every priced row (not just the ones over the floor, unlike `named`) with its
     workspace resolved, for the below-floor and overlap notes; `named` stays the floored, flagged,
@@ -425,30 +436,33 @@ def waste_cte(schema: str) -> str:
     disc = discount_factor_sql()
     return f"""WITH src AS (
   SELECT 'Warehouse idle time' AS source_label, workspace_id, warehouse_id AS entity_id, 'warehouse' AS entity_kind,
-         status, ROUND(est_wasted_usd_list * {disc}, 2) AS wasted, est_wasted_usd_list AS floor_value, window_days
+         status, ROUND(est_wasted_usd_list * {disc}, 2) AS wasted, est_wasted_usd_list AS floor_value, window_days,
+         {floor_min_sql("compute_warehouse_idle_minutes")} AS floor_min
   FROM {schema}.compute_warehouse_idle_minutes
   UNION ALL
   SELECT 'Idle cluster nodes', dc.workspace_id, w.cluster_id, 'cluster',
-         w.status, ROUND(w.est_wasted_usd_list * {disc}, 2), w.est_wasted_usd_list, w.window_days
+         w.status, ROUND(w.est_wasted_usd_list * {disc}, 2), w.est_wasted_usd_list, w.window_days,
+         {floor_min_sql("compute_idle_node_ratio", "w.window_days")}
   FROM {schema}.compute_idle_node_ratio w
   LEFT JOIN {schema}.dim_cluster dc ON dc.cluster_id = w.cluster_id
   UNION ALL
   SELECT 'Compute burned on failed runs', workspace_id, job_id, 'job',
-         status, ROUND(est_wasted_usd_list * {disc}, 2), CAST(NULL AS DOUBLE), window_days
+         status, ROUND(est_wasted_usd_list * {disc}, 2), CAST(NULL AS DOUBLE), window_days, CAST(NULL AS DOUBLE)
   FROM {schema}.lakeflow_failed_jobs_wasted_dbus
   UNION ALL
   SELECT 'Compute burned on failed statements', workspace_id, warehouse_id, 'warehouse',
-         status, ROUND(est_wasted_usd_list * {disc}, 2), est_wasted_usd_list, window_days
+         status, ROUND(est_wasted_usd_list * {disc}, 2), est_wasted_usd_list, window_days,
+         {floor_min_sql("cost_failed_statement_waste")}
   FROM {schema}.cost_failed_statement_waste
   UNION ALL
   SELECT 'Endpoints billed with no requests', workspace_id, endpoint_id, 'endpoint',
-         status, ROUND(est_wasted_usd_list * {disc}, 2), est_usd_list, window_days
+         status, ROUND(est_wasted_usd_list * {disc}, 2), est_usd_list, window_days,
+         {floor_min_sql("compute_serving_endpoint_cost_status")}
   FROM {schema}.compute_serving_endpoint_cost_status
 ),
 eff AS (
   SELECT *,
-         CASE WHEN status IN ('CRITICAL', 'WARN') AND floor_value IS NOT NULL
-                   AND floor_value < 50.0 * window_days / 30.0
+         CASE WHEN status IN ('CRITICAL', 'WARN') AND floor_value < floor_min
               THEN 'OK' ELSE status END AS eff_status
   FROM src
 ),
@@ -807,10 +821,12 @@ def add_chart_tables(dash: dict) -> dict:
             for chart, ds, cols in bands[y]:
                 p = chart["position"]
                 title = (chart["widget"]["spec"].get("frame") or {}).get("title") or ""
-                layout.append(data_table_widget(f"chart-table:{page['name']}:{chart['widget']['name']}", ds,
-                                                [(c, t, k, "0,0.[00]") for c, t, k in cols],
-                                                f"{title}: rows" if title else "Rows", x=p["x"], y=at,
-                                                width=p["width"], height=CHART_TABLE_HEIGHT))
+                rows = data_table_widget(f"chart-table:{page['name']}:{chart['widget']['name']}", ds,
+                                         [(c, t, k, "0,0.[00]") for c, t, k in cols],
+                                         f"{title}: rows" if title else "Rows", x=p["x"], y=at,
+                                         width=p["width"], height=CHART_TABLE_HEIGHT)
+                rows["widget"]["spec"]["frame"].update(showDescription=True, description="The figures behind the chart above.")
+                layout.append(rows)
     return dash
 
 

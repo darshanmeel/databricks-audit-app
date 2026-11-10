@@ -971,7 +971,8 @@
               "frame": {
                 "title": "Active users by class: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },

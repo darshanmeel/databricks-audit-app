@@ -19,3 +19,8 @@ rls:
   columns: [workspace]
   # Databricks App only: query (filter per signed-in user) or export (one data file per distinct grant set).
   apply: query
+
+# Who may start a refresh from the app (POST /api/refresh) when rls is on: these emails, plus anyone
+# whose grants cover everything. With rls off everyone may.
+refresh:
+  admins: []

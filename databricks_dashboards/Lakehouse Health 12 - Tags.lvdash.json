@@ -4319,7 +4319,8 @@
               "frame": {
                 "title": "Spend by tag value, per key: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -4452,7 +4453,8 @@
               "frame": {
                 "title": "Untagged spend by workspace, per key: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -4554,7 +4556,8 @@
               "frame": {
                 "title": "Spend with no cost-center tag, by workspace: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -4656,7 +4659,8 @@
               "frame": {
                 "title": "Serverless DBUs by usage-policy coverage: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },

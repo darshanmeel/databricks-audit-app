@@ -9158,7 +9158,8 @@
               "frame": {
                 "title": "Warehouses by auto-stop setting: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -9260,7 +9261,8 @@
               "frame": {
                 "title": "Cache reuse, by warehouse (lowest first): rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -9362,7 +9364,8 @@
               "frame": {
                 "title": "Starts, by warehouse: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -9464,7 +9467,8 @@
               "frame": {
                 "title": "Auto-stop saving at 1 min (serverless) or 10 min (pro, classic), by warehouse: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -9566,7 +9570,8 @@
               "frame": {
                 "title": "Late auto-stop, extra wait by warehouse: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -9699,7 +9704,8 @@
               "frame": {
                 "title": "Where each warehouse's running time went: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -9801,7 +9807,8 @@
               "frame": {
                 "title": "Autoscale churn, by warehouse: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -14134,7 +14141,8 @@
               "frame": {
                 "title": "All-purpose clusters by auto-termination: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -14236,7 +14244,8 @@
               "frame": {
                 "title": "Pools by idle capacity: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -14338,7 +14347,8 @@
               "frame": {
                 "title": "Worst idle-node ratio, by cluster: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -14440,7 +14450,8 @@
               "frame": {
                 "title": "Cluster count by worker node type: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -16547,7 +16558,8 @@
               "frame": {
                 "title": "Setup risks, by flag: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },

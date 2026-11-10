@@ -129,7 +129,7 @@ def test_identities_are_masked_when_masking_is_on(tmp_path):
             if "AS identity" in sql and "tables_written" in sql:
                 cols = [f.name for f in wa.USER_SCHEMA]
                 self.description = [(c,) for c in cols]
-                self._rows = [("1", "alice@example.com", "2026-10-29", 2, 5, "2026-10-29", 1, 0)]
+                self._rows = [(30, "1", "alice@example.com", "2026-10-29", 2, 5, "2026-10-29", 1, 0)]
             else:
                 self.description, self._rows = [("x",)], []
 

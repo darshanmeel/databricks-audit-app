@@ -17,6 +17,9 @@ from pathlib import Path
 from app.core import datasource, rls
 
 ROOT = Path(__file__).resolve().parent.parent.parent
+# A hung statement or network would otherwise leave the refresh "running" until the app restarts.
+EXPORT_TIMEOUT_S = 4 * 3600
+LOAD_TIMEOUT_S = 30 * 60
 _lock = threading.Lock()
 _state: dict = {"running": False, "step": None, "days": None, "started_at": None,
                 "finished_at": None, "error": None}
@@ -38,8 +41,8 @@ def start(days: int) -> dict:
     return status()
 
 
-def _call(args: list[str]) -> None:
-    proc = subprocess.run([sys.executable, *args], cwd=ROOT, capture_output=True, text=True)
+def _call(args: list[str], timeout: int) -> None:
+    proc = subprocess.run([sys.executable, *args], cwd=ROOT, capture_output=True, text=True, timeout=timeout)
     if proc.returncode != 0:
         tail = (proc.stderr or proc.stdout or "").strip().splitlines()[-3:]
         raise RuntimeError(" / ".join(tail) or f"exit code {proc.returncode}")
@@ -51,9 +54,10 @@ def _run(days: int) -> None:
     out = base / "results" / stamp
     db = base / f"audit-{stamp}.duckdb"
     try:
-        _call(["tools/export_direct_results.py", "--windows", str(days), "--max-rows", "500000", "--out", str(out)])
+        _call(["tools/export_direct_results.py", "--windows", str(days), "--max-rows", "500000", "--out", str(out)],
+              EXPORT_TIMEOUT_S)
         _state["step"] = "load"
-        _call(["tools/load_direct_results.py", str(out), "--db", str(db)])
+        _call(["tools/load_direct_results.py", str(out), "--db", str(db)], LOAD_TIMEOUT_S)
         previous = os.environ.get("AUDIT_DB")
         keep = {str(db), previous or ""}
         if rls.mode() == "export" and rls.is_app():

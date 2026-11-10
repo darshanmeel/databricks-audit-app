@@ -25,7 +25,8 @@
 --   across identities by their share of that warehouse-day's SUMMED system.query.history
 --   total_duration_ms, keeping workspace_id/warehouse_id as its own dimension), jobs (billed
 --   jobs-compute DBU usage, identity via COALESCE(owned_by, run_as, 'unknown')), and other
---   (everything else - serverless/notebook/all-purpose-interactive - identity via
+--   (everything else - serverless/notebook/all-purpose-interactive DBU usage, plus every non-DBU
+--   row even one carrying a warehouse_id or job_id - identity via
 --   COALESCE(owned_by, run_as, the cluster's own latest owned_by for an all-purpose cluster_id,
 --   'unknown')). Reuses the effective-list-price join every priced cost query in this app already
 --   uses (DEC-66.1) and cost_period_over_period's own WARN/CRITICAL band (DEC-62); the
@@ -211,7 +212,7 @@ jobs_gate AS (
     END AS price_basis
   FROM jobs_usage
 ),
--- ===== source: other (no warehouse_id and no job_id -- serverless, notebooks, all-purpose, etc.) =====
+-- ===== source: other (non-DBU, or no warehouse_id and no job_id -- serverless, notebooks, all-purpose, etc.) =====
 other_usage AS (
   SELECT COALESCE(u.identity_metadata.owned_by, u.identity_metadata.run_as, lc.owned_by, 'unknown') AS identity_run_as,
          u.usage_date,
@@ -226,8 +227,8 @@ other_usage AS (
     AND (p.price_end_time IS NULL OR u.usage_end_time < p.price_end_time)
   LEFT JOIN latest_clusters lc
     ON  lc.workspace_id = u.workspace_id AND lc.cluster_id = u.usage_metadata.cluster_id
-  WHERE u.usage_metadata.warehouse_id IS NULL
-    AND u.usage_metadata.job_id IS NULL
+  WHERE (upper(u.usage_unit) <> 'DBU'
+         OR (u.usage_metadata.warehouse_id IS NULL AND u.usage_metadata.job_id IS NULL))
     AND u.usage_date >= dateadd(day, -(:period_days * 2), current_date())
     AND u.usage_date <  current_date()
 ),

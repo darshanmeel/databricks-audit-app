@@ -377,7 +377,7 @@ def _previous_volumes(path: Path | None) -> dict[str, dict]:
 
 
 def _sq(text: str) -> str:
-    return "'" + str(text).replace("\\", "\\\\").replace("'", "\'") + "'"
+    return "'" + str(text).replace("\\", "\\\\").replace("'", "\\'") + "'"
 
 
 def _list_volume(cur, root: str, max_entries: int) -> tuple[int, int, bool]:

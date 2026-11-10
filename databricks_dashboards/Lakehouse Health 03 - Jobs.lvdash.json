@@ -7631,7 +7631,8 @@
               "frame": {
                 "title": "Jobs and pipelines by day: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -7764,7 +7765,8 @@
               "frame": {
                 "title": "Failed runs by reason: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -11809,7 +11811,8 @@
               "frame": {
                 "title": "Slower than usual, by job (recent / before): rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -11911,7 +11914,8 @@
               "frame": {
                 "title": "Jobs by cluster start time (p95), hours of task start: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -12013,7 +12017,8 @@
               "frame": {
                 "title": "Failed cluster starts, by reason: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -12115,7 +12120,8 @@
               "frame": {
                 "title": "Jobs waiting longest on compute (p95 queue, s): rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -12217,7 +12223,8 @@
               "frame": {
                 "title": "Slowest cluster cold starts (p95, s): rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -17721,7 +17728,8 @@
               "frame": {
                 "title": "Jobs relying on retries or repairs: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -17823,7 +17831,8 @@
               "frame": {
                 "title": "Jobs on all-purpose compute, $: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -22847,7 +22856,8 @@
               "frame": {
                 "title": "Jobs by compute pressure: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -22949,7 +22959,8 @@
               "frame": {
                 "title": "Tasks by bottleneck: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -25593,7 +25604,8 @@
               "frame": {
                 "title": "Spend by pipeline: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -25695,7 +25707,8 @@
               "frame": {
                 "title": "Failed updates by pipeline: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },

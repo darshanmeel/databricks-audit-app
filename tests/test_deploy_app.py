@@ -63,6 +63,11 @@ def test_the_local_file_wins_line_by_line(tmp_path):
     assert dep.read_settings(base, local) == {"name": "my-audit", "run_as": "app"}
 
 
+def test_refresh_admins_reach_the_deployed_settings(tmp_path):
+    got = _read(tmp_path, "{name: my-audit, refresh: {admins: [ops@example.com]}}")
+    assert got["refresh"] == {"admins": ["ops@example.com"]}
+
+
 def test_read_settings_refuses_another_run_as(tmp_path):
     with pytest.raises(dep.DeployError, match="run_as"):
         _read(tmp_path, "{name: my-audit, run_as: admin}")

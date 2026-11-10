@@ -3458,7 +3458,8 @@
               "frame": {
                 "title": "Failed runs per day: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -4008,7 +4009,8 @@
               "frame": {
                 "title": "Failed runs per day, top 10 failing jobs: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -5340,7 +5342,8 @@
               "frame": {
                 "title": "Cluster start p95, top 10 jobs: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },

@@ -3345,7 +3345,8 @@
               "frame": {
                 "title": "Model-serving $ by endpoint: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -3447,7 +3448,8 @@
               "frame": {
                 "title": "Vector Search $ by endpoint: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -3549,7 +3551,8 @@
               "frame": {
                 "title": "Compute time by endpoint: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -7291,7 +7294,8 @@
               "frame": {
                 "title": "Spend by endpoint: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -7393,7 +7397,8 @@
               "frame": {
                 "title": "Requests by endpoint: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -8582,7 +8587,8 @@
               "frame": {
                 "title": "Requests by endpoint: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },

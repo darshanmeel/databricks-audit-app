@@ -156,6 +156,7 @@ import sys
 from pathlib import Path
 
 import duckdb
+import yaml
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -386,9 +387,27 @@ def get_refresh() -> dict:
     return app_refresh.status()
 
 
+def _refresh_admins() -> set[str]:
+    """refresh.admins from config/app.yml; config/app.local.yml wins."""
+    d = app_config._config_dir()
+    admins: list = []
+    for p in (d / "app.yml", d / "app.local.yml"):
+        if p.exists():
+            block = (yaml.safe_load(p.read_text(encoding="utf-8")) or {}).get("refresh") or {}
+            admins = block.get("admins", admins)
+    return {str(a).strip().lower() for a in admins or []}
+
+
 @app.post("/api/refresh")
 def post_refresh(days: int = Query(default=30, ge=1, le=90)) -> dict:
     """Export the last `days` days from Databricks and load them; the page reloads when done."""
+    # The export replaces every viewer's data at the app's cost: only admins or users who see everything.
+    if rls.is_app() and rls.mode() != "off":
+        me = rls.current_principal()
+        grants = rls.principal_grants(app_core_data._base_db_path(), me) if me else []
+        if not me or (me not in _refresh_admins() and not rls.unrestricted(rls.load().columns, grants)):
+            raise HTTPException(403, "refresh is limited to refresh.admins in config/app.yml "
+                                     "and users whose access covers every workspace")
     return app_refresh.start(days)
 
 

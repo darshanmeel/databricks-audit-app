@@ -4694,8 +4694,8 @@ other_usage AS (
     AND (p.price_end_time IS NULL OR u.usage_end_time < p.price_end_time)
   LEFT JOIN latest_clusters lc
     ON  lc.workspace_id = u.workspace_id AND lc.cluster_id = u.usage_metadata.cluster_id
-  WHERE u.usage_metadata.warehouse_id IS NULL
-    AND u.usage_metadata.job_id IS NULL
+  WHERE (upper(u.usage_unit) <> 'DBU'
+         OR (u.usage_metadata.warehouse_id IS NULL AND u.usage_metadata.job_id IS NULL))
     AND u.usage_date >= dateadd(day, -(30 * 2), current_date())
     AND u.usage_date <  current_date()
 ),

@@ -22,7 +22,7 @@
 
 Requires `python tests/fixtures/build_fixtures.py` followed by `python tools/dbt_run.py build
 --target test` (or, for just these tables, `python tools/dbt_run.py build --target test --select
-"+dim_workspace dim_list_prices"` -- the `+dim_workspace` selector pulls in the
+"+dim_workspace"` -- the `+dim_workspace` selector pulls in the
 workspace_env_overrides seed too, since dim_workspace refs it) to have already been run -- this
 file only reads the result, it does not build it (same division of responsibility as
 tests/dbutil.py).
@@ -205,8 +205,7 @@ def dim_workspace_rows() -> dict[str, dict]:
         raise FileNotFoundError(
             f"{DB_PATH} does not exist yet -- run `python tests/fixtures/build_fixtures.py` then "
             '`python tools/dbt_run.py build --target test` (or, for just these tables, '
-            '`python tools/dbt_run.py build --target test --select "+dim_workspace '
-            'dim_list_prices"` -- the selector must be quoted as one argument) first'
+            '`python tools/dbt_run.py build --target test --select "+dim_workspace"`) first'
         )
     con = None
     for attempt in range(_LOCK_RETRY_ATTEMPTS):

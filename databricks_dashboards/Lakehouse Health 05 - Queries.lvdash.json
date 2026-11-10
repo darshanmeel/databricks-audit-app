@@ -7608,7 +7608,8 @@
               "frame": {
                 "title": "Warehouse spend by statement type: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -7710,7 +7711,8 @@
               "frame": {
                 "title": "Query groups by status: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -7812,7 +7814,8 @@
               "frame": {
                 "title": "Top query groups by $: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -7914,7 +7917,8 @@
               "frame": {
                 "title": "Statements by source: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -10914,7 +10918,8 @@
               "frame": {
                 "title": "Warehouses missing the cache most (top): rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -11016,7 +11021,8 @@
               "frame": {
                 "title": "Warehouses reading the most despite pruning (top): rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -11118,7 +11124,8 @@
               "frame": {
                 "title": "Warehouses spilling the most (top): rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -11220,7 +11227,8 @@
               "frame": {
                 "title": "Warehouses shuffling the most (top): rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -13796,7 +13804,8 @@
               "frame": {
                 "title": "Failed statements by source: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -13898,7 +13907,8 @@
               "frame": {
                 "title": "Compute burned by warehouse: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -14000,7 +14010,8 @@
               "frame": {
                 "title": "Failed or canceled statements per day: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -14102,7 +14113,8 @@
               "frame": {
                 "title": "Failed statements by error class: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -19883,7 +19895,8 @@
               "frame": {
                 "title": "Warehouses queued longest for a slot (s): rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -19985,7 +19998,8 @@
               "frame": {
                 "title": "Warehouses waiting longest for start-up (s): rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -20087,7 +20101,8 @@
               "frame": {
                 "title": "Warehouses by pressure: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -20189,7 +20204,8 @@
               "frame": {
                 "title": "Workload by hour of day (UTC): rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -22338,7 +22354,8 @@
               "frame": {
                 "title": "Spill by warehouse (top): rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -22440,7 +22457,8 @@
               "frame": {
                 "title": "Shuffle by warehouse (top): rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -22542,7 +22560,8 @@
               "frame": {
                 "title": "Slot wait by day (s): rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -22644,7 +22663,8 @@
               "frame": {
                 "title": "Provisioning wait by day (s): rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },

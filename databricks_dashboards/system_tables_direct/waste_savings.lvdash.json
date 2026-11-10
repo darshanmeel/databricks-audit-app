@@ -1292,31 +1292,35 @@
         "src AS (\n",
         "  SELECT 'Warehouse idle time' AS source, 'SQL warehouse' AS kind, CAST(workspace_id AS STRING) AS workspace_id,\n",
         "         CAST(warehouse_id AS STRING) AS entity_id, CAST(NULL AS STRING) AS name_hint,\n",
-        "         status, est_wasted_usd_list AS wasted, est_wasted_usd_list AS floor_value, window_days\n",
+        "         status, est_wasted_usd_list AS wasted, est_wasted_usd_list AS floor_value, window_days,\n",
+        "         (CASE WHEN window_days > 0 THEN 50 * window_days / 30.0 ELSE 50 END) AS floor_min\n",
         "  FROM idle\n",
         "  UNION ALL\n",
         "  SELECT 'Idle cluster nodes', 'Cluster', cl.workspace_id, CAST(n.cluster_id AS STRING), NULL,\n",
-        "         n.status, n.est_wasted_usd_list, n.est_wasted_usd_list, n.window_days\n",
+        "         n.status, n.est_wasted_usd_list, n.est_wasted_usd_list, n.window_days,\n",
+        "         (CASE WHEN n.window_days > 0 THEN 50 * n.window_days / 30.0 ELSE 50 END)\n",
         "  FROM nodes n LEFT JOIN cl ON cl.cluster_id = CAST(n.cluster_id AS STRING)\n",
         "  UNION ALL\n",
         "  -- no floor on failed runs: a job that keeps failing counts even when it is cheap\n",
         "  SELECT 'Failed job runs', 'Job', CAST(workspace_id AS STRING), CAST(job_id AS STRING), NULL,\n",
-        "         status, est_wasted_usd_list, CAST(NULL AS DOUBLE), window_days\n",
+        "         status, est_wasted_usd_list, CAST(NULL AS DOUBLE), window_days, CAST(NULL AS DOUBLE)\n",
         "  FROM failed_jobs\n",
         "  UNION ALL\n",
         "  SELECT 'Failed SQL statements', 'SQL warehouse', CAST(workspace_id AS STRING), CAST(warehouse_id AS STRING), NULL,\n",
-        "         status, est_wasted_usd_list, est_wasted_usd_list, window_days\n",
+        "         status, est_wasted_usd_list, est_wasted_usd_list, window_days,\n",
+        "         (CASE WHEN window_days > 0 THEN 50 * window_days / 30.0 ELSE 50 END)\n",
         "  FROM failed_stmts\n",
         "  UNION ALL\n",
         "  SELECT 'Serving endpoints with no requests', 'Serving endpoint', CAST(workspace_id AS STRING),\n",
         "         CAST(endpoint_id AS STRING), endpoint_name,\n",
-        "         status, est_wasted_usd_list, est_usd_list, window_days\n",
+        "         status, est_wasted_usd_list, est_usd_list, window_days,\n",
+        "         (CASE WHEN window_days > 0 THEN 50 * window_days / 30.0 ELSE 50 END)\n",
         "  FROM serving\n",
         "),\n",
         "flagged AS (\n",
         "  SELECT * FROM src\n",
         "  WHERE status IN ('CRITICAL', 'WARN') AND wasted > 0\n",
-        "    AND (floor_value IS NULL OR floor_value >= 50.0 * window_days / 30.0)\n",
+        "    AND (floor_value IS NULL OR floor_min IS NULL OR floor_value >= floor_min)\n",
         "),\n",
         "named AS (\n",
         "  SELECT f.source, f.kind, f.status, f.entity_id, ROUND(f.wasted, 2) AS possible_usd,\n",
@@ -6717,7 +6721,8 @@
               "frame": {
                 "title": "Where each warehouse's running time went: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -8027,7 +8032,8 @@
               "frame": {
                 "title": "Saving by auto-stop setting: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },

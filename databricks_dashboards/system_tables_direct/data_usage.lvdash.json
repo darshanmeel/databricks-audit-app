@@ -7301,7 +7301,8 @@
               "frame": {
                 "title": "Everyone by last seen, by workspace: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -7434,7 +7435,8 @@
               "frame": {
                 "title": "Volumes in use, by workspace: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -7567,7 +7569,8 @@
               "frame": {
                 "title": "Heaviest tables: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -7700,7 +7703,8 @@
               "frame": {
                 "title": "Most used tables: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -7833,7 +7837,8 @@
               "frame": {
                 "title": "Most active people: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -7966,7 +7971,8 @@
               "frame": {
                 "title": "Most active workspaces: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -8128,7 +8134,8 @@
               "frame": {
                 "title": "Workspaces: reads against writes: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -8261,7 +8268,8 @@
               "frame": {
                 "title": "Table reads and writes per day: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -8363,7 +8371,8 @@
               "frame": {
                 "title": "GB by class: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -14346,7 +14355,8 @@
               "frame": {
                 "title": "Busiest tables per day: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -14479,7 +14489,8 @@
               "frame": {
                 "title": "Most active volumes: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -14612,7 +14623,8 @@
               "frame": {
                 "title": "Most used tables: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -14745,7 +14757,8 @@
               "frame": {
                 "title": "Most active people: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -14878,7 +14891,8 @@
               "frame": {
                 "title": "Heaviest tables: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -15011,7 +15025,8 @@
               "frame": {
                 "title": "Reads and writes per day: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -16894,7 +16909,8 @@
               "frame": {
                 "title": "Most active tables: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -17027,7 +17043,8 @@
               "frame": {
                 "title": "The 25 largest tables, by class: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -21555,7 +21572,8 @@
               "frame": {
                 "title": "Most active people: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -21688,7 +21706,8 @@
               "frame": {
                 "title": "Reads and writes per day: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -23132,7 +23151,8 @@
               "frame": {
                 "title": "Most active volumes: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -24573,7 +24593,8 @@
               "frame": {
                 "title": "Most active people: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -25885,7 +25906,8 @@
               "frame": {
                 "title": "Most used tables: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },

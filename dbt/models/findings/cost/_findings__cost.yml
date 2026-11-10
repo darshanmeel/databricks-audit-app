@@ -1964,15 +1964,16 @@ models:
       overlap so nothing is double-counted: sql_warehouse (a SQL warehouse''s DBU cost split across identities
       by their share of that warehouse-day''s SUMMED system.query.history total_duration_ms, keeping workspace_id/warehouse_id
       as its own dimension), jobs (billed jobs-compute DBU usage, identity via COALESCE(owned_by, run_as,
-      ''unknown'')), and other (everything else - serverless/notebook/all-purpose-interactive - identity
-      via COALESCE(owned_by, run_as, the cluster''s own latest owned_by for an all-purpose cluster_id,
-      ''unknown'')). Reuses the effective-list-price join every priced cost query in this app already
-      uses (DEC-66.1) and cost_period_over_period''s own WARN/CRITICAL band (DEC-62); the NOT_ASSESSED
-      pricing-coverage gate is computed once per SOURCE (not per identity - see caveats), unlike the other
-      cost_chargeback_by_* checks in this app, which compute it per row. Confirm on your account: an identity
-      you know grew spend between two recent equal periods matches change_pct, and that all-purpose-cluster
-      usage (identity_metadata.run_as blank there per Databricks'' own documentation) resolves through
-      owned_by or the cluster fallback instead of collapsing to ''unknown''.'
+      ''unknown'')), and other (everything else - serverless/notebook/all-purpose-interactive DBU usage,
+      plus every non-DBU row even one carrying a warehouse_id or job_id - identity via COALESCE(owned_by,
+      run_as, the cluster''s own latest owned_by for an all-purpose cluster_id, ''unknown'')). Reuses
+      the effective-list-price join every priced cost query in this app already uses (DEC-66.1) and cost_period_over_period''s
+      own WARN/CRITICAL band (DEC-62); the NOT_ASSESSED pricing-coverage gate is computed once per SOURCE
+      (not per identity - see caveats), unlike the other cost_chargeback_by_* checks in this app, which
+      compute it per row. Confirm on your account: an identity you know grew spend between two recent
+      equal periods matches change_pct, and that all-purpose-cluster usage (identity_metadata.run_as blank
+      there per Databricks'' own documentation) resolves through owned_by or the cluster fallback instead
+      of collapsing to ''unknown''.'
     healthy: OK - up less than :warn_increase_pct, or current spend under $:min_spend_usd.
     investigate_if: CRITICAL - up :crit_increase_pct or more on at least $:min_spend_usd of current spend,
       or brand-new spend above the floor with nothing before. WARN - up :warn_increase_pct or more. NOT_ASSESSED

@@ -4,6 +4,7 @@ from __future__ import annotations
 import datetime as dt
 import importlib.util
 import json
+import os
 import re
 import sys
 from pathlib import Path
@@ -865,3 +866,61 @@ def test_sizes_only_without_volumes_keeps_the_last_listing(tmp_path, monkeypatch
     assert done["volume_detail"] is None
     assert (out / "storage" / "volume_detail.parquet").read_text(encoding="utf-8") == "OLD"
     assert (out / "storage" / "table_detail.parquet").read_text(encoding="utf-8") == "B"
+
+
+def test_policies_on_schemas_run_on_their_own_connections_with_the_same_result(tmp_path):
+    def handler(sql: str) -> pa.Table:
+        if "information_schema.catalogs" in sql:
+            return pa.table({"catalog_name": ["main"]})
+        if "information_schema.schemata" in sql:
+            return pa.table({"catalog_name": ["main"] * 6, "schema_name": [f"s{i}" for i in range(6)]})
+        if sql == "SHOW POLICIES ON SCHEMA `main`.`s3`":
+            return pa.table({"Policy Name": ["p"], "Policy Type": ["ROW_FILTER"], "Catalog": ["main"],
+                             "Schema": ["s3"], "Table": [None], "Comment": [None]})
+        if sql == "SHOW POLICIES ON SCHEMA `main`.`s5`":
+            raise RuntimeError("PERMISSION_DENIED")
+        return pa.table({"policy_name": pa.array([], pa.string())})
+
+    connect = make_connect_fn(handler)
+    probe: list[str] = []
+    info = edr._export_policies(FakeConnection(handler, probe).cursor(), tmp_path, connect)
+    assert (info["rows"], info["schemas"], info["not_readable"], info["metastore"]) == (1, 6, 1, True)
+    assert not any("ON SCHEMA" in s for s in probe)  # schema statements went to the pool's connections
+    assert pq.read_table(tmp_path / "policies" / "abac_policies.parquet").to_pylist()[0]["on_name"] == "main.s3"
+
+
+def test_a_new_stamp_folder_takes_last_runs_storage_from_its_newest_sibling(tmp_path, monkeypatch):
+    results = tmp_path / "results"
+    for stamp, marker in (("20261101-0000", "OLD"), ("20261102-0000", "NEW")):
+        (results / stamp / "storage").mkdir(parents=True)
+        (results / stamp / "storage" / "table_detail.parquet").write_text(marker, encoding="utf-8")
+        (results / stamp / "manifest.json").write_text("{}", encoding="utf-8")
+    os.utime(results / "20261101-0000" / "manifest.json", (1, 1))
+    assert edr._previous_storage(results / "20261103-0000") == results / "20261102-0000" / "storage"
+    assert edr._previous_storage(results / "20261101-0000") == results / "20261101-0000" / "storage"
+    (results / "fixed").mkdir()  # an existing folder with no sizes never borrows a sibling's
+    assert edr._previous_storage(results / "fixed") == results / "fixed" / "storage"
+    handler = marker_handler({"cost_by_job": _rows_table(1)})
+    edr.run_export(results / "20261103-0000", only=["cost_by_job"], table_sizes=False, threads=1,
+                   connect_fn=make_connect_fn(handler), compile_fn=fake_compile, env=dict(FAKE_ENV),
+                   now=NOW, names_sql={}, tags_sql={})
+    assert (results / "20261103-0000" / "storage" / "table_detail.parquet").read_text(encoding="utf-8") == "NEW"
+
+
+def test_a_failed_final_swap_puts_the_previous_export_back(tmp_path, monkeypatch):
+    out = tmp_path / "results"
+    out.mkdir()
+    (out / "manifest.json").write_text("PREVIOUS", encoding="utf-8")
+    real_rename = os.rename
+
+    def rename(src, dst):
+        if str(src).endswith(".tmp"):
+            raise OSError("file in use")
+        real_rename(src, dst)
+    monkeypatch.setattr(edr.os, "rename", rename)
+    handler = marker_handler({"cost_by_job": _rows_table(1)})
+    with pytest.raises(OSError, match="file in use"):
+        edr.run_export(out, only=["cost_by_job"], table_sizes=False, threads=1, connect_fn=make_connect_fn(handler),
+                       compile_fn=fake_compile, env=dict(FAKE_ENV), now=NOW, names_sql={}, tags_sql={})
+    assert (out / "manifest.json").read_text(encoding="utf-8") == "PREVIOUS"
+    assert not (tmp_path / "results.old").exists()

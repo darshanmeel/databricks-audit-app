@@ -565,3 +565,11 @@ def test_every_dataset_starts_with_its_query_tags(dashboard):
         keys = {l.split("'")[1] for l in tags}
         assert {"dashboard", "tab"} <= keys and set(bdd.query_tags()) <= keys
         assert all("-" not in l for l in tags), "a hyphen in a query tag fails the query"
+
+
+def test_waste_floor_reads_each_checks_materiality_min(monkeypatch):
+    floors = {"compute_warehouse_idle_minutes": {"column": "est_wasted_usd_list", "min": 200, "unit": "USD"}}
+    monkeypatch.setattr(bdd.app_config, "load_materiality", lambda: floors)
+    sql = bdd.waste_cte("s")
+    assert "200 * window_days / 30.0" in sql
+    assert "50 * " not in sql and "50.0 * " not in sql  # the other checks have no floor here

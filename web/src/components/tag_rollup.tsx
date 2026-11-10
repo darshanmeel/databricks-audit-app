@@ -18,8 +18,8 @@ type Metrics = Record<string, number>;
 export interface RollupKey {
   tag_key: string;
   display_key?: string;
-  compute?: { usd?: number };
-  work?: { usd?: number };
+  compute?: { usd?: number; usd_disc?: number };
+  work?: { usd?: number; usd_disc?: number };
   spellings?: string[];
   mandatory?: boolean;
   platform?: boolean;
@@ -229,12 +229,12 @@ export function TopTagSwitch({ tags, value, onChange }: {
 export function allocSplit(view: RollupState<RollupData> | null | undefined): { total: number; untagged: number; items: Entry[] } {
   const out: { total: number; untagged: number; items: Entry[] } = { total: 0, untagged: 0, items: [] };
   if (!view || view.phase !== "ready" || view.outcome !== "ok_rows" || !view.data) return out;
-  out.total = numOrZero(view.data.total && view.data.total.usd);
+  out.total = numOrZero(view.data.total && (view.data.total.usd_disc ?? view.data.total.usd));
   const rows = view.data.by_value || [];
   const untagged = rows.find((e) => e.value === "__untagged__");
-  out.untagged = numOrZero(untagged && untagged.metrics && untagged.metrics.usd);
+  out.untagged = numOrZero(untagged && untagged.metrics && (untagged.metrics.usd_disc ?? untagged.metrics.usd));
   out.items = rows.filter((e) => e.value !== "__untagged__")
-    .map((e) => ({ name: e.label, value: numOrZero(e.metrics && e.metrics.usd) }));
+    .map((e) => ({ name: e.label, value: numOrZero(e.metrics && (e.metrics.usd_disc ?? e.metrics.usd)) }));
   return out;
 }
 

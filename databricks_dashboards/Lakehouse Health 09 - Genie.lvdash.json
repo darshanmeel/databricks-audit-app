@@ -2383,7 +2383,8 @@
               "frame": {
                 "title": "Genie spend per day: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -2485,7 +2486,8 @@
               "frame": {
                 "title": "Genie spend by workspace: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -2587,7 +2589,8 @@
               "frame": {
                 "title": "Top Genie agents by spend: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },

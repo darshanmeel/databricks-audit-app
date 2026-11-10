@@ -3,7 +3,7 @@
 
     python tools/deploy_app.py
 
-Reads `name` and `run_as` from config/app.yml (config/app.local.yml, git-ignored, wins), and the
+Reads `name`, `run_as` and `refresh` from config/app.yml (config/app.local.yml, git-ignored, wins), and the
 host, HTTP path and token from .env or the environment, as the export does. Needs the Databricks CLI, no CLI login. The
 app installs nothing from PyPI or a volume: the DuckDB wheel ships in the app folder in parts under
 10 MB (the Apps file limit) that tools/app_start.py joins at start-up, and everything else it uses
@@ -66,6 +66,8 @@ def read_settings(path: Path = SETTINGS, local: Path = LOCAL_SETTINGS) -> dict:
     if run_as not in RUN_AS:
         raise DeployError("run_as in config/app.yml: user (the token in .env) or app (the app's own service principal)")
     out = {"name": name, "run_as": run_as}
+    if raw.get("refresh"):
+        out["refresh"] = raw["refresh"]  # refresh.admins, read by POST /api/refresh
     try:
         block = rls.merged_block(path, local)
         if block:

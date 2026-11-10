@@ -111,6 +111,7 @@ import os
 import re
 import sys
 import threading
+import time
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
 from pathlib import Path
@@ -275,6 +276,8 @@ share_connection = False
 _SHARED_CONS: dict = {}  # _identity_key(path) -> connection, least recently used first
 _SHARED_MAX = 8
 _SHARED_LOCK = threading.Lock()
+_RETIRED: list = []  # (when, connection) dropped from the cache but not yet closed
+_RETIRE_AFTER_S = 120
 
 
 def _identity_key(path: str) -> tuple:
@@ -299,6 +302,9 @@ def _cap(con: duckdb.DuckDBPyConnection) -> None:
 
 
 def _connect(read_only: bool = True) -> duckdb.DuckDBPyConnection:
+    if _RETIRED:  # close handles whose grace is up, even when no later swap retires another
+        with _SHARED_LOCK:
+            _retire(None)
     if read_only and rls.mode() == "query":
         return rls.scoped_connection(_base_db_path(), rls.current_principal())
     path = str(_db_path())
@@ -314,13 +320,23 @@ def _connect(read_only: bool = True) -> duckdb.DuckDBPyConnection:
             base = _base_db_path()
             family = {str(base), *rls.set_files(base)}
             for old in [k for k in _SHARED_CONS if k[0] == key[0] or k[0] not in family]:
-                _SHARED_CONS.pop(old).close()
+                _retire(_SHARED_CONS.pop(old))
             _SHARED_CONS[key] = con
             while len(_SHARED_CONS) > _SHARED_MAX:  # per-user files: the least recently used goes
-                _SHARED_CONS.pop(next(iter(_SHARED_CONS))).close()
+                _retire(_SHARED_CONS.pop(next(iter(_SHARED_CONS))))
         else:
             _SHARED_CONS[key] = _SHARED_CONS.pop(key)
         return con.cursor()
+
+
+def _retire(con) -> None:
+    """Close `con` later: closing it now breaks the cursors other requests are still reading through.
+    Handles parked longer than _RETIRE_AFTER_S, or past 32 of them, are closed now."""
+    now = time.monotonic()
+    while _RETIRED and (now - _RETIRED[0][0] > _RETIRE_AFTER_S or len(_RETIRED) >= 32):
+        _RETIRED.pop(0)[1].close()
+    if con is not None:
+        _RETIRED.append((now, con))
 
 
 def _file_cached(path_fn):

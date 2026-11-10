@@ -3189,7 +3189,8 @@
               "frame": {
                 "title": "Growth, fastest first: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -3291,7 +3292,8 @@
               "frame": {
                 "title": "Tables by type: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -3393,7 +3395,8 @@
               "frame": {
                 "title": "Oldest untouched tables: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -8350,7 +8353,8 @@
               "frame": {
                 "title": "Largest tables missing predictive optimization: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },
@@ -8452,7 +8456,8 @@
               "frame": {
                 "title": "Maintenance DBU by table: rows",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": true,
+                "description": "The figures behind the chart above."
               }
             }
           },

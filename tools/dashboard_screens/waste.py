@@ -86,7 +86,7 @@ def priced(d):
 FROM named_ws
 WHERE {{ws}}
 """, target="target", fmt=MONEY, tone="crit",
-            how="Sum of the 5 priced waste checks' $, each floored at $50 * window/30 days and discounted; below the floor doesn't count."),
+            how="Sum of the 5 priced waste checks' $, each floored at its materiality minimum (scaled to the window) and discounted; below the floor doesn't count."),
         kpi("Top 3 resources", f"""{cte}, ranked AS (
   SELECT wasted, ROW_NUMBER() OVER (ORDER BY wasted DESC) AS rn FROM named_ws WHERE {{ws}}
 )

@@ -95,13 +95,13 @@ function rollupHeavyGroups(rows: any) {
     if (!byGroup.has(key)) {
       byGroup.set(key, {
         group_kind: r.group_kind, group_id: r.group_id, statement_type: r.statement_type,
-        est_cost_usd_list: 0, runs: 0, distinct_users: 0, topUser: null, topUserRuns: -1,
+        est_cost_usd_list_disc: 0, runs: 0, distinct_users: 0, topUser: null, topUserRuns: -1,
         sample: null, p50Sum: 0, p50Wt: 0, p95Sum: 0, p95Wt: 0,
         worst_status: null, warehouses: new Map(), read_files: null, pruned_files: 0, read_bytes: 0,
       });
     }
     const g = byGroup.get(key);
-    g.est_cost_usd_list += numOrZero(r.est_cost_usd_list);
+    g.est_cost_usd_list_disc += numOrZero(r.est_cost_usd_list_disc);
     g.runs += numOrZero(r.runs);
     // An export from before the file counts has no read_files at all: "-", never 0 of 0.
     if (r.read_files != null) g.read_files = numOrZero(g.read_files) + numOrZero(r.read_files);
@@ -117,7 +117,7 @@ function rollupHeavyGroups(rows: any) {
   });
   return [...byGroup.values()].map((g) => ({
     group_kind: g.group_kind, group_id: g.group_id, statement_type: g.statement_type,
-    est_cost_usd_list: g.est_cost_usd_list, runs: g.runs, distinct_users: g.distinct_users,
+    est_cost_usd_list_disc: g.est_cost_usd_list_disc, runs: g.runs, distinct_users: g.distinct_users,
     top_user: g.topUser, status: g.worst_status,
     source_kind: g.sample ? g.sample.source_kind : null, source_id: g.sample ? g.sample.source_id : null,
     sample_statement_id: g.sample ? g.sample.sample_statement_id : null,
@@ -126,7 +126,7 @@ function rollupHeavyGroups(rows: any) {
     p50_duration_ms: g.p50Wt > 0 ? g.p50Sum / g.p50Wt : null,
     p95_duration_ms: g.p95Wt > 0 ? g.p95Sum / g.p95Wt : null,
     read_files: g.read_files, pruned_files: g.pruned_files, read_bytes: g.read_bytes,
-  })).sort((a, b) => b.est_cost_usd_list - a.est_cost_usd_list);
+  })).sort((a, b) => b.est_cost_usd_list_disc - a.est_cost_usd_list_disc);
 }
 
 // Files the group read out of every file its filters could have skipped. A small table read whole
@@ -239,7 +239,7 @@ function QueryHeavyContent({ findings, filters, dims, maxCat, onExternalJump, on
   // One row per group_id across every warehouse it ran on (rule K19/T6/T10): the same job or
   // repeated statement on two warehouses is one row here, not two.
   const rolled = top ? rollupHeavyGroups(top) : null;
-  const topTotal = top ? sumBy(top, "est_cost_usd_list") : null;
+  const topTotal = top ? sumBy(top, "est_cost_usd_list_disc") : null;
   const worst = rolled && rolled.length ? rolled[0] : null;
 
   // Counted on the client from the rolled groups, never query_top_by_cost's own `affected` --
@@ -265,10 +265,11 @@ function QueryHeavyContent({ findings, filters, dims, maxCat, onExternalJump, on
   // Each warehouse's own bill split across its statements, so an XS and a 5XL weigh by what they cost.
   const typeReady = typeAgg.phase === "ready" && typeAgg.outcome === "ok_rows"
     && typeRunsAgg.phase === "ready" && typeRunsAgg.outcome === "ok_rows";
-  const typeTotal = typeReady ? numOrZero(typeAgg.data.total_value) : 0;
+  const typeNet = typeReady ? 1 - numOrZero(typeAgg.data.discount_pct) : 1;
+  const typeTotal = typeReady ? numOrZero(typeAgg.data.total_value) * typeNet : 0;
   const runsByType = new Map(typeReady ? (typeRunsAgg.data.groups || []).map((g) => [g.key[0], numOrZero(g.value)]) : []);
   const typeRows = typeReady ? (typeAgg.data.groups || [])
-    .map((g) => ({ type: g.key[0] || "UNKNOWN", usd: numOrZero(g.value), runs: runsByType.get(g.key[0]) || 0 }))
+    .map((g) => ({ type: g.key[0] || "UNKNOWN", usd: numOrZero(g.value) * typeNet, runs: runsByType.get(g.key[0]) || 0 }))
     .sort((a, b) => b.usd - a.usd) : null;
 
   // No query_top_by_cost on this export at all (not just still loading) -- fall back to the
@@ -287,7 +288,7 @@ function QueryHeavyContent({ findings, filters, dims, maxCat, onExternalJump, on
   const verdictSentence = topState.phase !== "ready"
     ? "Loading heavy queries..."
     : top
-      ? `${fmtMoney(topTotal, 0)} across ${fmtInt(rolled!.length)} query group${rolled!.length === 1 ? "" : "s"} over the last ${filters.window} days${worst ? `; worst: ${worstLabel}, ${fmtMoney(worst.est_cost_usd_list, 0)} across ${fmtInt(worst.warehouseIds.length)} warehouse${worst.warehouseIds.length === 1 ? "" : "s"}` : ""}.`
+      ? `${fmtMoney(topTotal, 0)} across ${fmtInt(rolled!.length)} query group${rolled!.length === 1 ? "" : "s"} over the last ${filters.window} days${worst ? `; worst: ${worstLabel}, ${fmtMoney(worst.est_cost_usd_list_disc, 0)} across ${fmtInt(worst.warehouseIds.length)} warehouse${worst.warehouseIds.length === 1 ? "" : "s"}` : ""}.`
       : "Query cost isn't in this export yet: re-run the export.";
   React.useEffect(() => { if (!usingFallback && onVerdict) onVerdict(verdictSentence); }, [verdictSentence, onVerdict, usingFallback]);
 
@@ -307,7 +308,7 @@ function QueryHeavyContent({ findings, filters, dims, maxCat, onExternalJump, on
         <Card title="Worst query group">
           {worst ? (
             <React.Fragment>
-              <div className="pqgs-card-value">{fmtMoney(worst.est_cost_usd_list, 0)}</div>
+              <div className="pqgs-card-value">{fmtMoney(worst.est_cost_usd_list_disc, 0)}</div>
               <PqgsNote facts={[
                 { label: "Group", value: worstLabel },
                 { label: "Warehouses", value: fmtInt(worst.warehouseIds.length) },
@@ -319,7 +320,7 @@ function QueryHeavyContent({ findings, filters, dims, maxCat, onExternalJump, on
         <Card title="This audit's own query cost">
           {selfState.phase === "ready" && selfState.outcome === "ok_rows" ? (
             <React.Fragment>
-              <div className="pqgs-card-value">{fmtMoney(sumBy(selfState.data.rows, "est_audit_usd_list"), 0)}</div>
+              <div className="pqgs-card-value">{fmtMoney(sumBy(selfState.data.rows, "est_audit_usd_list_disc"), 0)}</div>
               <PqgsNote facts={[
                 { label: "Statements", value: fmtInt(sumBy(selfState.data.rows, "matched_statement_count")) },
                 { label: "Run time", value: fmtDuration(sumBy(selfState.data.rows, "matched_duration_secs")) },
@@ -385,7 +386,7 @@ function QueryHeavyContent({ findings, filters, dims, maxCat, onExternalJump, on
                     <tr key={`${r.group_kind}-${r.group_id}-${r.statement_type}-${i}`}>
                       <td>{`${r.statement_type ? `${r.statement_type}: ` : ""}`}{heavyGroupCell(r)}</td>
                       <td><WarehouseList ids={r.warehouseIds} max={1} /></td>
-                      <td className="num mono">{fmtMoney(r.est_cost_usd_list, 0)}</td>
+                      <td className="num mono">{fmtMoney(r.est_cost_usd_list_disc, 0)}</td>
                       <td className="num mono">{fmtInt(r.runs)}</td>
                       <td className="num mono">{`${fmtDurationMs(r.p50_duration_ms)} / ${fmtDurationMs(r.p95_duration_ms)}`}</td>
                       <td><FilesReadCell row={r} /></td>
