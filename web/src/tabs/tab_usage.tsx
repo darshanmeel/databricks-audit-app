@@ -426,7 +426,9 @@ function UsageTablesContent({ filters, goTo, onVerdict }: LooseProps) {
   const rows = all.filter((r) => (cls === "all" || (cls === "sensitive" ? r.sensitive && r.sensitive.length : r.usage_class === cls))
     && (!q || r.table_full_name.toLowerCase().includes(q.toLowerCase())));
   const max = Math.max(1, ...rows.map((r) => (r.reads || 0) + (r.writes || 0)));
-  const wsOptions = Array.from(new Map(base.filter((r) => r.workspace_id).map((r) => [r.workspace_id, r.workspace_name])).entries());
+  const wsOptions: [string, string][] = Array.from(new Map(base.filter((r) => r.workspace_id).map((r) => [r.workspace_id, r.workspace_name])).entries());
+  // a catalog no workspace read or wrote in the window has no home: its own pick, so idle tables stay findable
+  if (base.some((r) => !r.workspace_id)) wsOptions.push(["none", "No workspace (unused in the window)"]);
   const shown = rows.slice(0, page * PAGE);
   const sum = (k: string) => rows.reduce((a, r) => a + (r[k] || 0), 0);
   const totalSize = (t.totals || {}).size_in_bytes || 0;
@@ -462,7 +464,7 @@ function UsageTablesContent({ filters, goTo, onVerdict }: LooseProps) {
       <Card title={`Most active tables · ${t.window_days}d`} right={<span className="muted">{cls !== "all" || q ? "the tables shown below · click one" : "every table · click one"}</span>}>
         <MostUsed open={setOpen} rows={topUsed(cls !== "all" || q ? rows : t.most_used || [], (r) => r.table_full_name, rwSub)} />
       </Card>
-      {wsPick.length < 2 ? <SchemaBreakdown workspaceId={wsPick[0] || ""} name={(wsOptions.find(([id]) => id === wsPick[0]) || [])[1] || wsPick[0]} window={filters.window} /> : null}
+      {wsPick.length < 2 && wsPick[0] !== "none" ? <SchemaBreakdown workspaceId={wsPick[0] || ""} name={(wsOptions.find(([id]) => id === wsPick[0]) || [])[1] || wsPick[0]} window={filters.window} /> : null}
       <Card title="Tables" right={<span className="muted">click one for its detail</span>}>
         <div className="data-table-wrap">
           <table className="data">

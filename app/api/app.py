@@ -904,8 +904,13 @@ def get_tables(
     tag: list[str] = Query(default=[]),
 ) -> dict:
     attributes = _read_attribute_filters(request, _canonical_keys()) or None
-    scope = app_rollup._resolve_workspace_scope(workspace_ids or None, env or None, attributes)
-    return app_core_data.read_tables(scope, _parse_tag_filter(None, None, tag), window=window)
+    # "none": tables whose catalog no workspace read or wrote in the window
+    no_home = "none" in workspace_ids
+    ids = [w for w in workspace_ids if w != "none"]
+    scope = app_rollup._resolve_workspace_scope(ids or None, env or None, attributes)
+    if no_home and scope is None:
+        scope = set()
+    return app_core_data.read_tables(scope, _parse_tag_filter(None, None, tag), window=window, no_home=no_home)
 
 
 @app.get("/api/people")

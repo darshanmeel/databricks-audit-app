@@ -2523,7 +2523,8 @@ def _home_and_names(con, have) -> tuple[dict, dict, dict]:
     return home, names, envs
 
 
-def read_tables(workspace_scope: set[str] | None, tag_filter=None, limit: int = 1000, window: int = 30) -> dict:
+def read_tables(workspace_scope: set[str] | None, tag_filter=None, limit: int = 1000, window: int = 30,
+                no_home: bool = False) -> dict:
     """Every table and view with its home workspace and env, size, files, reads and writes across
     workspaces in the window (lineage), readers, writers, usage class and sensitive columns, in
     attention order (class, then size); not_assessed without table sizes."""
@@ -2559,7 +2560,7 @@ def read_tables(workspace_scope: set[str] | None, tag_filter=None, limit: int = 
         f = facts.get(name) or {"table_full_name": name, "table_catalog": name.split(".")[0], "table_type": None,
                                 "data_source_format": None, "column_count": None, "last_modified": None}
         ws = home.get(str(f["table_catalog"]))
-        if workspace_scope is not None and ws not in workspace_scope:
+        if workspace_scope is not None and ws not in workspace_scope and not (no_home and ws is None):
             continue
         if kept is not None and ws not in kept:
             continue

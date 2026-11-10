@@ -318,7 +318,12 @@ function tableSizesScope(info: any, earlier = false) {
       ? `Not read this export from ${info.stored_from}: ${info.error}. Run the Data usage sizes job, or fix settings dashboards sizes_schema / sizes_tables${earlier ? "; figures shown are from an earlier export" : ""}.`
       : `Not measured this export: the table list could not be read (${info.error}). Check access to settings table_sizes tables_from.`;
   }
+  // information_schema lists only what the exporting identity sees in its workspace
+  const listed = info.listed_by || info.listed_in
+    ? `Tables visible to ${info.listed_by || "the export"}${info.listed_in ? ` in ${info.listed_in}` : ""}; another identity or workspace can see more`
+    : null;
   const parts = [
+    listed,
     stored ? `${fmtInt(numOrZero(info.described))} read from ${info.stored_from}, as of ${info.collected_at || "unknown"}`
       : `${fmtInt(numOrZero(info.described))} described this export`,
     info.reused ? `${fmtInt(info.reused)} unchanged, last export's figure` : null,

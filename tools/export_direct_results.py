@@ -1216,7 +1216,7 @@ def run_export(
         detail_info = table_detail.export(
             connect, work_dir, previous=out_dir / "storage" / table_detail.FILE,
             threads=sizes_cfg["threads"], max_tables=sizes_cfg["max_tables"],
-            redact=lambda text: _redact(text, token))
+            redact=lambda text: _redact(text, token), host=host, mask=_mask_user if mask_users else str)
     volume_info = None
     if sizes_on and not partial and (sizes_cfg["volumes"] if volumes is None else volumes):
         volume_info = _export_volumes(connect, work_dir, out_dir, sizes_cfg, token)
@@ -1367,7 +1367,8 @@ def export_sizes_only(out_dir: Path, *, connect_fn: Callable | None = None, env:
             f"{out_dir} is inside the repository. This folder holds real-account Databricks "
             "data; choose a folder outside the repo."
         )
-    token = (env if env is not None else _preflight_env()).get(ENV_TOKEN)
+    env = env if env is not None else _preflight_env()
+    token = env.get(ENV_TOKEN)
     connect = connect_fn or tools_snapshot.connect
     redact = lambda text: _redact(text, token)  # noqa: E731
     cfg = app_config.table_sizes()
@@ -1375,7 +1376,8 @@ def export_sizes_only(out_dir: Path, *, connect_fn: Callable | None = None, env:
     if work.exists():
         shutil.rmtree(work)
     detail = table_detail.export(connect, work, previous=out_dir / "storage" / table_detail.FILE,
-                                 threads=cfg["threads"], max_tables=cfg["max_tables"], redact=redact)
+                                 threads=cfg["threads"], max_tables=cfg["max_tables"], redact=redact,
+                                 host=env.get(ENV_HOST), mask=_mask_user if masking_enabled() else str)
     if not detail.get("exported"):
         shutil.rmtree(work, ignore_errors=True)
         raise ExportConfigError(f"table sizes not exported: {detail.get('error')}")

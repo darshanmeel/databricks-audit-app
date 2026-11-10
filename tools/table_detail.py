@@ -168,7 +168,8 @@ def _previous(path: Path | None) -> dict[tuple, dict]:
 
 def export(connect_fn: Callable, out_dir: Path, *, previous: Path | None = None, threads: int = 16,
            max_tables: int = 20000, redact: Callable[[str], str] = str,
-           log: Callable[[str], None] = print, history: bool = True) -> dict:
+           log: Callable[[str], None] = print, history: bool = True,
+           host: str | None = None, mask: Callable[[str], str] = str) -> dict:
     """List every table, DESCRIBE DETAIL the changed Delta ones `threads` at a time, write
     out_dir/storage/table_detail.parquet; returns what it did for the manifest."""
     t0 = time.perf_counter()
@@ -181,7 +182,14 @@ def export(connect_fn: Callable, out_dir: Path, *, previous: Path | None = None,
         return {"exported": False, "error": redact(str(exc)), **source}
     try:
         cur = lister.conn.cursor()
+        # information_schema lists only what this identity sees in this workspace: say which, with the count
+        source["listed_in"] = host
+        try:
+            source["listed_by"] = mask(str(_rows(cur, "SELECT current_user() AS u")[0]["u"]))
+        except Exception:  # noqa: BLE001 -- who listed is a label; the list still counts
+            source["listed_by"] = None
         tables = [r for r in _rows(cur, _LIST_SQL.format(**_list_from())) if not skipped(r["table_catalog"])]
+        seen = (f" visible to {source['listed_by']}" if source["listed_by"] else "") + (f" in {host}" if host else "")
         if stored is not None:
             sizes = {(r["catalog"], r["schema"], r["table_name"]): r for r in _rows(cur, _STORED_SIZES_SQL.format(**stored))}
             hist, history_error = [], None
@@ -215,7 +223,7 @@ def export(connect_fn: Callable, out_dir: Path, *, previous: Path | None = None,
                            last_modified=s.get("last_modified"), detail=s.get("detail") or "described")
             out.append(row)
         collected = max((s["collected_at"] for s in sizes.values() if s.get("collected_at")), default=None)
-        log(f"table sizes: {len(tables)} tables, read from {stored['table_sizes']} (collected {collected})")
+        log(f"table sizes: {len(tables)} tables{seen}, read from {stored['table_sizes']} (collected {collected})")
         return _write_tables(out, hist, out_dir, **source, collected_at=collected, history_error=history_error,
                              history_from=stored["table_history"], seconds=round(time.perf_counter() - t0, 1))
 
@@ -244,7 +252,7 @@ def export(connect_fn: Callable, out_dir: Path, *, previous: Path | None = None,
     for row in todo[max_tables:]:
         row["detail"] = "not_asked"
     todo = todo[:max_tables]
-    log(f"table sizes: {len(tables)} tables, {len(todo)} to describe, "
+    log(f"table sizes: {len(tables)} tables{seen}, {len(todo)} to describe, "
         f"{sum(1 for r in out if r['detail'] == 'reused')} unchanged since the last export")
 
     local = threading.local()
@@ -293,7 +301,7 @@ def export(connect_fn: Callable, out_dir: Path, *, previous: Path | None = None,
             c.conn.close()
         except Exception:  # noqa: BLE001
             pass
-    return _write_tables(out, hist, out_dir, source="describe", threads=threads, max_tables=max_tables,
+    return _write_tables(out, hist, out_dir, **source, threads=threads, max_tables=max_tables,
                          seconds=round(time.perf_counter() - t0, 1))
 
 
