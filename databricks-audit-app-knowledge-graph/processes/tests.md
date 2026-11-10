@@ -53,7 +53,7 @@ flowchart LR
 - Workspaces 2001-2003 and scenarios in `tests/fake_account/build.py:1-40`; `extra.py` adds 2006-2014 edge cases (tags, Azure/GCP, mixed tags, uat, eu region, closed, lab) (`tests/fake_account/extra.py:1-14`).
 - `tests/fake_account/usage.py` adds table/volume sizes and people to a built Example DB (`tests/fake_account/usage.py:1-9`).
 - `tests/test_fake_account.py` builds it in a tmp folder with dbt dev, skips when dbt is missing (`tests/test_fake_account.py:24-41`), then checks named answers (e.g. `test_warehouse_idle_time` `:53`, `test_every_check_has_rows` `:168`).
-- Open it in the app: `README.md:666-675`.
+- Open it in the app: `README.md:671-680`.
 
 ## Web tests
 
@@ -62,16 +62,16 @@ flowchart LR
 
 ## Coverage gate
 
-- `python tools/fixture_coverage.py --check`: every executable id has a grain entry and a `rows(...)` call in `tests/test_findings/`; also duplicate grains and grain/model column drift (`tools/fixture_coverage.py:1-30`). Runs only in the full gate (`tools/gate.py:159-170`).
+- `python tools/fixture_coverage.py --check`: every executable id has a grain entry and a `rows(...)` call in `tests/test_findings/`; also duplicate grains and grain/model column drift (`tools/fixture_coverage.py:1-30`). Runs only in the full gate (`tools/gate.py:179-190`).
 
 ## Commands
 
 | Goal | Command | Evidence |
 |---|---|---|
-| Install | `pip install -r requirements-dev.txt` (pytest 9.1.1, sqlfluff, sqlglot, + dbt + app deps) | `requirements-dev.txt:1-5`, `README.md:742` |
-| Full gate (builds DB, ~30 min) | `python tools/gate.py` | `README.md:743` |
-| Quick gate (needs a built DB) | `python tools/gate.py --quick` | `README.md:744-747` |
-| Only pytest | `python -m pytest -q` | `tools/gate.py:121` |
+| Install | `pip install -r requirements-dev.txt` (pytest 9.1.1, sqlfluff, sqlglot, + dbt + app deps) | `requirements-dev.txt:1-5`, `README.md:747` |
+| Full gate (builds DB, ~30 min) | `python tools/gate.py` | `README.md:748` |
+| Quick gate (needs a built DB) | `python tools/gate.py --quick` | `README.md:749-752` |
+| Only pytest | `python -m pytest -q` | `tools/gate.py:141` |
 | Rebuild DB from pytest | set `AUDIT_BUILD_FIXTURES=1`, then pytest | `tests/conftest.py:264-265` |
-| Web | `cd web && npm ci && npm run typecheck && npm test` | `README.md:748` |
-| Fake account | `python tests/fake_account/build.py`, then `tools/dbt_run.py build --target dev` with `AUDIT_SNAPSHOT_DIR`, `AUDIT_DB`, `DBT_TARGET_PATH` | `README.md:666-672` |
+| Web | `cd web && npm ci && npm run typecheck && npm test` | `README.md:754` |
+| Fake account | `python tests/fake_account/build.py`, then `tools/dbt_run.py build --target dev` with `AUDIT_SNAPSHOT_DIR`, `AUDIT_DB`, `DBT_TARGET_PATH` | `README.md:671-677` |

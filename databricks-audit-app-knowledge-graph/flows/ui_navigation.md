@@ -21,7 +21,7 @@ flowchart TD
   RAIL --> COV["Coverage & Gaps<br/>tab=coverage"]
   RAIL --> GUIDE["How it works<br/>tab=guide"]
   AREAS -->|"sub-tab click: onSubtabChange<br/>web/src/App.tsx:1010"| SUBT["same area, subtab=key"]
-  AREAS -->|"row expand: focus=qid<br/>web/src/components/findings_table.tsx:268"| DET["FindingDetail in place"]
+  AREAS -->|"row expand: focus=qid<br/>web/src/components/findings_table.tsx:269"| DET["FindingDetail in place"]
   AREAS -->|"job Ref click: JobFocus.open<br/>web/src/components/names.tsx:258"| JOB["Job run panel<br/>job=ws:job"]
   AREAS -->|"'How is this worked out?'"| DRAWER["Guide drawer<br/>web/src/components/guide_drawer.tsx:109"]
   OV -->|"Fix-first row / tile: goTo(homeForQuery)<br/>web/src/App.tsx:988-1007"| AREAS
@@ -89,7 +89,7 @@ sequenceDiagram
 | Tag picker | `setTagFilterState` (web/src/App.tsx:1090) | `tags=` JSON (web/src/App.tsx:943-947) | `Api.setTagFilter(activeTag)` (web/src/App.tsx:834) -> `tag=key:value` on findings, finding, aggregate, rollup, tables, volumes, workspace_usage, workspace_tags, tag_origins, tag_compliance (web/src/api.ts:53-57, 88-108, 122, 139) |
 | Lens | `applyRole` (web/src/App.tsx:786-792) | `role=` (omitted for finops) (web/src/App.tsx:803) | sidebar, landing, `summaryOnly` and `canDrill` change; data requests unchanged |
 | Sub-tab | `onSubtabChange` (web/src/App.tsx:1010) | `subtab=` | new Content mounts, its hooks fetch |
-| Row expand | FindingsTable state | `focus=` (web/src/components/findings_table.tsx:268) | `GET /api/finding/{qid}` |
+| Row expand | FindingsTable state | `focus=` (web/src/components/findings_table.tsx:269) | `GET /api/finding/{qid}` |
 | Job click | `JobFocus.open` (web/src/components/names.tsx:258-263) | `job=ws:id` (web/src/components/names.tsx:243-245) | `GET /api/finding/{id}?job_id=` x JOB_PANEL_IDS (web/src/components/job_panel.tsx:79) |
 
 - Exceptions that ignore filters on purpose:

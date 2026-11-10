@@ -40,7 +40,7 @@ flowchart LR
 - Two raw spellings of one normalised key: alphabetically first wins (`dbt/models/tags/tag_entity.sql:61`).
 - billed_* inference: value if coverage >= coverage_floor and share >= share_floor, else `__untagged__` / `__mixed__` (`dbt/macros/tag_entity_billed_inference.sql:89-94`).
 - billed_endpoint_name only when endpoint_id is absent (no double count) (`dbt/models/tags/tag_entity.sql:349-355`).
-- Direct-load trimming: loader keeps only configured tag keys plus all `uc_*` rows (`tools/load_direct_results.py:637-643`).
+- Direct-load trimming: loader keeps only configured tag keys plus all `uc_*` rows (`tools/load_direct_results.py:652-658`).
 
 ## Columns
 
@@ -49,4 +49,4 @@ flowchart LR
 ## Read by
 
 - `ref`: `dbt/models/tags/tag_index.sql:69,126`.
-- App: `app/core/tags.py:584,598` (tag filter scalar subquery), `app/core/tag_compliance.py:128,141,185`; missing table -> `TagModelsNotBuiltError` (`app/core/tags.py:46`).
+- App: `app/core/tags.py:582,596` (tag filter scalar subquery), `app/core/tag_compliance.py:128,141,185`; missing table -> `TagModelsNotBuiltError` (`app/core/tags.py:46`).

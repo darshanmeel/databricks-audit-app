@@ -50,8 +50,8 @@ sequenceDiagram
 
 ## Steps with evidence
 
-1. Build: `main()` -> `build(catalog)` writes notebook, one file per tab, README (`tools/build_databricks_dashboards.py:1441-1477`).
-2. Inputs read: checks and names with markers filled (`tools/build_databricks_dashboards.py:75-95`); tabs from `tab_registry.ts` (`tools/build_databricks_dashboards.py:935-968`); labels from `labels.ts` (`tools/build_databricks_dashboards.py:989-998`); columns from `tools/dashboard_columns.json` (`tools/build_databricks_dashboards.py:1066-1068`).
+1. Build: `main()` -> `build(catalog)` writes notebook, one file per tab, README (`tools/build_databricks_dashboards.py:1457-1493`).
+2. Inputs read: checks and names with markers filled (`tools/build_databricks_dashboards.py:75-95`); tabs from `tab_registry.ts` (`tools/build_databricks_dashboards.py:951-984`); labels from `labels.ts` (`tools/build_databricks_dashboards.py:1005-1014`); columns from `tools/dashboard_columns.json` (`tools/build_databricks_dashboards.py:1082-1084`).
 3. Owner imports and runs the notebook (`databricks_dashboards/README.md:47-63`).
 4. Widgets: `databricks_dashboards/Lakehouse Health 00 - Snapshot.py:15-18`.
 5. Catalog check and query tags: `databricks_dashboards/Lakehouse Health 00 - Snapshot.py:16301-16316`.
@@ -62,7 +62,7 @@ sequenceDiagram
 10. `snapshot_log`: `databricks_dashboards/Lakehouse Health 00 - Snapshot.py:16352-16357`.
 11. Import and publish: `databricks_dashboards/README.md:65-83`.
 12. Links cell: `databricks_dashboards/Lakehouse Health 00 - Snapshot.py:16361-16380`.
-13. Dashboard queries carry `SET QUERY_TAGS` (`tools/build_databricks_dashboards.py:189-209`) and read only `{S}` tables (test `tests/test_databricks_dashboards.py:314`).
+13. Dashboard queries carry `SET QUERY_TAGS` (`tools/build_databricks_dashboards.py:200-220`) and read only `{S}` tables (test `tests/test_databricks_dashboards.py:314`).
 
 ## Rules on this flow
 

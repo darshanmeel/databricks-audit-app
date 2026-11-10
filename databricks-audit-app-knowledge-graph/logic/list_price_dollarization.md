@@ -12,7 +12,7 @@ flowchart LR
 ```
 
 ## Rule in plain words
-- One price basis: the *effective list price* (`pricing.effective_list.default`), "no discount assumed by default" - `app/core/pricing.py:24-26`, README `README.md:348-350`.
+- One price basis: the *effective list price* (`pricing.effective_list.default`), "no discount assumed by default" - `app/core/pricing.py:24-26`, README `README.md:353-355`.
 - DBUs are never dollars; a dollar column always ends in a list-price name (`est_..._usd_list`, `net_list_cost[_usd]`) - `app/core/pricing.py:5-8`, regex `app/core/pricing.py:26`.
 - The join key is `sku_name + cloud + usage_unit` and the price window `usage_end_time >= price_start_time AND (price_end_time IS NULL OR usage_end_time < price_end_time)` - `dbt/models/tags/cost_alloc.sql:38-45`, same in `dbt/models/tags/cost_reconciliation.sql:23-30`, `app/queries/app/cost/cost_period_over_period.sql:81-90`.
 - `list_prices()` macro de-duplicates: USD rows only, each row's end capped at the next row's start for the same (sku, cloud, unit), rows with no open interval dropped - so one usage row matches exactly one price - `dbt/macros/list_prices.sql:1-37` (cap `:18-23`, USD `:32`, drop `:35`).
@@ -36,7 +36,7 @@ unpriced_q = COALESCE(SUM(CASE WHEN list_rate IS NULL THEN qty ELSE 0 END), 0)  
 - Non-USD price rows are dropped (`currency_code = 'USD'`) - `dbt/macros/list_prices.sql:32`.
 - `usage_end_time < price_end_time` alone would zero recent usage; the `IS NULL OR` branch is required - caveat in `app/queries/vendored/cost/cost_actual_vs_list_by_sku.sql:15`.
 - Some checks deliberately read the raw table (reconcile check) - `tests/test_generate_models.py:509-511`.
-- Cloud VM bill is out of scope (no system table) - `README.md:348-350`.
+- Cloud VM bill is out of scope (no system table) - `README.md:353-355`.
 
 ## Implementing code
 - `dbt/macros/list_prices.sql:10-37`

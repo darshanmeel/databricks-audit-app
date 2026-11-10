@@ -35,22 +35,22 @@ Line numbers in this table are as of `dda0df6`, not re-checked against `b8d2db1`
 
 ## Should fix (selected), `reviews/review-2026-11-10-repo.html:62-79`
 
-- Findings fetch race (`web/src/App.tsx:913`); per-window people/warehouse users (`app/core/data.py`); partial `--only`/`--domain` export replacing the full folder (`tools/export_direct_results.py:1330`); masking of owners/user_name/grantees (`tools/table_detail.py`, `tools/workspace_activity.py`).
-- Dashboard builders: stale-jobs 30-day threshold rewritten by the window swap (`tools/build_direct_dashboards.py:39`) - now kept via `KEEP_BY_ID` (`tools/build_direct_dashboards.py:50`); `COUNT(DISTINCT user_name)` typed as number (`tools/build_databricks_dashboards.py:757`).
+- Findings fetch race (`web/src/App.tsx:913`); per-window people/warehouse users (`app/core/data.py`); partial `--only`/`--domain` export replacing the full folder (`tools/export_direct_results.py:1360`); masking of owners/user_name/grantees (`tools/table_detail.py`, `tools/workspace_activity.py`).
+- Dashboard builders: stale-jobs 30-day threshold rewritten by the window swap (`tools/build_direct_dashboards.py:39`) - now kept via `KEEP_BY_ID` (`tools/build_direct_dashboards.py:50`); `COUNT(DISTINCT user_name)` typed as number (`tools/build_databricks_dashboards.py:771`).
 - Data/design: env hint case (`dbt/models/dims/int_workspace_tag_hints.sql:50`), blank tag values, two dollar-by-tag pipelines, four product maps, tag-filter performance (`app/core/tag_spend.py:203`), seed test row, dead `databricks` dbt target, comment slop.
 
 ## Questions, `reviews/review-2026-11-10-repo.html:82-86`
 
-- PAT stored plain in synced `app.yaml` with `run_as: user` (`tools/deploy_app.py:149`).
+- PAT stored plain in synced `app.yaml` with `run_as: user` (`tools/deploy_app.py:151`).
 - Hour 00:00 peak in Cost "When you spend": fake data or daily billing rows?
 - Tag tables filter `ingestion_date < as_of`, checks don't (`app/direct_sql/overview_spend_estimate.sql:59`).
 
 ## Other findings, `reviews/review-2026-11-10-repo.html:91-115`
 
 - Visual: month labels, axis collision, table overflow, narrow text, dark-mode contrast.
-- Code size/obvious: duplicate dict key in `tools/direct_guides.py:1157,1174`, unused import `app/core/rls.py:17`, Streamlit leftovers, unused helpers.
-- Correctness: cache eviction race (`app/api/app.py:1116,1143`), routes ignoring `default_window` (`app/api/app.py:845`), `--sizes-only --mask-users` ignored, unredacted error strings (`tools/export_direct_results.py:1380,488,784`).
-- Design: materiality floor hard-coded in dashboards (`tools/build_direct_dashboards.py:172`, `tools/build_databricks_dashboards.py:451`); gate existence probes dead, duplicated `.env`/redact helpers (`tools/gate.py:61`).
+- Code size/obvious: duplicate dict key in `tools/direct_guides.py:1157,1174`, unused import `app/core/rls.py:19`, Streamlit leftovers, unused helpers.
+- Correctness: cache eviction race (`app/api/app.py:1135,1162`), routes ignoring `default_window` (`app/api/app.py:864`), `--sizes-only --mask-users` ignored, unredacted error strings (`tools/export_direct_results.py:1425,488,813`).
+- Design: materiality floor hard-coded in dashboards (`tools/build_direct_dashboards.py:176`, `tools/build_databricks_dashboards.py:465`); gate existence probes dead, duplicated `.env`/redact helpers (`tools/gate.py:63`).
 - Areas with no issues: API injection, query tags on direct SQL, customer names, type safety (`reviews/review-2026-11-10-repo.html:89`).
 
 ## What it documents

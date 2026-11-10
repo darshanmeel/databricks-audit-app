@@ -10,7 +10,7 @@ flowchart LR
 ```
 
 ## Rule in plain words
-- No system table holds contract rates - `README.md:348-350`, `app/queries/vendored/cost/cost_actual_vs_list_by_sku.sql:8`.
+- No system table holds contract rates - `README.md:353-355`, `app/queries/vendored/cost/cost_actual_vs_list_by_sku.sql:8`.
 - The query emits only `net_list_cost` (effective list price) plus a constant `'NOT_ASSESSED'` status - `app/queries/vendored/cost/cost_actual_vs_list_by_sku.sql:18-22`.
 - The old second column (`net_default_cost`, from `pricing.default`) was dropped; one basis everywhere - `app/core/pricing.py:34-45`.
 - Disclosed as a library correction: the vendored query banded CRITICAL on a ratio that is always >= 1 - `config/library_corrections.yml:3-16`.

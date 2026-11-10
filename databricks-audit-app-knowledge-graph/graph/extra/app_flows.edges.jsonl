@@ -22,200 +22,200 @@
 {"from": "config:app.name", "to": "config:app.yml", "type": "part_of", "evidence": "config/app.yml:4", "status": "extracted"}
 {"from": "config:app.run_as", "to": "config:app.yml", "type": "part_of", "evidence": "config/app.yml:7", "status": "extracted"}
 {"from": "config:app.rls", "to": "config:app.yml", "type": "part_of", "evidence": "config/app.yml:12", "status": "extracted"}
-{"from": "function:app/api/app.py:get_status", "to": "endpoint:GET /api/status", "type": "implements", "evidence": "app/api/app.py:348", "status": "extracted"}
-{"from": "file:app/api/app.py", "to": "endpoint:GET /api/status", "type": "exposes", "evidence": "app/api/app.py:348", "status": "extracted"}
-{"from": "function:app/api/app.py:get_refresh", "to": "endpoint:GET /api/refresh", "type": "implements", "evidence": "app/api/app.py:384", "status": "extracted"}
-{"from": "file:app/api/app.py", "to": "endpoint:GET /api/refresh", "type": "exposes", "evidence": "app/api/app.py:384", "status": "extracted"}
-{"from": "function:app/api/app.py:post_refresh", "to": "endpoint:POST /api/refresh", "type": "implements", "evidence": "app/api/app.py:389", "status": "extracted"}
-{"from": "file:app/api/app.py", "to": "endpoint:POST /api/refresh", "type": "exposes", "evidence": "app/api/app.py:389", "status": "extracted"}
-{"from": "function:app/api/app.py:get_meta", "to": "endpoint:GET /api/meta", "type": "implements", "evidence": "app/api/app.py:398", "status": "extracted"}
-{"from": "file:app/api/app.py", "to": "endpoint:GET /api/meta", "type": "exposes", "evidence": "app/api/app.py:398", "status": "extracted"}
-{"from": "function:app/api/app.py:get_workspaces", "to": "endpoint:GET /api/workspaces", "type": "implements", "evidence": "app/api/app.py:490", "status": "extracted"}
-{"from": "file:app/api/app.py", "to": "endpoint:GET /api/workspaces", "type": "exposes", "evidence": "app/api/app.py:490", "status": "extracted"}
-{"from": "function:app/api/app.py:get_dims", "to": "endpoint:GET /api/dims", "type": "implements", "evidence": "app/api/app.py:581", "status": "extracted"}
-{"from": "file:app/api/app.py", "to": "endpoint:GET /api/dims", "type": "exposes", "evidence": "app/api/app.py:581", "status": "extracted"}
-{"from": "function:app/api/app.py:get_coverage", "to": "endpoint:GET /api/coverage", "type": "implements", "evidence": "app/api/app.py:639", "status": "extracted"}
-{"from": "file:app/api/app.py", "to": "endpoint:GET /api/coverage", "type": "exposes", "evidence": "app/api/app.py:639", "status": "extracted"}
-{"from": "function:app/api/app.py:get_guide", "to": "endpoint:GET /api/guide", "type": "implements", "evidence": "app/api/app.py:712", "status": "extracted"}
-{"from": "file:app/api/app.py", "to": "endpoint:GET /api/guide", "type": "exposes", "evidence": "app/api/app.py:712", "status": "extracted"}
-{"from": "function:app/api/app.py:get_guide_sql", "to": "endpoint:GET /api/guide/sql/{query_id}", "type": "implements", "evidence": "app/api/app.py:717", "status": "extracted"}
-{"from": "file:app/api/app.py", "to": "endpoint:GET /api/guide/sql/{query_id}", "type": "exposes", "evidence": "app/api/app.py:717", "status": "extracted"}
-{"from": "function:app/api/app.py:get_rollup", "to": "endpoint:GET /api/rollup", "type": "implements", "evidence": "app/api/app.py:735", "status": "extracted"}
-{"from": "file:app/api/app.py", "to": "endpoint:GET /api/rollup", "type": "exposes", "evidence": "app/api/app.py:735", "status": "extracted"}
-{"from": "function:app/api/app.py:get_rollup_top", "to": "endpoint:GET /api/rollup/top", "type": "implements", "evidence": "app/api/app.py:764", "status": "extracted"}
-{"from": "file:app/api/app.py", "to": "endpoint:GET /api/rollup/top", "type": "exposes", "evidence": "app/api/app.py:764", "status": "extracted"}
-{"from": "function:app/api/app.py:get_rollup_keys", "to": "endpoint:GET /api/rollup/keys", "type": "implements", "evidence": "app/api/app.py:945", "status": "extracted"}
-{"from": "file:app/api/app.py", "to": "endpoint:GET /api/rollup/keys", "type": "exposes", "evidence": "app/api/app.py:945", "status": "extracted"}
-{"from": "function:app/api/app.py:get_tag_origins", "to": "endpoint:GET /api/tag_origins", "type": "implements", "evidence": "app/api/app.py:787", "status": "extracted"}
-{"from": "file:app/api/app.py", "to": "endpoint:GET /api/tag_origins", "type": "exposes", "evidence": "app/api/app.py:787", "status": "extracted"}
-{"from": "function:app/api/app.py:get_workspace_tags", "to": "endpoint:GET /api/workspace_tags", "type": "implements", "evidence": "app/api/app.py:801", "status": "extracted"}
-{"from": "file:app/api/app.py", "to": "endpoint:GET /api/workspace_tags", "type": "exposes", "evidence": "app/api/app.py:801", "status": "extracted"}
-{"from": "function:app/api/app.py:get_abac_policies", "to": "endpoint:GET /api/abac_policies", "type": "implements", "evidence": "app/api/app.py:816", "status": "extracted"}
-{"from": "file:app/api/app.py", "to": "endpoint:GET /api/abac_policies", "type": "exposes", "evidence": "app/api/app.py:816", "status": "extracted"}
-{"from": "function:app/api/app.py:get_workspace_usage", "to": "endpoint:GET /api/workspace_usage", "type": "implements", "evidence": "app/api/app.py:821", "status": "extracted"}
-{"from": "file:app/api/app.py", "to": "endpoint:GET /api/workspace_usage", "type": "exposes", "evidence": "app/api/app.py:821", "status": "extracted"}
-{"from": "function:app/api/app.py:get_workspace_schemas", "to": "endpoint:GET /api/workspace_schemas", "type": "implements", "evidence": "app/api/app.py:833", "status": "extracted"}
-{"from": "file:app/api/app.py", "to": "endpoint:GET /api/workspace_schemas", "type": "exposes", "evidence": "app/api/app.py:833", "status": "extracted"}
-{"from": "function:app/api/app.py:get_activity", "to": "endpoint:GET /api/activity", "type": "implements", "evidence": "app/api/app.py:839", "status": "extracted"}
-{"from": "file:app/api/app.py", "to": "endpoint:GET /api/activity", "type": "exposes", "evidence": "app/api/app.py:839", "status": "extracted"}
-{"from": "function:app/api/app.py:get_person_tables", "to": "endpoint:GET /api/person_tables", "type": "implements", "evidence": "app/api/app.py:851", "status": "extracted"}
-{"from": "file:app/api/app.py", "to": "endpoint:GET /api/person_tables", "type": "exposes", "evidence": "app/api/app.py:851", "status": "extracted"}
-{"from": "function:app/api/app.py:get_volumes", "to": "endpoint:GET /api/volumes", "type": "implements", "evidence": "app/api/app.py:857", "status": "extracted"}
-{"from": "file:app/api/app.py", "to": "endpoint:GET /api/volumes", "type": "exposes", "evidence": "app/api/app.py:857", "status": "extracted"}
-{"from": "function:app/api/app.py:get_volume_users", "to": "endpoint:GET /api/volume_users", "type": "implements", "evidence": "app/api/app.py:869", "status": "extracted"}
-{"from": "file:app/api/app.py", "to": "endpoint:GET /api/volume_users", "type": "exposes", "evidence": "app/api/app.py:869", "status": "extracted"}
-{"from": "function:app/api/app.py:get_tables", "to": "endpoint:GET /api/tables", "type": "implements", "evidence": "app/api/app.py:875", "status": "extracted"}
-{"from": "file:app/api/app.py", "to": "endpoint:GET /api/tables", "type": "exposes", "evidence": "app/api/app.py:875", "status": "extracted"}
-{"from": "function:app/api/app.py:get_people", "to": "endpoint:GET /api/people", "type": "implements", "evidence": "app/api/app.py:892", "status": "extracted"}
-{"from": "file:app/api/app.py", "to": "endpoint:GET /api/people", "type": "exposes", "evidence": "app/api/app.py:892", "status": "extracted"}
-{"from": "function:app/api/app.py:get_warehouses", "to": "endpoint:GET /api/warehouses", "type": "implements", "evidence": "app/api/app.py:902", "status": "extracted"}
-{"from": "file:app/api/app.py", "to": "endpoint:GET /api/warehouses", "type": "exposes", "evidence": "app/api/app.py:902", "status": "extracted"}
-{"from": "function:app/api/app.py:get_warehouse", "to": "endpoint:GET /api/warehouse", "type": "implements", "evidence": "app/api/app.py:913", "status": "extracted"}
-{"from": "file:app/api/app.py", "to": "endpoint:GET /api/warehouse", "type": "exposes", "evidence": "app/api/app.py:913", "status": "extracted"}
-{"from": "function:app/api/app.py:get_table", "to": "endpoint:GET /api/table", "type": "implements", "evidence": "app/api/app.py:919", "status": "extracted"}
-{"from": "file:app/api/app.py", "to": "endpoint:GET /api/table", "type": "exposes", "evidence": "app/api/app.py:919", "status": "extracted"}
-{"from": "function:app/api/app.py:get_table_sizes", "to": "endpoint:GET /api/table_sizes", "type": "implements", "evidence": "app/api/app.py:926", "status": "extracted"}
-{"from": "file:app/api/app.py", "to": "endpoint:GET /api/table_sizes", "type": "exposes", "evidence": "app/api/app.py:926", "status": "extracted"}
-{"from": "function:app/api/app.py:get_tag_compliance", "to": "endpoint:GET /api/tag_compliance", "type": "implements", "evidence": "app/api/app.py:931", "status": "extracted"}
-{"from": "file:app/api/app.py", "to": "endpoint:GET /api/tag_compliance", "type": "exposes", "evidence": "app/api/app.py:931", "status": "extracted"}
-{"from": "function:app/api/app.py:get_tags", "to": "endpoint:GET /api/tags", "type": "implements", "evidence": "app/api/app.py:964", "status": "extracted"}
-{"from": "file:app/api/app.py", "to": "endpoint:GET /api/tags", "type": "exposes", "evidence": "app/api/app.py:964", "status": "extracted"}
-{"from": "function:app/api/app.py:get_findings", "to": "endpoint:GET /api/findings", "type": "implements", "evidence": "app/api/app.py:999", "status": "extracted"}
-{"from": "file:app/api/app.py", "to": "endpoint:GET /api/findings", "type": "exposes", "evidence": "app/api/app.py:999", "status": "extracted"}
-{"from": "function:app/api/app.py:get_finding", "to": "endpoint:GET /api/finding/{query_id}", "type": "implements", "evidence": "app/api/app.py:1137", "status": "extracted"}
-{"from": "file:app/api/app.py", "to": "endpoint:GET /api/finding/{query_id}", "type": "exposes", "evidence": "app/api/app.py:1137", "status": "extracted"}
-{"from": "function:app/api/app.py:get_finding_aggregate", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "implements", "evidence": "app/api/app.py:1306", "status": "extracted"}
-{"from": "file:app/api/app.py", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "exposes", "evidence": "app/api/app.py:1306", "status": "extracted"}
-{"from": "function:app/api/app.py:index_page", "to": "endpoint:GET /", "type": "implements", "evidence": "app/api/app.py:1434", "status": "extracted"}
-{"from": "file:app/api/app.py", "to": "endpoint:GET /", "type": "exposes", "evidence": "app/api/app.py:1434", "status": "extracted"}
-{"from": "endpoint:GET /api/status", "to": "function:app/core/config.py:load_settings", "type": "calls", "evidence": "app/api/app.py:357", "status": "extracted"}
-{"from": "endpoint:GET /api/status", "to": "function:app/core/data.py:db_state", "type": "calls", "evidence": "app/api/app.py:364", "status": "extracted"}
-{"from": "endpoint:POST /api/refresh", "to": "function:app/api/refresh.py:start", "type": "calls", "evidence": "app/api/app.py:392", "status": "extracted"}
-{"from": "endpoint:GET /api/refresh", "to": "function:app/api/refresh.py:status", "type": "calls", "evidence": "app/api/app.py:386", "status": "extracted"}
-{"from": "endpoint:GET /api/findings", "to": "function:app/api/service.py:list_findings", "type": "calls", "evidence": "app/api/app.py:1022", "status": "extracted"}
-{"from": "endpoint:GET /api/finding/{query_id}", "to": "function:app/api/service.py:load_outcome", "type": "calls", "evidence": "app/api/app.py:1173", "status": "extracted"}
-{"from": "endpoint:GET /api/finding/{query_id}", "to": "function:app/core/pricing.py:apply", "type": "calls", "evidence": "app/api/app.py:1249", "status": "extracted"}
-{"from": "endpoint:GET /api/finding/{query_id}/aggregate", "to": "function:app/api/service.py:load_aggregate", "type": "calls", "evidence": "app/api/app.py:1334", "status": "extracted"}
-{"from": "endpoint:GET /api/rollup", "to": "function:app/core/rollup.py:rollup", "type": "calls", "evidence": "app/api/app.py:754", "status": "extracted"}
-{"from": "endpoint:GET /api/rollup/top", "to": "function:app/core/rollup.py:by_tag_top", "type": "calls", "evidence": "app/api/app.py:778", "status": "extracted"}
-{"from": "endpoint:GET /api/rollup/keys", "to": "function:app/core/rollup.py:rollup_keys", "type": "calls", "evidence": "app/api/app.py:953", "status": "extracted"}
-{"from": "endpoint:GET /api/tags", "to": "function:app/core/tags.py:read_tag_index", "type": "calls", "evidence": "app/api/app.py:973", "status": "extracted"}
-{"from": "endpoint:GET /api/guide", "to": "function:app/api/guide.py:build_guide", "type": "calls", "evidence": "app/api/app.py:714", "status": "extracted"}
-{"from": "endpoint:GET /api/guide/sql/{query_id}", "to": "function:app/api/guide.py:runnable_sql", "type": "calls", "evidence": "app/api/app.py:721", "status": "extracted"}
-{"from": "endpoint:GET /api/meta", "to": "function:app/core/rls.py:meta", "type": "calls", "evidence": "app/api/app.py:467", "status": "extracted"}
-{"from": "endpoint:GET /api/workspaces", "to": "function:app/core/data.py:read_dim_workspace", "type": "calls", "evidence": "app/api/app.py:500", "status": "extracted"}
-{"from": "endpoint:GET /api/tag_compliance", "to": "function:app/core/data.py:read_tag_compliance", "type": "calls", "evidence": "app/api/app.py:942", "status": "extracted"}
+{"from": "function:app/api/app.py:get_status", "to": "endpoint:GET /api/status", "type": "implements", "evidence": "app/api/app.py:349", "status": "extracted"}
+{"from": "file:app/api/app.py", "to": "endpoint:GET /api/status", "type": "exposes", "evidence": "app/api/app.py:349", "status": "extracted"}
+{"from": "function:app/api/app.py:get_refresh", "to": "endpoint:GET /api/refresh", "type": "implements", "evidence": "app/api/app.py:385", "status": "extracted"}
+{"from": "file:app/api/app.py", "to": "endpoint:GET /api/refresh", "type": "exposes", "evidence": "app/api/app.py:385", "status": "extracted"}
+{"from": "function:app/api/app.py:post_refresh", "to": "endpoint:POST /api/refresh", "type": "implements", "evidence": "app/api/app.py:401", "status": "extracted"}
+{"from": "file:app/api/app.py", "to": "endpoint:POST /api/refresh", "type": "exposes", "evidence": "app/api/app.py:401", "status": "extracted"}
+{"from": "function:app/api/app.py:get_meta", "to": "endpoint:GET /api/meta", "type": "implements", "evidence": "app/api/app.py:417", "status": "extracted"}
+{"from": "file:app/api/app.py", "to": "endpoint:GET /api/meta", "type": "exposes", "evidence": "app/api/app.py:417", "status": "extracted"}
+{"from": "function:app/api/app.py:get_workspaces", "to": "endpoint:GET /api/workspaces", "type": "implements", "evidence": "app/api/app.py:509", "status": "extracted"}
+{"from": "file:app/api/app.py", "to": "endpoint:GET /api/workspaces", "type": "exposes", "evidence": "app/api/app.py:509", "status": "extracted"}
+{"from": "function:app/api/app.py:get_dims", "to": "endpoint:GET /api/dims", "type": "implements", "evidence": "app/api/app.py:600", "status": "extracted"}
+{"from": "file:app/api/app.py", "to": "endpoint:GET /api/dims", "type": "exposes", "evidence": "app/api/app.py:600", "status": "extracted"}
+{"from": "function:app/api/app.py:get_coverage", "to": "endpoint:GET /api/coverage", "type": "implements", "evidence": "app/api/app.py:658", "status": "extracted"}
+{"from": "file:app/api/app.py", "to": "endpoint:GET /api/coverage", "type": "exposes", "evidence": "app/api/app.py:658", "status": "extracted"}
+{"from": "function:app/api/app.py:get_guide", "to": "endpoint:GET /api/guide", "type": "implements", "evidence": "app/api/app.py:731", "status": "extracted"}
+{"from": "file:app/api/app.py", "to": "endpoint:GET /api/guide", "type": "exposes", "evidence": "app/api/app.py:731", "status": "extracted"}
+{"from": "function:app/api/app.py:get_guide_sql", "to": "endpoint:GET /api/guide/sql/{query_id}", "type": "implements", "evidence": "app/api/app.py:736", "status": "extracted"}
+{"from": "file:app/api/app.py", "to": "endpoint:GET /api/guide/sql/{query_id}", "type": "exposes", "evidence": "app/api/app.py:736", "status": "extracted"}
+{"from": "function:app/api/app.py:get_rollup", "to": "endpoint:GET /api/rollup", "type": "implements", "evidence": "app/api/app.py:754", "status": "extracted"}
+{"from": "file:app/api/app.py", "to": "endpoint:GET /api/rollup", "type": "exposes", "evidence": "app/api/app.py:754", "status": "extracted"}
+{"from": "function:app/api/app.py:get_rollup_top", "to": "endpoint:GET /api/rollup/top", "type": "implements", "evidence": "app/api/app.py:783", "status": "extracted"}
+{"from": "file:app/api/app.py", "to": "endpoint:GET /api/rollup/top", "type": "exposes", "evidence": "app/api/app.py:783", "status": "extracted"}
+{"from": "function:app/api/app.py:get_rollup_keys", "to": "endpoint:GET /api/rollup/keys", "type": "implements", "evidence": "app/api/app.py:964", "status": "extracted"}
+{"from": "file:app/api/app.py", "to": "endpoint:GET /api/rollup/keys", "type": "exposes", "evidence": "app/api/app.py:964", "status": "extracted"}
+{"from": "function:app/api/app.py:get_tag_origins", "to": "endpoint:GET /api/tag_origins", "type": "implements", "evidence": "app/api/app.py:806", "status": "extracted"}
+{"from": "file:app/api/app.py", "to": "endpoint:GET /api/tag_origins", "type": "exposes", "evidence": "app/api/app.py:806", "status": "extracted"}
+{"from": "function:app/api/app.py:get_workspace_tags", "to": "endpoint:GET /api/workspace_tags", "type": "implements", "evidence": "app/api/app.py:820", "status": "extracted"}
+{"from": "file:app/api/app.py", "to": "endpoint:GET /api/workspace_tags", "type": "exposes", "evidence": "app/api/app.py:820", "status": "extracted"}
+{"from": "function:app/api/app.py:get_abac_policies", "to": "endpoint:GET /api/abac_policies", "type": "implements", "evidence": "app/api/app.py:835", "status": "extracted"}
+{"from": "file:app/api/app.py", "to": "endpoint:GET /api/abac_policies", "type": "exposes", "evidence": "app/api/app.py:835", "status": "extracted"}
+{"from": "function:app/api/app.py:get_workspace_usage", "to": "endpoint:GET /api/workspace_usage", "type": "implements", "evidence": "app/api/app.py:840", "status": "extracted"}
+{"from": "file:app/api/app.py", "to": "endpoint:GET /api/workspace_usage", "type": "exposes", "evidence": "app/api/app.py:840", "status": "extracted"}
+{"from": "function:app/api/app.py:get_workspace_schemas", "to": "endpoint:GET /api/workspace_schemas", "type": "implements", "evidence": "app/api/app.py:852", "status": "extracted"}
+{"from": "file:app/api/app.py", "to": "endpoint:GET /api/workspace_schemas", "type": "exposes", "evidence": "app/api/app.py:852", "status": "extracted"}
+{"from": "function:app/api/app.py:get_activity", "to": "endpoint:GET /api/activity", "type": "implements", "evidence": "app/api/app.py:858", "status": "extracted"}
+{"from": "file:app/api/app.py", "to": "endpoint:GET /api/activity", "type": "exposes", "evidence": "app/api/app.py:858", "status": "extracted"}
+{"from": "function:app/api/app.py:get_person_tables", "to": "endpoint:GET /api/person_tables", "type": "implements", "evidence": "app/api/app.py:870", "status": "extracted"}
+{"from": "file:app/api/app.py", "to": "endpoint:GET /api/person_tables", "type": "exposes", "evidence": "app/api/app.py:870", "status": "extracted"}
+{"from": "function:app/api/app.py:get_volumes", "to": "endpoint:GET /api/volumes", "type": "implements", "evidence": "app/api/app.py:876", "status": "extracted"}
+{"from": "file:app/api/app.py", "to": "endpoint:GET /api/volumes", "type": "exposes", "evidence": "app/api/app.py:876", "status": "extracted"}
+{"from": "function:app/api/app.py:get_volume_users", "to": "endpoint:GET /api/volume_users", "type": "implements", "evidence": "app/api/app.py:888", "status": "extracted"}
+{"from": "file:app/api/app.py", "to": "endpoint:GET /api/volume_users", "type": "exposes", "evidence": "app/api/app.py:888", "status": "extracted"}
+{"from": "function:app/api/app.py:get_tables", "to": "endpoint:GET /api/tables", "type": "implements", "evidence": "app/api/app.py:894", "status": "extracted"}
+{"from": "file:app/api/app.py", "to": "endpoint:GET /api/tables", "type": "exposes", "evidence": "app/api/app.py:894", "status": "extracted"}
+{"from": "function:app/api/app.py:get_people", "to": "endpoint:GET /api/people", "type": "implements", "evidence": "app/api/app.py:911", "status": "extracted"}
+{"from": "file:app/api/app.py", "to": "endpoint:GET /api/people", "type": "exposes", "evidence": "app/api/app.py:911", "status": "extracted"}
+{"from": "function:app/api/app.py:get_warehouses", "to": "endpoint:GET /api/warehouses", "type": "implements", "evidence": "app/api/app.py:921", "status": "extracted"}
+{"from": "file:app/api/app.py", "to": "endpoint:GET /api/warehouses", "type": "exposes", "evidence": "app/api/app.py:921", "status": "extracted"}
+{"from": "function:app/api/app.py:get_warehouse", "to": "endpoint:GET /api/warehouse", "type": "implements", "evidence": "app/api/app.py:932", "status": "extracted"}
+{"from": "file:app/api/app.py", "to": "endpoint:GET /api/warehouse", "type": "exposes", "evidence": "app/api/app.py:932", "status": "extracted"}
+{"from": "function:app/api/app.py:get_table", "to": "endpoint:GET /api/table", "type": "implements", "evidence": "app/api/app.py:938", "status": "extracted"}
+{"from": "file:app/api/app.py", "to": "endpoint:GET /api/table", "type": "exposes", "evidence": "app/api/app.py:938", "status": "extracted"}
+{"from": "function:app/api/app.py:get_table_sizes", "to": "endpoint:GET /api/table_sizes", "type": "implements", "evidence": "app/api/app.py:945", "status": "extracted"}
+{"from": "file:app/api/app.py", "to": "endpoint:GET /api/table_sizes", "type": "exposes", "evidence": "app/api/app.py:945", "status": "extracted"}
+{"from": "function:app/api/app.py:get_tag_compliance", "to": "endpoint:GET /api/tag_compliance", "type": "implements", "evidence": "app/api/app.py:950", "status": "extracted"}
+{"from": "file:app/api/app.py", "to": "endpoint:GET /api/tag_compliance", "type": "exposes", "evidence": "app/api/app.py:950", "status": "extracted"}
+{"from": "function:app/api/app.py:get_tags", "to": "endpoint:GET /api/tags", "type": "implements", "evidence": "app/api/app.py:983", "status": "extracted"}
+{"from": "file:app/api/app.py", "to": "endpoint:GET /api/tags", "type": "exposes", "evidence": "app/api/app.py:983", "status": "extracted"}
+{"from": "function:app/api/app.py:get_findings", "to": "endpoint:GET /api/findings", "type": "implements", "evidence": "app/api/app.py:1018", "status": "extracted"}
+{"from": "file:app/api/app.py", "to": "endpoint:GET /api/findings", "type": "exposes", "evidence": "app/api/app.py:1018", "status": "extracted"}
+{"from": "function:app/api/app.py:get_finding", "to": "endpoint:GET /api/finding/{query_id}", "type": "implements", "evidence": "app/api/app.py:1156", "status": "extracted"}
+{"from": "file:app/api/app.py", "to": "endpoint:GET /api/finding/{query_id}", "type": "exposes", "evidence": "app/api/app.py:1156", "status": "extracted"}
+{"from": "function:app/api/app.py:get_finding_aggregate", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "implements", "evidence": "app/api/app.py:1325", "status": "extracted"}
+{"from": "file:app/api/app.py", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "exposes", "evidence": "app/api/app.py:1325", "status": "extracted"}
+{"from": "function:app/api/app.py:index_page", "to": "endpoint:GET /", "type": "implements", "evidence": "app/api/app.py:1453", "status": "extracted"}
+{"from": "file:app/api/app.py", "to": "endpoint:GET /", "type": "exposes", "evidence": "app/api/app.py:1453", "status": "extracted"}
+{"from": "endpoint:GET /api/status", "to": "function:app/core/config.py:load_settings", "type": "calls", "evidence": "app/api/app.py:358", "status": "extracted"}
+{"from": "endpoint:GET /api/status", "to": "function:app/core/data.py:db_state", "type": "calls", "evidence": "app/api/app.py:365", "status": "extracted"}
+{"from": "endpoint:POST /api/refresh", "to": "function:app/api/refresh.py:start", "type": "calls", "evidence": "app/api/app.py:411", "status": "extracted"}
+{"from": "endpoint:GET /api/refresh", "to": "function:app/api/refresh.py:status", "type": "calls", "evidence": "app/api/app.py:387", "status": "extracted"}
+{"from": "endpoint:GET /api/findings", "to": "function:app/api/service.py:list_findings", "type": "calls", "evidence": "app/api/app.py:1041", "status": "extracted"}
+{"from": "endpoint:GET /api/finding/{query_id}", "to": "function:app/api/service.py:load_outcome", "type": "calls", "evidence": "app/api/app.py:1192", "status": "extracted"}
+{"from": "endpoint:GET /api/finding/{query_id}", "to": "function:app/core/pricing.py:apply", "type": "calls", "evidence": "app/api/app.py:1268", "status": "extracted"}
+{"from": "endpoint:GET /api/finding/{query_id}/aggregate", "to": "function:app/api/service.py:load_aggregate", "type": "calls", "evidence": "app/api/app.py:1353", "status": "extracted"}
+{"from": "endpoint:GET /api/rollup", "to": "function:app/core/rollup.py:rollup", "type": "calls", "evidence": "app/api/app.py:773", "status": "extracted"}
+{"from": "endpoint:GET /api/rollup/top", "to": "function:app/core/rollup.py:by_tag_top", "type": "calls", "evidence": "app/api/app.py:797", "status": "extracted"}
+{"from": "endpoint:GET /api/rollup/keys", "to": "function:app/core/rollup.py:rollup_keys", "type": "calls", "evidence": "app/api/app.py:972", "status": "extracted"}
+{"from": "endpoint:GET /api/tags", "to": "function:app/core/tags.py:read_tag_index", "type": "calls", "evidence": "app/api/app.py:992", "status": "extracted"}
+{"from": "endpoint:GET /api/guide", "to": "function:app/api/guide.py:build_guide", "type": "calls", "evidence": "app/api/app.py:733", "status": "extracted"}
+{"from": "endpoint:GET /api/guide/sql/{query_id}", "to": "function:app/api/guide.py:runnable_sql", "type": "calls", "evidence": "app/api/app.py:740", "status": "extracted"}
+{"from": "endpoint:GET /api/meta", "to": "function:app/core/rls.py:meta", "type": "calls", "evidence": "app/api/app.py:486", "status": "extracted"}
+{"from": "endpoint:GET /api/workspaces", "to": "function:app/core/data.py:read_dim_workspace", "type": "calls", "evidence": "app/api/app.py:519", "status": "extracted"}
+{"from": "endpoint:GET /api/tag_compliance", "to": "function:app/core/data.py:read_tag_compliance", "type": "calls", "evidence": "app/api/app.py:961", "status": "extracted"}
 {"from": "function:app/api/service.py:load_outcome", "to": "function:app/core/data.py:read_finding", "type": "calls", "evidence": "app/api/service.py:549", "status": "extracted"}
 {"from": "function:app/api/service.py:load_outcome", "to": "function:app/core/data.py:count_finding", "type": "calls", "evidence": "app/api/service.py:516", "status": "extracted"}
 {"from": "function:app/api/service.py:load_outcome", "to": "function:app/core/data.py:finding_status", "type": "calls", "evidence": "app/api/service.py:475", "status": "extracted"}
 {"from": "function:app/api/service.py:load_aggregate", "to": "function:app/core/data.py:aggregate_finding", "type": "calls", "evidence": "app/api/service.py:684", "status": "extracted"}
 {"from": "function:app/api/service.py:list_findings", "to": "function:app/core/data.py:finding_window_counts", "type": "calls", "evidence": "app/api/service.py:844", "status": "extracted"}
 {"from": "function:tools/first_run.py:main", "to": "flow:export_load_serve", "type": "part_of", "evidence": "tools/first_run.py:162", "status": "extracted"}
-{"from": "function:tools/export_direct_results.py:run_export", "to": "flow:export_load_serve", "type": "part_of", "evidence": "tools/export_direct_results.py:1091", "status": "extracted"}
+{"from": "function:tools/export_direct_results.py:run_export", "to": "flow:export_load_serve", "type": "part_of", "evidence": "tools/export_direct_results.py:1120", "status": "extracted"}
 {"from": "function:tools/snapshot.py:connect", "to": "flow:export_load_serve", "type": "part_of", "evidence": "tools/snapshot.py:485", "status": "extracted"}
-{"from": "function:tools/load_direct_results.py:load_folder", "to": "flow:export_load_serve", "type": "part_of", "evidence": "tools/load_direct_results.py:411", "status": "extracted"}
+{"from": "function:tools/load_direct_results.py:load_folder", "to": "flow:export_load_serve", "type": "part_of", "evidence": "tools/load_direct_results.py:426", "status": "extracted"}
 {"from": "function:app/api/__main__.py:main", "to": "flow:export_load_serve", "type": "part_of", "evidence": "app/api/__main__.py:14", "status": "extracted"}
-{"from": "endpoint:GET /api/status", "to": "flow:export_load_serve", "type": "part_of", "evidence": "app/api/app.py:348", "status": "extracted"}
-{"from": "endpoint:GET /api/findings", "to": "flow:export_load_serve", "type": "part_of", "evidence": "app/api/app.py:999", "status": "extracted"}
+{"from": "endpoint:GET /api/status", "to": "flow:export_load_serve", "type": "part_of", "evidence": "app/api/app.py:349", "status": "extracted"}
+{"from": "endpoint:GET /api/findings", "to": "flow:export_load_serve", "type": "part_of", "evidence": "app/api/app.py:1018", "status": "extracted"}
 {"from": "process:run_locally", "to": "flow:export_load_serve", "type": "part_of", "evidence": "README.md:65", "status": "extracted"}
 {"from": "function:tools/first_run.py:main", "to": "function:tools/export_direct_results.py:main", "type": "calls", "evidence": "tools/first_run.py:174", "status": "extracted"}
 {"from": "function:tools/first_run.py:main", "to": "function:tools/load_direct_results.py:main", "type": "calls", "evidence": "tools/first_run.py:185", "status": "extracted"}
-{"from": "function:tools/export_direct_results.py:run_export", "to": "function:tools/snapshot.py:connect", "type": "calls", "evidence": "tools/export_direct_results.py:1145", "status": "extracted"}
+{"from": "function:tools/export_direct_results.py:run_export", "to": "function:tools/snapshot.py:connect", "type": "calls", "evidence": "tools/export_direct_results.py:1174", "status": "extracted"}
 {"from": "function:tools/snapshot.py:connect", "to": "external_system:databricks_sql_warehouse", "type": "calls", "evidence": "tools/snapshot.py:536", "status": "extracted"}
-{"from": "function:tools/export_direct_results.py:run_export", "to": "external_system:databricks_system_tables", "type": "reads", "evidence": "tools/export_direct_results.py:1208", "status": "extracted"}
-{"from": "function:tools/export_direct_results.py:run_export", "to": "example_data:data_dir/results_stamp", "type": "writes", "evidence": "tools/export_direct_results.py:1338", "status": "extracted"}
-{"from": "function:tools/load_direct_results.py:load_folder", "to": "example_data:data_dir/results_stamp", "type": "reads", "evidence": "tools/load_direct_results.py:411", "status": "extracted"}
-{"from": "function:tools/load_direct_results.py:_load_root", "to": "example_data:data_dir/audit.duckdb", "type": "writes", "evidence": "tools/load_direct_results.py:853", "status": "extracted"}
-{"from": "function:tools/load_direct_results.py:main", "to": "example_data:data_dir/current_db.txt", "type": "writes", "evidence": "tools/load_direct_results.py:932", "status": "extracted"}
-{"from": "function:app/core/data.py:_base_db_path", "to": "example_data:data_dir/current_db.txt", "type": "reads", "evidence": "app/core/data.py:209", "status": "extracted"}
-{"from": "function:app/core/data.py:_connect", "to": "example_data:data_dir/audit.duckdb", "type": "reads", "evidence": "app/core/data.py:311", "status": "extracted"}
+{"from": "function:tools/export_direct_results.py:run_export", "to": "external_system:databricks_system_tables", "type": "reads", "evidence": "tools/export_direct_results.py:1237", "status": "extracted"}
+{"from": "function:tools/export_direct_results.py:run_export", "to": "example_data:data_dir/results_stamp", "type": "writes", "evidence": "tools/export_direct_results.py:1368", "status": "extracted"}
+{"from": "function:tools/load_direct_results.py:load_folder", "to": "example_data:data_dir/results_stamp", "type": "reads", "evidence": "tools/load_direct_results.py:426", "status": "extracted"}
+{"from": "function:tools/load_direct_results.py:_load_root", "to": "example_data:data_dir/audit.duckdb", "type": "writes", "evidence": "tools/load_direct_results.py:876", "status": "extracted"}
+{"from": "function:tools/load_direct_results.py:main", "to": "example_data:data_dir/current_db.txt", "type": "writes", "evidence": "tools/load_direct_results.py:955", "status": "extracted"}
+{"from": "function:app/core/data.py:_base_db_path", "to": "example_data:data_dir/current_db.txt", "type": "reads", "evidence": "app/core/data.py:210", "status": "extracted"}
+{"from": "function:app/core/data.py:_connect", "to": "example_data:data_dir/audit.duckdb", "type": "reads", "evidence": "app/core/data.py:317", "status": "extracted"}
 {"from": "function:app/api/__main__.py:main", "to": "file:app/api/app.py", "type": "calls", "evidence": "app/api/__main__.py:25", "status": "extracted"}
-{"from": "external_system:browser", "to": "endpoint:GET /", "type": "calls", "evidence": "app/api/app.py:1434", "status": "extracted"}
+{"from": "external_system:browser", "to": "endpoint:GET /", "type": "calls", "evidence": "app/api/app.py:1453", "status": "extracted"}
 {"from": "external_system:browser", "to": "endpoint:GET /api/status", "type": "calls", "evidence": "web/src/App.tsx:842", "status": "extracted"}
-{"from": "endpoint:POST /api/refresh", "to": "flow:refresh_in_app", "type": "part_of", "evidence": "app/api/app.py:389", "status": "extracted"}
-{"from": "endpoint:GET /api/refresh", "to": "flow:refresh_in_app", "type": "part_of", "evidence": "app/api/app.py:384", "status": "extracted"}
-{"from": "function:app/api/refresh.py:start", "to": "flow:refresh_in_app", "type": "part_of", "evidence": "app/api/refresh.py:31", "status": "extracted"}
-{"from": "function:app/api/refresh.py:_run", "to": "flow:refresh_in_app", "type": "part_of", "evidence": "app/api/refresh.py:48", "status": "extracted"}
-{"from": "function:app/core/rls.py:build_sets", "to": "flow:refresh_in_app", "type": "part_of", "evidence": "app/api/refresh.py:61", "status": "extracted"}
-{"from": "function:app/core/datasource.py:set_current_db", "to": "flow:refresh_in_app", "type": "part_of", "evidence": "app/api/refresh.py:63", "status": "extracted"}
-{"from": "function:app/api/refresh.py:start", "to": "function:app/api/refresh.py:_run", "type": "triggers", "evidence": "app/api/refresh.py:37", "status": "extracted"}
-{"from": "function:app/api/refresh.py:_run", "to": "function:tools/export_direct_results.py:main", "type": "calls", "evidence": "app/api/refresh.py:54", "status": "extracted"}
-{"from": "function:app/api/refresh.py:_run", "to": "function:tools/load_direct_results.py:main", "type": "calls", "evidence": "app/api/refresh.py:56", "status": "extracted"}
-{"from": "function:app/api/refresh.py:_run", "to": "function:app/core/rls.py:build_sets", "type": "calls", "evidence": "app/api/refresh.py:61", "status": "extracted"}
-{"from": "function:app/api/refresh.py:_run", "to": "function:app/core/datasource.py:set_current_db", "type": "calls", "evidence": "app/api/refresh.py:63", "status": "extracted"}
-{"from": "function:app/api/refresh.py:_run", "to": "config:env.AUDIT_DB", "type": "writes", "evidence": "app/api/refresh.py:64", "status": "extracted"}
-{"from": "function:app/api/refresh.py:_run", "to": "example_data:data_dir/audit.duckdb", "type": "writes", "evidence": "app/api/refresh.py:52", "status": "extracted"}
+{"from": "endpoint:POST /api/refresh", "to": "flow:refresh_in_app", "type": "part_of", "evidence": "app/api/app.py:401", "status": "extracted"}
+{"from": "endpoint:GET /api/refresh", "to": "flow:refresh_in_app", "type": "part_of", "evidence": "app/api/app.py:385", "status": "extracted"}
+{"from": "function:app/api/refresh.py:start", "to": "flow:refresh_in_app", "type": "part_of", "evidence": "app/api/refresh.py:34", "status": "extracted"}
+{"from": "function:app/api/refresh.py:_run", "to": "flow:refresh_in_app", "type": "part_of", "evidence": "app/api/refresh.py:51", "status": "extracted"}
+{"from": "function:app/core/rls.py:build_sets", "to": "flow:refresh_in_app", "type": "part_of", "evidence": "app/api/refresh.py:65", "status": "extracted"}
+{"from": "function:app/core/datasource.py:set_current_db", "to": "flow:refresh_in_app", "type": "part_of", "evidence": "app/api/refresh.py:67", "status": "extracted"}
+{"from": "function:app/api/refresh.py:start", "to": "function:app/api/refresh.py:_run", "type": "triggers", "evidence": "app/api/refresh.py:40", "status": "extracted"}
+{"from": "function:app/api/refresh.py:_run", "to": "function:tools/export_direct_results.py:main", "type": "calls", "evidence": "app/api/refresh.py:57", "status": "extracted"}
+{"from": "function:app/api/refresh.py:_run", "to": "function:tools/load_direct_results.py:main", "type": "calls", "evidence": "app/api/refresh.py:60", "status": "extracted"}
+{"from": "function:app/api/refresh.py:_run", "to": "function:app/core/rls.py:build_sets", "type": "calls", "evidence": "app/api/refresh.py:65", "status": "extracted"}
+{"from": "function:app/api/refresh.py:_run", "to": "function:app/core/datasource.py:set_current_db", "type": "calls", "evidence": "app/api/refresh.py:67", "status": "extracted"}
+{"from": "function:app/api/refresh.py:_run", "to": "config:env.AUDIT_DB", "type": "writes", "evidence": "app/api/refresh.py:68", "status": "extracted"}
+{"from": "function:app/api/refresh.py:_run", "to": "example_data:data_dir/audit.duckdb", "type": "writes", "evidence": "app/api/refresh.py:55", "status": "extracted"}
 {"from": "function:app/core/datasource.py:set_current_db", "to": "example_data:data_dir/current_db.txt", "type": "writes", "evidence": "app/core/datasource.py:62", "status": "extracted"}
 {"from": "external_system:browser", "to": "endpoint:POST /api/refresh", "type": "calls", "evidence": "web/src/api.ts:78", "status": "extracted"}
 {"from": "external_system:browser", "to": "endpoint:GET /api/refresh", "type": "calls", "evidence": "web/src/components/first_run.tsx:15", "status": "extracted"}
 {"from": "function:web/src/components/hooks.ts:useFindingData", "to": "flow:api_request", "type": "part_of", "evidence": "web/src/components/hooks.ts:85", "status": "extracted"}
 {"from": "function:web/src/api.ts:getJson", "to": "flow:api_request", "type": "part_of", "evidence": "web/src/api.ts:24", "status": "extracted"}
-{"from": "function:app/api/app.py:_PrincipalMiddleware", "to": "flow:api_request", "type": "part_of", "evidence": "app/api/app.py:186", "status": "extracted"}
-{"from": "endpoint:GET /api/finding/{query_id}", "to": "flow:api_request", "type": "part_of", "evidence": "app/api/app.py:1137", "status": "extracted"}
+{"from": "function:app/api/app.py:_PrincipalMiddleware", "to": "flow:api_request", "type": "part_of", "evidence": "app/api/app.py:187", "status": "extracted"}
+{"from": "endpoint:GET /api/finding/{query_id}", "to": "flow:api_request", "type": "part_of", "evidence": "app/api/app.py:1156", "status": "extracted"}
 {"from": "function:app/api/service.py:load_outcome", "to": "flow:api_request", "type": "part_of", "evidence": "app/api/service.py:427", "status": "extracted"}
-{"from": "function:app/core/data.py:read_finding", "to": "flow:api_request", "type": "part_of", "evidence": "app/core/data.py:806", "status": "extracted"}
-{"from": "function:app/core/data.py:_connect", "to": "flow:api_request", "type": "part_of", "evidence": "app/core/data.py:301", "status": "extracted"}
+{"from": "function:app/core/data.py:read_finding", "to": "flow:api_request", "type": "part_of", "evidence": "app/core/data.py:822", "status": "extracted"}
+{"from": "function:app/core/data.py:_connect", "to": "flow:api_request", "type": "part_of", "evidence": "app/core/data.py:304", "status": "extracted"}
 {"from": "function:web/src/components/hooks.ts:useFindingData", "to": "function:web/src/api.ts:Api.finding", "type": "calls", "evidence": "web/src/components/hooks.ts:97", "status": "extracted"}
 {"from": "function:web/src/api.ts:getJson", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/api.ts:113", "status": "extracted"}
 {"from": "function:web/src/api.ts:getJson", "to": "endpoint:GET /api/findings", "type": "calls", "evidence": "web/src/api.ts:106", "status": "extracted"}
-{"from": "function:app/core/data.py:read_finding", "to": "function:app/core/data.py:_connect", "type": "calls", "evidence": "app/core/data.py:833", "status": "extracted"}
-{"from": "function:app/core/data.py:read_finding", "to": "example_data:data_dir/audit.duckdb", "type": "reads", "evidence": "app/core/data.py:887", "status": "extracted"}
+{"from": "function:app/core/data.py:read_finding", "to": "function:app/core/data.py:_connect", "type": "calls", "evidence": "app/core/data.py:849", "status": "extracted"}
+{"from": "function:app/core/data.py:read_finding", "to": "example_data:data_dir/audit.duckdb", "type": "reads", "evidence": "app/core/data.py:903", "status": "extracted"}
 {"from": "test_case:tests/test_api.py:test_finding_detail_ok_rows", "to": "endpoint:GET /api/finding/{query_id}", "type": "illustrates", "evidence": "tests/test_api.py:1134", "status": "extracted"}
 {"from": "test_case:tests/test_api.py:test_findings_list_default_window_and_status_counts", "to": "endpoint:GET /api/findings", "type": "illustrates", "evidence": "tests/test_api.py:1061", "status": "extracted"}
 {"from": "function:tools/app_start.py:main", "to": "flow:databricks_app", "type": "part_of", "evidence": "tools/app_start.py:34", "status": "extracted"}
 {"from": "function:tools/app_start.py:unpack", "to": "flow:databricks_app", "type": "part_of", "evidence": "tools/app_start.py:21", "status": "extracted"}
 {"from": "function:app/api/__main__.py:main", "to": "flow:databricks_app", "type": "part_of", "evidence": "app/api/__main__.py:15", "status": "extracted"}
-{"from": "function:app/api/app.py:_PrincipalMiddleware", "to": "flow:databricks_app", "type": "part_of", "evidence": "app/api/app.py:187", "status": "extracted"}
-{"from": "function:app/core/rls.py:scoped_connection", "to": "flow:databricks_app", "type": "part_of", "evidence": "app/core/rls.py:582", "status": "extracted"}
-{"from": "function:app/core/rls.py:resolve", "to": "flow:databricks_app", "type": "part_of", "evidence": "app/core/rls.py:476", "status": "extracted"}
+{"from": "function:app/api/app.py:_PrincipalMiddleware", "to": "flow:databricks_app", "type": "part_of", "evidence": "app/api/app.py:188", "status": "extracted"}
+{"from": "function:app/core/rls.py:scoped_connection", "to": "flow:databricks_app", "type": "part_of", "evidence": "app/core/rls.py:587", "status": "extracted"}
+{"from": "function:app/core/rls.py:resolve", "to": "flow:databricks_app", "type": "part_of", "evidence": "app/core/rls.py:481", "status": "extracted"}
 {"from": "function:tools/snapshot.py:_app_principal_auth", "to": "flow:databricks_app", "type": "part_of", "evidence": "tools/snapshot.py:473", "status": "extracted"}
 {"from": "flow:refresh_in_app", "to": "flow:databricks_app", "type": "part_of", "evidence": "web/src/components/first_run.tsx:25", "status": "extracted"}
-{"from": "process:deploy_app", "to": "flow:databricks_app", "type": "part_of", "evidence": "tools/deploy_app.py:146", "status": "extracted"}
-{"from": "external_system:databricks_apps", "to": "function:tools/app_start.py:main", "type": "triggers", "evidence": "tools/deploy_app.py:147", "status": "extracted"}
+{"from": "process:deploy_app", "to": "flow:databricks_app", "type": "part_of", "evidence": "tools/deploy_app.py:148", "status": "extracted"}
+{"from": "external_system:databricks_apps", "to": "function:tools/app_start.py:main", "type": "triggers", "evidence": "tools/deploy_app.py:149", "status": "extracted"}
 {"from": "function:tools/app_start.py:main", "to": "function:app/api/__main__.py:main", "type": "calls", "evidence": "tools/app_start.py:39", "status": "extracted"}
 {"from": "external_system:databricks_apps", "to": "config:env.DATABRICKS_APP_PORT", "type": "configures", "evidence": "app/api/__main__.py:15", "status": "extracted"}
 {"from": "config:env.DATABRICKS_APP_PORT", "to": "function:app/api/__main__.py:main", "type": "configures", "evidence": "app/api/__main__.py:15-17", "status": "extracted"}
-{"from": "config:env.DATABRICKS_APP_PORT", "to": "function:app/core/rls.py:is_app", "type": "configures", "evidence": "app/core/rls.py:102", "status": "extracted"}
-{"from": "external_system:databricks_apps", "to": "function:app/api/app.py:_PrincipalMiddleware", "type": "calls", "evidence": "app/api/app.py:196", "status": "extracted"}
-{"from": "function:app/api/app.py:_PrincipalMiddleware", "to": "function:app/core/rls.py:set_principal", "type": "calls", "evidence": "app/api/app.py:197", "status": "extracted"}
-{"from": "function:app/core/data.py:_connect", "to": "function:app/core/rls.py:scoped_connection", "type": "calls", "evidence": "app/core/data.py:303", "status": "extracted"}
-{"from": "function:app/core/data.py:_db_path", "to": "function:app/core/rls.py:resolve", "type": "calls", "evidence": "app/core/data.py:199", "status": "extracted"}
+{"from": "config:env.DATABRICKS_APP_PORT", "to": "function:app/core/rls.py:is_app", "type": "configures", "evidence": "app/core/rls.py:107", "status": "extracted"}
+{"from": "external_system:databricks_apps", "to": "function:app/api/app.py:_PrincipalMiddleware", "type": "calls", "evidence": "app/api/app.py:197", "status": "extracted"}
+{"from": "function:app/api/app.py:_PrincipalMiddleware", "to": "function:app/core/rls.py:set_principal", "type": "calls", "evidence": "app/api/app.py:198", "status": "extracted"}
+{"from": "function:app/core/data.py:_connect", "to": "function:app/core/rls.py:scoped_connection", "type": "calls", "evidence": "app/core/data.py:309", "status": "extracted"}
+{"from": "function:app/core/data.py:_db_path", "to": "function:app/core/rls.py:resolve", "type": "calls", "evidence": "app/core/data.py:200", "status": "extracted"}
 {"from": "external_system:databricks_apps", "to": "secret_ref:DATABRICKS_CLIENT_ID", "type": "configures", "evidence": "tools/snapshot.py:170", "status": "inferred"}
 {"from": "external_system:databricks_apps", "to": "secret_ref:DATABRICKS_CLIENT_SECRET", "type": "configures", "evidence": "tools/snapshot.py:170", "status": "inferred"}
 {"from": "function:tools/snapshot.py:_app_principal_auth", "to": "secret_ref:DATABRICKS_CLIENT_ID", "type": "reads", "evidence": "tools/snapshot.py:480", "status": "extracted"}
 {"from": "function:tools/snapshot.py:_app_principal_auth", "to": "secret_ref:DATABRICKS_CLIENT_SECRET", "type": "reads", "evidence": "tools/snapshot.py:481", "status": "extracted"}
 {"from": "function:tools/snapshot.py:connect", "to": "function:tools/snapshot.py:_app_principal_auth", "type": "calls", "evidence": "tools/snapshot.py:535", "status": "extracted"}
-{"from": "config:app.run_as", "to": "config:app.yaml", "type": "configures", "evidence": "tools/deploy_app.py:148-149", "status": "extracted"}
-{"from": "config:app.rls", "to": "function:app/core/rls.py:load", "type": "configures", "evidence": "app/core/rls.py:96-98", "status": "extracted"}
-{"from": "function:tools/deploy_app.py:main", "to": "process:deploy_app", "type": "part_of", "evidence": "tools/deploy_app.py:173", "status": "extracted"}
-{"from": "function:tools/deploy_app.py:stage", "to": "process:deploy_app", "type": "part_of", "evidence": "tools/deploy_app.py:127", "status": "extracted"}
+{"from": "config:app.run_as", "to": "config:app.yaml", "type": "configures", "evidence": "tools/deploy_app.py:150-151", "status": "extracted"}
+{"from": "config:app.rls", "to": "function:app/core/rls.py:load", "type": "configures", "evidence": "app/core/rls.py:101-103", "status": "extracted"}
+{"from": "function:tools/deploy_app.py:main", "to": "process:deploy_app", "type": "part_of", "evidence": "tools/deploy_app.py:175", "status": "extracted"}
+{"from": "function:tools/deploy_app.py:stage", "to": "process:deploy_app", "type": "part_of", "evidence": "tools/deploy_app.py:129", "status": "extracted"}
 {"from": "function:tools/deploy_app.py:read_settings", "to": "process:deploy_app", "type": "part_of", "evidence": "tools/deploy_app.py:55", "status": "extracted"}
-{"from": "function:tools/deploy_app.py:fetch_wheel", "to": "process:deploy_app", "type": "part_of", "evidence": "tools/deploy_app.py:113", "status": "extracted"}
-{"from": "function:tools/deploy_app.py:grant_sql", "to": "process:deploy_app", "type": "part_of", "evidence": "tools/deploy_app.py:92", "status": "extracted"}
-{"from": "function:tools/deploy_app.py:main", "to": "function:tools/deploy_app.py:read_settings", "type": "calls", "evidence": "tools/deploy_app.py:175", "status": "extracted"}
-{"from": "function:tools/deploy_app.py:main", "to": "function:tools/export_direct_results.py:_preflight_env", "type": "calls", "evidence": "tools/deploy_app.py:177", "status": "extracted"}
-{"from": "function:tools/deploy_app.py:main", "to": "function:tools/deploy_app.py:fetch_wheel", "type": "calls", "evidence": "tools/deploy_app.py:186", "status": "extracted"}
-{"from": "function:tools/deploy_app.py:main", "to": "function:tools/deploy_app.py:stage", "type": "calls", "evidence": "tools/deploy_app.py:188", "status": "extracted"}
-{"from": "function:tools/deploy_app.py:fetch_wheel", "to": "external_system:pypi", "type": "reads", "evidence": "tools/deploy_app.py:118-120", "status": "extracted"}
+{"from": "function:tools/deploy_app.py:fetch_wheel", "to": "process:deploy_app", "type": "part_of", "evidence": "tools/deploy_app.py:115", "status": "extracted"}
+{"from": "function:tools/deploy_app.py:grant_sql", "to": "process:deploy_app", "type": "part_of", "evidence": "tools/deploy_app.py:94", "status": "extracted"}
+{"from": "function:tools/deploy_app.py:main", "to": "function:tools/deploy_app.py:read_settings", "type": "calls", "evidence": "tools/deploy_app.py:177", "status": "extracted"}
+{"from": "function:tools/deploy_app.py:main", "to": "function:tools/export_direct_results.py:_preflight_env", "type": "calls", "evidence": "tools/deploy_app.py:179", "status": "extracted"}
+{"from": "function:tools/deploy_app.py:main", "to": "function:tools/deploy_app.py:fetch_wheel", "type": "calls", "evidence": "tools/deploy_app.py:188", "status": "extracted"}
+{"from": "function:tools/deploy_app.py:main", "to": "function:tools/deploy_app.py:stage", "type": "calls", "evidence": "tools/deploy_app.py:190", "status": "extracted"}
+{"from": "function:tools/deploy_app.py:fetch_wheel", "to": "external_system:pypi", "type": "reads", "evidence": "tools/deploy_app.py:120-122", "status": "extracted"}
 {"from": "function:tools/deploy_app.py:read_settings", "to": "config:app.yml", "type": "reads", "evidence": "tools/deploy_app.py:58", "status": "extracted"}
 {"from": "function:tools/deploy_app.py:read_settings", "to": "config:app.local.yml", "type": "reads", "evidence": "tools/deploy_app.py:59-60", "status": "extracted"}
-{"from": "function:tools/deploy_app.py:stage", "to": "config:app.yaml", "type": "writes", "evidence": "tools/deploy_app.py:151", "status": "extracted"}
-{"from": "function:tools/deploy_app.py:stage", "to": "secret_ref:DATABRICKS_TOKEN", "type": "writes", "evidence": "tools/deploy_app.py:148-149", "status": "extracted"}
-{"from": "function:tools/deploy_app.py:main", "to": "external_system:databricks_cli", "type": "calls", "evidence": "tools/deploy_app.py:189-206", "status": "extracted"}
-{"from": "function:tools/deploy_app.py:main", "to": "external_system:databricks_workspace_files", "type": "writes", "evidence": "tools/deploy_app.py:192", "status": "extracted"}
-{"from": "function:tools/deploy_app.py:main", "to": "external_system:databricks_apps", "type": "deploys", "evidence": "tools/deploy_app.py:206", "status": "extracted"}
-{"from": "function:tools/deploy_app.py:main", "to": "secret_ref:DATABRICKS_HOST", "type": "writes", "evidence": "tools/deploy_app.py:182", "status": "extracted"}
-{"from": "function:tools/deploy_app.py:grant_sql", "to": "external_system:databricks_system_tables", "type": "grants", "evidence": "tools/deploy_app.py:95-97", "status": "extracted"}
-{"from": "function:tools/deploy_app.py:main", "to": "external_system:databricks_sql_warehouse", "type": "grants", "evidence": "tools/deploy_app.py:79-84", "status": "extracted"}
+{"from": "function:tools/deploy_app.py:stage", "to": "config:app.yaml", "type": "writes", "evidence": "tools/deploy_app.py:153", "status": "extracted"}
+{"from": "function:tools/deploy_app.py:stage", "to": "secret_ref:DATABRICKS_TOKEN", "type": "writes", "evidence": "tools/deploy_app.py:150-151", "status": "extracted"}
+{"from": "function:tools/deploy_app.py:main", "to": "external_system:databricks_cli", "type": "calls", "evidence": "tools/deploy_app.py:191-208", "status": "extracted"}
+{"from": "function:tools/deploy_app.py:main", "to": "external_system:databricks_workspace_files", "type": "writes", "evidence": "tools/deploy_app.py:194", "status": "extracted"}
+{"from": "function:tools/deploy_app.py:main", "to": "external_system:databricks_apps", "type": "deploys", "evidence": "tools/deploy_app.py:208", "status": "extracted"}
+{"from": "function:tools/deploy_app.py:main", "to": "secret_ref:DATABRICKS_HOST", "type": "writes", "evidence": "tools/deploy_app.py:184", "status": "extracted"}
+{"from": "function:tools/deploy_app.py:grant_sql", "to": "external_system:databricks_system_tables", "type": "grants", "evidence": "tools/deploy_app.py:97-99", "status": "extracted"}
+{"from": "function:tools/deploy_app.py:main", "to": "external_system:databricks_sql_warehouse", "type": "grants", "evidence": "tools/deploy_app.py:81-86", "status": "extracted"}
 {"from": "config:app.name", "to": "function:tools/deploy_app.py:read_settings", "type": "configures", "evidence": "tools/deploy_app.py:62", "status": "extracted"}
 {"from": "config:app.run_as", "to": "function:tools/deploy_app.py:read_settings", "type": "configures", "evidence": "tools/deploy_app.py:65", "status": "extracted"}
 {"from": "config:.env", "to": "process:run_locally", "type": "part_of", "evidence": "README.md:54-63", "status": "extracted"}
 {"from": "function:tools/first_run.py:main", "to": "process:run_locally", "type": "part_of", "evidence": "README.md:67-68", "status": "extracted"}
 {"from": "function:app/api/__main__.py:main", "to": "process:run_locally", "type": "part_of", "evidence": "README.md:69", "status": "extracted"}
-{"from": "function:app/core/datasource.py:data_dir", "to": "process:run_locally", "type": "part_of", "evidence": "README.md:177-187", "status": "extracted"}
+{"from": "function:app/core/datasource.py:data_dir", "to": "process:run_locally", "type": "part_of", "evidence": "README.md:180-190", "status": "extracted"}
 {"from": "function:app/core/config.py:load_settings", "to": "process:config_and_secrets", "type": "part_of", "evidence": "app/core/config.py:534", "status": "extracted"}
-{"from": "function:tools/export_direct_results.py:_preflight_env", "to": "process:config_and_secrets", "type": "part_of", "evidence": "tools/export_direct_results.py:857", "status": "extracted"}
-{"from": "function:tools/export_direct_results.py:_load_dotenv", "to": "process:config_and_secrets", "type": "part_of", "evidence": "tools/export_direct_results.py:816", "status": "extracted"}
+{"from": "function:tools/export_direct_results.py:_preflight_env", "to": "process:config_and_secrets", "type": "part_of", "evidence": "tools/export_direct_results.py:886", "status": "extracted"}
+{"from": "function:tools/export_direct_results.py:_load_dotenv", "to": "process:config_and_secrets", "type": "part_of", "evidence": "tools/export_direct_results.py:845", "status": "extracted"}
 {"from": "config:settings.yml", "to": "process:config_and_secrets", "type": "part_of", "evidence": "config/settings.yml:1", "status": "extracted"}
 {"from": "config:settings.local.yml", "to": "process:config_and_secrets", "type": "part_of", "evidence": "app/core/config.py:516", "status": "extracted"}
 {"from": "config:app.yml", "to": "process:config_and_secrets", "type": "part_of", "evidence": "config/app.yml:1", "status": "extracted"}
@@ -224,44 +224,44 @@
 {"from": "function:app/core/config.py:load_settings", "to": "config:settings.local.yml", "type": "reads", "evidence": "app/core/config.py:567", "status": "extracted"}
 {"from": "function:app/core/config.py:load_settings", "to": "config:settings.yml", "type": "writes", "evidence": "app/core/config.py:555", "status": "extracted"}
 {"from": "config:env.AUDIT_CONFIG_DIR", "to": "function:app/core/config.py:load_settings", "type": "configures", "evidence": "app/core/config.py:128", "status": "extracted"}
-{"from": "function:tools/export_direct_results.py:_load_dotenv", "to": "config:.env", "type": "reads", "evidence": "tools/export_direct_results.py:820-824", "status": "extracted"}
-{"from": "function:tools/export_direct_results.py:_preflight_env", "to": "secret_ref:DATABRICKS_SERVER_HOSTNAME", "type": "reads", "evidence": "tools/export_direct_results.py:860", "status": "extracted"}
+{"from": "function:tools/export_direct_results.py:_load_dotenv", "to": "config:.env", "type": "reads", "evidence": "tools/export_direct_results.py:849-853", "status": "extracted"}
+{"from": "function:tools/export_direct_results.py:_preflight_env", "to": "secret_ref:DATABRICKS_SERVER_HOSTNAME", "type": "reads", "evidence": "tools/export_direct_results.py:889", "status": "extracted"}
 {"from": "secret_ref:DATABRICKS_SERVER_HOSTNAME", "to": "config:.env", "type": "part_of", "evidence": ".env.example:11-20", "status": "extracted"}
-{"from": "function:tools/export_direct_results.py:_preflight_env", "to": "secret_ref:DATABRICKS_HTTP_PATH", "type": "reads", "evidence": "tools/export_direct_results.py:860", "status": "extracted"}
+{"from": "function:tools/export_direct_results.py:_preflight_env", "to": "secret_ref:DATABRICKS_HTTP_PATH", "type": "reads", "evidence": "tools/export_direct_results.py:889", "status": "extracted"}
 {"from": "secret_ref:DATABRICKS_HTTP_PATH", "to": "config:.env", "type": "part_of", "evidence": ".env.example:11-20", "status": "extracted"}
-{"from": "function:tools/export_direct_results.py:_preflight_env", "to": "secret_ref:DATABRICKS_TOKEN", "type": "reads", "evidence": "tools/export_direct_results.py:860", "status": "extracted"}
+{"from": "function:tools/export_direct_results.py:_preflight_env", "to": "secret_ref:DATABRICKS_TOKEN", "type": "reads", "evidence": "tools/export_direct_results.py:889", "status": "extracted"}
 {"from": "secret_ref:DATABRICKS_TOKEN", "to": "config:.env", "type": "part_of", "evidence": ".env.example:11-20", "status": "extracted"}
 {"from": "function:tools/snapshot.py:connect", "to": "secret_ref:DATABRICKS_TOKEN", "type": "reads", "evidence": "tools/snapshot.py:509", "status": "extracted"}
 {"from": "function:tools/snapshot.py:connect", "to": "secret_ref:DATABRICKS_SERVER_HOSTNAME", "type": "reads", "evidence": "tools/snapshot.py:507", "status": "extracted"}
 {"from": "function:tools/snapshot.py:connect", "to": "secret_ref:DATABRICKS_HTTP_PATH", "type": "reads", "evidence": "tools/snapshot.py:508", "status": "extracted"}
-{"from": "config:settings.discount_pct", "to": "endpoint:GET /api/finding/{query_id}", "type": "configures", "evidence": "app/api/app.py:1249", "status": "extracted"}
-{"from": "config:settings.default_window", "to": "function:app/api/app.py:_resolve_window", "type": "configures", "evidence": "app/api/app.py:241", "status": "extracted"}
+{"from": "config:settings.discount_pct", "to": "endpoint:GET /api/finding/{query_id}", "type": "configures", "evidence": "app/api/app.py:1268", "status": "extracted"}
+{"from": "config:settings.default_window", "to": "function:app/api/app.py:_resolve_window", "type": "configures", "evidence": "app/api/app.py:242", "status": "extracted"}
 {"from": "config:settings.default_window", "to": "function:tools/export_direct_results.py:_default_windows", "type": "configures", "evidence": "tools/export_direct_results.py:214", "status": "extracted"}
 {"from": "config:settings.include_today", "to": "function:tools/export_direct_results.py:_include_today", "type": "configures", "evidence": "tools/export_direct_results.py:206", "status": "extracted"}
-{"from": "config:settings.ui.max_rows", "to": "function:app/core/data.py:read_finding", "type": "configures", "evidence": "app/core/data.py:882", "status": "extracted"}
-{"from": "config:settings.ui.max_chart_categories", "to": "endpoint:GET /api/meta", "type": "configures", "evidence": "app/api/app.py:458", "status": "extracted"}
-{"from": "config:settings.mandatory_tag_keys", "to": "function:app/core/data.py:read_tag_compliance", "type": "configures", "evidence": "app/core/data.py:1521", "status": "extracted"}
-{"from": "config:settings.export_tag_keys", "to": "function:tools/export_direct_results.py:tag_key_filter_sql", "type": "configures", "evidence": "tools/export_direct_results.py:592", "status": "extracted"}
-{"from": "config:settings.load.memory_limit", "to": "function:app/core/data.py:_cap", "type": "configures", "evidence": "app/core/data.py:295", "status": "extracted"}
-{"from": "config:settings.load.threads", "to": "function:app/core/data.py:_cap", "type": "configures", "evidence": "app/core/data.py:296", "status": "extracted"}
-{"from": "config:settings.load.memory_limit", "to": "function:tools/load_direct_results.py:_load_root", "type": "configures", "evidence": "tools/load_direct_results.py:546", "status": "extracted"}
-{"from": "config:settings.load.threads", "to": "function:tools/load_direct_results.py:_load_root", "type": "configures", "evidence": "tools/load_direct_results.py:545-547", "status": "extracted"}
-{"from": "config:settings.load.top_tag_keys", "to": "function:tools/load_direct_results.py:_tag_entity_keys", "type": "configures", "evidence": "tools/load_direct_results.py:167", "status": "extracted"}
-{"from": "config:settings.tag_share_floor", "to": "function:tools/dbt_run.py:load_share_floor", "type": "configures", "evidence": "tools/dbt_run.py:146", "status": "extracted"}
-{"from": "config:settings.tag_coverage_floor", "to": "function:tools/dbt_run.py:load_coverage_floor", "type": "configures", "evidence": "tools/dbt_run.py:157", "status": "extracted"}
-{"from": "config:settings.tag_share_floor", "to": "endpoint:GET /api/workspace_tags", "type": "configures", "evidence": "app/api/app.py:810", "status": "extracted"}
+{"from": "config:settings.ui.max_rows", "to": "function:app/core/data.py:read_finding", "type": "configures", "evidence": "app/core/data.py:898", "status": "extracted"}
+{"from": "config:settings.ui.max_chart_categories", "to": "endpoint:GET /api/meta", "type": "configures", "evidence": "app/api/app.py:477", "status": "extracted"}
+{"from": "config:settings.mandatory_tag_keys", "to": "function:app/core/data.py:read_tag_compliance", "type": "configures", "evidence": "app/core/data.py:1537", "status": "extracted"}
+{"from": "config:settings.export_tag_keys", "to": "function:tools/export_direct_results.py:tag_key_filter_sql", "type": "configures", "evidence": "tools/export_direct_results.py:621", "status": "extracted"}
+{"from": "config:settings.load.memory_limit", "to": "function:app/core/data.py:_cap", "type": "configures", "evidence": "app/core/data.py:298", "status": "extracted"}
+{"from": "config:settings.load.threads", "to": "function:app/core/data.py:_cap", "type": "configures", "evidence": "app/core/data.py:299", "status": "extracted"}
+{"from": "config:settings.load.memory_limit", "to": "function:tools/load_direct_results.py:_load_root", "type": "configures", "evidence": "tools/load_direct_results.py:561", "status": "extracted"}
+{"from": "config:settings.load.threads", "to": "function:tools/load_direct_results.py:_load_root", "type": "configures", "evidence": "tools/load_direct_results.py:560-562", "status": "extracted"}
+{"from": "config:settings.load.top_tag_keys", "to": "function:tools/load_direct_results.py:_tag_entity_keys", "type": "configures", "evidence": "tools/load_direct_results.py:182", "status": "extracted"}
+{"from": "config:settings.tag_share_floor", "to": "function:tools/dbt_run.py:load_share_floor", "type": "configures", "evidence": "tools/dbt_run.py:141", "status": "extracted"}
+{"from": "config:settings.tag_coverage_floor", "to": "function:tools/dbt_run.py:load_coverage_floor", "type": "configures", "evidence": "tools/dbt_run.py:146", "status": "extracted"}
+{"from": "config:settings.tag_share_floor", "to": "endpoint:GET /api/workspace_tags", "type": "configures", "evidence": "app/api/app.py:829", "status": "extracted"}
 {"from": "config:settings.admin_groups", "to": "function:app/core/materiality.py:admin_group_expr", "type": "configures", "evidence": "app/core/materiality.py:81", "status": "extracted"}
-{"from": "config:settings.brand", "to": "endpoint:GET /", "type": "configures", "evidence": "app/api/app.py:1439", "status": "extracted"}
+{"from": "config:settings.brand", "to": "endpoint:GET /", "type": "configures", "evidence": "app/api/app.py:1458", "status": "extracted"}
 {"from": "config:settings.privacy.mask_user_identities", "to": "function:app/core/identity.py:masking_enabled", "type": "configures", "evidence": "app/core/identity.py:65", "status": "extracted"}
 {"from": "config:settings.query_source", "to": "function:app/core/config.py:query_source", "type": "configures", "evidence": "app/core/config.py:671-672", "status": "extracted"}
 {"from": "config:settings.query_tags", "to": "function:tools/snapshot.py:_tag_session", "type": "configures", "evidence": "tools/snapshot.py:81", "status": "extracted"}
-{"from": "config:settings.table_sizes", "to": "function:tools/export_direct_results.py:run_export", "type": "configures", "evidence": "tools/export_direct_results.py:1201", "status": "extracted"}
+{"from": "config:settings.table_sizes", "to": "function:tools/export_direct_results.py:run_export", "type": "configures", "evidence": "tools/export_direct_results.py:1230", "status": "extracted"}
 {"from": "config:settings.sources", "to": "function:tools/snapshot.py:connect", "type": "configures", "evidence": "tools/snapshot.py:549-552", "status": "extracted"}
-{"from": "config:settings.contract", "to": "endpoint:GET /api/meta", "type": "configures", "evidence": "app/api/app.py:448", "status": "extracted"}
+{"from": "config:settings.contract", "to": "endpoint:GET /api/meta", "type": "configures", "evidence": "app/api/app.py:467", "status": "extracted"}
 {"from": "config:settings.dashboards", "to": "file:tools/build_databricks_dashboards.py", "type": "configures", "evidence": "tools/build_databricks_dashboards.py:36", "status": "extracted"}
-{"from": "config:env.AUDIT_DB", "to": "function:app/core/data.py:_base_db_path", "type": "configures", "evidence": "app/core/data.py:206", "status": "extracted"}
+{"from": "config:env.AUDIT_DB", "to": "function:app/core/data.py:_base_db_path", "type": "configures", "evidence": "app/core/data.py:207", "status": "extracted"}
 {"from": "config:env.AUDIT_DATA_DIR", "to": "function:app/core/datasource.py:data_dir", "type": "configures", "evidence": "app/core/datasource.py:30", "status": "extracted"}
 {"from": "config:env.AUDIT_API_HOST", "to": "function:app/api/__main__.py:main", "type": "configures", "evidence": "app/api/__main__.py:16", "status": "extracted"}
 {"from": "config:env.AUDIT_API_PORT", "to": "function:app/api/__main__.py:main", "type": "configures", "evidence": "app/api/__main__.py:17", "status": "extracted"}
-{"from": "config:env.AUDIT_DBX_CATALOG", "to": "function:tools/export_direct_results.py:_preflight_env", "type": "configures", "evidence": "tools/export_direct_results.py:871", "status": "extracted"}
-{"from": "config:env.AUDIT_SNAPSHOT_DIR", "to": "function:app/core/data.py:_snapshot_dir", "type": "configures", "evidence": "app/core/data.py:219", "status": "extracted"}
+{"from": "config:env.AUDIT_DBX_CATALOG", "to": "function:tools/export_direct_results.py:_preflight_env", "type": "configures", "evidence": "tools/export_direct_results.py:900", "status": "extracted"}
+{"from": "config:env.AUDIT_SNAPSHOT_DIR", "to": "function:app/core/data.py:_snapshot_dir", "type": "configures", "evidence": "app/core/data.py:220", "status": "extracted"}

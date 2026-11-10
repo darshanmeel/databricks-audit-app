@@ -1,9 +1,9 @@
 {
- "generated_from_commit": "b8d2db1",
+ "generated_from_commit": "7f4be46+wt",
  "notes": [
   "No constraint is enforced in DuckDB (CTAS tables); every relationship is logical/inferred.",
   "pk lists come from unique_grain tests (dbt/tests/generic/test_unique_grain.sql), QUALIFY/ROW_NUMBER partitions, or GROUP BY; see each entity's evidence.",
-  "findings.* columns+types come from tools/dashboard_columns.json (DESCRIBE of the test DuckDB, tools/build_databricks_dashboards.py:1050-1061) and may lag the SQL.",
+  "findings.* columns+types come from tools/dashboard_columns.json (DESCRIBE of the test DuckDB, tools/build_databricks_dashboards.py:1066-1077) and may lag the SQL.",
   "d_* models (dbt/models/databricks_direct) are enabled=false: they are never tables; they render app/direct_sql/*.sql (tools/generate_direct_models.py:21-24).",
   "Review (Opus, b8d2db1): cardinalities in model.md erDiagram re-checked; pk_status marks keys backed by a unique_grain test vs inferred from GROUP BY/ROW_NUMBER."
  ],
@@ -562,7 +562,6 @@
    "read_by": [
     "dbt_model:cost_alloc (via list_prices macro)",
     "dbt_model:cost_reconciliation (via list_prices macro)",
-    "dbt_model:dim_list_prices (via list_prices macro)",
     "dbt_model:f_access_source_table_coverage (via list_prices macro)",
     "dbt_model:f_compute_idle_node_ratio (via list_prices macro)",
     "dbt_model:f_compute_serving_endpoint_cost_status (via list_prices macro)",
@@ -3050,13 +3049,13 @@
    "partition": "none (DuckDB table)",
    "written_by": [
     "dbt build --target dev (dbt/models/tags/cost_unit.sql)",
-    "tools/load_direct_results.py from app/direct_sql/tags/cost_unit.sql export (tools/load_direct_results.py:646-658)"
+    "tools/load_direct_results.py from app/direct_sql/tags/cost_unit.sql export (tools/load_direct_results.py:661-673)"
    ],
    "read_by": [
     "app/core/rollup.py:330",
-    "app/core/rls.py:200-205",
+    "app/core/rls.py:205-210",
     "dbt_model:cost_reconciliation (dbt/models/tags/cost_reconciliation.sql:54)",
-    "tools/load_direct_results.py:680-700"
+    "tools/load_direct_results.py:695-715"
    ],
    "evidence": [
     "dbt/models/tags/cost_unit.sql:1-38",
@@ -3147,7 +3146,7 @@
    "partition": "none (DuckDB table)",
    "written_by": [
     "dbt build --target dev (dbt/models/tags/cost_unit_tag.sql)",
-    "tools/load_direct_results.py from app/direct_sql/tags/cost_unit_tag.sql export (tools/load_direct_results.py:646-658)"
+    "tools/load_direct_results.py from app/direct_sql/tags/cost_unit_tag.sql export (tools/load_direct_results.py:661-673)"
    ],
    "read_by": [
     "app/core/rollup.py:331"
@@ -3311,7 +3310,7 @@
    "partition": "none (DuckDB table)",
    "written_by": [
     "dbt build --target dev (dbt/models/tags/cost_day.sql)",
-    "tools/load_direct_results.py from app/direct_sql/tags/cost_day.sql export (tools/load_direct_results.py:646-658)"
+    "tools/load_direct_results.py from app/direct_sql/tags/cost_day.sql export (tools/load_direct_results.py:661-673)"
    ],
    "read_by": [
     "app/core/tag_spend.py:122",
@@ -3443,7 +3442,7 @@
    "partition": "none (DuckDB table)",
    "written_by": [
     "dbt build --target dev (dbt/models/tags/cost_reconciliation.sql)",
-    "tools/load_direct_results.py from app/direct_sql/tags/cost_reconciliation.sql export (tools/load_direct_results.py:646-658)"
+    "tools/load_direct_results.py from app/direct_sql/tags/cost_reconciliation.sql export (tools/load_direct_results.py:661-673)"
    ],
    "read_by": [
     "app/core/rollup.py:773"
@@ -3550,7 +3549,7 @@
    "partition": "none (DuckDB table)",
    "written_by": [
     "dbt build --target dev (dbt/models/tags/perf_unit.sql)",
-    "tools/load_direct_results.py from app/direct_sql/tags/perf_unit.sql export (tools/load_direct_results.py:646-658)"
+    "tools/load_direct_results.py from app/direct_sql/tags/perf_unit.sql export (tools/load_direct_results.py:661-673)"
    ],
    "read_by": [
     "app/core/rollup.py:396",
@@ -3678,7 +3677,7 @@
    "partition": "none (DuckDB table)",
    "written_by": [
     "dbt build --target dev (dbt/models/tags/perf_unit_tag.sql)",
-    "tools/load_direct_results.py from app/direct_sql/tags/perf_unit_tag.sql export (tools/load_direct_results.py:646-658)"
+    "tools/load_direct_results.py from app/direct_sql/tags/perf_unit_tag.sql export (tools/load_direct_results.py:661-673)"
    ],
    "read_by": [
     "app/core/rollup.py:397"
@@ -3774,7 +3773,7 @@
    "partition": "none (DuckDB table)",
    "written_by": [
     "dbt build --target dev (dbt/models/tags/query_tag_keys.sql)",
-    "tools/load_direct_results.py from app/direct_sql/tags/query_tag_keys.sql export (tools/load_direct_results.py:646-658)"
+    "tools/load_direct_results.py from app/direct_sql/tags/query_tag_keys.sql export (tools/load_direct_results.py:661-673)"
    ],
    "read_by": [
     "app/core/tag_compliance.py:344"
@@ -3922,7 +3921,7 @@
    "partition": "none (DuckDB table)",
    "written_by": [
     "dbt build --target dev (dbt/models/tags/tag_workspace_history.sql)",
-    "tools/load_direct_results.py from app/direct_sql/tags/tag_workspace_history.sql export (tools/load_direct_results.py:646-658)"
+    "tools/load_direct_results.py from app/direct_sql/tags/tag_workspace_history.sql export (tools/load_direct_results.py:661-673)"
    ],
    "read_by": [
     "app/core/rollup.py:281",
@@ -4054,11 +4053,11 @@
    "partition": "none (DuckDB table)",
    "written_by": [
     "dbt build --target dev (dbt/models/tags/tag_workspace.sql)",
-    "tools/load_direct_results.py from app/direct_sql/tags/tag_workspace.sql export (tools/load_direct_results.py:646-658)"
+    "tools/load_direct_results.py from app/direct_sql/tags/tag_workspace.sql export (tools/load_direct_results.py:661-673)"
    ],
    "read_by": [
     "app/core/tag_compliance.py:278",
-    "app/core/data.py:1739"
+    "app/core/data.py:1755"
    ],
    "evidence": [
     "dbt/models/tags/tag_workspace.sql:1-15",
@@ -4172,10 +4171,10 @@
    "partition": "none (DuckDB table)",
    "written_by": [
     "dbt build --target dev (dbt/models/tags/tag_entity.sql)",
-    "tools/load_direct_results.py from app/direct_sql/tags/tag_entity.sql export (tools/load_direct_results.py:646-658)"
+    "tools/load_direct_results.py from app/direct_sql/tags/tag_entity.sql export (tools/load_direct_results.py:661-673)"
    ],
    "read_by": [
-    "app/core/tags.py:584",
+    "app/core/tags.py:582",
     "app/core/tag_compliance.py:128"
    ],
    "evidence": [
@@ -4281,7 +4280,7 @@
    "partition": "none (DuckDB table)",
    "written_by": [
     "dbt build --target dev (dbt/models/tags/tag_index.sql)",
-    "tools/load_direct_results.py from app/direct_sql/tags/tag_index.sql export (tools/load_direct_results.py:646-658)"
+    "tools/load_direct_results.py from app/direct_sql/tags/tag_index.sql export (tools/load_direct_results.py:661-673)"
    ],
    "read_by": [
     "app/core/tags.py:202"
@@ -4398,15 +4397,15 @@
    "partition": "none (DuckDB table)",
    "written_by": [
     "dbt build --target dev (dbt/models/tags/bill_tag_dates.sql)",
-    "tools/load_direct_results.py from app/direct_sql/tags/bill_tag_dates.sql export (tools/load_direct_results.py:646-658)"
+    "tools/load_direct_results.py from app/direct_sql/tags/bill_tag_dates.sql export (tools/load_direct_results.py:661-673)"
    ],
    "read_by": [
     "app/core/tag_compliance.py:165",
     "app/core/tag_bill.py:12"
    ],
    "evidence": [
-    "dbt/models/tags/bill_tag_dates.sql:1-99",
-    "columns dbt/models/tags/bill_tag_dates.sql:88-99",
+    "dbt/models/tags/bill_tag_dates.sql:1-101",
+    "columns dbt/models/tags/bill_tag_dates.sql:90-101",
     "pk dbt/models/tags/_tags_idx.yml:110-116"
    ],
    "pk_status": "tested (unique_grain)"
@@ -4482,10 +4481,10 @@
    "partition": "none (DuckDB table)",
    "written_by": [
     "dbt build --target dev (dbt/models/dims/dim_job.sql)",
-    "tools/load_direct_results.py from app/direct_sql/names/dim_job.sql export (tools/load_direct_results.py:597-620)"
+    "tools/load_direct_results.py from app/direct_sql/names/dim_job.sql export (tools/load_direct_results.py:612-635)"
    ],
    "read_by": [
-    "app/core/data.py:3156"
+    "app/core/data.py:3172"
    ],
    "evidence": [
     "dbt/models/dims/dim_job.sql:1-44",
@@ -4556,10 +4555,10 @@
    "partition": "none (DuckDB table)",
    "written_by": [
     "dbt build --target dev (dbt/models/dims/dim_cluster.sql)",
-    "tools/load_direct_results.py from app/direct_sql/names/dim_cluster.sql export (tools/load_direct_results.py:597-620)"
+    "tools/load_direct_results.py from app/direct_sql/names/dim_cluster.sql export (tools/load_direct_results.py:612-635)"
    ],
    "read_by": [
-    "app/core/data.py:3175"
+    "app/core/data.py:3191"
    ],
    "evidence": [
     "dbt/models/dims/dim_cluster.sql:1-50",
@@ -4622,10 +4621,10 @@
    "partition": "none (DuckDB table)",
    "written_by": [
     "dbt build --target dev (dbt/models/dims/dim_warehouse.sql)",
-    "tools/load_direct_results.py from app/direct_sql/names/dim_warehouse.sql export (tools/load_direct_results.py:597-620)"
+    "tools/load_direct_results.py from app/direct_sql/names/dim_warehouse.sql export (tools/load_direct_results.py:612-635)"
    ],
    "read_by": [
-    "app/core/data.py:3195"
+    "app/core/data.py:3211"
    ],
    "evidence": [
     "dbt/models/dims/dim_warehouse.sql:1-43",
@@ -4689,10 +4688,10 @@
    "partition": "none (DuckDB table)",
    "written_by": [
     "dbt build --target dev (dbt/models/dims/dim_pipeline.sql)",
-    "tools/load_direct_results.py from app/direct_sql/names/dim_pipeline.sql export (tools/load_direct_results.py:597-620)"
+    "tools/load_direct_results.py from app/direct_sql/names/dim_pipeline.sql export (tools/load_direct_results.py:612-635)"
    ],
    "read_by": [
-    "app/core/data.py:3214"
+    "app/core/data.py:3230"
    ],
    "evidence": [
     "dbt/models/dims/dim_pipeline.sql:1-43",
@@ -4740,88 +4739,15 @@
    "partition": "none (DuckDB table)",
    "written_by": [
     "dbt build --target dev (dbt/models/dims/dim_notebook.sql)",
-    "tools/load_direct_results.py from app/direct_sql/names/dim_notebook.sql export (tools/load_direct_results.py:597-620)"
+    "tools/load_direct_results.py from app/direct_sql/names/dim_notebook.sql export (tools/load_direct_results.py:612-635)"
    ],
    "read_by": [
-    "app/core/data.py:3230"
+    "app/core/data.py:3246"
    ],
    "evidence": [
     "dbt/models/dims/dim_notebook.sql:1-20",
     "columns dbt/models/dims/dim_notebook.sql:18-20",
     "pk dbt/models/dims/dim_notebook.sql:9-12,20 (ROW_NUMBER rn=1; no unique test)"
-   ],
-   "pk_status": "inferred (GROUP BY / ROW_NUMBER; no unique test)"
-  },
-  {
-   "name": "dim_list_prices",
-   "type": "dbt_model",
-   "schema": "dims",
-   "grain": "one row per (cloud, sku_name, currency_code), current price only",
-   "columns": [
-    {
-     "name": "cloud",
-     "type": "unclear",
-     "nullable": false,
-     "key": "pk",
-     "desc": "",
-     "pii": false
-    },
-    {
-     "name": "sku_name",
-     "type": "unclear",
-     "nullable": false,
-     "key": "pk",
-     "desc": "",
-     "pii": false
-    },
-    {
-     "name": "currency_code",
-     "type": "unclear",
-     "nullable": false,
-     "key": "pk",
-     "desc": "",
-     "pii": false
-    },
-    {
-     "name": "usage_unit",
-     "type": "unclear",
-     "nullable": null,
-     "key": null,
-     "desc": "",
-     "pii": false
-    },
-    {
-     "name": "list_price",
-     "type": "unclear",
-     "nullable": null,
-     "key": null,
-     "desc": "",
-     "pii": false
-    },
-    {
-     "name": "price_start_time",
-     "type": "unclear",
-     "nullable": null,
-     "key": null,
-     "desc": "",
-     "pii": false
-    }
-   ],
-   "pk": [
-    "cloud",
-    "sku_name",
-    "currency_code"
-   ],
-   "versioning": "current row (price_end_time IS NULL)",
-   "partition": "none (DuckDB table)",
-   "written_by": [
-    "dbt build --target dev (dbt/models/dims/dim_list_prices.sql)"
-   ],
-   "read_by": [],
-   "evidence": [
-    "dbt/models/dims/dim_list_prices.sql:1-33",
-    "columns dbt/models/dims/dim_list_prices.sql:25-33",
-    "pk dbt/models/dims/dim_list_prices.sql:18-21,33 (ROW_NUMBER rn=1; no unique test)"
    ],
    "pk_status": "inferred (GROUP BY / ROW_NUMBER; no unique test)"
   },
@@ -4935,10 +4861,10 @@
    "partition": "none (DuckDB table)",
    "written_by": [
     "dbt build --target dev (dbt/models/dims/dim_workspace.sql)",
-    "tools/load_direct_results.py from app/direct_sql/names/dim_workspace.sql export (tools/load_direct_results.py:597-620)"
+    "tools/load_direct_results.py from app/direct_sql/names/dim_workspace.sql export (tools/load_direct_results.py:612-635)"
    ],
    "read_by": [
-    "app/core/data.py:1495"
+    "app/core/data.py:1511"
    ],
    "evidence": [
     "dbt/models/dims/dim_workspace.sql:1-203",
@@ -5237,11 +5163,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/governance_access/f_access_admin_role_change_events.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/access_admin_role_change_events.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/access_admin_role_change_events.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/governance_access/f_access_admin_role_change_events.sql:1-184",
@@ -5349,11 +5275,11 @@
    "partition": "window_days = 0 (snapshot check)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/governance_access/f_access_broad_grants.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/access_broad_grants.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/access_broad_grants.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/governance_access/f_access_broad_grants.sql:1-264",
@@ -5434,11 +5360,11 @@
    "partition": "window_days = 0 (snapshot check)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/governance_access/f_access_classification_coverage.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/access_classification_coverage.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/access_classification_coverage.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/governance_access/f_access_classification_coverage.sql:1-142",
@@ -5562,11 +5488,11 @@
    "partition": "window_days = 0 (snapshot check)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/governance_access/f_access_classified_unmasked.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/access_classified_unmasked.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/access_classified_unmasked.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/governance_access/f_access_classified_unmasked.sql:1-120",
@@ -5701,11 +5627,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/governance_access/f_access_column_lineage_sensitive_reach.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/access_column_lineage_sensitive_reach.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/access_column_lineage_sensitive_reach.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/governance_access/f_access_column_lineage_sensitive_reach.sql:1-98",
@@ -5789,11 +5715,11 @@
    "partition": "window_days = 0 (snapshot check)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/governance_access/f_access_column_masks_inventory.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/access_column_masks_inventory.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/access_column_masks_inventory.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/governance_access/f_access_column_masks_inventory.sql:1-16",
@@ -5912,11 +5838,11 @@
    "partition": "window_days = 0 (snapshot check)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/governance_access/f_access_data_classification_inventory.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/access_data_classification_inventory.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/access_data_classification_inventory.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/governance_access/f_access_data_classification_inventory.sql:1-24",
@@ -6023,11 +5949,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/governance_access/f_access_dead_table_candidates.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/access_dead_table_candidates.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/access_dead_table_candidates.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/governance_access/f_access_dead_table_candidates.sql:1-116",
@@ -6124,11 +6050,11 @@
    "partition": "window_days = 0 (snapshot check)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/governance_access/f_access_delta_sharing_exposure.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/access_delta_sharing_exposure.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/access_delta_sharing_exposure.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/governance_access/f_access_delta_sharing_exposure.sql:1-87",
@@ -6203,11 +6129,11 @@
    "partition": "window_days = 0 (snapshot check)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/governance_access/f_access_grants_inventory.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/access_grants_inventory.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/access_grants_inventory.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/governance_access/f_access_grants_inventory.sql:1-42",
@@ -6274,11 +6200,11 @@
    "partition": "window_days = 0 (snapshot check)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/governance_access/f_access_grants_inventory_extended.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/access_grants_inventory_extended.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/access_grants_inventory_extended.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/governance_access/f_access_grants_inventory_extended.sql:1-48",
@@ -6419,11 +6345,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/governance_access/f_access_login_concentration.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/access_login_concentration.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/access_login_concentration.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/governance_access/f_access_login_concentration.sql:1-88",
@@ -6541,11 +6467,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/governance_access/f_access_network_inbound_denials.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/access_network_inbound_denials.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/access_network_inbound_denials.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/governance_access/f_access_network_inbound_denials.sql:1-44",
@@ -6672,11 +6598,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/governance_access/f_access_network_outbound_denials.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/access_network_outbound_denials.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/access_network_outbound_denials.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/governance_access/f_access_network_outbound_denials.sql:1-48",
@@ -6776,11 +6702,11 @@
    "partition": "window_days = 0 (snapshot check)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/governance_access/f_access_pii_outside_tables.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/access_pii_outside_tables.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/access_pii_outside_tables.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/governance_access/f_access_pii_outside_tables.sql:1-126",
@@ -6925,11 +6851,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/governance_access/f_access_pii_propagation_untagged.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/access_pii_propagation_untagged.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/access_pii_propagation_untagged.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/governance_access/f_access_pii_propagation_untagged.sql:1-142",
@@ -7004,11 +6930,11 @@
    "partition": "window_days = 0 (snapshot check)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/governance_access/f_access_row_filters_inventory.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/access_row_filters_inventory.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/access_row_filters_inventory.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/governance_access/f_access_row_filters_inventory.sql:1-16",
@@ -7133,11 +7059,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/governance_access/f_access_runas_escalation.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/access_runas_escalation.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/access_runas_escalation.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/governance_access/f_access_runas_escalation.sql:1-148",
@@ -7278,11 +7204,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/governance_access/f_access_sensitive_table_reads.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/access_sensitive_table_reads.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/access_sensitive_table_reads.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/governance_access/f_access_sensitive_table_reads.sql:1-290",
@@ -7428,11 +7354,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/governance_access/f_access_source_table_coverage.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/access_source_table_coverage.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/access_source_table_coverage.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/governance_access/f_access_source_table_coverage.sql:1-1224",
@@ -7576,11 +7502,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/governance_access/f_access_table_lineage_blast_radius.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/access_table_lineage_blast_radius.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/access_table_lineage_blast_radius.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/governance_access/f_access_table_lineage_blast_radius.sql:1-88",
@@ -7647,11 +7573,11 @@
    "partition": "window_days = 0 (snapshot check)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/governance_access/f_access_tags_inventory.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/access_tags_inventory.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/access_tags_inventory.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/governance_access/f_access_tags_inventory.sql:1-48",
@@ -7742,11 +7668,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/governance_access/f_access_vector_search_traffic.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/access_vector_search_traffic.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/access_vector_search_traffic.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/governance_access/f_access_vector_search_traffic.sql:1-52",
@@ -7853,11 +7779,11 @@
    "partition": "window_days = 0 (snapshot check)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/governance_access/f_access_views_inventory.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/access_views_inventory.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/access_views_inventory.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/governance_access/f_access_views_inventory.sql:1-36",
@@ -7972,11 +7898,11 @@
    "partition": "window_days = 0 (snapshot check)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/governance_access/f_access_volumes_inventory.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/access_volumes_inventory.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/access_volumes_inventory.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/governance_access/f_access_volumes_inventory.sql:1-66",
@@ -8074,11 +8000,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/performance/f_audit_self_cost.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/audit_self_cost.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/audit_self_cost.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/performance/f_audit_self_cost.sql:1-46",
@@ -8319,11 +8245,11 @@
    "partition": "window_days = 0 (snapshot check)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/compute/f_classic_clusters_config_current.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/classic_clusters_config_current.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/classic_clusters_config_current.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/compute/f_classic_clusters_config_current.sql:1-36",
@@ -8463,11 +8389,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/serving_ai/f_compute_ai_gateway_usage.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/compute_ai_gateway_usage.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/compute_ai_gateway_usage.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/serving_ai/f_compute_ai_gateway_usage.sql:1-70",
@@ -8668,11 +8594,11 @@
    "partition": "window_days = 0 (snapshot check)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/compute/f_compute_cluster_config_posture.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/compute_cluster_config_posture.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/compute_cluster_config_posture.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/compute/f_compute_cluster_config_posture.sql:1-146",
@@ -8841,11 +8767,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/compute/f_compute_idle_node_ratio.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/compute_idle_node_ratio.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/compute_idle_node_ratio.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/compute/f_compute_idle_node_ratio.sql:1-210",
@@ -9009,11 +8935,11 @@
    "partition": "window_days = 0 (snapshot check)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/compute/f_compute_last_activity.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/compute_last_activity.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/compute_last_activity.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/compute/f_compute_last_activity.sql:1-262",
@@ -9143,11 +9069,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/serving_ai/f_compute_serving_dormant_endpoints.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/compute_serving_dormant_endpoints.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/compute_serving_dormant_endpoints.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/serving_ai/f_compute_serving_dormant_endpoints.sql:1-190",
@@ -9453,11 +9379,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/serving_ai/f_compute_serving_endpoint_cost_status.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/compute_serving_endpoint_cost_status.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/compute_serving_endpoint_cost_status.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/serving_ai/f_compute_serving_endpoint_cost_status.sql:1-418",
@@ -9625,11 +9551,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/serving_ai/f_compute_serving_endpoint_usage.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/compute_serving_endpoint_usage.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/compute_serving_endpoint_usage.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/serving_ai/f_compute_serving_endpoint_usage.sql:1-265",
@@ -9854,11 +9780,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/compute/f_compute_warehouse_autoscale_churn.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/compute_warehouse_autoscale_churn.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/compute_warehouse_autoscale_churn.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/compute/f_compute_warehouse_autoscale_churn.sql:1-232",
@@ -10012,11 +9938,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/compute/f_compute_warehouse_autostop_churn.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/compute_warehouse_autostop_churn.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/compute_warehouse_autostop_churn.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/compute/f_compute_warehouse_autostop_churn.sql:1-522",
@@ -10145,11 +10071,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/compute/f_compute_warehouse_cache_reuse.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/compute_warehouse_cache_reuse.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/compute_warehouse_cache_reuse.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/compute/f_compute_warehouse_cache_reuse.sql:1-174",
@@ -10310,11 +10236,11 @@
    "partition": "window_days = 0 (snapshot check)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/compute/f_compute_warehouse_config_posture.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/compute_warehouse_config_posture.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/compute_warehouse_config_posture.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/compute/f_compute_warehouse_config_posture.sql:1-114",
@@ -10451,11 +10377,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/compute/f_compute_warehouse_idle_gaps.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/compute_warehouse_idle_gaps.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/compute_warehouse_idle_gaps.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/compute/f_compute_warehouse_idle_gaps.sql:1-272",
@@ -10833,11 +10759,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/compute/f_compute_warehouse_idle_minutes.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/compute_warehouse_idle_minutes.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/compute_warehouse_idle_minutes.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/compute/f_compute_warehouse_idle_minutes.sql:1-854",
@@ -10983,11 +10909,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/compute/f_compute_warehouse_late_autostop.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/compute_warehouse_late_autostop.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/compute_warehouse_late_autostop.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/compute/f_compute_warehouse_late_autostop.sql:1-260",
@@ -11087,11 +11013,11 @@
    "partition": "window_days = 0 (snapshot check)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/cost/f_cost_account_prices_raw.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/cost_account_prices_raw.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/cost_account_prices_raw.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/cost/f_cost_account_prices_raw.sql:1-16",
@@ -11200,11 +11126,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/cost/f_cost_actual_vs_list_by_sku.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/cost_actual_vs_list_by_sku.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/cost_actual_vs_list_by_sku.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/cost/f_cost_actual_vs_list_by_sku.sql:1-60",
@@ -11342,11 +11268,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/cost/f_cost_audit_self_usage.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/cost_audit_self_usage.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/cost_audit_self_usage.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/cost/f_cost_audit_self_usage.sql:1-164",
@@ -11430,11 +11356,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/cost/f_cost_by_billing_origin_product.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/cost_by_billing_origin_product.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/cost_by_billing_origin_product.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/cost/f_cost_by_billing_origin_product.sql:1-30",
@@ -11602,11 +11528,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/cost/f_cost_by_compute_resource.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/cost_by_compute_resource.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/cost_by_compute_resource.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/cost/f_cost_by_compute_resource.sql:1-142",
@@ -11746,11 +11672,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/cost/f_cost_by_hour_of_day.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/cost_by_hour_of_day.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/cost_by_hour_of_day.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/cost/f_cost_by_hour_of_day.sql:1-216",
@@ -11900,11 +11826,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/cost/f_cost_by_job.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/cost_by_job.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/cost_by_job.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/cost/f_cost_by_job.sql:1-104",
@@ -12006,11 +11932,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/cost/f_cost_by_notebook.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/cost_by_notebook.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/cost_by_notebook.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/cost/f_cost_by_notebook.sql:1-52",
@@ -12113,11 +12039,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/cost/f_cost_by_serving_endpoint.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/cost_by_serving_endpoint.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/cost_by_serving_endpoint.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/cost/f_cost_by_serving_endpoint.sql:1-40",
@@ -12241,11 +12167,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/cost/f_cost_chargeback_by_allocation_tag.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/cost_chargeback_by_allocation_tag.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/cost_chargeback_by_allocation_tag.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/cost/f_cost_chargeback_by_allocation_tag.sql:1-242",
@@ -12408,11 +12334,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/cost/f_cost_chargeback_by_cluster.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/cost_chargeback_by_cluster.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/cost_chargeback_by_cluster.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/cost/f_cost_chargeback_by_cluster.sql:1-448",
@@ -12524,11 +12450,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/cost/f_cost_chargeback_by_identity.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/cost_chargeback_by_identity.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/cost_chargeback_by_identity.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/cost/f_cost_chargeback_by_identity.sql:1-58",
@@ -12683,11 +12609,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/cost/f_cost_chargeback_by_job.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/cost_chargeback_by_job.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/cost_chargeback_by_job.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/cost/f_cost_chargeback_by_job.sql:1-372",
@@ -12809,11 +12735,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/cost/f_cost_chargeback_by_service.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/cost_chargeback_by_service.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/cost_chargeback_by_service.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/cost/f_cost_chargeback_by_service.sql:1-242",
@@ -12961,11 +12887,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/cost/f_cost_chargeback_by_sku.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/cost_chargeback_by_sku.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/cost_chargeback_by_sku.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/cost/f_cost_chargeback_by_sku.sql:1-208",
@@ -13067,11 +12993,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/cost/f_cost_chargeback_by_tag.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/cost_chargeback_by_tag.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/cost_chargeback_by_tag.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/cost/f_cost_chargeback_by_tag.sql:1-34",
@@ -13218,11 +13144,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/cost/f_cost_chargeback_by_tag_value.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/cost_chargeback_by_tag_value.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/cost_chargeback_by_tag_value.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/cost/f_cost_chargeback_by_tag_value.sql:1-398",
@@ -13378,11 +13304,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/cost/f_cost_chargeback_by_warehouse.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/cost_chargeback_by_warehouse.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/cost_chargeback_by_warehouse.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/cost/f_cost_chargeback_by_warehouse.sql:1-434",
@@ -13487,11 +13413,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/cost/f_cost_chargeback_by_workspace.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/cost_chargeback_by_workspace.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/cost_chargeback_by_workspace.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/cost/f_cost_chargeback_by_workspace.sql:1-196",
@@ -13648,11 +13574,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/cost/f_cost_chargeback_identity_by_source.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/cost_chargeback_identity_by_source.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/cost_chargeback_identity_by_source.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/cost/f_cost_chargeback_identity_by_source.sql:1-654",
@@ -13758,11 +13684,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/cost/f_cost_chargeback_reconcile.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/cost_chargeback_reconcile.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/cost_chargeback_reconcile.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/cost/f_cost_chargeback_reconcile.sql:1-258",
@@ -13854,11 +13780,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/cost/f_cost_cloud_infra.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/cost_cloud_infra.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/cost_cloud_infra.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/cost/f_cost_cloud_infra.sql:1-70",
@@ -14021,11 +13947,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/cost/f_cost_daily_by_resource.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/cost_daily_by_resource.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/cost_daily_by_resource.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/cost/f_cost_daily_by_resource.sql:1-208",
@@ -14148,11 +14074,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/cost/f_cost_daily_spikes.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/cost_daily_spikes.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/cost_daily_spikes.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/cost/f_cost_daily_spikes.sql:1-248",
@@ -14263,11 +14189,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/cost/f_cost_dbsql_allocation_gap.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/cost_dbsql_allocation_gap.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/cost_dbsql_allocation_gap.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/cost/f_cost_dbsql_allocation_gap.sql:1-90",
@@ -14378,11 +14304,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/cost/f_cost_default_storage_dsu.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/cost_default_storage_dsu.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/cost_default_storage_dsu.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/cost/f_cost_default_storage_dsu.sql:1-38",
@@ -14510,11 +14436,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/cost/f_cost_dollarized_by_sku_day.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/cost_dollarized_by_sku_day.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/cost_dollarized_by_sku_day.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/cost/f_cost_dollarized_by_sku_day.sql:1-74",
@@ -14676,11 +14602,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/cost/f_cost_failed_statement_waste.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/cost_failed_statement_waste.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/cost_failed_statement_waste.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/cost/f_cost_failed_statement_waste.sql:1-388",
@@ -14825,11 +14751,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/cost/f_cost_genai_token_gpu.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/cost_genai_token_gpu.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/cost_genai_token_gpu.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/cost/f_cost_genai_token_gpu.sql:1-68",
@@ -14952,11 +14878,11 @@
    "partition": "window_days = 0 (snapshot check)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/cost/f_cost_monthly_actuals.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/cost_monthly_actuals.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/cost_monthly_actuals.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/cost/f_cost_monthly_actuals.sql:1-112",
@@ -15101,11 +15027,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/cost/f_cost_networking_egress.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/cost_networking_egress.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/cost_networking_egress.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/cost/f_cost_networking_egress.sql:1-72",
@@ -15211,11 +15137,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/cost/f_cost_period_over_period.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/cost_period_over_period.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/cost_period_over_period.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/cost/f_cost_period_over_period.sql:1-228",
@@ -15354,11 +15280,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/cost/f_cost_premium_serverless_photon.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/cost_premium_serverless_photon.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/cost_premium_serverless_photon.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/cost/f_cost_premium_serverless_photon.sql:1-46",
@@ -15448,11 +15374,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/cost/f_cost_restatement_trust_metric.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/cost_restatement_trust_metric.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/cost_restatement_trust_metric.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/cost/f_cost_restatement_trust_metric.sql:1-38",
@@ -15613,11 +15539,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/cost/f_cost_serving_mode_by_endpoint.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/cost_serving_mode_by_endpoint.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/cost_serving_mode_by_endpoint.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/cost/f_cost_serving_mode_by_endpoint.sql:1-140",
@@ -15780,11 +15706,11 @@
    "partition": "window_days = 0 (snapshot check)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/cost/f_cost_sku_trend_12m.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/cost_sku_trend_12m.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/cost_sku_trend_12m.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/cost/f_cost_sku_trend_12m.sql:1-276",
@@ -15928,11 +15854,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/cost/f_cost_totals_by_sku_day.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/cost_totals_by_sku_day.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/cost_totals_by_sku_day.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/cost/f_cost_totals_by_sku_day.sql:1-40",
@@ -16045,11 +15971,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/cost/f_cost_unnamed_workspaces.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/cost_unnamed_workspaces.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/cost_unnamed_workspaces.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/cost/f_cost_unnamed_workspaces.sql:1-120",
@@ -16160,11 +16086,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/cost/f_cost_usage_policy_coverage.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/cost_usage_policy_coverage.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/cost_usage_policy_coverage.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/cost/f_cost_usage_policy_coverage.sql:1-96",
@@ -16316,11 +16242,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/cost/f_cost_vector_search_spend.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/cost_vector_search_spend.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/cost_vector_search_spend.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/cost/f_cost_vector_search_spend.sql:1-106",
@@ -16377,11 +16303,11 @@
    "partition": "window_days = 0 (snapshot check)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/cost/f_cost_workspace_names.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/cost_workspace_names.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/cost_workspace_names.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/cost/f_cost_workspace_names.sql:1-14",
@@ -16532,11 +16458,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/cost/f_genie_usage.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/genie_usage.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/genie_usage.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/cost/f_genie_usage.sql:1-140",
@@ -16645,11 +16571,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/compute/f_instance_events_idle_active.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/instance_events_idle_active.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/instance_events_idle_active.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/compute/f_instance_events_idle_active.sql:1-30",
@@ -16867,11 +16793,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/compute/f_instance_pools_idle_capacity.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/instance_pools_idle_capacity.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/instance_pools_idle_capacity.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/compute/f_instance_pools_idle_capacity.sql:1-118",
@@ -17058,11 +16984,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/jobs_pipelines/f_lakeflow_daily_state.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/lakeflow_daily_state.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/lakeflow_daily_state.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/jobs_pipelines/f_lakeflow_daily_state.sql:1-242",
@@ -17153,11 +17079,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/jobs_pipelines/f_lakeflow_failed_cluster_starts.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/lakeflow_failed_cluster_starts.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/lakeflow_failed_cluster_starts.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/jobs_pipelines/f_lakeflow_failed_cluster_starts.sql:1-60",
@@ -17375,11 +17301,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/jobs_pipelines/f_lakeflow_failed_jobs_wasted_dbus.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/lakeflow_failed_jobs_wasted_dbus.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/lakeflow_failed_jobs_wasted_dbus.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/jobs_pipelines/f_lakeflow_failed_jobs_wasted_dbus.sql:1-404",
@@ -17513,11 +17439,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/jobs_pipelines/f_lakeflow_failed_runs.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/lakeflow_failed_runs.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/lakeflow_failed_runs.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/jobs_pipelines/f_lakeflow_failed_runs.sql:1-82",
@@ -17599,11 +17525,11 @@
    "partition": "window_days = 0 (snapshot check)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/jobs_pipelines/f_lakeflow_health_rule_coverage.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/lakeflow_health_rule_coverage.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/lakeflow_health_rule_coverage.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/jobs_pipelines/f_lakeflow_health_rule_coverage.sql:1-48",
@@ -17981,11 +17907,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/jobs_pipelines/f_lakeflow_job_compute_pressure.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/lakeflow_job_compute_pressure.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/lakeflow_job_compute_pressure.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/jobs_pipelines/f_lakeflow_job_compute_pressure.sql:1-1039",
@@ -18115,11 +18041,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/jobs_pipelines/f_lakeflow_job_cost_summary.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/lakeflow_job_cost_summary.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/lakeflow_job_cost_summary.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/jobs_pipelines/f_lakeflow_job_cost_summary.sql:1-166",
@@ -18305,11 +18231,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/jobs_pipelines/f_lakeflow_job_duration_regression.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/lakeflow_job_duration_regression.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/lakeflow_job_duration_regression.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/jobs_pipelines/f_lakeflow_job_duration_regression.sql:1-340",
@@ -18535,11 +18461,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/jobs_pipelines/f_lakeflow_job_oversized.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/lakeflow_job_oversized.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/lakeflow_job_oversized.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/jobs_pipelines/f_lakeflow_job_oversized.sql:1-590",
@@ -18677,11 +18603,11 @@
    "partition": "window_days = 0 (snapshot check)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/jobs_pipelines/f_lakeflow_job_ownership_orphans.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/lakeflow_job_ownership_orphans.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/lakeflow_job_ownership_orphans.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/jobs_pipelines/f_lakeflow_job_ownership_orphans.sql:1-128",
@@ -18771,11 +18697,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/jobs_pipelines/f_lakeflow_job_queue_time.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/lakeflow_job_queue_time.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/lakeflow_job_queue_time.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/jobs_pipelines/f_lakeflow_job_queue_time.sql:1-72",
@@ -18954,11 +18880,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/jobs_pipelines/f_lakeflow_job_recent_runs.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/lakeflow_job_recent_runs.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/lakeflow_job_recent_runs.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/jobs_pipelines/f_lakeflow_job_recent_runs.sql:1-283",
@@ -19152,11 +19078,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/jobs_pipelines/f_lakeflow_job_reliability.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/lakeflow_job_reliability.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/lakeflow_job_reliability.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/jobs_pipelines/f_lakeflow_job_reliability.sql:1-332",
@@ -19271,11 +19197,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/jobs_pipelines/f_lakeflow_job_run_changes.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/lakeflow_job_run_changes.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/lakeflow_job_run_changes.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/jobs_pipelines/f_lakeflow_job_run_changes.sql:1-672",
@@ -19414,11 +19340,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/jobs_pipelines/f_lakeflow_job_run_cost.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/lakeflow_job_run_cost.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/lakeflow_job_run_cost.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/jobs_pipelines/f_lakeflow_job_run_cost.sql:1-266",
@@ -19581,11 +19507,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/jobs_pipelines/f_lakeflow_job_tasks_no_timeout.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/lakeflow_job_tasks_no_timeout.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/lakeflow_job_tasks_no_timeout.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/jobs_pipelines/f_lakeflow_job_tasks_no_timeout.sql:1-212",
@@ -19723,11 +19649,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/jobs_pipelines/f_lakeflow_jobs_no_timeout.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/lakeflow_jobs_no_timeout.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/lakeflow_jobs_no_timeout.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/jobs_pipelines/f_lakeflow_jobs_no_timeout.sql:1-178",
@@ -19858,11 +19784,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/jobs_pipelines/f_lakeflow_jobs_on_all_purpose.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/lakeflow_jobs_on_all_purpose.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/lakeflow_jobs_on_all_purpose.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/jobs_pipelines/f_lakeflow_jobs_on_all_purpose.sql:1-384",
@@ -20153,11 +20079,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/jobs_pipelines/f_lakeflow_long_running_runs.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/lakeflow_long_running_runs.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/lakeflow_long_running_runs.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/jobs_pipelines/f_lakeflow_long_running_runs.sql:1-332",
@@ -20264,11 +20190,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/jobs_pipelines/f_lakeflow_never_started_runs.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/lakeflow_never_started_runs.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/lakeflow_never_started_runs.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/jobs_pipelines/f_lakeflow_never_started_runs.sql:1-110",
@@ -20398,11 +20324,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/jobs_pipelines/f_lakeflow_phase_cold_start.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/lakeflow_phase_cold_start.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/lakeflow_phase_cold_start.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/jobs_pipelines/f_lakeflow_phase_cold_start.sql:1-148",
@@ -20620,11 +20546,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/jobs_pipelines/f_lakeflow_pipeline_cost.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/lakeflow_pipeline_cost.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/lakeflow_pipeline_cost.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/jobs_pipelines/f_lakeflow_pipeline_cost.sql:1-340",
@@ -20762,11 +20688,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/jobs_pipelines/f_lakeflow_pipeline_idle_tail_duration.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/lakeflow_pipeline_idle_tail_duration.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/lakeflow_pipeline_idle_tail_duration.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/jobs_pipelines/f_lakeflow_pipeline_idle_tail_duration.sql:1-186",
@@ -20875,11 +20801,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/jobs_pipelines/f_lakeflow_pipeline_update_failures_retries.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/lakeflow_pipeline_update_failures_retries.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/lakeflow_pipeline_update_failures_retries.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/jobs_pipelines/f_lakeflow_pipeline_update_failures_retries.sql:1-56",
@@ -21001,11 +20927,11 @@
    "partition": "window_days = 0 (snapshot check)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/jobs_pipelines/f_lakeflow_pipelines_inventory_tier.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/lakeflow_pipelines_inventory_tier.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/lakeflow_pipelines_inventory_tier.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/jobs_pipelines/f_lakeflow_pipelines_inventory_tier.sql:1-44",
@@ -21143,11 +21069,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/jobs_pipelines/f_lakeflow_retries_repairs.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/lakeflow_retries_repairs.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/lakeflow_retries_repairs.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/jobs_pipelines/f_lakeflow_retries_repairs.sql:1-206",
@@ -21277,11 +21203,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/jobs_pipelines/f_lakeflow_stale_zombie_jobs.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/lakeflow_stale_zombie_jobs.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/lakeflow_stale_zombie_jobs.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/jobs_pipelines/f_lakeflow_stale_zombie_jobs.sql:1-174",
@@ -21355,11 +21281,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/jobs_pipelines/f_lakeflow_succeeded_with_failed_tasks.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/lakeflow_succeeded_with_failed_tasks.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/lakeflow_succeeded_with_failed_tasks.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/jobs_pipelines/f_lakeflow_succeeded_with_failed_tasks.sql:1-80",
@@ -21522,11 +21448,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/jobs_pipelines/f_lakeflow_tasks_near_timeout.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/lakeflow_tasks_near_timeout.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/lakeflow_tasks_near_timeout.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/jobs_pipelines/f_lakeflow_tasks_near_timeout.sql:1-154",
@@ -21601,11 +21527,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/jobs_pipelines/f_lakeflow_termination_taxonomy.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/lakeflow_termination_taxonomy.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/lakeflow_termination_taxonomy.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/jobs_pipelines/f_lakeflow_termination_taxonomy.sql:1-34",
@@ -21672,11 +21598,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/jobs_pipelines/f_lakeflow_termination_type_probe.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/lakeflow_termination_type_probe.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/lakeflow_termination_type_probe.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/jobs_pipelines/f_lakeflow_termination_type_probe.sql:1-26",
@@ -21777,11 +21703,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/jobs_pipelines/f_lakeflow_workload_mix_hours.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/lakeflow_workload_mix_hours.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/lakeflow_workload_mix_hours.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/jobs_pipelines/f_lakeflow_workload_mix_hours.sql:1-42",
@@ -21936,11 +21862,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/compute/f_node_timeline_utilization.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/node_timeline_utilization.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/node_timeline_utilization.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/compute/f_node_timeline_utilization.sql:1-66",
@@ -22013,11 +21939,11 @@
    "partition": "window_days = 0 (snapshot check)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/compute/f_node_types_reference.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/node_types_reference.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/node_types_reference.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/compute/f_node_types_reference.sql:1-14",
@@ -22075,11 +22001,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/cost/f_overview_daily_dbu_trend.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/overview_daily_dbu_trend.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/overview_daily_dbu_trend.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/cost/f_overview_daily_dbu_trend.sql:1-34",
@@ -22146,11 +22072,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/cost/f_overview_dbu_by_sku.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/overview_dbu_by_sku.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/overview_dbu_by_sku.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/cost/f_overview_dbu_by_sku.sql:1-36",
@@ -22266,11 +22192,11 @@
    "partition": "window_days = 0 (snapshot check)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/cost/f_overview_list_prices_raw.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/overview_list_prices_raw.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/overview_list_prices_raw.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/cost/f_overview_list_prices_raw.sql:1-32",
@@ -22375,11 +22301,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/cost/f_overview_serverless_classic_split.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/overview_serverless_classic_split.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/overview_serverless_classic_split.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/cost/f_overview_serverless_classic_split.sql:1-64",
@@ -22460,11 +22386,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/cost/f_overview_spend_estimate.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/overview_spend_estimate.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/overview_spend_estimate.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/cost/f_overview_spend_estimate.sql:1-72",
@@ -22739,11 +22665,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/performance/f_perf_daily_by_resource.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/perf_daily_by_resource.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/perf_daily_by_resource.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/performance/f_perf_daily_by_resource.sql:1-478",
@@ -22835,11 +22761,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/performance/f_perf_failure_causes_daily.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/perf_failure_causes_daily.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/perf_failure_causes_daily.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/performance/f_perf_failure_causes_daily.sql:1-104",
@@ -22954,11 +22880,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/performance/f_perf_queue_by_hour.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/perf_queue_by_hour.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/perf_queue_by_hour.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/performance/f_perf_queue_by_hour.sql:1-46",
@@ -23100,11 +23026,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/storage/f_po_clustering_activity.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/po_clustering_activity.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/po_clustering_activity.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/storage/f_po_clustering_activity.sql:1-52",
@@ -23249,11 +23175,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/storage/f_po_clustering_column_churn.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/po_clustering_column_churn.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/po_clustering_column_churn.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/storage/f_po_clustering_column_churn.sql:1-60",
@@ -23389,11 +23315,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/storage/f_po_data_skipping_backfill.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/po_data_skipping_backfill.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/po_data_skipping_backfill.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/storage/f_po_data_skipping_backfill.sql:1-68",
@@ -23559,11 +23485,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/storage/f_po_failure_reasons.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/po_failure_reasons.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/po_failure_reasons.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/storage/f_po_failure_reasons.sql:1-216",
@@ -23725,11 +23651,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/storage/f_po_maintenance_cost_by_table.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/po_maintenance_cost_by_table.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/po_maintenance_cost_by_table.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/storage/f_po_maintenance_cost_by_table.sql:1-52",
@@ -23846,11 +23772,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/storage/f_po_vacuum_reclaimed_bytes.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/po_vacuum_reclaimed_bytes.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/po_vacuum_reclaimed_bytes.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/storage/f_po_vacuum_reclaimed_bytes.sql:1-52",
@@ -23966,11 +23892,11 @@
    "partition": "window_days = 0 (snapshot check)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/cost/f_pricing_list_prices_raw.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/pricing_list_prices_raw.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/pricing_list_prices_raw.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/cost/f_pricing_list_prices_raw.sql:1-20",
@@ -24118,11 +24044,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/performance/f_query_cache_coldstart.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/query_cache_coldstart.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/query_cache_coldstart.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/performance/f_query_cache_coldstart.sql:1-100",
@@ -24347,11 +24273,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/performance/f_query_costly_statements.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/query_costly_statements.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/query_costly_statements.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/performance/f_query_costly_statements.sql:1-147",
@@ -24489,11 +24415,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/performance/f_query_costly_statements_grouped.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/query_costly_statements_grouped.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/query_costly_statements_grouped.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/performance/f_query_costly_statements_grouped.sql:1-123",
@@ -24636,11 +24562,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/performance/f_query_failed_queries_daily.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/query_failed_queries_daily.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/query_failed_queries_daily.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/performance/f_query_failed_queries_daily.sql:1-69",
@@ -24774,11 +24700,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/performance/f_query_failed_statements_grouped.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/query_failed_statements_grouped.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/query_failed_statements_grouped.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/performance/f_query_failed_statements_grouped.sql:1-159",
@@ -24919,11 +24845,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/performance/f_query_local_spillage.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/query_local_spillage.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/query_local_spillage.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/performance/f_query_local_spillage.sql:1-64",
@@ -25052,11 +24978,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/performance/f_query_per_query_estimate_lane.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/query_per_query_estimate_lane.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/query_per_query_estimate_lane.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/performance/f_query_per_query_estimate_lane.sql:1-42",
@@ -25201,11 +25127,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/performance/f_query_provenance_by_source.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/query_provenance_by_source.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/query_provenance_by_source.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/performance/f_query_provenance_by_source.sql:1-82",
@@ -25379,11 +25305,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/performance/f_query_pruning_effectiveness.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/query_pruning_effectiveness.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/query_pruning_effectiveness.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/performance/f_query_pruning_effectiveness.sql:1-126",
@@ -25523,11 +25449,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/performance/f_query_queuing_waits.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/query_queuing_waits.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/query_queuing_waits.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/performance/f_query_queuing_waits.sql:1-94",
@@ -25669,11 +25595,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/performance/f_query_shuffle_write_amplification.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/query_shuffle_write_amplification.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/query_shuffle_write_amplification.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/performance/f_query_shuffle_write_amplification.sql:1-64",
@@ -25913,11 +25839,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/performance/f_query_slices.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/query_slices.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/query_slices.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/performance/f_query_slices.sql:1-164",
@@ -26322,11 +26248,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/performance/f_query_task_statement_breakdown.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/query_task_statement_breakdown.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/query_task_statement_breakdown.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/performance/f_query_task_statement_breakdown.sql:1-610",
@@ -26579,11 +26505,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/performance/f_query_top_by_cost.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/query_top_by_cost.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/query_top_by_cost.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/performance/f_query_top_by_cost.sql:1-600",
@@ -26889,11 +26815,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/performance/f_query_warehouse_pressure.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/query_warehouse_pressure.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/query_warehouse_pressure.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/performance/f_query_warehouse_pressure.sql:1-480",
@@ -27036,11 +26962,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/performance/f_query_workload_mix_hours.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/query_workload_mix_hours.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/query_workload_mix_hours.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/performance/f_query_workload_mix_hours.sql:1-44",
@@ -27170,11 +27096,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/serving_ai/f_serving_endpoint_traffic_by_endpoint.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/serving_endpoint_traffic_by_endpoint.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/serving_endpoint_traffic_by_endpoint.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/serving_ai/f_serving_endpoint_traffic_by_endpoint.sql:1-150",
@@ -27311,11 +27237,11 @@
    "partition": "window_days = 0 (snapshot check)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/compute/f_sql_warehouse_config_current.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/sql_warehouse_config_current.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/sql_warehouse_config_current.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/compute/f_sql_warehouse_config_current.sql:1-28",
@@ -27437,11 +27363,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/compute/f_sql_warehouse_events_activity.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/sql_warehouse_events_activity.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/sql_warehouse_events_activity.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/compute/f_sql_warehouse_events_activity.sql:1-166",
@@ -27594,11 +27520,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/storage/f_storage_growth.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/storage_growth.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/storage_growth.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/storage/f_storage_growth.sql:1-112",
@@ -27747,11 +27673,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/storage/f_storage_po_coverage.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/storage_po_coverage.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/storage_po_coverage.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/storage/f_storage_po_coverage.sql:1-150",
@@ -27880,11 +27806,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/storage/f_storage_small_files.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/storage_small_files.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/storage_small_files.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/storage/f_storage_small_files.sql:1-86",
@@ -27967,11 +27893,11 @@
    "partition": "window_days = 0 (snapshot check)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/storage/f_storage_target_table_discovery.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/storage_target_table_discovery.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/storage_target_table_discovery.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/storage/f_storage_target_table_discovery.sql:1-32",
@@ -28134,11 +28060,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/storage/f_storage_unused_table_cost.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/storage_unused_table_cost.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/storage_unused_table_cost.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/storage/f_storage_unused_table_cost.sql:1-506",
@@ -28214,11 +28140,11 @@
    "partition": "window_days = 0 (snapshot check)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/storage/f_table_inventory_type.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/table_inventory_type.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/table_inventory_type.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/storage/f_table_inventory_type.sql:1-22",
@@ -28653,11 +28579,11 @@
    "partition": "window_days in (7,30,90)",
    "written_by": [
     "dbt build --target dev (dbt/models/findings/compute/f_task_cluster_utilization.sql)",
-    "tools/load_direct_results.py:580 from app/direct_sql/task_cluster_utilization.sql (Databricks export)"
+    "tools/load_direct_results.py:595 from app/direct_sql/task_cluster_utilization.sql (Databricks export)"
    ],
    "read_by": [
-    "app/core/data.py:841 (read_finding)",
-    "app/core/data.py:1367 (aggregate_finding)"
+    "app/core/data.py:857 (read_finding)",
+    "app/core/data.py:1383 (aggregate_finding)"
    ],
    "evidence": [
     "dbt/models/findings/compute/f_task_cluster_utilization.sql:1-592",
@@ -28677,11 +28603,11 @@
    "versioning": "none",
    "partition": "none",
    "written_by": [
-    "tools/load_direct_results.py:812-832"
+    "tools/load_direct_results.py:835-855"
    ],
    "read_by": [],
    "evidence": [
-    "tools/load_direct_results.py:812-832"
+    "tools/load_direct_results.py:835-855"
    ]
   },
   {
@@ -28694,11 +28620,11 @@
    "versioning": "none",
    "partition": "none",
    "written_by": [
-    "tools/load_direct_results.py:835-846"
+    "tools/load_direct_results.py:858-869"
    ],
    "read_by": [],
    "evidence": [
-    "tools/load_direct_results.py:835-846"
+    "tools/load_direct_results.py:858-869"
    ]
   },
   {
@@ -28711,11 +28637,11 @@
    "versioning": "none",
    "partition": "none",
    "written_by": [
-    "tools/load_direct_results.py:727"
+    "tools/load_direct_results.py:742"
    ],
    "read_by": [],
    "evidence": [
-    "tools/load_direct_results.py:727"
+    "tools/load_direct_results.py:742"
    ]
   },
   {
@@ -28728,11 +28654,11 @@
    "versioning": "none",
    "partition": "none",
    "written_by": [
-    "tools/load_direct_results.py:718"
+    "tools/load_direct_results.py:733"
    ],
    "read_by": [],
    "evidence": [
-    "tools/load_direct_results.py:718"
+    "tools/load_direct_results.py:733"
    ]
   },
   {
@@ -28745,11 +28671,11 @@
    "versioning": "none",
    "partition": "none",
    "written_by": [
-    "tools/load_direct_results.py:743"
+    "tools/load_direct_results.py:758"
    ],
    "read_by": [],
    "evidence": [
-    "tools/load_direct_results.py:743"
+    "tools/load_direct_results.py:758"
    ]
   },
   {
@@ -28762,11 +28688,11 @@
    "versioning": "none",
    "partition": "none",
    "written_by": [
-    "tools/load_direct_results.py:739"
+    "tools/load_direct_results.py:754"
    ],
    "read_by": [],
    "evidence": [
-    "tools/load_direct_results.py:739"
+    "tools/load_direct_results.py:754"
    ]
   },
   {
@@ -28779,11 +28705,11 @@
    "versioning": "none",
    "partition": "none",
    "written_by": [
-    "tools/load_direct_results.py:753"
+    "tools/load_direct_results.py:770"
    ],
    "read_by": [],
    "evidence": [
-    "tools/load_direct_results.py:753"
+    "tools/load_direct_results.py:770"
    ]
   },
   {
@@ -28796,11 +28722,11 @@
    "versioning": "none",
    "partition": "none",
    "written_by": [
-    "tools/load_direct_results.py:764"
+    "tools/load_direct_results.py:783"
    ],
    "read_by": [],
    "evidence": [
-    "tools/load_direct_results.py:764"
+    "tools/load_direct_results.py:783"
    ]
   },
   {
@@ -28813,11 +28739,11 @@
    "versioning": "none",
    "partition": "none",
    "written_by": [
-    "tools/load_direct_results.py:759-766"
+    "tools/load_direct_results.py:778-785"
    ],
    "read_by": [],
    "evidence": [
-    "tools/load_direct_results.py:759-766"
+    "tools/load_direct_results.py:778-785"
    ]
   },
   {
@@ -28830,11 +28756,11 @@
    "versioning": "none",
    "partition": "none",
    "written_by": [
-    "tools/load_direct_results.py:776-777"
+    "tools/load_direct_results.py:795-796"
    ],
    "read_by": [],
    "evidence": [
-    "tools/load_direct_results.py:776-777"
+    "tools/load_direct_results.py:795-796"
    ]
   },
   {
@@ -28847,11 +28773,11 @@
    "versioning": "none",
    "partition": "none",
    "written_by": [
-    "tools/load_direct_results.py:794-795"
+    "tools/load_direct_results.py:815-816"
    ],
    "read_by": [],
    "evidence": [
-    "tools/load_direct_results.py:794-795"
+    "tools/load_direct_results.py:815-816"
    ]
   },
   {
@@ -28864,11 +28790,11 @@
    "versioning": "none",
    "partition": "none",
    "written_by": [
-    "tools/load_direct_results.py:785"
+    "tools/load_direct_results.py:804"
    ],
    "read_by": [],
    "evidence": [
-    "tools/load_direct_results.py:785"
+    "tools/load_direct_results.py:804"
    ]
   },
   {
@@ -28881,11 +28807,11 @@
    "versioning": "none",
    "partition": "none",
    "written_by": [
-    "tools/load_direct_results.py:785"
+    "tools/load_direct_results.py:804"
    ],
    "read_by": [],
    "evidence": [
-    "tools/load_direct_results.py:785"
+    "tools/load_direct_results.py:804"
    ]
   },
   {
@@ -28898,11 +28824,11 @@
    "versioning": "none",
    "partition": "none",
    "written_by": [
-    "tools/load_direct_results.py:785"
+    "tools/load_direct_results.py:804"
    ],
    "read_by": [],
    "evidence": [
-    "tools/load_direct_results.py:785"
+    "tools/load_direct_results.py:804"
    ]
   },
   {
@@ -28915,11 +28841,11 @@
    "versioning": "none",
    "partition": "none",
    "written_by": [
-    "tools/load_direct_results.py:785"
+    "tools/load_direct_results.py:804"
    ],
    "read_by": [],
    "evidence": [
-    "tools/load_direct_results.py:785"
+    "tools/load_direct_results.py:804"
    ]
   },
   {
@@ -28932,11 +28858,11 @@
    "versioning": "none",
    "partition": "none",
    "written_by": [
-    "tools/load_direct_results.py:785"
+    "tools/load_direct_results.py:804"
    ],
    "read_by": [],
    "evidence": [
-    "tools/load_direct_results.py:785"
+    "tools/load_direct_results.py:804"
    ]
   },
   {
@@ -28949,11 +28875,11 @@
    "versioning": "none",
    "partition": "none",
    "written_by": [
-    "tools/load_direct_results.py:785"
+    "tools/load_direct_results.py:804"
    ],
    "read_by": [],
    "evidence": [
-    "tools/load_direct_results.py:785"
+    "tools/load_direct_results.py:804"
    ]
   },
   {
@@ -28966,11 +28892,11 @@
    "versioning": "none",
    "partition": "none",
    "written_by": [
-    "tools/load_direct_results.py:785"
+    "tools/load_direct_results.py:804"
    ],
    "read_by": [],
    "evidence": [
-    "tools/load_direct_results.py:785"
+    "tools/load_direct_results.py:804"
    ]
   },
   {
@@ -28983,11 +28909,11 @@
    "versioning": "none",
    "partition": "none",
    "written_by": [
-    "tools/load_direct_results.py:785"
+    "tools/load_direct_results.py:804"
    ],
    "read_by": [],
    "evidence": [
-    "tools/load_direct_results.py:785"
+    "tools/load_direct_results.py:804"
    ]
   },
   {
@@ -29000,11 +28926,11 @@
    "versioning": "none",
    "partition": "none",
    "written_by": [
-    "tools/load_direct_results.py:785"
+    "tools/load_direct_results.py:804"
    ],
    "read_by": [],
    "evidence": [
-    "tools/load_direct_results.py:785"
+    "tools/load_direct_results.py:804"
    ]
   },
   {
@@ -29017,11 +28943,11 @@
    "versioning": "none",
    "partition": "none",
    "written_by": [
-    "tools/load_direct_results.py:785"
+    "tools/load_direct_results.py:804"
    ],
    "read_by": [],
    "evidence": [
-    "tools/load_direct_results.py:785"
+    "tools/load_direct_results.py:804"
    ]
   },
   {
@@ -29034,11 +28960,11 @@
    "versioning": "none",
    "partition": "none",
    "written_by": [
-    "tools/load_direct_results.py:785"
+    "tools/load_direct_results.py:804"
    ],
    "read_by": [],
    "evidence": [
-    "tools/load_direct_results.py:785"
+    "tools/load_direct_results.py:804"
    ]
   },
   {
@@ -29051,11 +28977,11 @@
    "versioning": "none",
    "partition": "none",
    "written_by": [
-    "tools/load_direct_results.py:785"
+    "tools/load_direct_results.py:804"
    ],
    "read_by": [],
    "evidence": [
-    "tools/load_direct_results.py:785"
+    "tools/load_direct_results.py:804"
    ]
   },
   {
@@ -29068,11 +28994,11 @@
    "versioning": "none",
    "partition": "none",
    "written_by": [
-    "tools/load_direct_results.py:785"
+    "tools/load_direct_results.py:804"
    ],
    "read_by": [],
    "evidence": [
-    "tools/load_direct_results.py:785"
+    "tools/load_direct_results.py:804"
    ]
   },
   {
@@ -29085,11 +29011,11 @@
    "versioning": "none",
    "partition": "none",
    "written_by": [
-    "tools/load_direct_results.py:785"
+    "tools/load_direct_results.py:804"
    ],
    "read_by": [],
    "evidence": [
-    "tools/load_direct_results.py:785"
+    "tools/load_direct_results.py:804"
    ]
   },
   {
@@ -29102,11 +29028,11 @@
    "versioning": "none",
    "partition": "none",
    "written_by": [
-    "tools/load_direct_results.py:785"
+    "tools/load_direct_results.py:804"
    ],
    "read_by": [],
    "evidence": [
-    "tools/load_direct_results.py:785"
+    "tools/load_direct_results.py:804"
    ]
   },
   {
@@ -29119,11 +29045,11 @@
    "versioning": "none",
    "partition": "none",
    "written_by": [
-    "tools/load_direct_results.py:801"
+    "tools/load_direct_results.py:822"
    ],
    "read_by": [],
    "evidence": [
-    "tools/load_direct_results.py:801"
+    "tools/load_direct_results.py:822"
    ]
   },
   {
@@ -29136,11 +29062,11 @@
    "versioning": "none",
    "partition": "none",
    "written_by": [
-    "tools/load_direct_results.py:801"
+    "tools/load_direct_results.py:822"
    ],
    "read_by": [],
    "evidence": [
-    "tools/load_direct_results.py:801"
+    "tools/load_direct_results.py:822"
    ]
   },
   {
@@ -29153,11 +29079,11 @@
    "versioning": "none",
    "partition": "none",
    "written_by": [
-    "tools/load_direct_results.py:801"
+    "tools/load_direct_results.py:822"
    ],
    "read_by": [],
    "evidence": [
-    "tools/load_direct_results.py:801"
+    "tools/load_direct_results.py:822"
    ]
   },
   {
@@ -29170,11 +29096,11 @@
    "versioning": "none",
    "partition": "none",
    "written_by": [
-    "tools/load_direct_results.py:801"
+    "tools/load_direct_results.py:822"
    ],
    "read_by": [],
    "evidence": [
-    "tools/load_direct_results.py:801"
+    "tools/load_direct_results.py:822"
    ]
   }
  ],
@@ -29190,7 +29116,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_access_column_lineage_sensitive_reach",
@@ -29203,7 +29129,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_access_login_concentration",
@@ -29216,7 +29142,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_access_network_inbound_denials",
@@ -29229,7 +29155,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_access_network_outbound_denials",
@@ -29242,7 +29168,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_access_pii_propagation_untagged",
@@ -29255,7 +29181,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_access_runas_escalation",
@@ -29268,7 +29194,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_access_sensitive_table_reads",
@@ -29281,7 +29207,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_access_table_lineage_blast_radius",
@@ -29294,7 +29220,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_access_vector_search_traffic",
@@ -29307,7 +29233,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_audit_self_cost",
@@ -29320,7 +29246,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_classic_clusters_config_current",
@@ -29333,7 +29259,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_compute_ai_gateway_usage",
@@ -29346,7 +29272,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_compute_cluster_config_posture",
@@ -29359,7 +29285,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_compute_idle_node_ratio",
@@ -29372,7 +29298,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:509"
+   "evidence": "app/core/data.py:525"
   },
   {
    "from": "findings.f_compute_last_activity",
@@ -29385,7 +29311,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_compute_serving_dormant_endpoints",
@@ -29398,7 +29324,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_compute_serving_endpoint_cost_status",
@@ -29411,7 +29337,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_compute_serving_endpoint_usage",
@@ -29424,7 +29350,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_compute_warehouse_autoscale_churn",
@@ -29437,7 +29363,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:507"
+   "evidence": "app/core/data.py:523"
   },
   {
    "from": "findings.f_compute_warehouse_autostop_churn",
@@ -29450,7 +29376,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_compute_warehouse_cache_reuse",
@@ -29463,7 +29389,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:507"
+   "evidence": "app/core/data.py:523"
   },
   {
    "from": "findings.f_compute_warehouse_config_posture",
@@ -29476,7 +29402,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_compute_warehouse_idle_gaps",
@@ -29489,7 +29415,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:507"
+   "evidence": "app/core/data.py:523"
   },
   {
    "from": "findings.f_compute_warehouse_idle_minutes",
@@ -29502,7 +29428,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_compute_warehouse_late_autostop",
@@ -29515,7 +29441,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_cost_actual_vs_list_by_sku",
@@ -29528,7 +29454,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_cost_audit_self_usage",
@@ -29541,7 +29467,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_cost_by_billing_origin_product",
@@ -29554,7 +29480,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_cost_by_compute_resource",
@@ -29567,7 +29493,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_cost_by_hour_of_day",
@@ -29580,7 +29506,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_cost_by_job",
@@ -29593,7 +29519,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_cost_by_notebook",
@@ -29606,7 +29532,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_cost_by_serving_endpoint",
@@ -29619,7 +29545,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_cost_chargeback_by_allocation_tag",
@@ -29632,7 +29558,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_cost_chargeback_by_cluster",
@@ -29645,7 +29571,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_cost_chargeback_by_identity",
@@ -29658,7 +29584,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_cost_chargeback_by_job",
@@ -29671,7 +29597,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_cost_chargeback_by_service",
@@ -29684,7 +29610,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_cost_chargeback_by_sku",
@@ -29697,7 +29623,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_cost_chargeback_by_tag",
@@ -29710,7 +29636,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_cost_chargeback_by_tag_value",
@@ -29723,7 +29649,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_cost_chargeback_by_warehouse",
@@ -29736,7 +29662,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_cost_chargeback_by_workspace",
@@ -29749,7 +29675,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_cost_chargeback_identity_by_source",
@@ -29762,7 +29688,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_cost_chargeback_reconcile",
@@ -29775,7 +29701,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_cost_cloud_infra",
@@ -29788,7 +29714,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_cost_daily_by_resource",
@@ -29801,7 +29727,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_cost_daily_spikes",
@@ -29814,7 +29740,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_cost_dbsql_allocation_gap",
@@ -29827,7 +29753,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_cost_default_storage_dsu",
@@ -29840,7 +29766,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_cost_dollarized_by_sku_day",
@@ -29853,7 +29779,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_cost_failed_statement_waste",
@@ -29866,7 +29792,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_cost_genai_token_gpu",
@@ -29879,7 +29805,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_cost_monthly_actuals",
@@ -29892,7 +29818,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_cost_networking_egress",
@@ -29905,7 +29831,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_cost_period_over_period",
@@ -29918,7 +29844,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_cost_premium_serverless_photon",
@@ -29931,7 +29857,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_cost_restatement_trust_metric",
@@ -29944,7 +29870,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_cost_serving_mode_by_endpoint",
@@ -29957,7 +29883,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_cost_sku_trend_12m",
@@ -29970,7 +29896,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_cost_totals_by_sku_day",
@@ -29983,7 +29909,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_cost_unnamed_workspaces",
@@ -29996,7 +29922,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_cost_usage_policy_coverage",
@@ -30009,7 +29935,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_cost_vector_search_spend",
@@ -30022,7 +29948,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_cost_workspace_names",
@@ -30035,7 +29961,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_genie_usage",
@@ -30048,7 +29974,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_instance_events_idle_active",
@@ -30061,7 +29987,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_instance_pools_idle_capacity",
@@ -30074,7 +30000,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_lakeflow_daily_state",
@@ -30087,7 +30013,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_lakeflow_failed_cluster_starts",
@@ -30100,7 +30026,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_lakeflow_failed_jobs_wasted_dbus",
@@ -30113,7 +30039,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_lakeflow_failed_runs",
@@ -30126,7 +30052,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_lakeflow_health_rule_coverage",
@@ -30139,7 +30065,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_lakeflow_job_compute_pressure",
@@ -30152,7 +30078,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_lakeflow_job_cost_summary",
@@ -30165,7 +30091,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_lakeflow_job_duration_regression",
@@ -30178,7 +30104,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_lakeflow_job_oversized",
@@ -30191,7 +30117,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_lakeflow_job_ownership_orphans",
@@ -30204,7 +30130,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_lakeflow_job_queue_time",
@@ -30217,7 +30143,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_lakeflow_job_recent_runs",
@@ -30230,7 +30156,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_lakeflow_job_reliability",
@@ -30243,7 +30169,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_lakeflow_job_run_changes",
@@ -30256,7 +30182,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_lakeflow_job_run_cost",
@@ -30269,7 +30195,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_lakeflow_job_tasks_no_timeout",
@@ -30282,7 +30208,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_lakeflow_jobs_no_timeout",
@@ -30295,7 +30221,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_lakeflow_jobs_on_all_purpose",
@@ -30308,7 +30234,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_lakeflow_long_running_runs",
@@ -30321,7 +30247,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_lakeflow_never_started_runs",
@@ -30334,7 +30260,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_lakeflow_phase_cold_start",
@@ -30347,7 +30273,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_lakeflow_pipeline_cost",
@@ -30360,7 +30286,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_lakeflow_pipeline_idle_tail_duration",
@@ -30373,7 +30299,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_lakeflow_pipeline_update_failures_retries",
@@ -30386,7 +30312,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_lakeflow_pipelines_inventory_tier",
@@ -30399,7 +30325,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_lakeflow_retries_repairs",
@@ -30412,7 +30338,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_lakeflow_stale_zombie_jobs",
@@ -30425,7 +30351,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_lakeflow_succeeded_with_failed_tasks",
@@ -30438,7 +30364,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_lakeflow_tasks_near_timeout",
@@ -30451,7 +30377,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_lakeflow_termination_taxonomy",
@@ -30464,7 +30390,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_lakeflow_termination_type_probe",
@@ -30477,7 +30403,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_lakeflow_workload_mix_hours",
@@ -30490,7 +30416,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_node_timeline_utilization",
@@ -30503,7 +30429,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:509"
+   "evidence": "app/core/data.py:525"
   },
   {
    "from": "findings.f_overview_daily_dbu_trend",
@@ -30516,7 +30442,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_overview_dbu_by_sku",
@@ -30529,7 +30455,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_overview_serverless_classic_split",
@@ -30542,7 +30468,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_overview_spend_estimate",
@@ -30555,7 +30481,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_perf_daily_by_resource",
@@ -30568,7 +30494,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_perf_failure_causes_daily",
@@ -30581,7 +30507,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_perf_queue_by_hour",
@@ -30594,7 +30520,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_po_clustering_activity",
@@ -30607,7 +30533,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_po_clustering_column_churn",
@@ -30620,7 +30546,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_po_data_skipping_backfill",
@@ -30633,7 +30559,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_po_failure_reasons",
@@ -30646,7 +30572,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_po_maintenance_cost_by_table",
@@ -30659,7 +30585,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_po_vacuum_reclaimed_bytes",
@@ -30672,7 +30598,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_query_cache_coldstart",
@@ -30685,7 +30611,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_query_costly_statements",
@@ -30698,7 +30624,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_query_costly_statements_grouped",
@@ -30711,7 +30637,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_query_failed_queries_daily",
@@ -30724,7 +30650,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_query_failed_statements_grouped",
@@ -30737,7 +30663,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_query_local_spillage",
@@ -30750,7 +30676,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_query_per_query_estimate_lane",
@@ -30763,7 +30689,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_query_provenance_by_source",
@@ -30776,7 +30702,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_query_pruning_effectiveness",
@@ -30789,7 +30715,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_query_queuing_waits",
@@ -30802,7 +30728,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_query_shuffle_write_amplification",
@@ -30815,7 +30741,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_query_slices",
@@ -30828,7 +30754,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_query_task_statement_breakdown",
@@ -30841,7 +30767,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_query_top_by_cost",
@@ -30854,7 +30780,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_query_warehouse_pressure",
@@ -30867,7 +30793,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_query_workload_mix_hours",
@@ -30880,7 +30806,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_serving_endpoint_traffic_by_endpoint",
@@ -30893,7 +30819,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_sql_warehouse_config_current",
@@ -30906,7 +30832,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_sql_warehouse_events_activity",
@@ -30919,7 +30845,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "findings.f_task_cluster_utilization",
@@ -30932,7 +30858,7 @@
    ],
    "cardinality": "N:1",
    "status": "logical",
-   "evidence": "app/core/data.py:501-509 (_in_workspaces), 1003"
+   "evidence": "app/core/data.py:517-525 (_in_workspaces), 1003"
   },
   {
    "from": "cost_unit_tag",
@@ -31466,14 +31392,6 @@
    ],
    "filter": "is_current (dbt/models/tags/tag_workspace.sql:15)",
    "grain": "(workspace_id, tag_key)"
-  },
-  {
-   "name": "dim_list_prices",
-   "sources": [
-    "list_prices() macro"
-   ],
-   "filter": "price_end_time IS NULL, rn=1 (dbt/models/dims/dim_list_prices.sql:23,33)",
-   "grain": "(cloud, sku_name, currency_code)"
   },
   {
    "name": "app/direct_sql/tags/_cost_alloc.sql (CTE block)",

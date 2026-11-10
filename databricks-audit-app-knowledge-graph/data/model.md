@@ -18,7 +18,7 @@ flowchart LR
 ```
 
 - Local build: every source is `read_parquet('<AUDIT_SNAPSHOT_DIR>/{schema}__{name}/*.parquet', union_by_name=true)` (`dbt/models/sources/sources.yml:12`); both profile targets are DuckDB (`dbt/profiles.yml:18-36`).
-- Direct build: the loader writes `findings."f_<qid>"` (`tools/load_direct_results.py:580`), `dims."<name>"` (`tools/load_direct_results.py:609`, empty stand-in at `:620`) and `tags."<name>"` (`tools/load_direct_results.py:646-658`); the 12 tag tables it knows are listed at `tools/load_direct_results.py:73-77`.
+- Direct build: the loader writes `findings."f_<qid>"` (`tools/load_direct_results.py:595`), `dims."<name>"` (`tools/load_direct_results.py:624`, empty stand-in at `:635`) and `tags."<name>"` (`tools/load_direct_results.py:661-673`); the 12 tag tables it knows are listed at `tools/load_direct_results.py:73-77`.
 - No constraint is enforced anywhere (CTAS tables). Keys below come from `unique_grain` tests (`dbt/tests/generic/test_unique_grain.sql:12-34`), `ROW_NUMBER ... PARTITION BY` or `GROUP BY`.
 
 ## Core entities
@@ -118,7 +118,7 @@ Cardinality notes (reviewed against the SQL):
 - `TAG_WORKSPACE` is the `is_current` row of each (workspace_id, tag_key) history: 1 current row : 1..n versions (`dbt/models/tags/tag_workspace.sql:12-15`, `dbt/models/tags/tag_workspace_history.sql:183`).
 - `TAG_WORKSPACE_HISTORY` to `COST_UNIT_TAG` is many-to-many: a unit spanning two allocating versions with the same value (split by a `__mixed__` run) sums both into one row (`dbt/models/tags/cost_unit_tag.sql:51-59`); inferred from the GROUP BY, not tested.
 - Dims are 1 dim row : 1..n SCD2 source rows (`ROW_NUMBER() ... = 1`), e.g. `dbt/models/dims/dim_job.sql:28-33,44`.
-- Keys asserted by a `unique_grain` test: every tags model except `cost_day` (and ephemeral `cost_alloc`), plus dim_job/cluster/warehouse/pipeline and int_workspace_tag_hints. `cost_day`, `dim_notebook`, `dim_list_prices`, `dim_workspace` keys are inferred from GROUP BY / ROW_NUMBER only (`dbt/models/tags/cost_day.sql:60`, `dbt/models/dims/dim_notebook.sql:9-12`, `dbt/models/dims/dim_list_prices.sql:18-23`).
+- Keys asserted by a `unique_grain` test: every tags model except `cost_day` (and ephemeral `cost_alloc`), plus dim_job/cluster/warehouse/pipeline and int_workspace_tag_hints. `cost_day`, `dim_notebook`, `dim_workspace` keys are inferred from GROUP BY / ROW_NUMBER only (`dbt/models/tags/cost_day.sql:60`, `dbt/models/dims/dim_notebook.sql:9-12`).
 
 Evidence: grains `dbt/models/tags/_tags_roll.yml:31-35,66-73`, `dbt/models/tags/_tags_idx.yml:42-47,66-72`, `dbt/models/dims/_dims.yml:36-40`; joins `app/core/rollup.py:330-333`, `dbt/models/tags/cost_unit_tag.sql:55-57`, `dbt/models/tags/tag_workspace.sql:12-15`, `dbt/models/tags/cost_alloc.sql:43-45,91-92,115`.
 
@@ -133,7 +133,7 @@ Evidence: grains `dbt/models/tags/_tags_roll.yml:31-35,66-73`, `dbt/models/tags/
 | tags.cost_reconciliation | billing.usage, list_prices(), attributed_usage, cost_unit | (window_days, usage_unit) | `dbt/models/tags/_tags_roll.yml:95-99` |
 | tags.perf_unit | query.history | (window_days, unit_id) | `dbt/models/tags/_tags_roll.yml:122-126` |
 | tags.perf_unit_tag | perf_unit, query.history, compute.warehouses/clusters/instance_pools, tag_workspace_history | (window_days, unit_id, level, tag_key, tag_value) | `dbt/models/tags/_tags_roll.yml:156-163` |
-| tags.query_tag_keys | query.history | (window_days, unit_id, own_keys, origin, job_id, pipeline_id, notebook_id) | `dbt/models/tags/query_tag_keys.sql:52-62` |
+| tags.query_tag_keys (blank query-tag values dropped, `dbt/models/tags/query_tag_keys.sql:22`) | query.history | (window_days, unit_id, own_keys, origin, job_id, pipeline_id, notebook_id) | `dbt/models/tags/query_tag_keys.sql:52-62` |
 | tags.tag_workspace_history | billing.usage | (workspace_id, tag_key, valid_from), SCD2 | `dbt/models/tags/_tags_idx.yml:42-47` |
 | tags.tag_workspace | tag_workspace_history WHERE is_current | (workspace_id, tag_key) | `dbt/models/tags/_tags_idx.yml:21-25` |
 | tags.tag_entity | tag_workspace + warehouses, pools, clusters, jobs, pipelines, query.history, UC *_tags, billing.usage | (entity_type, workspace_id, entity_id, tag_key) | `dbt/models/tags/_tags_idx.yml:66-72` |
@@ -146,11 +146,10 @@ Evidence: grains `dbt/models/tags/_tags_roll.yml:31-35,66-73`, `dbt/models/tags/
 | dims.dim_warehouse | compute.warehouses latest row | warehouse_id | `dbt/models/dims/_dims.yml:67-70` |
 | dims.dim_pipeline | lakeflow.pipelines latest row | (workspace_id, pipeline_id) | `dbt/models/dims/_dims.yml:85-89` |
 | dims.dim_notebook | billing.usage notebook rows | (workspace_id, notebook_id) | `dbt/models/dims/dim_notebook.sql:9-12` |
-| dims.dim_list_prices | list_prices() current rows | (cloud, sku_name, currency_code) | `dbt/models/dims/dim_list_prices.sql:18-23` |
 | seeds.workspace_env_overrides | dbt/seeds/workspace_env_overrides.csv (header only) | workspace_id (convention) | `dbt/models/_seeds.yml:4-12` |
 | findings.f_<qid> (160) | one check SQL each (100 vendored, 60 app) | (window_days + config/grains/<file>.yml cols) | `tools/generate_models.py:504-507` |
-| direct_export_meta, direct_export_findings_meta | export manifest.json | 1 row / 1 row per query_id | `tools/load_direct_results.py:812-846` |
-| usage.*, warehouse.*, storage.*, governance.* | export sub-folders | unclear | `tools/load_direct_results.py:712-803` |
+| direct_export_meta, direct_export_findings_meta | export manifest.json | 1 row / 1 row per query_id | `tools/load_direct_results.py:835-869` |
+| usage.*, warehouse.*, storage.*, governance.* | export sub-folders | unclear | `tools/load_direct_results.py:727-826` |
 
 ## Layer lineage
 

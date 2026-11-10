@@ -864,7 +864,7 @@ def d_f3():
         d.edge(str(a), str(b))
     d.edge("4", "f", **RD)
     return d.render("lane = actor or system · STEP n = order · red dashed = failure",
-                    "Refresh never replaces the open file, so it works while the app runs. [app/api/refresh.py:31-95; app/core/data.py:301-320]")
+                    "Refresh never replaces the open file; old handles close after a 120 s grace. Export times out at 4 h, load at 30 min; with rls on only refresh.admins or unrestricted users may start it (else 403). [app/api/refresh.py:20-22,31-95; app/core/data.py:279-339; app/api/app.py:390-409]")
 
 
 def d_f4():
@@ -1135,15 +1135,15 @@ def d_cfg():
     d.add("l", 0, 1, "data", "config/settings.local.yml", "git-ignored")
     d.add("ls", 1, 0, "routine", "config.load_settings", "local wins key by key")
     d.add("c", 2, 0, "routine", "app/api, app/core, export, load")
-    d.add("am", 2, 1, "shape", "dbt_run.load_share_floor, load_coverage_floor", "reads settings.yml only")
+    d.add("am", 2, 1, "routine", "dbt_run floor and mask loaders", "via app_config, local wins")
     d.add("a", 0, 2, "data", "config/app.yml", "+ app.local.yml")
     d.add("r", 1, 2, "routine", "rls.load, deploy_app")
     d.add("env", 0, 3, "data", ".env or env vars", "git-ignored")
     d.add("p", 1, 3, "routine", "_preflight_env", "then snapshot.connect")
     d.edge("s", "ls", "", True, num=1); d.edge("l", "ls", "merged over", True, num=2); d.edge("ls", "c", "", True, num=3)
-    d.edge("s", "am", "local file skipped", True, num=4); d.edge("a", "r", "", True, num=5); d.edge("env", "p", "", True, num=6)
-    return d.render("grey = file · teal = code · amber = gap (see Other findings) · dashed = data",
-                    "All readers merge the local file except the two tag-floor readers. [app/core/config.py:534-573,567; tools/dbt_run.py:85,140-158; app/core/rls.py:83-98]")
+    d.edge("ls", "am", "", True, num=4); d.edge("a", "r", "", True, num=5); d.edge("env", "p", "", True, num=6)
+    return d.render("grey = file · teal = code · dashed = data",
+                    "Every reader, dbt_run included, merges the local file over settings.yml. [app/core/config.py:534-573; tools/dbt_run.py:140-170; app/core/rls.py:83-98]")
 
 
 def d_dep():
@@ -1195,8 +1195,8 @@ SRC = ["billing.usage", "billing.list_prices", "billing.attributed_usage", "lake
        "access.workspaces_latest", "information_schema *_tags", "ai_gateway.usage"]
 MODELS = ["cost_alloc", "cost_unit", "cost_unit_tag", "cost_day", "cost_reconciliation", "tag_workspace_history", "tag_workspace",
           "tag_entity", "tag_index", "bill_tag_dates", "perf_unit", "perf_unit_tag", "query_tag_keys", "int_workspace_tag_hints",
-          "dim_workspace", "dim_job", "dim_cluster", "dim_warehouse", "dim_pipeline", "dim_notebook", "dim_list_prices"]
-LE = [("billing.list_prices", "list_prices()"), ("list_prices()", "cost_alloc"), ("list_prices()", "dim_list_prices"), ("list_prices()", "cost_reconciliation"),
+          "dim_workspace", "dim_job", "dim_cluster", "dim_warehouse", "dim_pipeline", "dim_notebook"]
+LE = [("billing.list_prices", "list_prices()"), ("list_prices()", "cost_alloc"), ("list_prices()", "cost_reconciliation"),
       ("billing.usage", "cost_alloc"), ("billing.attributed_usage", "cost_alloc"), ("lakeflow.jobs", "cost_alloc"),
       ("lakeflow.pipelines", "cost_alloc"), ("cost_alloc", "cost_unit"), ("cost_alloc", "cost_unit_tag"), ("cost_alloc", "cost_day"),
       ("billing.usage", "tag_workspace_history"), ("tag_workspace_history", "cost_unit_tag"), ("tag_workspace_history", "tag_workspace"),
@@ -1473,7 +1473,6 @@ def s_model():
         ("dims.dim_warehouse", "warehouse, latest row", "warehouse_id (tested)", "dbt; loader"),
         ("dims.dim_pipeline", "pipeline, latest row", "workspace_id, pipeline_id (tested)", "dbt; loader"),
         ("dims.dim_notebook", "notebook", "workspace_id, notebook_id (inferred)", "dbt; loader"),
-        ("dims.dim_list_prices", "current USD price", "cloud, sku_name, currency_code (inferred)", "dbt only"),
         ("dims.int_workspace_tag_hints", "workspace x canonical key", "workspace_id, canonical_key (tested)", "dbt only"),
         ("findings.f_<qid> (160)", "window x grain columns", "window_days + config/grains (tested by unique_grain)", "dbt generated model; loader [tools/load_direct_results.py:575-591]"),
         ("direct_export_meta", "one row per export", "none", "loader [tools/load_direct_results.py:812-846]"),
@@ -1482,7 +1481,6 @@ def s_model():
     views = [
         ("tags.cost_alloc (ephemeral)", "billing.usage, list_prices(), attributed_usage, lakeflow.jobs, lakeflow.pipelines; usage_date < audit_today()", "one per (billing row, part) [dbt/models/tags/cost_alloc.sql:1-6,46]"),
         ("list_prices() macro", "system.billing.list_prices; USD only; end capped at next start", "one price per SKU, cloud, unit, instant [dbt/macros/list_prices.sql:10-37]"),
-        ("dims.dim_list_prices source query", "list_prices() WHERE price_end_time IS NULL, rn = 1", "one per cloud, SKU, currency [dbt/models/dims/dim_list_prices.sql:23,33]"),
         ("app/direct_sql/tags/_cost_alloc.sql (CTE block)", "same five sources; pasted at __COST_ALLOC__", "one per (rid, part) [tools/export_direct_results.py:66-68]"),
         ("app/direct_sql/tags/_workspace_history.sql (CTE block)", "billing.usage; pasted at __WORKSPACE_HISTORY__", "workspace x key x version [tools/export_direct_results.py:63-65]"),
         ("dbt d_<qid> models (enabled=false)", "same check SQL, Databricks branch", "never built [tools/generate_direct_models.py:15-24]"),
@@ -1499,17 +1497,16 @@ def s_model():
                         "Finding models never ref() anything; only tags and dims chain; 9 more dim_workspace sources not drawn. [dbt/models/findings; dbt/models/dims/dim_workspace.sql]") +
                    table(["Child", "ref() parent", "Cite"], refs, mono=(0, 1, 2))))
     b = bullets([
-        "One DuckDB file: 160 findings tables, 12 tags tables, dims (8 dbt, 6 direct). [tools/load_direct_results.py:38-77]",
+        "One DuckDB file: 160 findings tables, 12 tags tables, dims (7 dbt, 6 direct). [tools/load_direct_results.py:38-77]",
         "No key is enforced; keys come from unique_grain tests, ROW_NUMBER, GROUP BY. [dbt/tests/generic/test_unique_grain.sql:12-34]",
         "f_<qid> grain = window_days + its config/grains columns. [tools/generate_models.py:504-507]",
-        "dim_list_prices and int_workspace_tag_hints exist on the dbt road only. [app/direct_sql/names/; tools/load_direct_results.py:38-69]",
+        "int_workspace_tag_hints exists on the dbt road only. [app/direct_sql/names/; tools/load_direct_results.py:38-69]",
         "Reconciliation must match billing within $0.005 per window and usage_unit. [dbt/tests/tags_cost_reconciles.sql:6-9]",
-        "Standalone cards: tags.bill_tag_dates, dims.dim_notebook, dims.dim_list_prices, direct_export_meta, direct_export_findings_meta.",
+        "Standalone cards: tags.bill_tag_dates, dims.dim_notebook, direct_export_meta, direct_export_findings_meta.",
     ])
     standalone = (exset(
         tcard("tags.bill_tag_dates", ["column", "key"], [("entity_type, workspace_id", "PK tested"), ("entity_id, tag_key", "PK tested")], "standalone: no key to others", "ok"),
         tcard("dims.dim_notebook", ["column", "key"], [("workspace_id, notebook_id", "PK inferred")], "standalone: no key to others", "ok"),
-        tcard("dims.dim_list_prices", ["column", "key"], [("cloud, sku_name, currency_code", "PK inferred")], "standalone, dbt road only", "ok"),
         tcard("direct_export_meta, direct_export_findings_meta", ["table", "key"], [("direct_export_meta", "none"), ("direct_export_findings_meta", "query_id inferred")], "standalone: loader metadata", "ok")))
     body = ("<h4>Cost allocation chain</h4>" + d_er_a() + "<h4>Tag lookup, performance, findings and dims</h4>" + d_er_b() + standalone + b +
             "<h4>Objects</h4>" + table(["Object", "Grain", "Key", "Written by"], objs, mono=(0,)) +
@@ -1582,7 +1579,8 @@ def s_rules():
         "from app/core/rls.py:114-141", [
             "Columns: workspace -> workspace_id, warehouse -> warehouse_id, environment -> env. [app/core/rls.py:25]",
             "NULL or account-level '0' rows need '*'. [app/core/rls.py:114-121]",
-            "Reference tables (list prices, node types) stay unfiltered. [app/core/rls.py:30-33]",
+            "Filtered schemas: findings, dims, tags, usage, storage, warehouse; rows with no workspace need '*'. [app/core/rls.py:29]",
+            "Reference tables (list prices, node types, usage/storage/warehouse *_info notes) stay unfiltered. [app/core/rls.py:32-38]",
             "Chargeback shares recomputed per user to sum to 100. [app/core/rls.py:34-45,305-311]",
             "Export mode files hold no bytes of other users' rows. [app/core/rls.py:382-418]"],
         exset(ex("ok", "Typical", "grants (1, dev), (2, prod); 6 rows", "2 rows: 1/dev, 2/prod (not 1/prod)", "from tests/test_rls.py:62-65"),
@@ -1813,14 +1811,14 @@ def s_risks():
 
 def s_other():
     f = [
-        "Tag floors ignore local overrides in export · dbt_run reads only settings.yml; API shows merged value · read via config.load_settings; else UI and data floors differ (0.6/0.5). [tools/dbt_run.py:85,140-158; tools/export_direct_results.py:617-618; app/api/app.py:810]",
         "Row cap differs by path · first_run 50,000, Refresh 500,000 · one setting; else truncation and totals differ. [tools/export_direct_results.py:183; app/api/refresh.py:54]",
         "Caveats say \"current day is excluded\" · default include_today counts today · reword; else users misread totals. [config/settings.yml:22; tools/export_direct_results.py:332-341; app/queries/app/cost/cost_period_over_period.sql:65-67]",
         "mandatory_tag_keys default differs · code says env, file says environment · align; low impact, avoids reseed confusion. [app/core/config.py:206; config/settings.yml:36; app/core/tag_compliance.py:41; app/core/config.py:547-557]",
         "dbt_target has no reader · validated, never read · remove or wire it; else a dead setting misleads. [app/core/config.py:16,189,389-390]",
-        "Full gate skips lint, sync, generator checks, web · can pass with stale generated files · run quick steps inside full. [tools/gate.py:182-202]",
         "Stale counts in docstrings · say 113 and 109 (actual 160); build_fixtures says 47 sources (ddl has 49) · drop the numbers. [tools/generate_models.py:4; tools/fixture_coverage.py:9; tests/fixtures/build_fixtures.py:11-13]",
         "Endpoints without tests · 14 of 32 /api routes never called by a test · one smoke test per route; else regressions ship unnoticed. Also no reader test: /api/activity, /api/people, /api/warehouses, /api/warehouse, /api/workspace_tags, /api/guide/sql/{query_id}. [app/api/app.py:717,801,839,892,902,913]",
+        "Restricted users see no table sizes or lineage · storage.table_detail has no workspace, so rows need a grant to every workspace · fill workspace_id from the catalog's home workspace; else sizes read empty for them. [app/core/rls.py:1-9,29]",
+        "storage.table_detail_info is shown to every user · it holds account-wide table and failure counts · drop it from REFERENCE if that leaks; else /api/table_sizes shows not exported to restricted users. [app/core/rls.py:32-38]",
         "Waste headline sum has no unit test · only column-contract tests exist · test once-per-resource, NULL, discount; else it can regress silently. [web/src/components/waste_total.ts:48-221; tests/test_waste_contract.py:54-88]",
     ]
     return section("other-findings", "13. Other findings (verified in code)", "<ul>" + "".join(f"<li>{txt(x)}</li>" for x in f) + "</ul>")

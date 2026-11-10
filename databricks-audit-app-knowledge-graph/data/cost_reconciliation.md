@@ -33,7 +33,7 @@ flowchart LR
 
 ## Direct-export variant
 
-- Exported without unit_* columns (`app/direct_sql/tags/cost_reconciliation.sql:5-10`); the loader adds them from the loaded `tags.cost_unit` (`tools/load_direct_results.py:680-700`).
+- Exported without unit_* columns (`app/direct_sql/tags/cost_reconciliation.sql:5-10`); the loader adds them from the loaded `tags.cost_unit` (`tools/load_direct_results.py:695-715`).
 
 ## Read by
 

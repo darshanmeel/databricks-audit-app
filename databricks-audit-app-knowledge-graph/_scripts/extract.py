@@ -61,9 +61,10 @@ def fid(path):
 # ---------------------------------------------------------------- files / folders
 
 def tracked_files():
-    out = subprocess.run(["git", "-c", "core.quotepath=false", "ls-files", "-z"], cwd=REPO,
-                         capture_output=True, check=True).stdout.decode("utf-8")
-    return sorted(p for p in out.split("\0") if p)
+    # Working tree: tracked + untracked-not-ignored, minus files deleted but not yet committed.
+    out = subprocess.run(["git", "-c", "core.quotepath=false", "ls-files", "-z", "--cached", "--others",
+                          "--exclude-standard"], cwd=REPO, capture_output=True, check=True).stdout.decode("utf-8")
+    return sorted({p for p in out.split("\0") if p and (REPO / p).is_file()})
 
 
 SECRET_RE = re.compile(r"(^|/)(\.env[^/]*|[^/]*\.(pem|key|p12|tfvars)|id_rsa[^/]*|credentials[^/]*|secrets?[^/]*|"

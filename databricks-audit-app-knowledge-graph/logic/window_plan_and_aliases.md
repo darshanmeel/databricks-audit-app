@@ -20,14 +20,14 @@ flowchart TD
 - `window_sources`: one run per DISTINCT days_used, at the smallest label that has it - `tools/export_direct_results.py:228-233`.
 - `window_aliases_map`: every label whose days_used is already run under a smaller label - `tools/export_direct_results.py:236-243`.
 - Default days: `default_window` from settings (30 shipped), fallback 30 when settings cannot be read - `tools/export_direct_results.py:211-216`, `config/settings.yml:18`, `tools/export_direct_results.py:184`.
-- A windowed check is one whose SQL carries `__WINDOW_DAYS__` (registry `windowed`) - `tools/export_direct_results.py:246-250`; a run relabels `window_days` from days_used to the label - `tools/export_direct_results.py:424-431`, `tools/export_direct_results.py:744-748`.
-- Truncation follows the alias: an alias of a truncated source is truncated too - `tools/export_direct_results.py:1249-1253`.
-- Manifest keys `windows`, `window_coverage` ({label: days_used}), `window_aliases`, `days` - `tools/export_direct_results.py:1115-1122`, `tools/export_direct_results.py:1298-1306`.
-- Loader copies source rows under each alias label for windowed findings and windowed tag tables - `tools/load_direct_results.py:583-591`, `tools/load_direct_results.py:662-673`; no manifest -> aliases inferred from the windows the files hold - `tools/load_direct_results.py:432-446`.
-- App: `exported_window_coverage()` reads `window_coverage`; an older manifest falls back to the measured day span - `app/core/data.py:3391-3409`; `window_status` gives `{days, available, covered_days, partial}` per label - `app/core/data.py:3412-3430`, served by `/api/meta` - `app/api/app.py:412-413`.
+- A windowed check is one whose SQL carries `__WINDOW_DAYS__` (registry `windowed`) - `tools/export_direct_results.py:246-250`; a run relabels `window_days` from days_used to the label - `tools/export_direct_results.py:424-431`, `tools/export_direct_results.py:773-777`.
+- Truncation follows the alias: an alias of a truncated source is truncated too - `tools/export_direct_results.py:1279-1283`.
+- Manifest keys `windows`, `window_coverage` ({label: days_used}), `window_aliases`, `days` - `tools/export_direct_results.py:1144-1151`, `tools/export_direct_results.py:1328-1336`.
+- Loader copies source rows under each alias label for windowed findings and windowed tag tables - `tools/load_direct_results.py:598-606`, `tools/load_direct_results.py:677-688`; no manifest -> aliases inferred from the windows the files hold - `tools/load_direct_results.py:447-461`.
+- App: `exported_window_coverage()` reads `window_coverage`; an older manifest falls back to the measured day span - `app/core/data.py:3407-3425`; `window_status` gives `{days, available, covered_days, partial}` per label - `app/core/data.py:3428-3446`, served by `/api/meta` - `app/api/app.py:431-432`.
 - A label not in `window_coverage` is unavailable: the window button is hidden - `web/src/App.tsx:263-271` - and a request for it is NOT_ASSESSED with "the export covered N days; the W-day window was not exported" - `app/api/service.py:262-272`.
 - Header text uses the covered days, not the label: "the export covered N of the M days you picked" - `app/api/service.py:222-245`.
-- A dbt/snapshot build has no coverage meta: every label is fully available - `app/core/data.py:3398-3401`, `app/core/data.py:3422-3424`.
+- A dbt/snapshot build has no coverage meta: every label is fully available - `app/core/data.py:3414-3417`, `app/core/data.py:3438-3440`.
 
 ## Formula
 ```
@@ -37,7 +37,7 @@ aliases    = {label: source_label} for the rest
 partial(w) = window_coverage[w] < w
 ```
 
-## Example (test `tests/test_export_direct_results.py:296-315`)
+## Example (test `tests/test_export_direct_results.py:297-316`)
 
 | N days | plan | sources (queried) | aliases |
 |---|---|---|---|
@@ -50,7 +50,7 @@ partial(w) = window_coverage[w] < w
 - So a default first run shows 90d as "partial" (30 of 90 days). Refresh `days=15` (choices `web/src/api.ts:7-8`) gives plan (7,7) (30,15) (90,15), alias 90->30 (derived from the rule above).
 
 ## Implementing code
-- `tools/export_direct_results.py:219-250`, `tools/load_direct_results.py:432-446,494-514,583-591,662-673`, `app/core/data.py:3362-3430`, `app/api/service.py:215-272`
+- `tools/export_direct_results.py:219-250`, `tools/load_direct_results.py:447-461,509-529,598-606,677-688`, `app/core/data.py:3378-3446`, `app/api/service.py:215-272`
 
 ## Config knobs
-- `default_window` (`config/settings.yml:18`), `--windows` on `tools/export_direct_results.py` / `tools/first_run.py`, `days` on `POST /api/refresh` (1..90, `app/api/app.py:389-392`).
+- `default_window` (`config/settings.yml:18`), `--windows` on `tools/export_direct_results.py` / `tools/first_run.py`, `days` on `POST /api/refresh` (1..90, `app/api/app.py:401-411`).

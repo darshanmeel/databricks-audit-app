@@ -22,7 +22,7 @@ flowchart LR
 - `env` counts as `environment` (unless both are mandatory) - `app/core/tag_compliance.py:40-53`.
 - This app's own export queries (query tag `auditapp`) are skipped - `app/core/tag_compliance.py:200-201`, `app/core/tag_compliance.py:358-359`.
 - Clusters: only all-purpose (sources JOB, PIPELINE, PIPELINE_MAINTENANCE, SQL, MODELS excluded) - `app/core/tag_compliance.py:29-30`.
-- Own tag vs bill disagreement is a conflict; the bill's value is what the cost carries - `app/core/tag_compliance.py:16-18`, `app/core/tag_compliance.py:501-509`.
+- Own tag vs bill disagreement is a conflict; the bill's value is what the cost carries - `app/core/tag_compliance.py:16-18`, `app/core/tag_compliance.py:500-508`.
 - Offenders capped at 500 per type - `app/core/tag_compliance.py:31`, `app/core/tag_compliance.py:248-249`.
 
 ## Example (test)
@@ -39,4 +39,4 @@ flowchart LR
 - `app/core/tag_compliance.py:204-314` (`_Tally`, `compliance`), `app/core/tag_compliance.py:149-194` (`_bill`)
 
 ## Config knobs
-- `config/settings.yml:30-36` `mandatory_tag_keys` (default `cost_center`, `domain`, `environment`). README `README.md:551-579`.
+- `config/settings.yml:30-36` `mandatory_tag_keys` (default `cost_center`, `domain`, `environment`). README `README.md:556-584`.

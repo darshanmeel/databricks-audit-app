@@ -38,7 +38,7 @@ flowchart LR
   GATE --> DBT
 ```
 
-Edge evidence: `tools/first_run.py:112-120`, `tools/export_direct_results.py:42-47`, `tools/export_direct_results.py:1145`, `tools/deploy_app.py:146-150`, `tools/app_start.py:39`, `tools/direct_dashboard_doc.py:14`, `tools/direct_guides.py:9-10`, `tools/direct_dashboard_load.py:9-12`, `tools/direct_governance.py:12-14`, `tools/direct_jobs_health.py:9-13`, `tools/direct_data_usage.py:13-14`, `tools/header_schema.py:3-5`, `tools/gate.py:4-7`.
+Edge evidence: `tools/first_run.py:112-120`, `tools/export_direct_results.py:42-47`, `tools/export_direct_results.py:1174`, `tools/deploy_app.py:148-152`, `tools/app_start.py:39`, `tools/direct_dashboard_doc.py:14`, `tools/direct_guides.py:9-10`, `tools/direct_dashboard_load.py:9-12`, `tools/direct_governance.py:12-14`, `tools/direct_jobs_health.py:9-13`, `tools/direct_data_usage.py:13-14`, `tools/header_schema.py:3-5`, `tools/gate.py:4-8`.
 
 ## Runtime tools
 
@@ -51,17 +51,17 @@ Edge evidence: `tools/first_run.py:112-120`, `tools/export_direct_results.py:42-
 
 ### export_direct_results.py — run checks on a SQL warehouse
 - Purpose: run every Databricks-direct query (`app/direct_sql/*.sql`) on the warehouse, save rows as parquet outside the repo (`tools/export_direct_results.py:1-7`, `tools/export_direct_results.py:50-53`).
-- CLI (`tools/export_direct_results.py:1416-1454`): `--out DIR` (default `<data dir>/results`), `--max-rows N` (50,000, `tools/export_direct_results.py:183`), `--windows DAYS` (settings `default_window`), `--threads N` (4, `tools/export_direct_results.py:185`), mutually exclusive `--only ID…` / `--domain NAME` / `--tags TABLE…` / `--sizes-only`, `--no-table-sizes`, `--no-volumes`, `--storage-from DIR`, `--mask-users`.
-- Credentials: `DATABRICKS_SERVER_HOSTNAME`, `DATABRICKS_HTTP_PATH`, `DATABRICKS_TOKEN` (token optional when the app principal is used), optional `AUDIT_DBX_CATALOG`, from env or `.env` (`tools/export_direct_results.py:189-194`, `tools/export_direct_results.py:816-873`). Errors are redacted (`tools/export_direct_results.py:196-200`, `tools/export_direct_results.py:804-813`).
-- Reads: `dbt/models/databricks_direct/generated_manifest.json` (`tools/export_direct_results.py:50`, `tools/export_direct_results.py:1130-1135`), `app/direct_sql/**` (`tools/export_direct_results.py:51-53`), settings (`include_today`, `default_window`, `table_sizes`, `query_tags`, `sources`) (`tools/export_direct_results.py:203-216`, `tools/export_direct_results.py:1201`), `config/app.yml rls:` (`tools/export_direct_results.py:1175`). On Databricks: `system.*` tables via the checks; the rls table (`tools/export_direct_results.py:567-584`).
-- Writes (under `<out>.tmp`, renamed to `<out>` on success): `findings/<qid>.parquet` (`tools/export_direct_results.py:985`), `dims/<name>.parquet` (`tools/export_direct_results.py:474-485`), tags, policies, `entitlements/entitlements.parquet` (`tools/export_direct_results.py:574-576`), `storage/`, `report.json`, `report.md`, `manifest.json` (`tools/export_direct_results.py:1289-1322`), swap at `tools/export_direct_results.py:1331-1340`. Refuses an `--out` inside the repo (`tools/export_direct_results.py:1125-1129`).
-- Main: `run_export(out_dir, *, max_rows, windows, threads, only, domain, tags, mask_users, …)` (`tools/export_direct_results.py:1091-1350`); `main(argv)` exit 0/2 (`tools/export_direct_results.py:1457-1528`).
+- CLI (`tools/export_direct_results.py:1467-1505`): `--out DIR` (default `<data dir>/results`), `--max-rows N` (50,000, `tools/export_direct_results.py:183`), `--windows DAYS` (settings `default_window`), `--threads N` (4, `tools/export_direct_results.py:185`), mutually exclusive `--only ID…` / `--domain NAME` / `--tags TABLE…` / `--sizes-only`, `--no-table-sizes`, `--no-volumes`, `--storage-from DIR`, `--mask-users`.
+- Credentials: `DATABRICKS_SERVER_HOSTNAME`, `DATABRICKS_HTTP_PATH`, `DATABRICKS_TOKEN` (token optional when the app principal is used), optional `AUDIT_DBX_CATALOG`, from env or `.env` (`tools/export_direct_results.py:189-194`, `tools/export_direct_results.py:845-902`). Errors are redacted (`tools/export_direct_results.py:196-200`, `tools/export_direct_results.py:833-842`).
+- Reads: `dbt/models/databricks_direct/generated_manifest.json` (`tools/export_direct_results.py:50`, `tools/export_direct_results.py:1159-1164`), `app/direct_sql/**` (`tools/export_direct_results.py:51-53`), settings (`include_today`, `default_window`, `table_sizes`, `query_tags`, `sources`) (`tools/export_direct_results.py:203-216`, `tools/export_direct_results.py:1230`), `config/app.yml rls:` (`tools/export_direct_results.py:1204`). On Databricks: `system.*` tables via the checks; the rls table (`tools/export_direct_results.py:596-613`).
+- Writes (under `<out>.tmp`, renamed to `<out>` on success): `findings/<qid>.parquet` (`tools/export_direct_results.py:1014`), `dims/<name>.parquet` (`tools/export_direct_results.py:474-485`), tags, policies, `entitlements/entitlements.parquet` (`tools/export_direct_results.py:603-605`), `storage/`, `report.json`, `report.md`, `manifest.json` (`tools/export_direct_results.py:1319-1352`), swap at `tools/export_direct_results.py:1361-1375`. Refuses an `--out` inside the repo (`tools/export_direct_results.py:1154-1158`).
+- Main: `run_export(out_dir, *, max_rows, windows, threads, only, domain, tags, mask_users, …)` (`tools/export_direct_results.py:1120-1385`); `main(argv)` exit 0/2 (`tools/export_direct_results.py:1508-1579`).
 
 ### load_direct_results.py — build the local DuckDB file
 - Purpose: load an export folder or `.zip` into DuckDB: `findings.f_<qid>`, `dims.*` (empty stand-ins when missing), `tags.*`, `governance.*`, `storage.*`, `usage.*`, `warehouse.*`, `direct_export_meta`, `direct_export_findings_meta`, `<db>.run_results.json` (`tools/load_direct_results.py:1-8`).
-- CLI: `SRC` (default newest `results/<stamp>`), `--db PATH` (default `<data dir>/audit.duckdb`; outside repo or `data/*.duckdb` other than `db_audit.duckdb`) (`tools/load_direct_results.py:887-905`, `tools/load_direct_results.py:89-97`).
-- Steps: build `<db>.tmp` with `load.memory_limit`/`threads` (`tools/load_direct_results.py:517`, `tools/load_direct_results.py:538-547`); findings (`:580`), dims (`:609`, stubs `:620`), tags (`:629-685`), `apply_bill_to_perf` (`:702`), `workspace_file.apply` (`:706-707`), governance (`:717-727`), storage (`:738-765`), usage (`:775-776`), warehouse (`:793-794`), rls entitlements + columns (`:804-808`), meta tables (`:813`, `:836`); laptop rls cut (`:851-852`); `os.replace(tmp, db)` (`:853`); run_results sidecar (`:863`) — all `tools/load_direct_results.py`.
-- After load into the data folder: `datasource.set_current_db(db)` (`tools/load_direct_results.py:927-932`).
+- CLI: `SRC` (default newest `results/<stamp>`), `--db PATH` (default `<data dir>/audit.duckdb`; outside repo or `data/*.duckdb` other than `db_audit.duckdb`) (`tools/load_direct_results.py:910-928`, `tools/load_direct_results.py:89-97`).
+- Steps: build `<db>.tmp` with `load.memory_limit`/`threads` (`tools/load_direct_results.py:532`, `tools/load_direct_results.py:553-562`); findings (`:595`), dims (`:624`, stubs `:635`), tags (`:644-700`), `apply_bill_to_perf` (`:717`), `workspace_file.apply` (`:721-722`), governance (`:732-742`), storage (`:753-784`), usage (`:794-795`), warehouse (`:814-815`), rls entitlements + columns (`:827-831`), meta tables (`:836`, `:859`); laptop rls cut (`:874-875`); `os.replace(tmp, db)` (`:876`); run_results sidecar (`:886`) — all `tools/load_direct_results.py`.
+- After load into the data folder: `datasource.set_current_db(db)` (`tools/load_direct_results.py:950-955`).
 
 ### snapshot.py — connector + raw system-table snapshot
 - Purpose: the one module that opens a Databricks SQL connection; also a standalone raw parquet snapshot for the dbt path (`tools/snapshot.py:1-47`).
@@ -70,7 +70,7 @@ Edge evidence: `tools/first_run.py:112-120`, `tools/export_direct_results.py:42-
 - Writes: `<out>/<schema>__<table>/part-NNNNN.parquet`, `_MISSING.json`, `manifest.json` (`tools/snapshot.py:18-38`). `run_export(opts, …)` (`tools/snapshot.py:1458`), `main` exit 0/1/2/130 (`tools/snapshot.py:1577-1593`).
 
 ### table_detail.py — table and volume sizes
-- `export(connect_fn, out_dir, *, previous, threads=16, …)` runs `DESCRIBE DETAIL` / `DESCRIBE HISTORY` per Delta table (`tools/table_detail.py:1-15`, `tools/table_detail.py:169`); `export_volumes(...)` lists volumes (`tools/table_detail.py:402`); `source: stored` reads the sizes job tables (`tools/table_detail.py:11-12`, `tools/table_detail.py:98`). Writes `storage/table_detail.parquet`, `storage/table_history.parquet` (`tools/table_detail.py:14-15`). No CLI; called by the export (`tools/export_direct_results.py:45`, `tools/export_direct_results.py:1221-1230`).
+- `export(connect_fn, out_dir, *, previous, threads=16, …)` runs `DESCRIBE DETAIL` / `DESCRIBE HISTORY` per Delta table (`tools/table_detail.py:1-15`, `tools/table_detail.py:169`); `export_volumes(...)` lists volumes (`tools/table_detail.py:402`); `source: stored` reads the sizes job tables (`tools/table_detail.py:11-12`, `tools/table_detail.py:98`). Writes `storage/table_detail.parquet`, `storage/table_history.parquet` (`tools/table_detail.py:14-15`). No CLI; called by the export (`tools/export_direct_results.py:45`, `tools/export_direct_results.py:1250-1260`).
 
 ### warehouse_activity.py — per-warehouse detail
 - SQL builders `daily_sql`, `users_sql`, `tables_sql`, `slow_sql` and `export(connect_fn, out_dir, *, end, windows, …)` (`tools/warehouse_activity.py:65-189`); writes `warehouse/<name>.parquet` (`tools/warehouse_activity.py:13`). No CLI; called by the export (`tools/export_direct_results.py:46`).
@@ -80,16 +80,16 @@ Edge evidence: `tools/first_run.py:112-120`, `tools/export_direct_results.py:42-
 
 ### deploy_app.py — deploy as a Databricks App
 - Purpose: stage `app/ config/ dbt/ tools/` + `app.yaml` + DuckDB wheel parts, sync to the workspace, create/update/start/deploy the app via the Databricks CLI (`tools/deploy_app.py:1-11`).
-- CLI: none (`tools/deploy_app.py:4`). Reads `config/app.yml` (+ `app.local.yml`): `name`, `run_as` (`user`|`app`), `rls` (`tools/deploy_app.py:55-76`); credentials via `export_direct_results._preflight_env` (`tools/deploy_app.py:177`); `requirements.txt` `duckdb==` pin (`tools/deploy_app.py:106-110`).
-- Writes: `<data dir>/app-deploy/wheels/*.whl` (`tools/deploy_app.py:113-124`, `tools/deploy_app.py:184-186`), `<data dir>/app-deploy/<name>/` with `wheels/*.partNN` (≤ 9 MB) and `app.yaml` (`tools/deploy_app.py:127-151`).
-- Remote: `databricks current-user me`, `sync`, `apps get/create/update/start/deploy` (`tools/deploy_app.py:189-207`); prints `GRANT` SQL for `run_as: app` (`tools/deploy_app.py:92-103`, `tools/deploy_app.py:208-213`). Exit 0 / 2 (`tools/deploy_app.py:173-219`). Full process: `processes/deploy_databricks_app.md`.
+- CLI: none (`tools/deploy_app.py:4`). Reads `config/app.yml` (+ `app.local.yml`): `name`, `run_as` (`user`|`app`), `rls` (`tools/deploy_app.py:55-78`); credentials via `export_direct_results._preflight_env` (`tools/deploy_app.py:179`); `requirements.txt` `duckdb==` pin (`tools/deploy_app.py:108-112`).
+- Writes: `<data dir>/app-deploy/wheels/*.whl` (`tools/deploy_app.py:115-126`, `tools/deploy_app.py:186-188`), `<data dir>/app-deploy/<name>/` with `wheels/*.partNN` (≤ 9 MB) and `app.yaml` (`tools/deploy_app.py:129-153`).
+- Remote: `databricks current-user me`, `sync`, `apps get/create/update/start/deploy` (`tools/deploy_app.py:191-209`); prints `GRANT` SQL for `run_as: app` (`tools/deploy_app.py:94-105`, `tools/deploy_app.py:210-215`). Exit 0 / 2 (`tools/deploy_app.py:175-221`). Full process: `processes/deploy_databricks_app.md`.
 
 ### app_start.py — Databricks App start command
 - `unpack(parts, target)` joins `wheels/*.whl.part*` into the wheel and extracts it to `.pydeps` once (`tools/app_start.py:21-31`); `main()` prepends `.pydeps` and repo root to `sys.path`/`PYTHONPATH` and runs `app.api` as `__main__` (`tools/app_start.py:34-39`). No CLI.
 
 ### dbt_run.py — dbt wrapper (dev/test path)
-- CLI: `build --target dev|test [--select S] [--exclude S]` (`tools/dbt_run.py:492-508`).
-- Builds `--vars` from thresholds, windows, tag aliases, share/coverage floors, masking, `as_of` (`tools/dbt_run.py:10-24`, `tools/dbt_run.py:210`); sets `AUDIT_SNAPSHOT_DIR` / `AUDIT_SEED_DIR` (`tools/dbt_run.py:352-364`); dev builds into `<db>-tmp-<pid>.duckdb` seeded from `AUDIT_DB` (default `data/db_audit.duckdb`) and swaps with `os.replace` (`tools/dbt_run.py:369-386`, `tools/dbt_run.py:262-267`); exit 3 = built with some failures (`tools/dbt_run.py:38-50`). Applies `config/workspace.csv` (`tools/dbt_run.py:325-330`).
+- CLI: `build --target dev|test [--select S] [--exclude S]` (`tools/dbt_run.py:474-490`).
+- Builds `--vars` from thresholds, windows, tag aliases, share/coverage floors, masking (all three from the merged settings, `settings.local.yml` wins: `tools/dbt_run.py:131-159`), `as_of` (`tools/dbt_run.py:10-24`, `tools/dbt_run.py:191`); sets `AUDIT_SNAPSHOT_DIR` / `AUDIT_SEED_DIR` (`tools/dbt_run.py:333-346`); dev builds into `<db>-tmp-<pid>.duckdb` seeded from `AUDIT_DB` (default `data/db_audit.duckdb`) and swaps with `os.replace` (`tools/dbt_run.py:351-368`, `tools/dbt_run.py:243-248`); exit 3 = built with some failures (`tools/dbt_run.py:38-50`). Applies `config/workspace.csv` (`tools/dbt_run.py:306-311`).
 
 ## Generate / build tools
 
@@ -109,9 +109,9 @@ Edge evidence: `tools/first_run.py:112-120`, `tools/export_direct_results.py:42-
 
 | Tool | Purpose | CLI | Evidence |
 |---|---|---|---|
-| `build_databricks_dashboards.py` | Lakehouse Health AI/BI dashboards (one per tab), snapshot notebook, README | `--catalog`, `--out-dir`, `--only TAB`, `--refresh-columns` | `tools/build_databricks_dashboards.py:1-10`, `tools/build_databricks_dashboards.py:1454-1466` |
+| `build_databricks_dashboards.py` | Lakehouse Health AI/BI dashboards (one per tab), snapshot notebook, README | `--catalog`, `--out-dir`, `--only TAB`, `--refresh-columns` | `tools/build_databricks_dashboards.py:1-10`, `tools/build_databricks_dashboards.py:1470-1482` |
 | `dashboard_kit.py` | Shared page layout for per-tab dashboards (library) | — | `tools/dashboard_kit.py:1-14` |
-| `build_direct_dashboards.py` | Dashboards reading `system.*` directly (Waste, Jobs health, Workspace usage, Broad grants, Admin changes, Data usage, Dashboard load) | `--out-dir`, `--query-tags`, `--workspace-class CLASS=PATTERN`, `--sizes-schema` | `tools/build_direct_dashboards.py:1-13`, `tools/build_direct_dashboards.py:952-963` |
+| `build_direct_dashboards.py` | Dashboards reading `system.*` directly (Waste, Jobs health, Workspace usage, Broad grants, Admin changes, Data usage, Dashboard load) | `--out-dir`, `--query-tags`, `--workspace-class CLASS=PATTERN`, `--sizes-schema` | `tools/build_direct_dashboards.py:1-13`, `tools/build_direct_dashboards.py:956-967` |
 | `direct_dashboard_doc.py` | HTML guide per direct dashboard (library, `build()`) | — | `tools/direct_dashboard_doc.py:1-7`, `tools/direct_dashboard_doc.py:709` |
 | `direct_dashboard_load.py` | "Dashboard load" dashboard by query tags (library) | — | `tools/direct_dashboard_load.py:1-14` |
 | `direct_data_usage.py` | Data usage dashboard + sizes notebook (library) | — | `tools/direct_data_usage.py:1-10`, `tools/direct_data_usage.py:1672` |
@@ -125,7 +125,7 @@ Edge evidence: `tools/first_run.py:112-120`, `tools/export_direct_results.py:42-
 
 | Tool | Purpose | CLI | Evidence |
 |---|---|---|---|
-| `gate.py` | Quick gate (lint, sync/generate checks, web checks, pytest) or full gate (fixtures + `dbt build --target test` + pytest + coverage) | `--quick` | `tools/gate.py:1-14`, `tools/gate.py:205-208` |
+| `gate.py` | Quick gate (lint, sync/generate checks, web checks, pytest; fails on a stale test DB) or full gate (the same lint/sync checks + fixtures + `dbt build --target test` + pytest + coverage) | `--quick` | `tools/gate.py:1-15`, `tools/gate.py:230-233` |
 | `fixture_coverage.py` | Every executable check has a grain entry and a pytest assertion | `--check` | `tools/fixture_coverage.py:1-14`, `tools/fixture_coverage.py:379-385` |
 
-Data files in `tools/`: `dashboard_columns.json` (rewritten by `--refresh-columns`, `tools/build_databricks_dashboards.py:1462-1463`), `dashboard_screens/` (per-tab screens, `tools/build_databricks_dashboards.py:3-4`).
+Data files in `tools/`: `dashboard_columns.json` (rewritten by `--refresh-columns`, `tools/build_databricks_dashboards.py:1478-1479`), `dashboard_screens/` (per-tab screens, `tools/build_databricks_dashboards.py:3-4`).

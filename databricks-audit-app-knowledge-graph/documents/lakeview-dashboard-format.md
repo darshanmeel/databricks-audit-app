@@ -28,7 +28,7 @@ flowchart TB
 
 ## What it documents (code that relies on it)
 
-- `tools/build_databricks_dashboards.py`: `query_lines()` cites the "concatenation must reproduce the SQL" rule (`tools/build_databricks_dashboards.py:217-222`); widget builders `526-890`.
+- `tools/build_databricks_dashboards.py`: `query_lines()` cites the "concatenation must reproduce the SQL" rule (`tools/build_databricks_dashboards.py:228-233`); widget builders `526-890`.
 - `tools/dashboard_kit.py`: GRID_V1 12-column layout (`tools/dashboard_kit.py:266-284`).
-- `tools/build_direct_dashboards.py`: `GRID = 12`, time-range parameter (`tools/build_direct_dashboards.py:623-626`).
+- `tools/build_direct_dashboards.py`: `GRID = 12`, time-range parameter (`tools/build_direct_dashboards.py:627-630`).
 - `tests/test_databricks_dashboards.py`: shape tests mirror the minimum-keys list (`tests/test_databricks_dashboards.py:56-151`); the file references this doc (grep hit).

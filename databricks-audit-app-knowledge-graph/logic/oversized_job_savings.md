@@ -23,7 +23,7 @@ flowchart TD
 - Only measured classic job clusters count; serverless/unmeasured compute cannot shrink - `app/queries/app/jobs_pipelines/lakeflow_job_oversized.sql:38-42`.
 - Cost excludes usage rows with no `job_run_id`, so it can be below `cost_by_job` - `app/queries/app/jobs_pipelines/lakeflow_job_oversized.sql:106-110`.
 - Telemetry capped at `LEAST(:period_days, 90)` days - `app/queries/app/jobs_pipelines/lakeflow_job_oversized.sql:12-13`.
-- A rough estimate from measured use, never a resize forecast - `README.md:379-382`.
+- A rough estimate from measured use, never a resize forecast - `README.md:384-387`.
 
 ## Formula
 ```

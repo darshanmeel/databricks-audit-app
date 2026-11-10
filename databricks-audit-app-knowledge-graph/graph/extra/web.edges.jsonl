@@ -151,7 +151,7 @@
 {"from": "file:web/src/components/roles.ts", "to": "function:web/src/components/roles.ts:roleAreasFor", "type": "contains", "evidence": "web/src/components/roles.ts:42", "status": "extracted"}
 {"from": "file:web/src/components/roles.ts", "to": "function:web/src/components/roles.ts:sidebarKeysForRole", "type": "contains", "evidence": "web/src/components/roles.ts:48", "status": "extracted"}
 {"from": "file:web/src/components/primitives.tsx", "to": "function:web/src/components/primitives.tsx:AreaPage", "type": "contains", "evidence": "web/src/components/primitives.tsx:702", "status": "extracted"}
-{"from": "file:web/src/components/findings_table.tsx", "to": "function:web/src/components/findings_table.tsx:FindingsTable", "type": "contains", "evidence": "web/src/components/findings_table.tsx:251", "status": "extracted"}
+{"from": "file:web/src/components/findings_table.tsx", "to": "function:web/src/components/findings_table.tsx:FindingsTable", "type": "contains", "evidence": "web/src/components/findings_table.tsx:252", "status": "extracted"}
 {"from": "file:web/src/components/tab_registry.ts", "to": "function:web/src/components/tab_registry.ts:homeForQuery", "type": "contains", "evidence": "web/src/components/tab_registry.ts:412", "status": "extracted"}
 {"from": "file:web/src/components/tab_registry.ts", "to": "function:web/src/components/tab_registry.ts:bandOf", "type": "contains", "evidence": "web/src/components/tab_registry.ts:440", "status": "extracted"}
 {"from": "file:web/src/components/tab_registry.ts", "to": "function:web/src/components/tab_registry.ts:countsForIds", "type": "contains", "evidence": "web/src/components/tab_registry.ts:354", "status": "extracted"}
@@ -210,8 +210,8 @@
 {"from": "function:web/src/components/primitives.tsx:AreaPage", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/components/primitives.tsx:781", "status": "extracted"}
 {"from": "function:web/src/components/primitives.tsx:AreaPage", "to": "function:web/src/components/findings_table.tsx:FindingsTable", "type": "calls", "evidence": "web/src/components/primitives.tsx:834", "status": "extracted"}
 {"from": "function:web/src/components/primitives.tsx:AreaPage", "to": "function:web/src/components/primitives.tsx:TagOriginNote", "type": "calls", "evidence": "web/src/components/primitives.tsx:829", "status": "extracted"}
-{"from": "function:web/src/components/findings_table.tsx:FindingsTable", "to": "function:web/src/components/finding_detail.tsx:FindingDetail", "type": "calls", "evidence": "web/src/components/findings_table.tsx:234", "status": "extracted"}
-{"from": "function:web/src/components/findings_table.tsx:FindingsTable", "to": "function:web/src/components/hash_state.tsx:HashState", "type": "calls", "evidence": "web/src/components/findings_table.tsx:268", "status": "extracted"}
+{"from": "function:web/src/components/findings_table.tsx:FindingsTable", "to": "function:web/src/components/finding_detail.tsx:FindingDetail", "type": "calls", "evidence": "web/src/components/findings_table.tsx:235", "status": "extracted"}
+{"from": "function:web/src/components/findings_table.tsx:FindingsTable", "to": "function:web/src/components/hash_state.tsx:HashState", "type": "calls", "evidence": "web/src/components/findings_table.tsx:269", "status": "extracted"}
 {"from": "function:web/src/components/guide_drawer.tsx:GuideDrawer", "to": "function:web/src/components/guide_drawer.tsx:fetchGuideData", "type": "calls", "evidence": "web/src/components/guide_drawer.tsx:146", "status": "extracted"}
 {"from": "function:web/src/components/guide.tsx:GuideTab", "to": "endpoint:GET /api/guide/sql/{query_id}", "type": "calls", "evidence": "web/src/components/guide.tsx:2321", "status": "extracted"}
 {"from": "function:web/src/components/guide.tsx:GuideTab", "to": "function:web/src/components/guide_drawer.tsx:fetchGuideData", "type": "calls", "evidence": "web/src/components/guide.tsx:2771", "status": "extracted"}
@@ -295,8 +295,8 @@
 {"from": "ui_screen:tab_query:trend", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/query_trend.tsx:116", "status": "extracted"}
 {"from": "ui_screen:tab_query:trend", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/query_trend.tsx:117", "status": "extracted"}
 {"from": "file:web/src/tabs/tab_actions.tsx", "to": "function:web/src/tabs/tab_actions.tsx:ActionsPanel", "type": "contains", "evidence": "web/src/tabs/tab_actions.tsx:167", "status": "extracted"}
-{"from": "function:web/src/tabs/tab_actions.tsx:ActionsPanel", "to": "ui_screen:tab_actions", "type": "implements", "evidence": "web/src/tabs/tab_actions.tsx:292", "status": "extracted"}
-{"from": "function:web/src/tabs/tab_actions.tsx:ActionsPanel", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_actions.tsx:292", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_actions.tsx:ActionsPanel", "to": "ui_screen:tab_actions", "type": "implements", "evidence": "web/src/tabs/tab_actions.tsx:293", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_actions.tsx:ActionsPanel", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_actions.tsx:293", "status": "extracted"}
 {"from": "ui_screen:tab_actions", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_actions.tsx:169", "status": "extracted"}
 {"from": "ui_screen:tab_actions", "to": "endpoint:GET /api/rollup/top", "type": "calls", "evidence": "web/src/tabs/tab_actions.tsx:175", "status": "extracted"}
 {"from": "ui_screen:tab_actions", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_actions.tsx:86", "status": "extracted"}
@@ -401,14 +401,14 @@
 {"from": "ui_screen:tab_cost:chargeback", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_cost.tsx:1704", "status": "extracted"}
 {"from": "ui_screen:tab_cost:chargeback", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_cost.tsx:1706", "status": "extracted"}
 {"from": "ui_screen:tab_cost_before_after", "to": "ui_screen:tab_cost", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:317", "status": "extracted"}
-{"from": "file:web/src/tabs/tab_cost_before_after.tsx", "to": "function:web/src/tabs/tab_cost_before_after.tsx:CostBeforeAfterContent", "type": "contains", "evidence": "web/src/tabs/tab_cost_before_after.tsx:336", "status": "extracted"}
-{"from": "function:web/src/tabs/tab_cost_before_after.tsx:CostBeforeAfterContent", "to": "ui_screen:tab_cost_before_after", "type": "implements", "evidence": "web/src/tabs/tab_cost_before_after.tsx:557", "status": "extracted"}
-{"from": "function:web/src/tabs/tab_cost_before_after.tsx:CostBeforeAfterContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_cost_before_after.tsx:557", "status": "extracted"}
-{"from": "ui_screen:tab_cost_before_after", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_cost_before_after.tsx:349", "status": "extracted"}
+{"from": "file:web/src/tabs/tab_cost_before_after.tsx", "to": "function:web/src/tabs/tab_cost_before_after.tsx:CostBeforeAfterContent", "type": "contains", "evidence": "web/src/tabs/tab_cost_before_after.tsx:337", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_cost_before_after.tsx:CostBeforeAfterContent", "to": "ui_screen:tab_cost_before_after", "type": "implements", "evidence": "web/src/tabs/tab_cost_before_after.tsx:556", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_cost_before_after.tsx:CostBeforeAfterContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_cost_before_after.tsx:556", "status": "extracted"}
 {"from": "ui_screen:tab_cost_before_after", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_cost_before_after.tsx:350", "status": "extracted"}
-{"from": "ui_screen:tab_cost_before_after", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_cost_before_after.tsx:242", "status": "extracted"}
+{"from": "ui_screen:tab_cost_before_after", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_cost_before_after.tsx:351", "status": "extracted"}
 {"from": "ui_screen:tab_cost_before_after", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_cost_before_after.tsx:243", "status": "extracted"}
 {"from": "ui_screen:tab_cost_before_after", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_cost_before_after.tsx:244", "status": "extracted"}
+{"from": "ui_screen:tab_cost_before_after", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_cost_before_after.tsx:245", "status": "extracted"}
 {"from": "ui_screen:tab_coverage:sources", "to": "ui_screen:tab_coverage", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:336", "status": "extracted"}
 {"from": "file:web/src/tabs/tab_coverage.tsx", "to": "function:web/src/tabs/tab_coverage.tsx:CoverageSourcesPanel", "type": "contains", "evidence": "web/src/tabs/tab_coverage.tsx:260", "status": "extracted"}
 {"from": "function:web/src/tabs/tab_coverage.tsx:CoverageSourcesPanel", "to": "ui_screen:tab_coverage:sources", "type": "implements", "evidence": "web/src/tabs/tab_coverage.tsx:634", "status": "extracted"}
@@ -598,8 +598,8 @@
 {"from": "ui_screen:tab_overview", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/query_queue.tsx:41", "status": "extracted"}
 {"from": "ui_screen:tab_query:heavy", "to": "ui_screen:tab_query", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:327", "status": "extracted"}
 {"from": "file:web/src/tabs/tab_query.tsx", "to": "function:web/src/tabs/tab_query.tsx:QueryHeavyContent", "type": "contains", "evidence": "web/src/tabs/tab_query.tsx:229", "status": "extracted"}
-{"from": "function:web/src/tabs/tab_query.tsx:QueryHeavyContent", "to": "ui_screen:tab_query:heavy", "type": "implements", "evidence": "web/src/tabs/tab_query.tsx:1064", "status": "extracted"}
-{"from": "function:web/src/tabs/tab_query.tsx:QueryHeavyContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_query.tsx:1064", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_query.tsx:QueryHeavyContent", "to": "ui_screen:tab_query:heavy", "type": "implements", "evidence": "web/src/tabs/tab_query.tsx:1065", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_query.tsx:QueryHeavyContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_query.tsx:1065", "status": "extracted"}
 {"from": "ui_screen:tab_query:heavy", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_query.tsx:230", "status": "extracted"}
 {"from": "ui_screen:tab_query:heavy", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_query.tsx:231", "status": "extracted"}
 {"from": "ui_screen:tab_query:heavy", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_query.tsx:232", "status": "extracted"}
@@ -607,60 +607,59 @@
 {"from": "ui_screen:tab_query:heavy", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_query.tsx:236", "status": "extracted"}
 {"from": "ui_screen:tab_query:heavy", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_query.tsx:237", "status": "extracted"}
 {"from": "ui_screen:tab_query:efficiency", "to": "ui_screen:tab_query", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:327", "status": "extracted"}
-{"from": "file:web/src/tabs/tab_query.tsx", "to": "function:web/src/tabs/tab_query.tsx:QueryEfficiencyContent", "type": "contains", "evidence": "web/src/tabs/tab_query.tsx:506", "status": "extracted"}
-{"from": "function:web/src/tabs/tab_query.tsx:QueryEfficiencyContent", "to": "ui_screen:tab_query:efficiency", "type": "implements", "evidence": "web/src/tabs/tab_query.tsx:1065", "status": "extracted"}
-{"from": "function:web/src/tabs/tab_query.tsx:QueryEfficiencyContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_query.tsx:1065", "status": "extracted"}
-{"from": "ui_screen:tab_query:efficiency", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_query.tsx:507", "status": "extracted"}
+{"from": "file:web/src/tabs/tab_query.tsx", "to": "function:web/src/tabs/tab_query.tsx:QueryEfficiencyContent", "type": "contains", "evidence": "web/src/tabs/tab_query.tsx:507", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_query.tsx:QueryEfficiencyContent", "to": "ui_screen:tab_query:efficiency", "type": "implements", "evidence": "web/src/tabs/tab_query.tsx:1066", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_query.tsx:QueryEfficiencyContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_query.tsx:1066", "status": "extracted"}
 {"from": "ui_screen:tab_query:efficiency", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_query.tsx:508", "status": "extracted"}
 {"from": "ui_screen:tab_query:efficiency", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_query.tsx:509", "status": "extracted"}
 {"from": "ui_screen:tab_query:efficiency", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_query.tsx:510", "status": "extracted"}
-{"from": "ui_screen:tab_query:efficiency", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_query.tsx:513", "status": "extracted"}
+{"from": "ui_screen:tab_query:efficiency", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_query.tsx:511", "status": "extracted"}
+{"from": "ui_screen:tab_query:efficiency", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_query.tsx:514", "status": "extracted"}
 {"from": "ui_screen:tab_query:reliability", "to": "ui_screen:tab_query", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:327", "status": "extracted"}
-{"from": "file:web/src/tabs/tab_query.tsx", "to": "function:web/src/tabs/tab_query.tsx:QueryReliabilityContent", "type": "contains", "evidence": "web/src/tabs/tab_query.tsx:690", "status": "extracted"}
-{"from": "function:web/src/tabs/tab_query.tsx:QueryReliabilityContent", "to": "ui_screen:tab_query:reliability", "type": "implements", "evidence": "web/src/tabs/tab_query.tsx:1066", "status": "extracted"}
-{"from": "function:web/src/tabs/tab_query.tsx:QueryReliabilityContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_query.tsx:1066", "status": "extracted"}
-{"from": "ui_screen:tab_query:reliability", "to": "endpoint:GET /api/dims", "type": "calls", "evidence": "web/src/tabs/tab_query.tsx:691", "status": "extracted"}
-{"from": "ui_screen:tab_query:reliability", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_query.tsx:692", "status": "extracted"}
+{"from": "file:web/src/tabs/tab_query.tsx", "to": "function:web/src/tabs/tab_query.tsx:QueryReliabilityContent", "type": "contains", "evidence": "web/src/tabs/tab_query.tsx:691", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_query.tsx:QueryReliabilityContent", "to": "ui_screen:tab_query:reliability", "type": "implements", "evidence": "web/src/tabs/tab_query.tsx:1067", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_query.tsx:QueryReliabilityContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_query.tsx:1067", "status": "extracted"}
+{"from": "ui_screen:tab_query:reliability", "to": "endpoint:GET /api/dims", "type": "calls", "evidence": "web/src/tabs/tab_query.tsx:692", "status": "extracted"}
 {"from": "ui_screen:tab_query:reliability", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_query.tsx:693", "status": "extracted"}
 {"from": "ui_screen:tab_query:reliability", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_query.tsx:694", "status": "extracted"}
+{"from": "ui_screen:tab_query:reliability", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_query.tsx:695", "status": "extracted"}
 {"from": "ui_screen:tab_query:capacity", "to": "ui_screen:tab_query", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:327", "status": "extracted"}
-{"from": "file:web/src/tabs/tab_query.tsx", "to": "function:web/src/tabs/tab_query.tsx:QueryCapacityContent", "type": "contains", "evidence": "web/src/tabs/tab_query.tsx:880", "status": "extracted"}
-{"from": "function:web/src/tabs/tab_query.tsx:QueryCapacityContent", "to": "ui_screen:tab_query:capacity", "type": "implements", "evidence": "web/src/tabs/tab_query.tsx:1067", "status": "extracted"}
-{"from": "function:web/src/tabs/tab_query.tsx:QueryCapacityContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_query.tsx:1067", "status": "extracted"}
-{"from": "ui_screen:tab_query:capacity", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_query.tsx:881", "status": "extracted"}
-{"from": "ui_screen:tab_query:capacity", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_query.tsx:884", "status": "extracted"}
-{"from": "ui_screen:tab_query:capacity", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_query.tsx:885", "status": "extracted"}
+{"from": "file:web/src/tabs/tab_query.tsx", "to": "function:web/src/tabs/tab_query.tsx:QueryCapacityContent", "type": "contains", "evidence": "web/src/tabs/tab_query.tsx:881", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_query.tsx:QueryCapacityContent", "to": "ui_screen:tab_query:capacity", "type": "implements", "evidence": "web/src/tabs/tab_query.tsx:1068", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_query.tsx:QueryCapacityContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_query.tsx:1068", "status": "extracted"}
+{"from": "ui_screen:tab_query:capacity", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_query.tsx:882", "status": "extracted"}
+{"from": "ui_screen:tab_query:capacity", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_query.tsx:885", "status": "extracted"}
 {"from": "ui_screen:tab_query:capacity", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_query.tsx:886", "status": "extracted"}
-{"from": "ui_screen:tab_query:capacity", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_query.tsx:888", "status": "extracted"}
-{"from": "ui_screen:tab_query:capacity", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_query.tsx:889", "status": "extracted"}
-{"from": "ui_screen:tab_query:capacity", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_query.tsx:892", "status": "extracted"}
+{"from": "ui_screen:tab_query:capacity", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_query.tsx:887", "status": "extracted"}
+{"from": "ui_screen:tab_query:capacity", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_query.tsx:889", "status": "extracted"}
+{"from": "ui_screen:tab_query:capacity", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_query.tsx:890", "status": "extracted"}
 {"from": "ui_screen:tab_query:capacity", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_query.tsx:893", "status": "extracted"}
+{"from": "ui_screen:tab_query:capacity", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_query.tsx:894", "status": "extracted"}
 {"from": "ui_screen:tab_query:capacity", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/query_queue.tsx:37", "status": "extracted"}
 {"from": "ui_screen:tab_query:capacity", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/query_queue.tsx:38", "status": "extracted"}
 {"from": "ui_screen:tab_query:capacity", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/query_queue.tsx:40", "status": "extracted"}
 {"from": "ui_screen:tab_query:capacity", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/query_queue.tsx:41", "status": "extracted"}
 {"from": "ui_screen:tab_query:team", "to": "ui_screen:tab_query", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:327", "status": "extracted"}
-{"from": "file:web/src/tabs/tab_query.tsx", "to": "function:web/src/tabs/tab_query.tsx:QueryTeamContent", "type": "contains", "evidence": "web/src/tabs/tab_query.tsx:1060", "status": "extracted"}
-{"from": "function:web/src/tabs/tab_query.tsx:QueryTeamContent", "to": "ui_screen:tab_query:team", "type": "implements", "evidence": "web/src/tabs/tab_query.tsx:1068", "status": "extracted"}
-{"from": "function:web/src/tabs/tab_query.tsx:QueryTeamContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_query.tsx:1068", "status": "extracted"}
+{"from": "file:web/src/tabs/tab_query.tsx", "to": "function:web/src/tabs/tab_query.tsx:QueryTeamContent", "type": "contains", "evidence": "web/src/tabs/tab_query.tsx:1061", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_query.tsx:QueryTeamContent", "to": "ui_screen:tab_query:team", "type": "implements", "evidence": "web/src/tabs/tab_query.tsx:1069", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_query.tsx:QueryTeamContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_query.tsx:1069", "status": "extracted"}
 {"from": "ui_screen:tab_query:team", "to": "endpoint:GET /api/rollup/keys", "type": "calls", "evidence": "web/src/components/tag_rollup.tsx:482", "status": "extracted"}
 {"from": "ui_screen:tab_query:team", "to": "endpoint:GET /api/rollup", "type": "calls", "evidence": "web/src/components/tag_rollup.tsx:150", "status": "extracted"}
 {"from": "ui_screen:tab_storage:tables", "to": "ui_screen:tab_storage", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:333", "status": "extracted"}
-{"from": "file:web/src/tabs/tab_storage.tsx", "to": "function:web/src/tabs/tab_storage.tsx:StorageTablesContent", "type": "contains", "evidence": "web/src/tabs/tab_storage.tsx:110", "status": "extracted"}
-{"from": "function:web/src/tabs/tab_storage.tsx:StorageTablesContent", "to": "ui_screen:tab_storage:tables", "type": "implements", "evidence": "web/src/tabs/tab_storage.tsx:660", "status": "extracted"}
-{"from": "function:web/src/tabs/tab_storage.tsx:StorageTablesContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_storage.tsx:660", "status": "extracted"}
-{"from": "ui_screen:tab_storage:tables", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_storage.tsx:111", "status": "extracted"}
+{"from": "file:web/src/tabs/tab_storage.tsx", "to": "function:web/src/tabs/tab_storage.tsx:StorageTablesContent", "type": "contains", "evidence": "web/src/tabs/tab_storage.tsx:111", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_storage.tsx:StorageTablesContent", "to": "ui_screen:tab_storage:tables", "type": "implements", "evidence": "web/src/tabs/tab_storage.tsx:661", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_storage.tsx:StorageTablesContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_storage.tsx:661", "status": "extracted"}
 {"from": "ui_screen:tab_storage:tables", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_storage.tsx:112", "status": "extracted"}
-{"from": "ui_screen:tab_storage:tables", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_storage.tsx:114", "status": "extracted"}
-{"from": "ui_screen:tab_storage:tables", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_storage.tsx:116", "status": "extracted"}
+{"from": "ui_screen:tab_storage:tables", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_storage.tsx:113", "status": "extracted"}
+{"from": "ui_screen:tab_storage:tables", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_storage.tsx:115", "status": "extracted"}
+{"from": "ui_screen:tab_storage:tables", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_storage.tsx:117", "status": "extracted"}
 {"from": "ui_screen:tab_storage:tables", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_storage.tsx:24", "status": "extracted"}
 {"from": "ui_screen:tab_storage:tables", "to": "endpoint:GET /api/tables", "type": "calls", "evidence": "web/src/tabs/tab_storage.tsx:32", "status": "extracted"}
-{"from": "ui_screen:tab_storage:tables", "to": "endpoint:GET /api/table_sizes", "type": "calls", "evidence": "web/src/tabs/tab_storage.tsx:304", "status": "extracted"}
+{"from": "ui_screen:tab_storage:tables", "to": "endpoint:GET /api/table_sizes", "type": "calls", "evidence": "web/src/tabs/tab_storage.tsx:305", "status": "extracted"}
 {"from": "ui_screen:tab_storage:maintenance", "to": "ui_screen:tab_storage", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:333", "status": "extracted"}
-{"from": "file:web/src/tabs/tab_storage.tsx", "to": "function:web/src/tabs/tab_storage.tsx:StorageMaintenanceContent", "type": "contains", "evidence": "web/src/tabs/tab_storage.tsx:545", "status": "extracted"}
-{"from": "function:web/src/tabs/tab_storage.tsx:StorageMaintenanceContent", "to": "ui_screen:tab_storage:maintenance", "type": "implements", "evidence": "web/src/tabs/tab_storage.tsx:661", "status": "extracted"}
-{"from": "function:web/src/tabs/tab_storage.tsx:StorageMaintenanceContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_storage.tsx:661", "status": "extracted"}
-{"from": "ui_screen:tab_storage:maintenance", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_storage.tsx:546", "status": "extracted"}
+{"from": "file:web/src/tabs/tab_storage.tsx", "to": "function:web/src/tabs/tab_storage.tsx:StorageMaintenanceContent", "type": "contains", "evidence": "web/src/tabs/tab_storage.tsx:546", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_storage.tsx:StorageMaintenanceContent", "to": "ui_screen:tab_storage:maintenance", "type": "implements", "evidence": "web/src/tabs/tab_storage.tsx:662", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_storage.tsx:StorageMaintenanceContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_storage.tsx:662", "status": "extracted"}
 {"from": "ui_screen:tab_storage:maintenance", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_storage.tsx:547", "status": "extracted"}
 {"from": "ui_screen:tab_storage:maintenance", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_storage.tsx:548", "status": "extracted"}
 {"from": "ui_screen:tab_storage:maintenance", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_storage.tsx:549", "status": "extracted"}
@@ -668,6 +667,7 @@
 {"from": "ui_screen:tab_storage:maintenance", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_storage.tsx:551", "status": "extracted"}
 {"from": "ui_screen:tab_storage:maintenance", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_storage.tsx:552", "status": "extracted"}
 {"from": "ui_screen:tab_storage:maintenance", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_storage.tsx:553", "status": "extracted"}
+{"from": "ui_screen:tab_storage:maintenance", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_storage.tsx:554", "status": "extracted"}
 {"from": "file:web/src/tabs/tab_tags.tsx", "to": "function:web/src/tabs/tab_tags.tsx:TagsPanel", "type": "contains", "evidence": "web/src/tabs/tab_tags.tsx:437", "status": "extracted"}
 {"from": "function:web/src/tabs/tab_tags.tsx:TagsPanel", "to": "ui_screen:tab_tags", "type": "implements", "evidence": "web/src/tabs/tab_tags.tsx:484", "status": "extracted"}
 {"from": "function:web/src/tabs/tab_tags.tsx:TagsPanel", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_tags.tsx:484", "status": "extracted"}
@@ -739,17 +739,17 @@
 {"from": "ui_screen:tab_money", "to": "endpoint:GET /api/rollup/keys", "type": "calls", "evidence": "web/src/tabs/tab_money.tsx:452", "status": "extracted"}
 {"from": "ui_screen:tab_money", "to": "endpoint:GET /api/rollup", "type": "calls", "evidence": "web/src/tabs/tab_money.tsx:459", "status": "extracted"}
 {"from": "ui_screen:tab_money", "to": "endpoint:GET /api/rollup", "type": "calls", "evidence": "web/src/tabs/tab_money.tsx:460", "status": "extracted"}
-{"from": "ui_screen:tab_money", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_money.tsx:526", "status": "extracted"}
-{"from": "ui_screen:tab_money", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_money.tsx:531", "status": "extracted"}
-{"from": "ui_screen:tab_money", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_money.tsx:537", "status": "extracted"}
-{"from": "ui_screen:tab_money", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_money.tsx:538", "status": "extracted"}
+{"from": "ui_screen:tab_money", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_money.tsx:528", "status": "extracted"}
+{"from": "ui_screen:tab_money", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_money.tsx:533", "status": "extracted"}
 {"from": "ui_screen:tab_money", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_money.tsx:539", "status": "extracted"}
 {"from": "ui_screen:tab_money", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_money.tsx:540", "status": "extracted"}
 {"from": "ui_screen:tab_money", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_money.tsx:541", "status": "extracted"}
-{"from": "ui_screen:tab_money", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_money.tsx:542", "status": "extracted"}
-{"from": "ui_screen:tab_money", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_money.tsx:543", "status": "extracted"}
+{"from": "ui_screen:tab_money", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_money.tsx:542", "status": "extracted"}
+{"from": "ui_screen:tab_money", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_money.tsx:543", "status": "extracted"}
+{"from": "ui_screen:tab_money", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_money.tsx:544", "status": "extracted"}
 {"from": "ui_screen:tab_money", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_money.tsx:545", "status": "extracted"}
-{"from": "ui_screen:tab_money", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_money.tsx:546", "status": "extracted"}
+{"from": "ui_screen:tab_money", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_money.tsx:547", "status": "extracted"}
+{"from": "ui_screen:tab_money", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_money.tsx:548", "status": "extracted"}
 {"from": "ui_screen:tab_money", "to": "endpoint:GET /api/tag_origins", "type": "calls", "evidence": "web/src/components/primitives.tsx:679", "status": "extracted"}
 {"from": "ui_screen:tab_money", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_money.tsx:119", "status": "extracted"}
 {"from": "ui_screen:tab_money", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_money.tsx:122", "status": "extracted"}
@@ -822,10 +822,10 @@
 {"from": "ui_screen:tab_cost:trend", "to": "dbt_model:f_cost_monthly_actuals", "type": "reads", "evidence": "web/src/tabs/tab_cost.tsx:284", "status": "inferred"}
 {"from": "ui_screen:tab_cost:trend", "to": "dbt_model:f_cost_period_over_period", "type": "reads", "evidence": "web/src/tabs/tab_cost.tsx:282", "status": "inferred"}
 {"from": "ui_screen:tab_cost:trend", "to": "dbt_model:f_cost_sku_trend_12m", "type": "reads", "evidence": "web/src/tabs/cost_trend_by.tsx:84", "status": "inferred"}
-{"from": "ui_screen:tab_cost_before_after", "to": "dbt_model:f_cost_daily_by_resource", "type": "reads", "evidence": "web/src/tabs/tab_cost_before_after.tsx:349", "status": "inferred"}
-{"from": "ui_screen:tab_cost_before_after", "to": "dbt_model:f_cost_dollarized_by_sku_day", "type": "reads", "evidence": "web/src/tabs/tab_cost_before_after.tsx:243", "status": "inferred"}
-{"from": "ui_screen:tab_cost_before_after", "to": "dbt_model:f_perf_daily_by_resource", "type": "reads", "evidence": "web/src/tabs/tab_cost_before_after.tsx:349", "status": "inferred"}
-{"from": "ui_screen:tab_cost_before_after", "to": "dbt_model:f_perf_failure_causes_daily", "type": "reads", "evidence": "web/src/tabs/tab_cost_before_after.tsx:244", "status": "inferred"}
+{"from": "ui_screen:tab_cost_before_after", "to": "dbt_model:f_cost_daily_by_resource", "type": "reads", "evidence": "web/src/tabs/tab_cost_before_after.tsx:350", "status": "inferred"}
+{"from": "ui_screen:tab_cost_before_after", "to": "dbt_model:f_cost_dollarized_by_sku_day", "type": "reads", "evidence": "web/src/tabs/tab_cost_before_after.tsx:244", "status": "inferred"}
+{"from": "ui_screen:tab_cost_before_after", "to": "dbt_model:f_perf_daily_by_resource", "type": "reads", "evidence": "web/src/tabs/tab_cost_before_after.tsx:350", "status": "inferred"}
+{"from": "ui_screen:tab_cost_before_after", "to": "dbt_model:f_perf_failure_causes_daily", "type": "reads", "evidence": "web/src/tabs/tab_cost_before_after.tsx:245", "status": "inferred"}
 {"from": "ui_screen:tab_coverage:sources", "to": "dbt_model:f_access_source_table_coverage", "type": "reads", "evidence": "web/src/tabs/tab_coverage.tsx:160", "status": "inferred"}
 {"from": "ui_screen:tab_coverage:sources", "to": "dbt_model:f_cost_audit_self_usage", "type": "reads", "evidence": "web/src/tabs/tab_coverage.tsx:222", "status": "inferred"}
 {"from": "ui_screen:tab_genie", "to": "dbt_model:f_cost_monthly_actuals", "type": "reads", "evidence": "web/src/tabs/tab_genie.tsx:105", "status": "inferred"}
@@ -883,9 +883,9 @@
 {"from": "ui_screen:tab_money", "to": "dbt_model:f_compute_serving_dormant_endpoints", "type": "reads", "evidence": "web/src/tabs/tab_money.tsx:449", "status": "inferred"}
 {"from": "ui_screen:tab_money", "to": "dbt_model:f_compute_serving_endpoint_cost_status", "type": "reads", "evidence": "web/src/tabs/tab_money.tsx:449", "status": "inferred"}
 {"from": "ui_screen:tab_money", "to": "dbt_model:f_compute_warehouse_idle_minutes", "type": "reads", "evidence": "web/src/tabs/tab_money.tsx:449", "status": "inferred"}
-{"from": "ui_screen:tab_money", "to": "dbt_model:f_cost_chargeback_by_cluster", "type": "reads", "evidence": "web/src/tabs/tab_money.tsx:546", "status": "inferred"}
+{"from": "ui_screen:tab_money", "to": "dbt_model:f_cost_chargeback_by_cluster", "type": "reads", "evidence": "web/src/tabs/tab_money.tsx:548", "status": "inferred"}
 {"from": "ui_screen:tab_money", "to": "dbt_model:f_cost_chargeback_by_tag_value", "type": "reads", "evidence": "web/src/tabs/tab_money.tsx:123", "status": "inferred"}
-{"from": "ui_screen:tab_money", "to": "dbt_model:f_cost_chargeback_by_warehouse", "type": "reads", "evidence": "web/src/tabs/tab_money.tsx:545", "status": "inferred"}
+{"from": "ui_screen:tab_money", "to": "dbt_model:f_cost_chargeback_by_warehouse", "type": "reads", "evidence": "web/src/tabs/tab_money.tsx:547", "status": "inferred"}
 {"from": "ui_screen:tab_money", "to": "dbt_model:f_cost_dollarized_by_sku_day", "type": "reads", "evidence": "web/src/tabs/tab_money.tsx:443", "status": "inferred"}
 {"from": "ui_screen:tab_money", "to": "dbt_model:f_cost_failed_statement_waste", "type": "reads", "evidence": "web/src/tabs/tab_money.tsx:449", "status": "inferred"}
 {"from": "ui_screen:tab_money", "to": "dbt_model:f_cost_monthly_actuals", "type": "reads", "evidence": "web/src/tabs/tab_money.tsx:445", "status": "inferred"}
@@ -894,16 +894,16 @@
 {"from": "ui_screen:tab_money", "to": "dbt_model:f_cost_unnamed_workspaces", "type": "reads", "evidence": "web/src/tabs/tab_money.tsx:448", "status": "inferred"}
 {"from": "ui_screen:tab_money", "to": "dbt_model:f_instance_pools_idle_capacity", "type": "reads", "evidence": "web/src/tabs/tab_money.tsx:449", "status": "inferred"}
 {"from": "ui_screen:tab_money", "to": "dbt_model:f_lakeflow_failed_jobs_wasted_dbus", "type": "reads", "evidence": "web/src/tabs/tab_money.tsx:449", "status": "inferred"}
-{"from": "ui_screen:tab_money", "to": "dbt_model:f_lakeflow_job_duration_regression", "type": "reads", "evidence": "web/src/tabs/tab_money.tsx:543", "status": "inferred"}
-{"from": "ui_screen:tab_money", "to": "dbt_model:f_lakeflow_job_reliability", "type": "reads", "evidence": "web/src/tabs/tab_money.tsx:542", "status": "inferred"}
+{"from": "ui_screen:tab_money", "to": "dbt_model:f_lakeflow_job_duration_regression", "type": "reads", "evidence": "web/src/tabs/tab_money.tsx:545", "status": "inferred"}
+{"from": "ui_screen:tab_money", "to": "dbt_model:f_lakeflow_job_reliability", "type": "reads", "evidence": "web/src/tabs/tab_money.tsx:544", "status": "inferred"}
 {"from": "ui_screen:tab_money", "to": "dbt_model:f_lakeflow_jobs_on_all_purpose", "type": "reads", "evidence": "web/src/tabs/tab_money.tsx:449", "status": "inferred"}
 {"from": "ui_screen:tab_money", "to": "dbt_model:f_lakeflow_pipeline_idle_tail_duration", "type": "reads", "evidence": "web/src/tabs/tab_money.tsx:449", "status": "inferred"}
 {"from": "ui_screen:tab_money", "to": "dbt_model:f_lakeflow_stale_zombie_jobs", "type": "reads", "evidence": "web/src/tabs/tab_money.tsx:449", "status": "inferred"}
 {"from": "ui_screen:tab_money", "to": "dbt_model:f_overview_serverless_classic_split", "type": "reads", "evidence": "web/src/tabs/tab_money.tsx:119", "status": "inferred"}
-{"from": "ui_screen:tab_money", "to": "dbt_model:f_perf_daily_by_resource", "type": "reads", "evidence": "web/src/tabs/tab_money.tsx:541", "status": "inferred"}
-{"from": "ui_screen:tab_money", "to": "dbt_model:f_query_failed_queries_daily", "type": "reads", "evidence": "web/src/tabs/tab_money.tsx:537", "status": "inferred"}
-{"from": "ui_screen:tab_money", "to": "dbt_model:f_query_queuing_waits", "type": "reads", "evidence": "web/src/tabs/tab_money.tsx:539", "status": "inferred"}
-{"from": "ui_screen:tab_money", "to": "dbt_model:f_storage_unused_table_cost", "type": "reads", "evidence": "web/src/tabs/tab_money.tsx:531", "status": "inferred"}
+{"from": "ui_screen:tab_money", "to": "dbt_model:f_perf_daily_by_resource", "type": "reads", "evidence": "web/src/tabs/tab_money.tsx:543", "status": "inferred"}
+{"from": "ui_screen:tab_money", "to": "dbt_model:f_query_failed_queries_daily", "type": "reads", "evidence": "web/src/tabs/tab_money.tsx:539", "status": "inferred"}
+{"from": "ui_screen:tab_money", "to": "dbt_model:f_query_queuing_waits", "type": "reads", "evidence": "web/src/tabs/tab_money.tsx:541", "status": "inferred"}
+{"from": "ui_screen:tab_money", "to": "dbt_model:f_storage_unused_table_cost", "type": "reads", "evidence": "web/src/tabs/tab_money.tsx:533", "status": "inferred"}
 {"from": "ui_screen:tab_overview", "to": "dbt_model:f_compute_idle_node_ratio", "type": "reads", "evidence": "web/src/tabs/tab_overview.tsx:605", "status": "inferred"}
 {"from": "ui_screen:tab_overview", "to": "dbt_model:f_compute_serving_dormant_endpoints", "type": "reads", "evidence": "web/src/tabs/tab_overview.tsx:605", "status": "inferred"}
 {"from": "ui_screen:tab_overview", "to": "dbt_model:f_compute_serving_endpoint_cost_status", "type": "reads", "evidence": "web/src/tabs/tab_overview.tsx:605", "status": "inferred"}
@@ -925,39 +925,39 @@
 {"from": "ui_screen:tab_overview", "to": "dbt_model:f_overview_serverless_classic_split", "type": "reads", "evidence": "web/src/tabs/tab_overview.tsx:601", "status": "inferred"}
 {"from": "ui_screen:tab_overview", "to": "dbt_model:f_overview_spend_estimate", "type": "reads", "evidence": "web/src/tabs/tab_overview.tsx:601", "status": "inferred"}
 {"from": "ui_screen:tab_overview", "to": "dbt_model:f_perf_queue_by_hour", "type": "reads", "evidence": "web/src/tabs/query_queue.tsx:37", "status": "inferred"}
-{"from": "ui_screen:tab_query:capacity", "to": "dbt_model:f_perf_daily_by_resource", "type": "reads", "evidence": "web/src/tabs/tab_query.tsx:889", "status": "inferred"}
+{"from": "ui_screen:tab_query:capacity", "to": "dbt_model:f_perf_daily_by_resource", "type": "reads", "evidence": "web/src/tabs/tab_query.tsx:890", "status": "inferred"}
 {"from": "ui_screen:tab_query:capacity", "to": "dbt_model:f_perf_queue_by_hour", "type": "reads", "evidence": "web/src/tabs/query_queue.tsx:37", "status": "inferred"}
-{"from": "ui_screen:tab_query:capacity", "to": "dbt_model:f_query_queuing_waits", "type": "reads", "evidence": "web/src/tabs/tab_query.tsx:884", "status": "inferred"}
-{"from": "ui_screen:tab_query:capacity", "to": "dbt_model:f_query_slices", "type": "reads", "evidence": "web/src/tabs/tab_query.tsx:885", "status": "inferred"}
-{"from": "ui_screen:tab_query:capacity", "to": "dbt_model:f_query_warehouse_pressure", "type": "reads", "evidence": "web/src/tabs/tab_query.tsx:881", "status": "inferred"}
-{"from": "ui_screen:tab_query:capacity", "to": "dbt_model:f_query_workload_mix_hours", "type": "reads", "evidence": "web/src/tabs/tab_query.tsx:888", "status": "inferred"}
-{"from": "ui_screen:tab_query:efficiency", "to": "dbt_model:f_perf_daily_by_resource", "type": "reads", "evidence": "web/src/tabs/tab_query.tsx:513", "status": "inferred"}
-{"from": "ui_screen:tab_query:efficiency", "to": "dbt_model:f_query_cache_coldstart", "type": "reads", "evidence": "web/src/tabs/tab_query.tsx:510", "status": "inferred"}
-{"from": "ui_screen:tab_query:efficiency", "to": "dbt_model:f_query_local_spillage", "type": "reads", "evidence": "web/src/tabs/tab_query.tsx:507", "status": "inferred"}
-{"from": "ui_screen:tab_query:efficiency", "to": "dbt_model:f_query_pruning_effectiveness", "type": "reads", "evidence": "web/src/tabs/tab_query.tsx:509", "status": "inferred"}
-{"from": "ui_screen:tab_query:efficiency", "to": "dbt_model:f_query_shuffle_write_amplification", "type": "reads", "evidence": "web/src/tabs/tab_query.tsx:508", "status": "inferred"}
+{"from": "ui_screen:tab_query:capacity", "to": "dbt_model:f_query_queuing_waits", "type": "reads", "evidence": "web/src/tabs/tab_query.tsx:885", "status": "inferred"}
+{"from": "ui_screen:tab_query:capacity", "to": "dbt_model:f_query_slices", "type": "reads", "evidence": "web/src/tabs/tab_query.tsx:886", "status": "inferred"}
+{"from": "ui_screen:tab_query:capacity", "to": "dbt_model:f_query_warehouse_pressure", "type": "reads", "evidence": "web/src/tabs/tab_query.tsx:882", "status": "inferred"}
+{"from": "ui_screen:tab_query:capacity", "to": "dbt_model:f_query_workload_mix_hours", "type": "reads", "evidence": "web/src/tabs/tab_query.tsx:889", "status": "inferred"}
+{"from": "ui_screen:tab_query:efficiency", "to": "dbt_model:f_perf_daily_by_resource", "type": "reads", "evidence": "web/src/tabs/tab_query.tsx:514", "status": "inferred"}
+{"from": "ui_screen:tab_query:efficiency", "to": "dbt_model:f_query_cache_coldstart", "type": "reads", "evidence": "web/src/tabs/tab_query.tsx:511", "status": "inferred"}
+{"from": "ui_screen:tab_query:efficiency", "to": "dbt_model:f_query_local_spillage", "type": "reads", "evidence": "web/src/tabs/tab_query.tsx:508", "status": "inferred"}
+{"from": "ui_screen:tab_query:efficiency", "to": "dbt_model:f_query_pruning_effectiveness", "type": "reads", "evidence": "web/src/tabs/tab_query.tsx:510", "status": "inferred"}
+{"from": "ui_screen:tab_query:efficiency", "to": "dbt_model:f_query_shuffle_write_amplification", "type": "reads", "evidence": "web/src/tabs/tab_query.tsx:509", "status": "inferred"}
 {"from": "ui_screen:tab_query:heavy", "to": "dbt_model:f_cost_audit_self_usage", "type": "reads", "evidence": "web/src/tabs/tab_query.tsx:232", "status": "inferred"}
 {"from": "ui_screen:tab_query:heavy", "to": "dbt_model:f_query_costly_statements_grouped", "type": "reads", "evidence": "web/src/tabs/tab_query.tsx:233", "status": "inferred"}
 {"from": "ui_screen:tab_query:heavy", "to": "dbt_model:f_query_provenance_by_source", "type": "reads", "evidence": "web/src/tabs/tab_query.tsx:231", "status": "inferred"}
 {"from": "ui_screen:tab_query:heavy", "to": "dbt_model:f_query_top_by_cost", "type": "reads", "evidence": "web/src/tabs/tab_query.tsx:230", "status": "inferred"}
-{"from": "ui_screen:tab_query:reliability", "to": "dbt_model:f_cost_failed_statement_waste", "type": "reads", "evidence": "web/src/tabs/tab_query.tsx:694", "status": "inferred"}
-{"from": "ui_screen:tab_query:reliability", "to": "dbt_model:f_query_failed_queries_daily", "type": "reads", "evidence": "web/src/tabs/tab_query.tsx:693", "status": "inferred"}
-{"from": "ui_screen:tab_query:reliability", "to": "dbt_model:f_query_failed_statements_grouped", "type": "reads", "evidence": "web/src/tabs/tab_query.tsx:692", "status": "inferred"}
+{"from": "ui_screen:tab_query:reliability", "to": "dbt_model:f_cost_failed_statement_waste", "type": "reads", "evidence": "web/src/tabs/tab_query.tsx:695", "status": "inferred"}
+{"from": "ui_screen:tab_query:reliability", "to": "dbt_model:f_query_failed_queries_daily", "type": "reads", "evidence": "web/src/tabs/tab_query.tsx:694", "status": "inferred"}
+{"from": "ui_screen:tab_query:reliability", "to": "dbt_model:f_query_failed_statements_grouped", "type": "reads", "evidence": "web/src/tabs/tab_query.tsx:693", "status": "inferred"}
 {"from": "ui_screen:tab_query:trend", "to": "dbt_model:f_perf_daily_by_resource", "type": "reads", "evidence": "web/src/tabs/query_trend.tsx:100", "status": "inferred"}
 {"from": "ui_screen:tab_query:trend", "to": "dbt_model:f_query_slices", "type": "reads", "evidence": "web/src/tabs/query_trend.tsx:100", "status": "inferred"}
-{"from": "ui_screen:tab_storage:maintenance", "to": "dbt_model:f_po_clustering_activity", "type": "reads", "evidence": "web/src/tabs/tab_storage.tsx:548", "status": "inferred"}
-{"from": "ui_screen:tab_storage:maintenance", "to": "dbt_model:f_po_clustering_column_churn", "type": "reads", "evidence": "web/src/tabs/tab_storage.tsx:549", "status": "inferred"}
-{"from": "ui_screen:tab_storage:maintenance", "to": "dbt_model:f_po_data_skipping_backfill", "type": "reads", "evidence": "web/src/tabs/tab_storage.tsx:550", "status": "inferred"}
-{"from": "ui_screen:tab_storage:maintenance", "to": "dbt_model:f_po_failure_reasons", "type": "reads", "evidence": "web/src/tabs/tab_storage.tsx:553", "status": "inferred"}
-{"from": "ui_screen:tab_storage:maintenance", "to": "dbt_model:f_po_maintenance_cost_by_table", "type": "reads", "evidence": "web/src/tabs/tab_storage.tsx:546", "status": "inferred"}
-{"from": "ui_screen:tab_storage:maintenance", "to": "dbt_model:f_po_vacuum_reclaimed_bytes", "type": "reads", "evidence": "web/src/tabs/tab_storage.tsx:547", "status": "inferred"}
-{"from": "ui_screen:tab_storage:maintenance", "to": "dbt_model:f_storage_po_coverage", "type": "reads", "evidence": "web/src/tabs/tab_storage.tsx:552", "status": "inferred"}
-{"from": "ui_screen:tab_storage:maintenance", "to": "dbt_model:f_storage_small_files", "type": "reads", "evidence": "web/src/tabs/tab_storage.tsx:551", "status": "inferred"}
-{"from": "ui_screen:tab_storage:tables", "to": "dbt_model:f_access_dead_table_candidates", "type": "reads", "evidence": "web/src/tabs/tab_storage.tsx:114", "status": "inferred"}
-{"from": "ui_screen:tab_storage:tables", "to": "dbt_model:f_storage_growth", "type": "reads", "evidence": "web/src/tabs/tab_storage.tsx:116", "status": "inferred"}
-{"from": "ui_screen:tab_storage:tables", "to": "dbt_model:f_storage_target_table_discovery", "type": "reads", "evidence": "web/src/tabs/tab_storage.tsx:111", "status": "inferred"}
+{"from": "ui_screen:tab_storage:maintenance", "to": "dbt_model:f_po_clustering_activity", "type": "reads", "evidence": "web/src/tabs/tab_storage.tsx:549", "status": "inferred"}
+{"from": "ui_screen:tab_storage:maintenance", "to": "dbt_model:f_po_clustering_column_churn", "type": "reads", "evidence": "web/src/tabs/tab_storage.tsx:550", "status": "inferred"}
+{"from": "ui_screen:tab_storage:maintenance", "to": "dbt_model:f_po_data_skipping_backfill", "type": "reads", "evidence": "web/src/tabs/tab_storage.tsx:551", "status": "inferred"}
+{"from": "ui_screen:tab_storage:maintenance", "to": "dbt_model:f_po_failure_reasons", "type": "reads", "evidence": "web/src/tabs/tab_storage.tsx:554", "status": "inferred"}
+{"from": "ui_screen:tab_storage:maintenance", "to": "dbt_model:f_po_maintenance_cost_by_table", "type": "reads", "evidence": "web/src/tabs/tab_storage.tsx:547", "status": "inferred"}
+{"from": "ui_screen:tab_storage:maintenance", "to": "dbt_model:f_po_vacuum_reclaimed_bytes", "type": "reads", "evidence": "web/src/tabs/tab_storage.tsx:548", "status": "inferred"}
+{"from": "ui_screen:tab_storage:maintenance", "to": "dbt_model:f_storage_po_coverage", "type": "reads", "evidence": "web/src/tabs/tab_storage.tsx:553", "status": "inferred"}
+{"from": "ui_screen:tab_storage:maintenance", "to": "dbt_model:f_storage_small_files", "type": "reads", "evidence": "web/src/tabs/tab_storage.tsx:552", "status": "inferred"}
+{"from": "ui_screen:tab_storage:tables", "to": "dbt_model:f_access_dead_table_candidates", "type": "reads", "evidence": "web/src/tabs/tab_storage.tsx:115", "status": "inferred"}
+{"from": "ui_screen:tab_storage:tables", "to": "dbt_model:f_storage_growth", "type": "reads", "evidence": "web/src/tabs/tab_storage.tsx:117", "status": "inferred"}
+{"from": "ui_screen:tab_storage:tables", "to": "dbt_model:f_storage_target_table_discovery", "type": "reads", "evidence": "web/src/tabs/tab_storage.tsx:112", "status": "inferred"}
 {"from": "ui_screen:tab_storage:tables", "to": "dbt_model:f_storage_unused_table_cost", "type": "reads", "evidence": "web/src/tabs/tab_storage.tsx:24", "status": "inferred"}
-{"from": "ui_screen:tab_storage:tables", "to": "dbt_model:f_table_inventory_type", "type": "reads", "evidence": "web/src/tabs/tab_storage.tsx:112", "status": "inferred"}
+{"from": "ui_screen:tab_storage:tables", "to": "dbt_model:f_table_inventory_type", "type": "reads", "evidence": "web/src/tabs/tab_storage.tsx:113", "status": "inferred"}
 {"from": "ui_screen:tab_waste:priced", "to": "dbt_model:f_compute_idle_node_ratio", "type": "reads", "evidence": "web/src/tabs/tab_waste.tsx:440", "status": "inferred"}
 {"from": "ui_screen:tab_waste:priced", "to": "dbt_model:f_compute_serving_dormant_endpoints", "type": "reads", "evidence": "web/src/tabs/tab_waste.tsx:440", "status": "inferred"}
 {"from": "ui_screen:tab_waste:priced", "to": "dbt_model:f_compute_serving_endpoint_cost_status", "type": "reads", "evidence": "web/src/tabs/tab_waste.tsx:440", "status": "inferred"}
@@ -973,7 +973,7 @@
 {"from": "ui_screen:tab_overview", "to": "ui_screen:tab_money", "type": "depends_on", "evidence": "web/src/App.tsx:1175", "status": "extracted"}
 {"from": "process:build_web", "to": "file:web/vite.config.ts", "type": "depends_on", "evidence": "web/package.json:7", "status": "extracted"}
 {"from": "process:build_web", "to": "file:web/src/main.tsx", "type": "depends_on", "evidence": "web/index.html:27", "status": "inferred"}
-{"from": "process:serve_web", "to": "process:build_web", "type": "depends_on", "evidence": "app/api/app.py:1444", "status": "extracted"}
+{"from": "process:serve_web", "to": "process:build_web", "type": "depends_on", "evidence": "app/api/app.py:1463", "status": "extracted"}
 {"from": "function:web/src/components/nav_hash.ts:readNavHash", "to": "flow:ui_navigation", "type": "part_of", "evidence": "web/src/components/nav_hash.ts:29", "status": "extracted"}
 {"from": "function:web/src/components/nav_hash.ts:filtersFromHash", "to": "flow:ui_navigation", "type": "part_of", "evidence": "web/src/components/nav_hash.ts:88", "status": "extracted"}
 {"from": "function:web/src/components/hash_state.tsx:HashState", "to": "flow:ui_navigation", "type": "part_of", "evidence": "web/src/components/hash_state.tsx:6", "status": "extracted"}

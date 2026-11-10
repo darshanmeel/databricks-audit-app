@@ -18,8 +18,8 @@ flowchart LR
 
 `workspace_id, cluster_id, cluster_name, cluster_source, owned_by (PII, raw), delete_time` (`dbt/models/dims/dim_cluster.sql:42-48`).
 
-- `owned_by` masked on read (`app/core/data.py:3164-3180`).
+- `owned_by` masked on read (`app/core/data.py:3180-3196`).
 
 ## Read by
 
-- `app/core/data.py:3175` (`read_dim_cluster`); workspace scoping for cluster-only findings `app/core/data.py:509,523`; `GET /api/dims` (`app/api/app.py:600`).
+- `app/core/data.py:3191` (`read_dim_cluster`); workspace scoping for cluster-only findings `app/core/data.py:525,539`; `GET /api/dims` (`app/api/app.py:619`).

@@ -11,7 +11,7 @@ The Databricks billing record table; the most-read source in the repo (71 findin
 | Column | Type (fixture DDL) | Used for | Source |
 |---|---|---|---|
 | record_id | VARCHAR | row id -> `rid` in cost_alloc (inferred PK) | `dbt/models/tags/cost_alloc.sql:12`, `dbt/models/tags/cost_unit.sql:35` |
-| workspace_id | VARCHAR | every grain; NULL/`'0'` = account level | `app/core/data.py:519` |
+| workspace_id | VARCHAR | every grain; NULL/`'0'` = account level | `app/core/data.py:535` |
 | usage_date | DATE | day bucket, window filter, `< audit_today()` | `dbt/models/tags/cost_alloc.sql:46` |
 | usage_end_time | TIMESTAMP | price-row match | `dbt/models/tags/cost_alloc.sql:44-45` |
 | sku_name, cloud, usage_unit | VARCHAR | price join key | `dbt/models/tags/cost_alloc.sql:43` |

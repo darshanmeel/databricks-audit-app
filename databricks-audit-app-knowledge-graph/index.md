@@ -2,7 +2,7 @@
 
 Crosshire is a read-only audit of a Databricks account: about 160 SQL checks on `system.*` tables are exported to a local DuckDB file (`README.md:6`), served by a FastAPI app (`app/api/app.py`) to a React UI (`web/src`), and also shipped as Lakeview dashboards (`databricks_dashboards/`).
 
-Start here, then open a page from the table below. Every fact on a page cites `path:line` in the repo at commit `b8d2db1`. Graph data is in `graph/nodes.jsonl` and `graph/edges.jsonl`; see [README.md](README.md).
+Start here, then open a page from the table below. Every fact on a page cites `path:line` in the repo at commit `f3d2565`. Graph data is in `graph/nodes.jsonl` and `graph/edges.jsonl`; see [README.md](README.md).
 
 ## Big picture
 
@@ -21,9 +21,9 @@ flowchart LR
   SYS --> LV
 ```
 
-- Export path: `tools/first_run.py:162-194` runs the export (`tools/export_direct_results.py:1457`) and the load (`tools/load_direct_results.py:908`, writes the DuckDB in `_load_root` at `tools/load_direct_results.py:471`). See [flows/export_load_serve.md](flows/export_load_serve.md).
-- dbt path: `python tools/snapshot.py` then `python tools/dbt_run.py build --target dev` writes `data/db_audit.duckdb` (`README.md:684-685`). See [flows/dbt_lineage.md](flows/dbt_lineage.md).
-- The app opens DuckDB read-only (`app/core/data.py:232`) and serves `/api/*` (e.g. `app/api/app.py:348`). See [flows/api_request.md](flows/api_request.md).
+- Export path: `tools/first_run.py:162-194` runs the export (`tools/export_direct_results.py:1508`) and the load (`tools/load_direct_results.py:931`, writes the DuckDB in `_load_root` at `tools/load_direct_results.py:486`). See [flows/export_load_serve.md](flows/export_load_serve.md).
+- dbt path: `python tools/snapshot.py` then `python tools/dbt_run.py build --target dev` writes `data/db_audit.duckdb` (`README.md:689-690`). See [flows/dbt_lineage.md](flows/dbt_lineage.md).
+- The app opens DuckDB read-only (`app/core/data.py:233`) and serves `/api/*` (e.g. `app/api/app.py:349`). See [flows/api_request.md](flows/api_request.md).
 - Lakeview: the notebook `databricks_dashboards/Lakehouse Health 00 - Snapshot.py` fills a snapshot schema the 14 dashboards read; 7 more dashboards read `system.*` live. See [flows/dashboards_snapshot.md](flows/dashboards_snapshot.md).
 
 ## Entry points
@@ -32,16 +32,16 @@ flowchart LR
 |---|---|---|
 | `python tools/first_run.py [--windows 90]` | Export every check on a warehouse, then load into `audit.duckdb` | `tools/first_run.py:162`, `README.md:68-69` |
 | `python -m app.api` | Start the app on `http://127.0.0.1:8000/` (uvicorn) | `app/api/__main__.py:14-25` |
-| `POST /api/refresh?days=N` (Refresh button) | Export + load as subprocesses into a new DuckDB | `app/api/refresh.py:48-69` |
-| `python tools/export_direct_results.py` | Export only (direct SQL -> parquet) | `tools/export_direct_results.py:1457` |
-| `python tools/load_direct_results.py` | Load exported parquet into DuckDB | `tools/load_direct_results.py:908` |
+| `POST /api/refresh?days=N` (Refresh button) | Export + load as subprocesses into a new DuckDB (4 h / 30 min timeouts; with rls on, only `refresh.admins` or users granted everything) | `app/api/refresh.py:51-73` |
+| `python tools/export_direct_results.py` | Export only (direct SQL -> parquet) | `tools/export_direct_results.py:1508` |
+| `python tools/load_direct_results.py` | Load exported parquet into DuckDB | `tools/load_direct_results.py:931` |
 | `python tools/snapshot.py` | Copy `system.*` to local parquet (`snapshot/`) | `tools/snapshot.py:1577` |
-| `python tools/dbt_run.py build --target dev` | dbt build over the snapshot -> `data/db_audit.duckdb` | `tools/dbt_run.py:492`, `README.md:685` |
-| `python tools/deploy_app.py` | Stage, sync and deploy as a Databricks App | `tools/deploy_app.py:173` |
+| `python tools/dbt_run.py build --target dev` | dbt build over the snapshot -> `data/db_audit.duckdb` | `tools/dbt_run.py:474`, `README.md:690` |
+| `python tools/deploy_app.py` | Stage, sync and deploy as a Databricks App | `tools/deploy_app.py:175` |
 | `python tools/app_start.py` | Start command inside Databricks Apps | `tools/app_start.py:34` |
-| `python tools/build_databricks_dashboards.py` | Regenerate the 14 Lakehouse Health dashboards + notebook | `tools/build_databricks_dashboards.py:1454` |
-| `python tools/build_direct_dashboards.py` | Regenerate the 7 live dashboards | `tools/build_direct_dashboards.py:952` |
-| `python tools/gate.py [--quick]` | Run lint, sync checks, web, dbt and pytest | `tools/gate.py:205` |
+| `python tools/build_databricks_dashboards.py` | Regenerate the 14 Lakehouse Health dashboards + notebook | `tools/build_databricks_dashboards.py:1470` |
+| `python tools/build_direct_dashboards.py` | Regenerate the 7 live dashboards | `tools/build_direct_dashboards.py:956` |
+| `python tools/gate.py [--quick]` | Run lint, sync checks, web, dbt and pytest | `tools/gate.py:230` |
 | `python tools/sync_queries.py` | Re-vendor the public query library | `tools/sync_queries.py:574` |
 | `python tools/generate_models.py` / `build_direct_sql.py` | Generate dbt models / `app/direct_sql` from check SQL | `tools/generate_models.py:777`, `tools/build_direct_sql.py:147` |
 | `npm run build` (in `web/`) | Vite build into `app/web/dist` | `web/package.json:7` |

@@ -25,7 +25,7 @@ flowchart TD
 - Usage weights: active people .35, service principals .15, queries .30, plus active days .20 linear - `app/core/usage.py:32-33`, index `app/core/usage.py:78-83`.
 - Signal - `app/core/usage.py:86-95`.
 - Clean-up order: unread sensitive tables first, then class rank, then biggest - `app/core/usage.py:98-101`.
-- Used by Data usage screens and the workspace usage dashboard - `app/core/data.py:1676-1709`, `tools/direct_data_usage.py:13`.
+- Used by Data usage screens and the workspace usage dashboard - `app/core/data.py:1692-1725`, `tools/direct_data_usage.py:13`.
 
 ## Formula
 ```

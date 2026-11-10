@@ -16,7 +16,7 @@ flowchart LR
 - Only compute-level rows with the SAME key are replaced; others are kept; work level untouched - `app/core/tag_bill.py:29-36`.
 - Returns how many rows came from the bill - `app/core/tag_bill.py:37-39`.
 - Cost already uses the bill as the compute level (`custom_tags`) - `app/core/tag_bill.py:1-2`, `dbt/models/tags/cost_unit_tag.sql:28-46`.
-- Run once in the loader - `tools/load_direct_results.py:702-703`.
+- Run once in the loader - `tools/load_direct_results.py:717-718`.
 
 ## Example (test)
 - u1: bill `bill_cc` replaces own `own_cc`; u2 keeps `kept` because its bill tag is gone before the last day; work level unchanged; returns 2 - `tests/test_tag_bill.py:16-39`.

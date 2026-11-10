@@ -18,8 +18,8 @@ flowchart LR
 - Strings are single-quote escaped; booleans render TRUE/FALSE - `dbt/macros/param.sql:21-29`.
 - Values must be numbers; param names strings - `app/core/config.py:610-613`.
 - Missing file is seeded with `task_cluster_utilization.top_n = 100000` - `app/core/config.py:677-687`.
-- Built into the export SQL: edit -> `python tools/build_direct_sql.py` -> export again; otherwise the export stops with a "changed since the SQL was generated" message - `README.md:389-392`.
-- Materiality floors are separate and apply at read time - `README.md:384-387`, see [materiality_and_severity](materiality_and_severity.md).
+- Built into the export SQL: edit -> `python tools/build_direct_sql.py` -> export again; otherwise the export stops with a "changed since the SQL was generated" message - `README.md:394-397`.
+- Materiality floors are separate and apply at read time - `README.md:389-392`, see [materiality_and_severity](materiality_and_severity.md).
 
 ## Example (test / config)
 - query level 42 wins; `_all` 99 is the fallback; query 7 beats `_all` 99 - `tests/test_dbt_skeleton.py:110-130`.

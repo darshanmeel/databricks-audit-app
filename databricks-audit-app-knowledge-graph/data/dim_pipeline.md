@@ -18,8 +18,8 @@ flowchart LR
 `workspace_id, pipeline_id, pipeline_name (= name), created_by (PII), run_as (PII)` (`dbt/models/dims/dim_pipeline.sql:24-28,36-41`).
 
 - No delete_time here, unlike the other three dims (`dbt/models/dims/dim_pipeline.sql:36-43`).
-- created_by / run_as masked on read (`app/core/data.py:3203-3219`).
+- created_by / run_as masked on read (`app/core/data.py:3219-3235`).
 
 ## Read by
 
-- `app/core/data.py:3214` (`read_dim_pipeline`).
+- `app/core/data.py:3230` (`read_dim_pipeline`).

@@ -19,7 +19,7 @@ flowchart LR
 | What you need | 29-44 | Python 3.11+, UC + system tables, SQL warehouse, PAT with SELECT on system schemas | `requirements.txt` |
 | Set up once | 46-63 | venv, `pip install`, `.env` with `DATABRICKS_SERVER_HOSTNAME`, `DATABRICKS_HTTP_PATH`, `DATABRICKS_TOKEN` | `.env.example` |
 | Run | 65-175 | `tools/first_run.py` (export + load), windows, today partial, Refresh, export options table, sizes as another account, sizes job, table/volume sizes | `tools/first_run.py`, `tools/export_direct_results.py`, `tools/load_direct_results.py`, `app/api/refresh.py` |
-| Where the files go | 177-202 | data folder per OS, `AUDIT_DATA_DIR`, which DB the app opens (4-step order) | `app/core/datasource.py`, `app/core/data.py:197-216` |
+| Where the files go | 177-202 | data folder per OS, `AUDIT_DATA_DIR`, which DB the app opens (4-step order) | `app/core/datasource.py`, `app/core/data.py:198-217` |
 | Run as a Databricks App | 204-229 | `tools/deploy_app.py`, `config/app.yml`, RLS block | `tools/deploy_app.py`, `app/core/rls.py` |
 | AI/BI dashboards | 231-244 | notebook + 14 dashboards; 7 live dashboards | `databricks_dashboards/` |
 | Update to a new version | 246-258 | pull, keep own files, reinstall, re-export | `processes/update_to_new_version.md` |
@@ -38,11 +38,11 @@ flowchart LR
 
 - Only the export (and Refresh) queries the warehouse; browsing does not (`README.md:18-19`).
 - Refresh keeps the newest two results folders and up to 500,000 rows per check; `first_run.py` keeps 50,000 (`README.md:95-103`).
-- Possible waste = 5 priced checks, each resource once (`README.md:367-377`).
-- Statuses: Critical, Warn, OK, Ranked, Not assessed, No data, No data (filtered), Reference (`README.md:352-365`).
-- The app has no login; keep `AUDIT_API_HOST` local (`README.md:508`).
+- Possible waste = 5 priced checks, each resource once (`README.md:372-382`).
+- Statuses: Critical, Warn, OK, Ranked, Not assessed, No data, No data (filtered), Reference (`README.md:357-370`).
+- The app has no login; keep `AUDIT_API_HOST` local (`README.md:513`).
 - Secrets referenced by name only: `DATABRICKS_TOKEN`, `DATABRICKS_HTTP_PATH`, `DATABRICKS_SERVER_HOSTNAME` (`README.md:57-63`).
 
 ## Possibly stale
 
-- "It runs 160 SQL checks" (`README.md:6`) vs the notebook's 159 (`databricks_dashboards/README.md:60`): 160 `.sql` files in `app/direct_sql/`, one is a developer probe skipped by the dashboards (`tools/build_databricks_dashboards.py:905`). Both are consistent with their own scope.
+- "It runs 160 SQL checks" (`README.md:6`) vs the notebook's 159 (`databricks_dashboards/README.md:60`): 160 `.sql` files in `app/direct_sql/`, one is a developer probe skipped by the dashboards (`tools/build_databricks_dashboards.py:921`). Both are consistent with their own scope.

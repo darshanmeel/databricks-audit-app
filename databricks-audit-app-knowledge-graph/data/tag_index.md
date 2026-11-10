@@ -37,4 +37,4 @@ flowchart LR
 
 ## Read by
 
-- `app/core/tags.py:202,231` (`read_tag_index`); missing -> "rebuild to search tags" (`app/core/tags.py:167`). Per-user rebuild under RLS: `app/core/rls.py:329`. `config/workspace.csv` rows replaced: `app/core/workspace_file.py:111-119`.
+- `app/core/tags.py:202,227-239` (`read_tag_index`: one query for every key's values, since under rls query mode `tags.tag_index` re-aggregates on each read); missing -> "rebuild to search tags" (`app/core/tags.py:167`). Per-user rebuild under RLS: `app/core/rls.py:334`. `config/workspace.csv` rows replaced: `app/core/workspace_file.py:111-119`.

@@ -46,7 +46,7 @@ flowchart TD
 ## actions
 
 - Purpose: flagged checks turned into a short fix list with impact, effort, team (web/src/tabs/tab_actions.tsx:1-4).
-- Hash `tab=actions`; area web/src/components/tab_registry.ts:316; registered web/src/tabs/tab_actions.tsx:292.
+- Hash `tab=actions`; area web/src/components/tab_registry.ts:316; registered web/src/tabs/tab_actions.tsx:293.
 - Data: F(WASTE_IDS, CRITICAL/WARN, 5000) web/src/tabs/tab_actions.tsx:169; `GET /api/rollup/top` cost_center untagged (175); per action F(action.main.query_id, flagged, 200) in `ActionEvidence` (86).
 - Logic: `buildActions` joins `ACTION_TEMPLATES` with the findings index and waste worklist; `roleSeesCheck` limits to the lens's areas (29-58; web/src/components/action_templates.ts:28).
 - Widgets: action list, `ActionDetail` (136-165) with "open check" -> `goTo(homeForQuery)` (158), `ActionEvidence` (84-134).
@@ -86,7 +86,7 @@ flowchart TD
 ## cost_before_after
 
 - Purpose: one resource's average day (or per query/run) before vs after a chosen date, and what drove it (web/src/tabs/tab_cost_before_after.tsx:1-3).
-- Hash `tab=cost&subtab=before_after`; sub-tab def web/src/components/tab_registry.ts:87-91 (refIds cost_daily_by_resource, perf_daily_by_resource, perf_failure_causes_daily); registered web/src/tabs/tab_cost_before_after.tsx:557.
+- Hash `tab=cost&subtab=before_after`; sub-tab def web/src/components/tab_registry.ts:87-91 (refIds cost_daily_by_resource, perf_daily_by_resource, perf_failure_causes_daily); registered web/src/tabs/tab_cost_before_after.tsx:556.
 - Data: A(m.qid) numerator/denominator grouped by resource_type, resource_key, usage_date (349-350) where `m.qid` is `cost_daily_by_resource` (COST_QID 19) or `perf_daily_by_resource` (PERF_QID 20) per metric (`BA_METRICS` 38-52); `WhatChanged`: driver columns A(...) 242, A(cost_dollarized_by_sku_day by product, day) 243, A(perf_failure_causes_daily) 244.
 - Widgets: "Before and after a fix" 456/480, "<Level>s by change" 508, "What changed" 249/292.
 - Filters: level (workspace/warehouse/job/cluster/pipeline, default warehouse), metric, fix day, direction (338-344).
@@ -142,14 +142,14 @@ flowchart TD
 
 | Sub-tab | Content | Data | Widgets |
 |---|---|---|---|
-| heavy | `QueryHeavyContent` web/src/tabs/tab_query.tsx:229-414 (reg 1064) | F(query_top_by_cost, query_provenance_by_source, cost_audit_self_usage, query_costly_statements_grouped) 230-233; A(query_top_by_cost by statement_type: $ and runs) 236-237 | "Query groups over threshold" 299, "Worst query group" 307, "This audit's own query cost" 319, "Heaviest statement shapes" 219 |
+| heavy | `QueryHeavyContent` web/src/tabs/tab_query.tsx:229-415 (reg 1064) | F(query_top_by_cost, query_provenance_by_source, cost_audit_self_usage, query_costly_statements_grouped) 230-233; A(query_top_by_cost by statement_type: $ and runs) 236-237 | "Query groups over threshold" 299, "Worst query group" 307, "This audit's own query cost" 319, "Heaviest statement shapes" 219 |
 | efficiency | `QueryEfficiencyContent` 506-672 (reg 1065) | F(query_local_spillage, query_shuffle_write_amplification, query_pruning_effectiveness, query_cache_coldstart) 507-510; A(perf_daily_by_resource read_gb) 513 | `ProblemCard` per problem (428), per-warehouse efficiency (471-504), "Files read out of all..." 379 |
 | reliability | `QueryReliabilityContent` 690-806 (reg 1066) | useDims 691; F(query_failed_statements_grouped, query_failed_queries_daily, cost_failed_statement_waste) 692-694 | "Failed statements" 726, "Compute burned on failed statements" 737 |
 | capacity | `QueryCapacityContent` 880-1056 (reg 1067) | F(query_warehouse_pressure) 881; F(query_queuing_waits) when no tag filter 884; else A(query_slices slot_wait_s, provision_s) 885-886; F(query_workload_mix_hours) 888; useStartupWaits 889; A(fetch_s, runs on query_slices or perf_daily_by_resource) 891-893; `QueueHeatCards` A(perf_queue_by_hour) web/src/tabs/query_queue.tsx:37-41 (1021) | "Warehouses under pressure" 956, "Queued for a slot" 972, "Waiting for start-up" 983, "Result fetching by clients" 998, "Workload peak hour" 1010, "Queued share, weekday by hour (UTC)" web/src/tabs/query_queue.tsx:95, "Queued share, warehouse by day" web/src/tabs/query_queue.tsx:122 |
 | trend | `QueryTrendContent` web/src/tabs/query_trend.tsx:92-352 (reg 387) | qid = query_slices when a tag filter is on, else perf_daily_by_resource (98-99); F(probe, limit 1) 100; A(num, den, runs by resource, day) 107-109; provisioning A(provision_s, starts, start_s, failed_starts, max start_s_max) 113-117 | "SQL warehouse trend" 261, `WarehouseTrendCard` 354 |
 | team | `QueryTeamContent` 1060-1062 (reg 1068) | `TagRollupView area="performance"` -> `/api/rollup/keys`, `/api/rollup` (web/src/components/tag_rollup.tsx:482, 150) | nested tag rollup |
 
-- Tag filter changes the data source (slices) on capacity and trend: `sliced = !!Api.tagFilterKey()` (web/src/tabs/tab_query.tsx:883; web/src/tabs/query_trend.tsx:98).
+- Tag filter changes the data source (slices) on capacity and trend: `sliced = !!Api.tagFilterKey()` (web/src/tabs/tab_query.tsx:884; web/src/tabs/query_trend.tsx:98).
 
 ## storage
 
@@ -157,7 +157,7 @@ flowchart TD
 
 | Sub-tab | Content | Data | Widgets |
 |---|---|---|---|
-| tables | `StorageTablesContent` web/src/tabs/tab_storage.tsx:110-262 (reg 660) | F(storage_target_table_discovery, table_inventory_type, access_dead_table_candidates, storage_growth) 111-116; `UnreadTablesCard` F(storage_unused_table_cost) 24 + `GET /api/tables` 32; `TableSizesPanel` `GET /api/table_sizes` 304 | "Tables nobody read in the last N days" 65, "Tables discovered" 160, "Tables and views by type" 171, "Not altered recently" 179, "Fastest-growing tables" 195 |
+| tables | `StorageTablesContent` web/src/tabs/tab_storage.tsx:111-263 (reg 660) | F(storage_target_table_discovery, table_inventory_type, access_dead_table_candidates, storage_growth) 111-116; `UnreadTablesCard` F(storage_unused_table_cost) 24 + `GET /api/tables` 32; `TableSizesPanel` `GET /api/table_sizes` 304 | "Tables nobody read in the last N days" 65, "Tables discovered" 160, "Tables and views by type" 171, "Not altered recently" 179, "Fastest-growing tables" 195 |
 | maintenance | `StorageMaintenanceContent` 545-658 (reg 661) | F(po_maintenance_cost_by_table, po_vacuum_reclaimed_bytes, po_clustering_activity, po_clustering_column_churn, po_data_skipping_backfill, storage_small_files, storage_po_coverage, po_failure_reasons) 546-553 | "Maintenance DBU burn" 598, "Vacuum reclaiming nothing" 609, "Clustering activity" 620, "Data-skipping backfill" 631, small files 265, PO coverage 429, failure reasons 482 |
 
 ## mlai
@@ -211,14 +211,14 @@ flowchart TD
 | volumes | `UsageVolumesContent` 878-949 (reg 1150) | `GET /api/volumes` 880; `VolumeDetail` `GET /api/volume_users` 983 | "File reads" 903, "File writes" 904, "People using volumes" 905, "Not read" 907 |
 | people | `UsagePeopleContent` 1012-1093 (reg 1151) | `GET /api/people` 1016; `GET /api/workspaces` 1017; `PersonTables` `GET /api/person_tables` 1120 | people list, seen bands 1098 |
 
-- Cross-sub-tab handoff: module object `handoff` {workspace, cls, table, person, volume} set before `goTo` (web/src/tabs/tab_usage.tsx:28; web/src/tabs/usage_activity.tsx:281-283).
+- Cross-sub-tab handoff: module object `handoff` {workspace, cls, table, person, volume} set before `goTo` (web/src/tabs/tab_usage.tsx:29; web/src/tabs/usage_activity.tsx:281-283).
 
 ## findings
 
 - Purpose: "All findings": every check, one row each, worst status, grouped by area/status/none; rows expand in place (web/src/tabs/tab_findings.tsx:1-7).
 - Hash `tab=findings` (old `domains` redirects); area web/src/components/tab_registry.ts:335; registered web/src/tabs/tab_findings.tsx:541.
 - Data: reads `allFindingsIndex` (from `/api/findings`), limited to `roleAreas`; expanded row -> `FindingDetail` F(query_id) (97, 137; web/src/components/finding_detail.tsx:1238-1266).
-- Widgets: `CheckStatusTabs` status tabs (web/src/components/findings_table.tsx:150), `AfRow`/`AfCard` (68, 114; card view on narrow screens 27-40), group rows (210, 223), home-tab link `AfHomeLink` (50), CSV download (424).
+- Widgets: `CheckStatusTabs` status tabs (web/src/components/findings_table.tsx:151), `AfRow`/`AfCard` (68, 114; card view on narrow screens 27-40), group rows (210, 223), home-tab link `AfHomeLink` (50), CSV download (424).
 - Filters: search (262), area (263), status tab (266-269), group mode (271), show all rows (270).
 
 ## coverage

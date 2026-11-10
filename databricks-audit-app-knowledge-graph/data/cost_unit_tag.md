@@ -35,5 +35,5 @@ flowchart TD
 
 ## Read by / written by
 
-- Read: `app/core/rollup.py:331,341,349,733,756`; per-user rebuild `app/core/rls.py:329`.
+- Read: `app/core/rollup.py:331,341,349,733,756`; per-user rebuild `app/core/rls.py:334`.
 - Re-written after build for `config/workspace.csv` workspaces (workspace level): `app/core/workspace_file.py:95-101`.

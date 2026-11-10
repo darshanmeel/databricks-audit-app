@@ -13,8 +13,8 @@ flowchart LR
   G --> Y[_findings__DOMAIN.yml<br/>window_days / status / unique_grain tests]
   G --> D[dbt/models/databricks_direct/DOMAIN/d_QID.sql<br/>enabled=false]
   M -->|dbt build --target dev| T[(findings.f_QID)]
-  D -->|tools/build_direct_sql.py| DS[app/direct_sql/QID.sql] -->|export + tools/load_direct_results.py:580| T
-  T -->|app/core/data.py:841| API[read_finding / count / aggregate]
+  D -->|tools/build_direct_sql.py| DS[app/direct_sql/QID.sql] -->|export + tools/load_direct_results.py:595| T
+  T -->|app/core/data.py:857| API[read_finding / count / aggregate]
 ```
 
 ## Model shape
@@ -63,7 +63,7 @@ flowchart LR
 
 ## How the app reads one
 
-- Column whitelist from information_schema; missing table -> FindingNotBuiltError (`app/core/data.py:430-441`).
-- `SELECT ... FROM findings."f_<qid>" WHERE window_days = ? ...` with bound params (`app/core/data.py:818-841`).
-- Workspace/env filter only if the table has workspace_id, else through warehouse_id/cluster_id dims (`app/core/data.py:495-509`).
+- Column whitelist from information_schema; missing table -> FindingNotBuiltError (`app/core/data.py:446-457`).
+- `SELECT ... FROM findings."f_<qid>" WHERE window_days = ? ...` with bound params (`app/core/data.py:834-857`).
+- Workspace/env filter only if the table has workspace_id, else through warehouse_id/cluster_id dims (`app/core/data.py:511-525`).
 - Per-model columns/keys: `data/model.json` entities of type `finding_table`.

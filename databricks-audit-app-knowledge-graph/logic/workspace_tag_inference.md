@@ -23,8 +23,8 @@ flowchart TD
 - Runs and 3-day smoothing - `dbt/models/tags/tag_workspace_history.sql:74-103`; versions and `valid_to` = next `valid_from` - `:104-117`.
 - `is_allocating` only for a real value - `dbt/models/tags/tag_workspace_history.sql:180`; reason text cites both floors - `:196-209`.
 - `tags.tag_workspace` is the current row; spend uses the history by usage date - `dbt/models/tags/tag_workspace.sql:1-15`.
-- Azure copies a workspace's tag onto every bill row; elsewhere the inferred value is what most compute carries - `README.md:541-543`, `app/core/tag_compliance.py:287-290`.
-- `config/workspace.csv` overrides the bill for listed workspaces, all dates; empty cell = no tag - `app/core/workspace_file.py:1-34`, `README.md:541-549`.
+- Azure copies a workspace's tag onto every bill row; elsewhere the inferred value is what most compute carries - `README.md:546-548`, `app/core/tag_compliance.py:287-290`.
+- `config/workspace.csv` overrides the bill for listed workspaces, all dates; empty cell = no tag - `app/core/workspace_file.py:1-34`, `README.md:546-554`.
 
 ## Formula
 ```
@@ -49,10 +49,10 @@ Source: `tests/test_tags_index.py:43-56`; scenarios `tests/fixtures/tagworld.py:
 ## Edge / rejected cases
 - A short first run keeps its own value - `dbt/models/tags/tag_workspace_history.sql:94`.
 - Floors must be in [0, 1] - `app/core/config.py:432-435`, `tests/test_tag_filter.py:515-530`.
-- Worked over the whole export, not the selected window - `README.md:622`.
+- Worked over the whole export, not the selected window - `README.md:627`.
 
 ## Implementing code
 - `dbt/models/tags/tag_workspace_history.sql:1-210`, `dbt/models/tags/tag_workspace.sql:1-15`, `app/core/workspace_file.py:1-40`
 
 ## Config knobs
-- `config/settings.yml:58-62` `tag_coverage_floor` 0.5, `tag_share_floor` 0.6 (next export); fed as dbt vars - `tools/dbt_run.py:14-15`, defaults `dbt/dbt_project.yml:41`, `dbt/models/tags/tag_workspace_history.sql:21-22`.
+- `config/settings.yml:58-62` `tag_coverage_floor` 0.5, `tag_share_floor` 0.6 (next export; `settings.local.yml` wins); fed as dbt vars - `tools/dbt_run.py:14-17`, `tools/dbt_run.py:139-146`, defaults `dbt/dbt_project.yml:41`, `dbt/models/tags/tag_workspace_history.sql:21-22`.

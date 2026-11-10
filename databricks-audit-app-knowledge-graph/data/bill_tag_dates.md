@@ -19,12 +19,13 @@ flowchart TD
 ## Rules
 
 - billed_cluster excludes job and pipeline run clusters (`dbt/models/tags/bill_tag_dates.sql:28-29`); billed_notebook only when no warehouse/cluster/job/pipeline (`:37-40`).
-- `from_policy`: a usage/budget policy put the key on its last day (`dbt/models/tags/bill_tag_dates.sql:20,62-63`).
-- `first_date` = first day of the latest unbroken run of `last_value` over the entity's billed days (`dbt/models/tags/bill_tag_dates.sql:67-98`).
+- `raw_key` / `last_value` come from one billing row: the latest `usage_end_time`, then value, then key break a same-hour tie (`dbt/models/tags/bill_tag_dates.sql:59-61`).
+- `from_policy`: a usage/budget policy put the key on its last day (`dbt/models/tags/bill_tag_dates.sql:20,64-65`).
+- `first_date` = first day of the latest unbroken run of `last_value` over the entity's billed days (`dbt/models/tags/bill_tag_dates.sql:69-100`).
 
 ## Columns
 
-`entity_type, workspace_id, entity_id, tag_key, raw_key, last_value, all_values, first_date, last_date, entity_last_date, from_policy` (`dbt/models/tags/bill_tag_dates.sql:88-89`).
+`entity_type, workspace_id, entity_id, tag_key, raw_key, last_value, all_values, first_date, last_date, entity_last_date, from_policy` (`dbt/models/tags/bill_tag_dates.sql:90-91`).
 
 ## Example (illustrative)
 

@@ -19,7 +19,7 @@ flowchart LR
 | models/sources | 49 source tables in 10 sources | external parquet | `tools/build_sources.py` (generated) | `dbt/models/sources/sources.yml:1-2,12` |
 | models/findings/<domain> | 160 `f_<qid>` + one `_findings__<domain>.yml` each | table, schema `findings` | `tools/generate_models.py` | `dbt/dbt_project.yml:60-62`, `tools/generate_models.py:36-39` |
 | models/databricks_direct/<domain> | 160 `d_<qid>`, `_databricks_direct.yml` | `enabled=false` (never built) | `tools/generate_direct_models.py` | `dbt/models/databricks_direct/cost/d_cost_by_job.sql:1`, `tools/generate_direct_models.py:32-35` |
-| models/dims | dim_workspace, dim_job, dim_cluster, dim_warehouse, dim_pipeline, dim_notebook, dim_list_prices, int_workspace_tag_hints | table, schema `dims` | hand-written | `dbt/dbt_project.yml:63-65`, `dbt/models/dims/_dims.yml:1-7` |
+| models/dims | dim_workspace, dim_job, dim_cluster, dim_warehouse, dim_pipeline, dim_notebook, int_workspace_tag_hints | table, schema `dims` | hand-written | `dbt/dbt_project.yml:63-65`, `dbt/models/dims/_dims.yml:1-7` |
 | models/tags | cost_alloc (ephemeral), cost_unit, cost_unit_tag, cost_day, cost_reconciliation, perf_unit, perf_unit_tag, query_tag_keys, tag_workspace_history, tag_workspace, tag_entity, tag_index, bill_tag_dates | table, schema `tags` set per model | hand-written | `dbt/models/tags/cost_unit.sql:1`, `dbt/models/tags/cost_alloc.sql:1` |
 | seeds | workspace_env_overrides.csv (header only) | seed, schema `seeds` | hand-edited | `dbt/dbt_project.yml:67-69`, `dbt/models/_seeds.yml:4-12` |
 | tests | generic `unique_grain`, singular `tags_cost_reconciles` | test | hand-written | `dbt/tests/generic/test_unique_grain.sql:12-34`, `dbt/tests/tags_cost_reconciles.sql:6-9` |
@@ -31,7 +31,7 @@ flowchart LR
 
 | Target | Adapter | DB file | Snapshot dir | Evidence |
 |---|---|---|---|---|
-| dev (default) | duckdb | env `AUDIT_DB`, default `data/db_audit.duckdb` | env `AUDIT_SNAPSHOT_DIR`, default `snapshot` (via wrapper) | `dbt/profiles.yml:15-24`, `tools/dbt_run.py:227-231` |
+| dev (default) | duckdb | env `AUDIT_DB`, default `data/db_audit.duckdb` | env `AUDIT_SNAPSHOT_DIR`, default `snapshot` (via wrapper) | `dbt/profiles.yml:15-24`, `tools/dbt_run.py:208-212` |
 | test | duckdb | env `AUDIT_TEST_DB`, default `tests/db_audit_test.duckdb` | `tests/fixtures/parquet` | `dbt/profiles.yml:26-36`, `dbt/models/sources/sources.yml:12` |
 
 - No Databricks target exists. The `{% else %}` Databricks branches are rendered by `tools/build_direct_sql.py` with a fake `target={"type": "databricks"}` and plain-Python `param/source/var` (`tools/build_direct_sql.py:60-104`).
@@ -41,16 +41,16 @@ flowchart LR
 
 | Var | Default | Fed by | Consumer |
 |---|---|---|---|
-| windows | [7, 30, 90] | `tools/dbt_run.py:181` | every windowed model (`dbt/models/tags/cost_unit.sql:20`) |
-| thresholds | {} | `config/thresholds.yml` (`tools/dbt_run.py:120-128`) | `dbt/macros/param.sql:10-30` |
-| as_of_date / as_of_ts | null | snapshot manifest, dev only (`tools/dbt_run.py:191-208`) | `dbt/macros/audit_time.sql:12-42` |
+| windows | [7, 30, 90] | `tools/dbt_run.py:162` | every windowed model (`dbt/models/tags/cost_unit.sql:20`) |
+| thresholds | {} | `config/thresholds.yml` (`tools/dbt_run.py:111-119`) | `dbt/macros/param.sql:10-30` |
+| as_of_date / as_of_ts | null | snapshot manifest, dev only (`tools/dbt_run.py:172-189`) | `dbt/macros/audit_time.sql:12-42` |
 | tag_aliases | {} | `config/tag_aliases.yml` top_tags | `dbt/models/dims/dim_workspace.sql:35`, `dbt/models/dims/int_workspace_tag_hints.sql:16` |
 | share_floor / coverage_floor | 0.6 / 0.5 | `config/settings.yml:61-62` | `dbt/models/tags/tag_workspace_history.sql:21-22`, `dbt/macros/tag_entity_billed_inference.sql:26-27` |
 | mask_user_identities | false | `config/settings.yml` privacy | `dbt/macros/mask_user.sql:7-25` |
 | env_patterns | prod/uat/dev word lists | project only | `dbt/macros/classify_env.sql:33-61` |
-| grain_severity | error (warn on dev) | `tools/dbt_run.py:222-224` | `dbt/tests/generic/test_unique_grain.sql:13` |
+| grain_severity | error (warn on dev) | `tools/dbt_run.py:203-205` | `dbt/tests/generic/test_unique_grain.sql:13` |
 
-Declared at `dbt/dbt_project.yml:30-53`; merged into one `--vars` JSON by `tools/dbt_run.py:210-225,243-253`.
+Declared at `dbt/dbt_project.yml:30-53`; merged into one `--vars` JSON by `tools/dbt_run.py:191-206,224-234`.
 
 ## Macros
 
@@ -87,5 +87,5 @@ flowchart TD
 ## Running dbt
 
 - Only via `python tools/dbt_run.py build --target dev|test [--select ...]` (`tools/dbt_run.py:1-7`).
-- Dev builds into a tmp copy of the db, applies `config/workspace.csv` tags, then `os.replace` swaps it in; a partly failed build is kept when some models succeeded (exit 3) (`tools/dbt_run.py:380-386,420-460`, `tools/dbt_run.py:325-339`).
-- Command: `dbt build --project-dir dbt --profiles-dir dbt --target <t> --vars <json>` (`tools/dbt_run.py:234-259`).
+- Dev builds into a tmp copy of the db, applies `config/workspace.csv` tags, then `os.replace` swaps it in; a partly failed build is kept when some models succeeded (exit 3) (`tools/dbt_run.py:362-368,402-442`, `tools/dbt_run.py:306-320`).
+- Command: `dbt build --project-dir dbt --profiles-dir dbt --target <t> --vars <json>` (`tools/dbt_run.py:215-240`).

@@ -27,7 +27,7 @@ flowchart TD
 - Compute level joins `perf_unit` by (workspace_id, compute_kind, compute_id) (`dbt/models/tags/perf_unit_tag.sql:79-107`).
 - Work level recomputes the same history/hash as `perf_unit` (`dbt/models/tags/perf_unit_tag.sql:108-161`); source `query_tags`.
 - Workspace level: `tag_workspace_history` row valid on statement start day, allocating only (`dbt/models/tags/perf_unit_tag.sql:162-176`).
-- After a direct load, `app/core/tag_bill.apply_bill_to_perf` replaces the compute level with the bill's value for warehouses/clusters whose tag is on today's bill (`app/core/tag_bill.py:8-39`, called `tools/load_direct_results.py:701-703`).
+- After a direct load, `app/core/tag_bill.apply_bill_to_perf` replaces the compute level with the bill's value for warehouses/clusters whose tag is on today's bill (`app/core/tag_bill.py:8-39`, called `tools/load_direct_results.py:716-718`).
 
 ## Columns
 
@@ -39,4 +39,4 @@ flowchart TD
 
 ## Read by
 
-- `app/core/rollup.py:397,407,415,761,1094`; written again by `app/core/tag_bill.py:30` and `app/core/workspace_file.py:95-101`.
+- `app/core/rollup.py:397,407,415,761,1098`; written again by `app/core/tag_bill.py:30` and `app/core/workspace_file.py:95-101`.

@@ -30,4 +30,4 @@ flowchart LR
 
 ## Read by
 
-- `app/core/tag_spend.py:122` (matching_cells), `app/core/tag_compliance.py:69` (Azure workspaces), `app/core/data.py:1500-1506` (`tag_spend_ready`).
+- `app/core/tag_spend.py:122` (matching_cells), `app/core/tag_compliance.py:69` (Azure workspaces), `app/core/data.py:1516-1522` (`tag_spend_ready`).

@@ -56,7 +56,6 @@ flowchart LR
   WH --> DWH[dim_warehouse]
   PL --> DP[dim_pipeline]
   BU --> DN[dim_notebook]
-  LP -->|list_prices macro| DLP[dim_list_prices]
 ```
 
 ## ref() edges (all of them)
@@ -82,7 +81,7 @@ flowchart LR
   B -->|source external_location| C[dbt build --target dev]
   C --> F[findings.f_* 160]
   C --> T[tags.* 12]
-  C --> D[dims.* 8 + seeds]
+  C --> D[dims.* 7 + seeds]
   A -->|app/direct_sql/*.sql on a SQL warehouse| E[export folder]
   E -->|tools/load_direct_results.py| F
   E --> T
@@ -90,8 +89,8 @@ flowchart LR
   F & T & D -->|app/core/data.py, rollup.py, tags.py, tag_spend.py| API[app/api] --> UI[web UI]
 ```
 
-- Snapshot read path: `dbt/models/sources/sources.yml:12`. Loader writes: `tools/load_direct_results.py:580,609,646-658`.
-- Post-build rewrites (both roads): `config/workspace.csv` tags into tag tables (`tools/dbt_run.py:325-339`, `tools/load_direct_results.py:705-710`); bill tags into perf compute level (direct road only, `tools/load_direct_results.py:701-703`).
+- Snapshot read path: `dbt/models/sources/sources.yml:12`. Loader writes: `tools/load_direct_results.py:595,624,661-673`.
+- Post-build rewrites (both roads): `config/workspace.csv` tags into tag tables (`tools/dbt_run.py:306-320`, `tools/load_direct_results.py:720-725`); bill tags into perf compute level (direct road only, `tools/load_direct_results.py:716-718`).
 
 ## Example 1: one warehouse dollar to the Chargeback screen (illustrative values)
 
@@ -107,8 +106,8 @@ flowchart LR
 1. Source SQL `app/queries/vendored/cost/cost_by_job.sql` -> `tools/generate_models.py` -> `dbt/models/findings/cost/f_cost_by_job.sql` (`:2`).
 2. Reads `billing.usage`, `list_prices()`, latest `lakeflow.jobs`, `workspaces_latest` (`dbt/models/findings/cost/f_cost_by_job.sql:31-45`), stacked for 7/30/90 (`:3-5,101-104`).
 3. Table `findings.f_cost_by_job`, grain from `config/grains/cost_usage_only.yml:69`.
-4. App reads it with `read_finding` (`app/core/data.py:841`), names from `dims.dim_job` (`app/api/app.py:599`).
-5. Direct road: `d_cost_by_job` -> `app/direct_sql/cost_by_job.sql` -> loader `findings."f_cost_by_job"` (`tools/load_direct_results.py:580`).
+4. App reads it with `read_finding` (`app/core/data.py:857`), names from `dims.dim_job` (`app/api/app.py:618`).
+5. Direct road: `d_cost_by_job` -> `app/direct_sql/cost_by_job.sql` -> loader `findings."f_cost_by_job"` (`tools/load_direct_results.py:595`).
 
 ## Example 3: a workspace tag
 

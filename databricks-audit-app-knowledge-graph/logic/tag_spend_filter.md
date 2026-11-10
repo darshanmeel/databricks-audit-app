@@ -22,7 +22,7 @@ flowchart LR
 - `table_sql`: only when a variant exists, a filter is set and `cost_day` is built; ids validated by regex before splicing - `app/core/tag_spend.py:197-215`, regexes `:23-24`.
 - Variant placeholders `__TAGGED__`, `__W__`, `__P__<name>__` (thresholds via `resolve_params`) - `app/core/tag_spend.py:188-224`.
 - `origins()` splits the kept dollars per key by origin - `app/core/tag_spend.py:132-181`.
-- Chain words shown to the user - `app/core/tag_spend.py:20-21`, `app/core/data.py:597-602`.
+- Chain words shown to the user - `app/core/tag_spend.py:20-21`, `app/core/data.py:613-618`.
 
 ## Example (test)
 - `cost_day` total == `cost_unit` total per window - `tests/test_tag_spend.py:33-43`.

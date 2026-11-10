@@ -17,7 +17,7 @@ flowchart LR
 - Both figures are rounded with the what-if twin - `app/core/rollup.py:744-745`.
 
 ## Example (test)
-- units cl (project on cluster) $10, pf (vendor only) $20, wh (one query's team tag) $30, job (own project tag) $40 -> `other_tags` 50 (cl + job), `no_tags` 50 (pf + wh) - `tests/test_api_rollup.py:244-264`.
+- units cl (project on cluster) $10, pf (vendor only) $20, wh (one query's team tag) $30, job (own project tag) $40 -> `other_tags` 50 (cl + job), `no_tags` 50 (pf + wh) - `tests/test_api_rollup.py:254-274`.
 
 ## Edge / rejected cases
 - Cost area only; performance returns `None` - `app/core/rollup.py:674`.

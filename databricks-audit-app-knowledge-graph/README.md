@@ -1,10 +1,10 @@
 # databricks-audit-app knowledge graph
 
-A committed map of the Crosshire repo: 8227 nodes and 23076 edges, each pointing at `path:line` in the code, plus hand-written pages on modules, flows, rules, data and processes.
+A committed map of the Crosshire repo: 8352 nodes and 23453 edges, each pointing at `path:line` in the code, plus hand-written pages on modules, flows, rules, data and processes.
 
 - Built: 2026-11-10
-- Commit: `b8d2db1` (`b8d2db1d5b78cfbebc05c75715cf7467c5ab6f17`)
-- Per-file SHA-256 of the 1227 tracked files at build time: `meta.json` (`file_hashes`).
+- Commit: `f3d2565` (`f3d2565a9ae1e2b1a57983b8bc996372c0dfe8de`); first built at `b8d2db1`, updated incrementally for the 2026-11-10 16:00 review fixes
+- Per-file SHA-256 of the 1232 tracked files at build time: `meta.json` (`file_hashes`).
 
 ## How to use it
 
@@ -53,27 +53,27 @@ Status: `extracted` = read straight from code; `inferred` = derived (e.g. fixtur
 
 ## Stats (merged graph)
 
-Nodes: 8227 (extracted 8184, inferred 43). Edges: 23076 (extracted 22331, inferred 745).
+Nodes: 8352 (extracted 8309, inferred 43). Edges: 23453 (extracted 22708, inferred 745).
 
 | Node type | Count |
 |---|---|
-| function | 2618 |
-| test_case | 1546 |
-| file | 956 |
-| column | 883 |
+| function | 2721 |
+| test_case | 1562 |
+| file | 958 |
+| column | 880 |
 | dbt_test | 645 |
-| dbt_model | 341 |
+| dbt_model | 340 |
 | table | 252 |
-| module | 245 |
+| module | 248 |
 | ui_screen | 187 |
 | config | 144 |
-| class | 96 |
+| class | 98 |
 | folder | 71 |
 | dbt_source | 49 |
 | example_data | 42 |
 | business_rule | 40 |
 | endpoint | 35 |
-| document | 21 |
+| document | 24 |
 | process | 20 |
 | dbt_macro | 10 |
 | flow | 8 |
@@ -86,15 +86,15 @@ Nodes: 8227 (extracted 8184, inferred 43). Edges: 23076 (extracted 22331, inferr
 
 | Edge type | Count |
 |---|---|
-| calls | 6501 |
-| contains | 6140 |
-| reads | 3266 |
-| part_of | 1388 |
+| calls | 6712 |
+| contains | 6268 |
+| reads | 3265 |
+| part_of | 1385 |
 | derived_from | 1186 |
-| imports | 895 |
-| configures | 889 |
+| configures | 913 |
+| imports | 903 |
 | depends_on | 808 |
-| illustrates | 782 |
+| illustrates | 792 |
 | writes | 415 |
 | documents | 414 |
 | implements | 257 |
@@ -120,7 +120,7 @@ Nodes: 8227 (extracted 8184, inferred 43). Edges: 23076 (extracted 22331, inferr
 Run from the repo root:
 
 ```
-python databricks-audit-app-knowledge-graph/_scripts/extract.py     # rebuild graph/*.base.jsonl (~40 s)
+python databricks-audit-app-knowledge-graph/_scripts/extract.py     # rebuild graph/*.base.jsonl from the working tree (tracked + untracked, not ignored; deleted files dropped) (~40 s)
 python databricks-audit-app-knowledge-graph/_scripts/merge.py       # base + extra -> graph/nodes.jsonl, edges.jsonl
 python databricks-audit-app-knowledge-graph/_scripts/validate.py    # 0 errors expected; prints random evidence lines to eyeball
 python databricks-audit-app-knowledge-graph/_scripts/stats.py       # recompute counts in README.md and meta.json

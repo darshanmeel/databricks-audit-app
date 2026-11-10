@@ -20,7 +20,8 @@ flowchart TD
 - Vendored inline CASE masks are rewritten into one macro call, keeping a coalesced real id - `app/core/translate.py:285-292`.
 - Masking is idempotent so dims masked at export are not re-hashed - `app/core/identity.py:56-58`, `app/core/identity.py:92-93`.
 - Groups, service principals and resource names stay readable; takes effect at the next export or reload; data loaded while on stays masked - `config/settings.yml:76-78`.
-- Data readers apply it to identity columns and job dims - `app/core/data.py:3087-3130`.
+- Data readers apply it to identity columns and job dims - `app/core/data.py:3103-3146`.
+- The load masks people columns in place when the setting is on, so an export made with masking off shows no raw emails: `storage.table_detail.owner`, `storage.table_history.user_name`, `usage.*` `identity`/`grantee`, `warehouse.*` `identity` (`_mask_people`, each distinct value once) - `tools/load_direct_results.py:147-159`, `tools/load_direct_results.py:508`, `tools/load_direct_results.py:756-772`, `tools/load_direct_results.py:802-827`.
 
 ## Formula
 ```
@@ -37,7 +38,7 @@ masked = (real_id or sha256(lower(strip(value)))[:8]) + ' ' + value[:2] + '***'
 - `__REDACTED__` (FedRamp "identity unavailable") is never hashed into a fake person - `app/core/identity.py:83-85`.
 
 ## Implementing code
-- `app/core/identity.py:55-100`, `dbt/macros/mask_user.sql:7-25`
+- `app/core/identity.py:55-100`, `dbt/macros/mask_user.sql:7-25`, `tools/load_direct_results.py:147-159`
 
 ## Config knobs
 - `config/settings.yml:79-80` `privacy.mask_user_identities` (bool, default false).

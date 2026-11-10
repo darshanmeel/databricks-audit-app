@@ -23,7 +23,7 @@ flowchart TD
 
 - Inputs: DBU rows with workspace_id, before today, excluding budget/usage-policy rows (policy tags are not the workspace's) (`dbt/models/tags/tag_workspace_history.sql:24-33`).
 - Day state: `__untagged__` if tagged DBUs < coverage_floor of the day's DBUs; top value if its share >= share_floor; else `__mixed__` (`dbt/models/tags/tag_workspace_history.sql:59-73`).
-- Floors: `share_floor` default 0.6, `coverage_floor` default 0.5 (`dbt/models/tags/tag_workspace_history.sql:21-22`), fed from `config/settings.yml:61-62` by `tools/dbt_run.py:14-15`.
+- Floors: `share_floor` default 0.6, `coverage_floor` default 0.5 (`dbt/models/tags/tag_workspace_history.sql:21-22`), fed from the merged settings (`config/settings.yml:61-62`, `settings.local.yml` wins) by `tools/dbt_run.py:139-146`.
 - A run becomes a version once it held 3 days (to next run or today) (`dbt/models/tags/tag_workspace_history.sql:84-92`); a shorter run inherits the previous standing value (`:93-103`).
 - First version starts on the workspace's first billed day, so earlier days read `__untagged__` (`dbt/models/tags/tag_workspace_history.sql:11-12,59-61`).
 - display_key = raw spelling with most DBUs account-wide (`dbt/models/tags/tag_workspace_history.sql:147-157`).

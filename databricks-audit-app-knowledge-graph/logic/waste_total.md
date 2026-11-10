@@ -16,7 +16,7 @@ flowchart TD
 
 ## Rule in plain words
 - Only `est_wasted_usd_list` is a waste dollar - `web/src/components/waste_total.ts:48-50`; contract test `tests/test_waste_contract.py:54-58`.
-- Waste checks and their columns - `web/src/components/tab_registry.ts:103-115`; dollar-priced ones: warehouse idle minutes, idle node ratio, failed job runs, failed statements, serving endpoints with no requests - `web/src/components/tab_registry.ts:104-108`, `README.md:367-377`.
+- Waste checks and their columns - `web/src/components/tab_registry.ts:103-115`; dollar-priced ones: warehouse idle minutes, idle node ratio, failed job runs, failed statements, serving endpoints with no requests - `web/src/components/tab_registry.ts:104-108`, `README.md:372-382`.
 - One key per resource at the check's grain (warehouse, job, cluster, endpoint + served entity) - `web/src/components/waste_total.ts:52-67`.
 - Only CRITICAL/WARN rows count - `web/src/components/waste_total.ts:69-71`.
 - All-NULL values read "unknown", never $0 - `web/src/components/waste_total.ts:73-96`.

@@ -25,6 +25,6 @@ flowchart LR
 ## Read by
 
 - dbt: `dbt/models/tags/tag_entity.sql:44`, `dbt/models/tags/tag_index.sql:59,163`, `dbt/models/dims/int_workspace_tag_hints.sql:108`.
-- App: `app/core/data.py:1739,2997`, `app/core/tag_compliance.py:278,300`.
-- Loader adds `<key>` columns to `dims.dim_workspace` from it (`tools/load_direct_results.py:196-231`).
+- App: `app/core/data.py:1755,3013`, `app/core/tag_compliance.py:278,300`.
+- Loader adds `<key>` columns to `dims.dim_workspace` from it (`tools/load_direct_results.py:211-246`).
 - Overwritten for `config/workspace.csv` rows: `app/core/workspace_file.py:77`.

@@ -112,11 +112,11 @@ flowchart LR
 | 5. Grain | `config/grains/*.yml` key columns; generator prepends `window_days` for the `unique_grain` test | `tools/generate_models.py:41`, `config/grains/compute_snapshots.yml:1-3` |
 | 6. Direct model | `generate_direct_models.py`: same Databricks branch, `config(enabled=false)`, plus `generated_manifest.json` | `tools/generate_direct_models.py:14-33` |
 | 7. Plain SQL | `build_direct_sql.py`: Jinja render, thresholds baked, window as `__WINDOW_DAYS__`, as-of as `__AS_OF_DATE__`/`__AS_OF_TS__`, query source `__QUERY_SOURCE__`; `ref()` forbidden | `tools/build_direct_sql.py:26-31`, `60-103`, `106-117` |
-| 8. Export | roster from `dbt/models/databricks_direct/generated_manifest.json`; markers filled; stops if `thresholds.json` differs from `config/thresholds.yml` | `tools/export_direct_results.py:1114-1135`, `344-358` |
-| 9. Write | one `findings/<id>.parquet` per check | `tools/export_direct_results.py:938-985` |
-| 10. Load | `CREATE OR REPLACE TABLE findings."f_<id>"` in DuckDB; run_results-shaped status per id | `tools/load_direct_results.py:548`, `580`, `375-400` |
-| 11. Read | `read_finding(query_id, window_days, ...)` selects from `findings."f_<id>"` | `app/core/data.py:806-841` |
-| 12. Serve | `GET /api/findings`, `GET /api/finding/{query_id}` | `app/api/app.py:999`, `1137` |
+| 8. Export | roster from `dbt/models/databricks_direct/generated_manifest.json`; markers filled; stops if `thresholds.json` differs from `config/thresholds.yml` | `tools/export_direct_results.py:1143-1164`, `344-358` |
+| 9. Write | one `findings/<id>.parquet` per check | `tools/export_direct_results.py:967-1014` |
+| 10. Load | `CREATE OR REPLACE TABLE findings."f_<id>"` in DuckDB; run_results-shaped status per id | `tools/load_direct_results.py:563`, `580`, `375-400` |
+| 11. Read | `read_finding(query_id, window_days, ...)` selects from `findings."f_<id>"` | `app/core/data.py:822-857` |
+| 12. Serve | `GET /api/findings`, `GET /api/finding/{query_id}` | `app/api/app.py:1018`, `1137` |
 | 13. Show | title/why in `labels.ts`, tab placement in `tab_registry.ts` | `web/src/components/labels.ts:67`, `web/src/components/tab_registry.ts:104`, `147` |
 | 14. Test | `tests/test_findings/test_<id>.py` asserts rows via `tests/dbutil.py rows()`; `fixture_coverage.py --check` requires grain + test per executable id | `tests/dbutil.py:4-6`, `tools/fixture_coverage.py:1-30` |
 
