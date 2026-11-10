@@ -8,7 +8,7 @@
         "SET QUERY_TAGS['domain'] = 'lakehouse_health';\n",
         "SET QUERY_TAGS['dashboard'] = 'dashboard_load';\n",
         "SET QUERY_TAGS['tab'] = 'dashboard_load';\n",
-        "-- Dashboard load: the queries of every dashboard in this set, per tab, from their query tags. Dates from the Time Window.\n",
+        "-- Dashboard load: the queries of every dashboard in this set, per tab, from their query tags. List price; dates from the Time Window.\n",
         "WITH wh AS (\n",
         "  SELECT CAST(warehouse_id AS STRING) AS warehouse_id, warehouse_name FROM system.compute.warehouses\n",
         "  QUALIFY ROW_NUMBER() OVER (PARTITION BY warehouse_id ORDER BY change_time DESC) = 1\n",
@@ -40,15 +40,46 @@
         "),\n",
         "q AS (\n",
         "  SELECT query_tags['dashboard'] AS slug, query_tags['tab'] AS tab, CAST(start_time AS DATE) AS day,\n",
+        "         date_trunc('HOUR', start_time) AS hr,\n",
         "         executed_by, CAST(compute.warehouse_id AS STRING) AS warehouse_id, execution_status,\n",
         "         COALESCE(from_result_cache, false) AS cached,\n",
         "         COALESCE(total_duration_ms, 0) AS duration_ms,\n",
+        "         CASE WHEN from_result_cache THEN 0\n",
+        "              ELSE COALESCE(total_task_duration_ms, execution_duration_ms, total_duration_ms, 0) END AS weight_ms,\n",
         "         COALESCE(waiting_at_capacity_duration_ms, 0) AS queued_ms, COALESCE(read_bytes, 0) AS read_bytes\n",
         "  FROM system.query.history\n",
         "  -- the SET QUERY_TAGS statements are not the dashboard's work; on a reused session they carry a tab\n",
         "  WHERE query_tags['dashboard'] IS NOT NULL AND query_tags['tab'] IS NOT NULL\n",
         "    AND upper(COALESCE(statement_type, '')) <> 'SET'\n",
         "    AND start_time >= CAST(:time_range.min AS DATE) AND start_time < date_add(:time_range.max, 1)\n",
+        "),\n",
+        "all_work AS (\n",
+        "  -- everything those warehouses ran per hour: a query's $ is its share of the hour's work\n",
+        "  SELECT CAST(compute.warehouse_id AS STRING) AS warehouse_id, date_trunc('HOUR', start_time) AS hr,\n",
+        "         SUM(CASE WHEN from_result_cache THEN 0\n",
+        "                  ELSE COALESCE(total_task_duration_ms, execution_duration_ms, total_duration_ms, 0) END) AS all_ms\n",
+        "  FROM system.query.history\n",
+        "  WHERE start_time >= CAST(:time_range.min AS DATE) AND start_time < date_add(:time_range.max, 1)\n",
+        "    AND CAST(compute.warehouse_id AS STRING) IN (SELECT warehouse_id FROM q)\n",
+        "  GROUP BY 1, 2\n",
+        "),\n",
+        "price AS (\n",
+        "  SELECT sku_name, cloud, usage_unit, price_start_time, price_end_time,\n",
+        "         CAST(pricing.effective_list.default AS DOUBLE) AS list_rate\n",
+        "  FROM system.billing.list_prices\n",
+        "  WHERE currency_code = 'USD'\n",
+        "),\n",
+        "bill AS (\n",
+        "  -- those warehouses' billed $ per hour, at list price\n",
+        "  SELECT CAST(u.usage_metadata.warehouse_id AS STRING) AS warehouse_id, date_trunc('HOUR', u.usage_start_time) AS hr,\n",
+        "         SUM(u.usage_quantity * p.list_rate) AS usd\n",
+        "  FROM system.billing.usage u\n",
+        "  JOIN price p\n",
+        "    ON p.sku_name = u.sku_name AND p.cloud = u.cloud AND p.usage_unit = u.usage_unit\n",
+        "   AND u.usage_end_time >= p.price_start_time AND (p.price_end_time IS NULL OR u.usage_end_time < p.price_end_time)\n",
+        "  WHERE u.usage_date >= CAST(CAST(:time_range.min AS DATE) AS DATE) AND u.usage_date < CAST(date_add(:time_range.max, 1) AS DATE)\n",
+        "    AND CAST(u.usage_metadata.warehouse_id AS STRING) IN (SELECT warehouse_id FROM q)\n",
+        "  GROUP BY 1, 2\n",
         ")\n",
         "SELECT b.dashboard, q.tab, q.day, q.executed_by AS run_as,\n",
         "       COALESCE(wh.warehouse_name, q.warehouse_id, 'No warehouse') AS warehouse,\n",
@@ -58,10 +89,13 @@
         "       ROUND(SUM(q.duration_ms) / 3600000, 3) AS hours,\n",
         "       ROUND(SUM(q.queued_ms) / 3600000, 3) AS queued_hours,\n",
         "       ROUND(MAX(q.duration_ms) / 1000, 1) AS slowest_s,\n",
-        "       ROUND(SUM(q.read_bytes) / 1e9, 2) AS gb_read\n",
+        "       ROUND(SUM(q.read_bytes) / 1e9, 2) AS gb_read,\n",
+        "       ROUND(SUM(COALESCE(bl.usd * q.weight_ms / NULLIF(a.all_ms, 0), 0)), 2) AS est_usd\n",
         "FROM q\n",
         "JOIN boards b ON b.slug = q.slug\n",
         "LEFT JOIN wh ON wh.warehouse_id = q.warehouse_id\n",
+        "LEFT JOIN all_work a ON a.warehouse_id = q.warehouse_id AND a.hr = q.hr\n",
+        "LEFT JOIN bill bl ON bl.warehouse_id = q.warehouse_id AND bl.hr = q.hr\n",
         "GROUP BY ALL\n",
         "ORDER BY q.day DESC, hours DESC\n"
       ],
@@ -101,7 +135,7 @@
                 "# **Dashboard load**\n",
                 "---\n",
                 "\n",
-                "**The queries of every Lakehouse Health and direct dashboard, from their dashboard and tab query tags: how many, how long, how long queued, and on which warehouse.**\n"
+                "**The queries of every Lakehouse Health and direct dashboard, from their dashboard and tab query tags: how many, how long, how long queued, on which warehouse and roughly what they cost.**\n"
               ]
             }
           },
@@ -359,7 +393,7 @@
           "position": {
             "x": 0,
             "y": 3,
-            "width": 3,
+            "width": 2,
             "height": 3
           }
         },
@@ -412,9 +446,9 @@
             }
           },
           "position": {
-            "x": 3,
+            "x": 2,
             "y": 3,
-            "width": 3,
+            "width": 2,
             "height": 3
           }
         },
@@ -467,7 +501,7 @@
             }
           },
           "position": {
-            "x": 6,
+            "x": 4,
             "y": 3,
             "width": 3,
             "height": 3
@@ -517,6 +551,62 @@
                 "title": "Failed queries",
                 "showTitle": true,
                 "description": "A widget showed an error",
+                "showDescription": true
+              }
+            }
+          },
+          "position": {
+            "x": 7,
+            "y": 3,
+            "width": 2,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "8f6d8c1e",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "74653cfe",
+                  "fields": [
+                    {
+                      "name": "sum(est_usd)",
+                      "expression": "SUM(`est_usd`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(est_usd)",
+                  "displayName": "Estimated $",
+                  "style": {
+                    "bold": true,
+                    "fontSize": 32,
+                    "color": "#1c1b18"
+                  },
+                  "format": {
+                    "type": "number-currency",
+                    "currencyCode": "USD",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 0
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "title": "Estimated $",
+                "showTitle": true,
+                "description": "Its share of the warehouse bill, list price",
                 "showDescription": true
               }
             }
@@ -747,6 +837,10 @@
                     {
                       "name": "gb_read",
                       "expression": "`gb_read`"
+                    },
+                    {
+                      "name": "est_usd",
+                      "expression": "`est_usd`"
                     }
                   ],
                   "disaggregated": true
@@ -1064,6 +1158,32 @@
                     "visible": true,
                     "alignContent": "right",
                     "numberFormat": "0,0.[0]",
+                    "allowHTML": false,
+                    "preserveWhitespace": false,
+                    "highlightLinks": false,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "useMonospaceFont": false,
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": ""
+                  },
+                  {
+                    "fieldName": "est_usd",
+                    "title": "Estimated $",
+                    "type": "float",
+                    "displayAs": "number",
+                    "order": 12,
+                    "visible": true,
+                    "alignContent": "right",
+                    "numberFormat": "$0,0",
                     "allowHTML": false,
                     "preserveWhitespace": false,
                     "highlightLinks": false,

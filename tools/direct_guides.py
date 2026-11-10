@@ -1315,6 +1315,7 @@ COLUMNS["dashboard_load"] = {
     "queued_hours": "Time they waited for a free slot on the warehouse, summed, in hours.",
     "slowest_s": "The longest single query in the row, in seconds.",
     "gb_read": "Data they read, in GB.",
+    "est_usd": "Estimated $ at list price: each query's share of its warehouse's bill in that hour, by task time.",
 }
 
 WHY["dashboard_load"] = ("A dashboard's query text reads <REDACTED> in the query history, so only its tags tell its "
@@ -1323,7 +1324,7 @@ WHY["dashboard_load"] = ("A dashboard's query text reads <REDACTED> in the query
 
 GUIDES["dashboard_load"] = {
     "purpose": "Shows what the dashboards of this set cost to run: their queries per dashboard, tab, day and "
-               "warehouse, with failures, cache hits, run time and queue time, found by their query tags.",
+               "warehouse, with failures, cache hits, run time, queue time and an estimated $, found by their query tags.",
     "basics": ["system_tables", "warehouse", "query_tags", "principal", "sql"],
     "rules": [
         ("Dashboard query", "A query-history row whose dashboard tag is one of this set's dashboards and that has a "
@@ -1332,9 +1333,13 @@ GUIDES["dashboard_load"] = {
         ("Queued", "waiting_at_capacity_duration_ms: the query waited because the warehouse was full.",
          "Queue time on a dashboard means a bigger or a scaling warehouse, or fewer widgets per page."),
         ("From cache", "from_result_cache is true.", "A repeat view answered without compute."),
+        ("Estimated $", "The warehouse's list-price bill in the hour the query started, times the query's task time "
+         "over all task time on that warehouse in that hour.", "A warehouse bills for every query and its idle time; "
+         "sharing the hour by work gives each dashboard its part."),
     ],
     "limits": [
-        "Run time, not $: the warehouse's bill covers every query on it, and idle time too.",
+        "Estimated $ is list price, not the invoice, and shares idle time by work: a dashboard alone on a warehouse "
+        "carries all of it. A query spanning hours is priced in its start hour.",
         "Only queries since the dashboards carry tags; an older copy without SET QUERY_TAGS doesn't show.",
         "A dashboard renamed or added later shows only after this dashboard is rebuilt.",
         _REGION,
@@ -1354,7 +1359,7 @@ SHORT["dashboard_load"] = {
         "system.query.history stores the tags with each query, so they can be counted per dashboard and tab.",
         "Run time, queue time and failures per tab show which page to fix and which warehouse to size.",
     ],
-    "rules": ["Dashboard query", "Queued", "From cache"],
+    "rules": ["Dashboard query", "Queued", "From cache", "Estimated $"],
     "sql": """-- Per dashboard and tab, last 7 days: queries, hours, queued hours.
 SELECT query_tags['dashboard'] AS dashboard, query_tags['tab'] AS tab, COUNT(*) AS queries,
        ROUND(SUM(total_duration_ms) / 3600000, 2) AS hours,
@@ -1372,13 +1377,15 @@ ER["dashboard_load"] = {
         ("boards", "boards: this set's dashboards", "table", ["*slug", "dashboard"], 0),
         ("q", "q: tagged queries in the window", "step", ["*slug", "tab", "day", "warehouse_id", "duration_ms"], 1),
         ("wh", "system.compute.warehouses", "table", ["*warehouse_id", "warehouse_name"], 1),
+        ("bill", "bill: warehouse $ per hour", "step", ["*warehouse_id", "*hr", "usd"], 1),
         ("out", "dashboard rows", "result", ["dashboard", "tab", "day", "warehouse", "queries", "hours",
-                                              "queued_hours"], 2),
+                                              "queued_hours", "est_usd"], 2),
     ],
     "edges": [
         ("qh", "q", "dashboard and tab tags; not SET"),
         ("q", "out", "JOIN boards ON slug"),
         ("boards", "out", "the title"),
         ("wh", "out", "LEFT JOIN ON warehouse_id"),
+        ("bill", "out", "LEFT JOIN ON warehouse_id, hour; share by task time"),
     ],
 }
