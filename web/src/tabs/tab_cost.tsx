@@ -1762,9 +1762,26 @@ function CostChargebackContent({ filters, maxCat, meta, onVerdict }: TabProps) {
     });
     return m;
   }, [dimKey, whState]);
-  const spendItems = displayRows
+  // warehouse, job and cluster cuts: one bar per workspace, its spend on them (dark) of all its spend
+  const byWsItems = React.useMemo(() => {
+    if (!fold || !rows) return null;
+    const m = new Map<string, { part: number; all: number }>();
+    rows.forEach((r) => {
+      // the check's pooled tail without a workspace keeps its own bar
+      const k = r.workspace_id != null ? String(r.workspace_id) : r.is_other ? " other" : "";
+      const e = m.get(k) || { part: 0, all: 0 };
+      const cur = numOrZero(cbMoney(dim, r, disc).cur);
+      e.all += cur;
+      if (!cbIsNotAttributed(dim, r)) e.part += cur;
+      m.set(k, e);
+    });
+    return [...m.entries()].map(([k, e]) => ({ name: k === " other" ? `Smaller ${dim.noun}s pooled` : k ? wsPhrase(k) : "Account-level (no workspace)", value: e.part, whole: e.all }))
+      .filter((e) => e.whole > 0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fold, rows, dim.key, disc]);
+  const spendItems = byWsItems ? byWsItems : displayRows
     // The check's own pooled row is renamed so it isn't confused with the chart's "Other" bar.
-    ? displayRows.filter((r) => !(fold && cbIsNotAttributed(dim, r)))
+    ? displayRows
         .map((r) => {
           const cur = numOrZero(cbMoney(dim, r, disc).cur);
           const name = r.is_other ? cbLabel(dim, r).replace(/^Other/, "Smaller ones pooled") : cbLabel(dim, r);
@@ -1847,7 +1864,7 @@ function CostChargebackContent({ filters, maxCat, meta, onVerdict }: TabProps) {
           {anyUnpriced && <div className="metric-note" style={{ marginBottom: 10 }}>Some usage here has no matching price -- its row, and the total above, understate actual spend.</div>}
 
           <Card
-            title={cbMetric === "spend" ? `Spend by ${dim.noun}` : "Biggest movers vs previous period"}
+            title={cbMetric === "spend" ? (fold ? `Spend on ${dim.noun}s, by workspace` : `Spend by ${dim.noun}`) : "Biggest movers vs previous period"}
             right={(
               <div className="ws-actions">
                 {CHANGE_METRICS.map((m) => (
@@ -1861,11 +1878,12 @@ function CostChargebackContent({ filters, maxCat, meta, onVerdict }: TabProps) {
                 items={spendItems}
                 n={maxCat}
                 untaggedFirst
+                rankByWhole={!!whByWs}
                 valueFmt={(v) => fmtMoney(v, 0)}
                 unitLabel="$"
                 note={whByWs
                   ? "Each workspace's total this window; the dark part ran on SQL warehouses, the rest on jobs, clusters, pipelines and serverless. The change is under Change and in the table below."
-                  : fold ? `Each ${dim.noun}'s total this window, biggest first. Spend ${CB_SCOPE_NOTE[dim.key]} is in the first card and at the end of the table.`
+                  : fold ? `Each workspace by its spend on ${dim.noun}s (dark), most first; light is the rest of its spend. Every ${dim.noun} is in the table below.`
                   : `Each ${dim.noun}'s total this window; the change against the previous period is under Change and in the table below.`}
               />
             ) : <div className="chart-note ok"><div className="chart-note-text">{`No spend by ${dim.noun} in this window.`}</div></div>)

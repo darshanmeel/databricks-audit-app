@@ -43,6 +43,7 @@ export interface FoldOptions {
   color?: string;
   otherLabel?: string;
   untaggedFirst?: boolean;
+  rankByWhole?: boolean;
 }
 
 export interface LegendItem {
@@ -157,8 +158,9 @@ export function foldTopNOther(items: Entry[] | null | undefined, opts?: FoldOpti
   const untagged = list.filter((it) => it.untagged);
   // pooled = rows a query already folded below its own top N: they belong in Other, never ranked
   const pooledTotal = list.filter((it) => it.pooled).reduce((s, it) => s + it.value, 0);
-  // a part-of-whole bar ranks by its whole
-  const size = (it: Entry) => ((it as { whole?: number | null }).whole ?? it.value);
+  // a part-of-whole bar ranks by its whole when asked, else by its part
+  const size = (it: Entry) => (o.rankByWhole ? ((it as { whole?: number | null }).whole ?? it.value) : it.value);
+  const whole = (it: Entry) => ((it as { whole?: number | null }).whole ?? it.value);
   const rest = list.filter((it) => !it.untagged && !it.pooled).sort((a, b) => size(b) - size(a));
   const head: FoldedItem[] = rest.slice(0, n).map((it, i) => ({
     ...it, color: it.color || (categorical ? paletteColor(i) : uniform), hatch: false,
@@ -166,7 +168,7 @@ export function foldTopNOther(items: Entry[] | null | undefined, opts?: FoldOpti
   const tail = rest.slice(n);
   const tailTotal = tail.reduce((s, it) => s + it.value, 0) + pooledTotal;
   const tailWhole = tail.some((it) => (it as { whole?: number | null }).whole != null)
-    ? tail.reduce((s, it) => s + size(it), 0) + pooledTotal : null;
+    ? tail.reduce((s, it) => s + whole(it), 0) + pooledTotal : null;
   const out: FoldedItem[] = [];
   const pushUntagged = () => untagged.forEach((it) => out.push({ ...it, color: CHART_UNTAGGED_LINE, bg: CHART_UNTAGGED_BG, hatch: true }));
   if (o.untaggedFirst) pushUntagged();
