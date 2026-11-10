@@ -1,0 +1,1002 @@
+{"from": "file:web/src/main.tsx", "to": "file:web/src/tabs/tab_actions.tsx", "type": "imports", "evidence": "web/src/main.tsx:22", "status": "extracted"}
+{"from": "file:web/src/main.tsx", "to": "file:web/src/tabs/tab_compute.tsx", "type": "imports", "evidence": "web/src/main.tsx:23", "status": "extracted"}
+{"from": "file:web/src/main.tsx", "to": "file:web/src/tabs/tab_cost.tsx", "type": "imports", "evidence": "web/src/main.tsx:24", "status": "extracted"}
+{"from": "file:web/src/main.tsx", "to": "file:web/src/tabs/tab_cost_before_after.tsx", "type": "imports", "evidence": "web/src/main.tsx:25", "status": "extracted"}
+{"from": "file:web/src/main.tsx", "to": "file:web/src/tabs/tab_coverage.tsx", "type": "imports", "evidence": "web/src/main.tsx:26", "status": "extracted"}
+{"from": "file:web/src/main.tsx", "to": "file:web/src/tabs/tab_findings.tsx", "type": "imports", "evidence": "web/src/main.tsx:27", "status": "extracted"}
+{"from": "file:web/src/main.tsx", "to": "file:web/src/tabs/tab_genie.tsx", "type": "imports", "evidence": "web/src/main.tsx:28", "status": "extracted"}
+{"from": "file:web/src/main.tsx", "to": "file:web/src/tabs/tab_governance.tsx", "type": "imports", "evidence": "web/src/main.tsx:29", "status": "extracted"}
+{"from": "file:web/src/main.tsx", "to": "file:web/src/tabs/tab_jobs.tsx", "type": "imports", "evidence": "web/src/main.tsx:30", "status": "extracted"}
+{"from": "file:web/src/main.tsx", "to": "file:web/src/tabs/tab_mlai.tsx", "type": "imports", "evidence": "web/src/main.tsx:31", "status": "extracted"}
+{"from": "file:web/src/main.tsx", "to": "file:web/src/tabs/tab_money.tsx", "type": "imports", "evidence": "web/src/main.tsx:32", "status": "extracted"}
+{"from": "file:web/src/main.tsx", "to": "file:web/src/tabs/tab_overview.tsx", "type": "imports", "evidence": "web/src/main.tsx:33", "status": "extracted"}
+{"from": "file:web/src/main.tsx", "to": "file:web/src/tabs/tab_query.tsx", "type": "imports", "evidence": "web/src/main.tsx:34", "status": "extracted"}
+{"from": "file:web/src/main.tsx", "to": "file:web/src/tabs/query_trend.tsx", "type": "imports", "evidence": "web/src/main.tsx:35", "status": "extracted"}
+{"from": "file:web/src/main.tsx", "to": "file:web/src/tabs/tab_storage.tsx", "type": "imports", "evidence": "web/src/main.tsx:36", "status": "extracted"}
+{"from": "file:web/src/main.tsx", "to": "file:web/src/tabs/tab_warehouse.tsx", "type": "imports", "evidence": "web/src/main.tsx:37", "status": "extracted"}
+{"from": "file:web/src/main.tsx", "to": "file:web/src/tabs/tab_usage.tsx", "type": "imports", "evidence": "web/src/main.tsx:38", "status": "extracted"}
+{"from": "file:web/src/main.tsx", "to": "file:web/src/tabs/usage_activity.tsx", "type": "imports", "evidence": "web/src/main.tsx:39", "status": "extracted"}
+{"from": "file:web/src/main.tsx", "to": "file:web/src/tabs/tab_tags.tsx", "type": "imports", "evidence": "web/src/main.tsx:40", "status": "extracted"}
+{"from": "file:web/src/main.tsx", "to": "file:web/src/tabs/tab_waste.tsx", "type": "imports", "evidence": "web/src/main.tsx:41", "status": "extracted"}
+{"from": "file:web/src/main.tsx", "to": "file:web/src/components/job_panel.tsx", "type": "imports", "evidence": "web/src/main.tsx:42", "status": "extracted"}
+{"from": "file:web/src/main.tsx", "to": "file:web/src/App.tsx", "type": "imports", "evidence": "web/src/main.tsx:43", "status": "extracted"}
+{"from": "file:web/src/App.tsx", "to": "file:web/src/api.ts", "type": "imports", "evidence": "web/src/App.tsx:8", "status": "extracted"}
+{"from": "file:web/src/App.tsx", "to": "file:web/src/format.tsx", "type": "imports", "evidence": "web/src/App.tsx:9", "status": "extracted"}
+{"from": "file:web/src/App.tsx", "to": "file:web/src/components/hash_state.tsx", "type": "imports", "evidence": "web/src/App.tsx:10", "status": "extracted"}
+{"from": "file:web/src/App.tsx", "to": "file:web/src/components/names.tsx", "type": "imports", "evidence": "web/src/App.tsx:11", "status": "extracted"}
+{"from": "file:web/src/App.tsx", "to": "file:web/src/components/hooks.ts", "type": "imports", "evidence": "web/src/App.tsx:12", "status": "extracted"}
+{"from": "file:web/src/App.tsx", "to": "file:web/src/components/first_run.tsx", "type": "imports", "evidence": "web/src/App.tsx:13", "status": "extracted"}
+{"from": "file:web/src/App.tsx", "to": "file:web/src/components/filters.tsx", "type": "imports", "evidence": "web/src/App.tsx:14", "status": "extracted"}
+{"from": "file:web/src/App.tsx", "to": "file:web/src/components/tag_picker.tsx", "type": "imports", "evidence": "web/src/App.tsx:15", "status": "extracted"}
+{"from": "file:web/src/App.tsx", "to": "file:web/src/components/tab_registry.ts", "type": "imports", "evidence": "web/src/App.tsx:16", "status": "extracted"}
+{"from": "file:web/src/App.tsx", "to": "file:web/src/components/roles.ts", "type": "imports", "evidence": "web/src/App.tsx:17", "status": "extracted"}
+{"from": "file:web/src/App.tsx", "to": "file:web/src/components/primitives.tsx", "type": "imports", "evidence": "web/src/App.tsx:18", "status": "extracted"}
+{"from": "file:web/src/App.tsx", "to": "file:web/src/components/scope.tsx", "type": "imports", "evidence": "web/src/App.tsx:19", "status": "extracted"}
+{"from": "file:web/src/App.tsx", "to": "file:web/src/components/finding_detail.tsx", "type": "imports", "evidence": "web/src/App.tsx:20", "status": "extracted"}
+{"from": "file:web/src/App.tsx", "to": "file:web/src/tabs/tab_money.tsx", "type": "imports", "evidence": "web/src/App.tsx:21", "status": "extracted"}
+{"from": "file:web/src/App.tsx", "to": "file:web/src/components/nav_hash.ts", "type": "imports", "evidence": "web/src/App.tsx:22", "status": "extracted"}
+{"from": "file:web/src/App.tsx", "to": "file:web/src/components/guide.tsx", "type": "imports", "evidence": "web/src/App.tsx:23", "status": "extracted"}
+{"from": "file:web/src/App.tsx", "to": "file:web/src/components/guide_drawer.tsx", "type": "imports", "evidence": "web/src/App.tsx:24", "status": "extracted"}
+{"from": "file:web/src/components/nav_hash.ts", "to": "file:web/src/components/tab_registry.ts", "type": "imports", "evidence": "web/src/components/nav_hash.ts:5", "status": "extracted"}
+{"from": "file:web/src/components/roles.ts", "to": "file:web/src/components/tab_registry.ts", "type": "imports", "evidence": "web/src/components/roles.ts:3", "status": "extracted"}
+{"from": "file:web/src/components/findings_table.tsx", "to": "file:web/src/components/hash_state.tsx", "type": "imports", "evidence": "web/src/components/findings_table.tsx:17", "status": "extracted"}
+{"from": "file:web/src/components/findings_table.tsx", "to": "file:web/src/components/finding_detail.tsx", "type": "imports", "evidence": "web/src/components/findings_table.tsx:22", "status": "extracted"}
+{"from": "file:web/src/api.ts", "to": "function:web/src/api.ts:Api.status", "type": "contains", "evidence": "web/src/api.ts:70", "status": "extracted"}
+{"from": "function:web/src/api.ts:Api.status", "to": "endpoint:GET /api/status", "type": "calls", "evidence": "web/src/api.ts:70", "status": "extracted"}
+{"from": "file:web/src/api.ts", "to": "function:web/src/api.ts:Api.meta", "type": "contains", "evidence": "web/src/api.ts:71", "status": "extracted"}
+{"from": "function:web/src/api.ts:Api.meta", "to": "endpoint:GET /api/meta", "type": "calls", "evidence": "web/src/api.ts:71", "status": "extracted"}
+{"from": "file:web/src/api.ts", "to": "function:web/src/api.ts:Api.workspaces", "type": "contains", "evidence": "web/src/api.ts:72", "status": "extracted"}
+{"from": "function:web/src/api.ts:Api.workspaces", "to": "endpoint:GET /api/workspaces", "type": "calls", "evidence": "web/src/api.ts:72", "status": "extracted"}
+{"from": "file:web/src/api.ts", "to": "function:web/src/api.ts:Api.dims", "type": "contains", "evidence": "web/src/api.ts:75", "status": "extracted"}
+{"from": "function:web/src/api.ts:Api.dims", "to": "endpoint:GET /api/dims", "type": "calls", "evidence": "web/src/api.ts:75", "status": "extracted"}
+{"from": "file:web/src/api.ts", "to": "function:web/src/api.ts:Api.coverage", "type": "contains", "evidence": "web/src/api.ts:76", "status": "extracted"}
+{"from": "function:web/src/api.ts:Api.coverage", "to": "endpoint:GET /api/coverage", "type": "calls", "evidence": "web/src/api.ts:76", "status": "extracted"}
+{"from": "file:web/src/api.ts", "to": "function:web/src/api.ts:Api.refreshStatus", "type": "contains", "evidence": "web/src/api.ts:77", "status": "extracted"}
+{"from": "function:web/src/api.ts:Api.refreshStatus", "to": "endpoint:GET /api/refresh", "type": "calls", "evidence": "web/src/api.ts:77", "status": "extracted"}
+{"from": "file:web/src/api.ts", "to": "function:web/src/api.ts:Api.refreshStart", "type": "contains", "evidence": "web/src/api.ts:78", "status": "extracted"}
+{"from": "function:web/src/api.ts:Api.refreshStart", "to": "endpoint:POST /api/refresh", "type": "calls", "evidence": "web/src/api.ts:78", "status": "extracted"}
+{"from": "file:web/src/api.ts", "to": "function:web/src/api.ts:Api.guide", "type": "contains", "evidence": "web/src/api.ts:80", "status": "extracted"}
+{"from": "function:web/src/api.ts:Api.guide", "to": "endpoint:GET /api/guide", "type": "calls", "evidence": "web/src/api.ts:80", "status": "extracted"}
+{"from": "file:web/src/api.ts", "to": "function:web/src/api.ts:Api.guideSql", "type": "contains", "evidence": "web/src/api.ts:81", "status": "extracted"}
+{"from": "function:web/src/api.ts:Api.guideSql", "to": "endpoint:GET /api/guide/sql/{query_id}", "type": "calls", "evidence": "web/src/api.ts:81", "status": "extracted"}
+{"from": "file:web/src/api.ts", "to": "function:web/src/api.ts:Api.tags", "type": "contains", "evidence": "web/src/api.ts:86", "status": "extracted"}
+{"from": "function:web/src/api.ts:Api.tags", "to": "endpoint:GET /api/tags", "type": "calls", "evidence": "web/src/api.ts:86", "status": "extracted"}
+{"from": "file:web/src/api.ts", "to": "function:web/src/api.ts:Api.tagOrigins", "type": "contains", "evidence": "web/src/api.ts:88", "status": "extracted"}
+{"from": "function:web/src/api.ts:Api.tagOrigins", "to": "endpoint:GET /api/tag_origins", "type": "calls", "evidence": "web/src/api.ts:88", "status": "extracted"}
+{"from": "file:web/src/api.ts", "to": "function:web/src/api.ts:Api.tagCompliance", "type": "contains", "evidence": "web/src/api.ts:90", "status": "extracted"}
+{"from": "function:web/src/api.ts:Api.tagCompliance", "to": "endpoint:GET /api/tag_compliance", "type": "calls", "evidence": "web/src/api.ts:90", "status": "extracted"}
+{"from": "file:web/src/api.ts", "to": "function:web/src/api.ts:Api.abacPolicies", "type": "contains", "evidence": "web/src/api.ts:91", "status": "extracted"}
+{"from": "function:web/src/api.ts:Api.abacPolicies", "to": "endpoint:GET /api/abac_policies", "type": "calls", "evidence": "web/src/api.ts:91", "status": "extracted"}
+{"from": "file:web/src/api.ts", "to": "function:web/src/api.ts:Api.tableSizes", "type": "contains", "evidence": "web/src/api.ts:92", "status": "extracted"}
+{"from": "function:web/src/api.ts:Api.tableSizes", "to": "endpoint:GET /api/table_sizes", "type": "calls", "evidence": "web/src/api.ts:92", "status": "extracted"}
+{"from": "file:web/src/api.ts", "to": "function:web/src/api.ts:Api.tables", "type": "contains", "evidence": "web/src/api.ts:93", "status": "extracted"}
+{"from": "function:web/src/api.ts:Api.tables", "to": "endpoint:GET /api/tables", "type": "calls", "evidence": "web/src/api.ts:93", "status": "extracted"}
+{"from": "file:web/src/api.ts", "to": "function:web/src/api.ts:Api.table", "type": "contains", "evidence": "web/src/api.ts:94", "status": "extracted"}
+{"from": "function:web/src/api.ts:Api.table", "to": "endpoint:GET /api/table", "type": "calls", "evidence": "web/src/api.ts:94", "status": "extracted"}
+{"from": "file:web/src/api.ts", "to": "function:web/src/api.ts:Api.people", "type": "contains", "evidence": "web/src/api.ts:95", "status": "extracted"}
+{"from": "function:web/src/api.ts:Api.people", "to": "endpoint:GET /api/people", "type": "calls", "evidence": "web/src/api.ts:95", "status": "extracted"}
+{"from": "file:web/src/api.ts", "to": "function:web/src/api.ts:Api.volumes", "type": "contains", "evidence": "web/src/api.ts:96", "status": "extracted"}
+{"from": "function:web/src/api.ts:Api.volumes", "to": "endpoint:GET /api/volumes", "type": "calls", "evidence": "web/src/api.ts:96", "status": "extracted"}
+{"from": "file:web/src/api.ts", "to": "function:web/src/api.ts:Api.volumeUsers", "type": "contains", "evidence": "web/src/api.ts:97", "status": "extracted"}
+{"from": "function:web/src/api.ts:Api.volumeUsers", "to": "endpoint:GET /api/volume_users", "type": "calls", "evidence": "web/src/api.ts:97", "status": "extracted"}
+{"from": "file:web/src/api.ts", "to": "function:web/src/api.ts:Api.warehouses", "type": "contains", "evidence": "web/src/api.ts:98", "status": "extracted"}
+{"from": "function:web/src/api.ts:Api.warehouses", "to": "endpoint:GET /api/warehouses", "type": "calls", "evidence": "web/src/api.ts:98", "status": "extracted"}
+{"from": "file:web/src/api.ts", "to": "function:web/src/api.ts:Api.warehouse", "type": "contains", "evidence": "web/src/api.ts:99", "status": "extracted"}
+{"from": "function:web/src/api.ts:Api.warehouse", "to": "endpoint:GET /api/warehouse", "type": "calls", "evidence": "web/src/api.ts:99", "status": "extracted"}
+{"from": "file:web/src/api.ts", "to": "function:web/src/api.ts:Api.workspaceSchemas", "type": "contains", "evidence": "web/src/api.ts:100", "status": "extracted"}
+{"from": "function:web/src/api.ts:Api.workspaceSchemas", "to": "endpoint:GET /api/workspace_schemas", "type": "calls", "evidence": "web/src/api.ts:100", "status": "extracted"}
+{"from": "file:web/src/api.ts", "to": "function:web/src/api.ts:Api.activity", "type": "contains", "evidence": "web/src/api.ts:101", "status": "extracted"}
+{"from": "function:web/src/api.ts:Api.activity", "to": "endpoint:GET /api/activity", "type": "calls", "evidence": "web/src/api.ts:101", "status": "extracted"}
+{"from": "file:web/src/api.ts", "to": "function:web/src/api.ts:Api.personTables", "type": "contains", "evidence": "web/src/api.ts:102", "status": "extracted"}
+{"from": "function:web/src/api.ts:Api.personTables", "to": "endpoint:GET /api/person_tables", "type": "calls", "evidence": "web/src/api.ts:102", "status": "extracted"}
+{"from": "file:web/src/api.ts", "to": "function:web/src/api.ts:Api.workspaceUsage", "type": "contains", "evidence": "web/src/api.ts:103", "status": "extracted"}
+{"from": "function:web/src/api.ts:Api.workspaceUsage", "to": "endpoint:GET /api/workspace_usage", "type": "calls", "evidence": "web/src/api.ts:103", "status": "extracted"}
+{"from": "file:web/src/api.ts", "to": "function:web/src/api.ts:Api.workspaceTags", "type": "contains", "evidence": "web/src/api.ts:104", "status": "extracted"}
+{"from": "function:web/src/api.ts:Api.workspaceTags", "to": "endpoint:GET /api/workspace_tags", "type": "calls", "evidence": "web/src/api.ts:104", "status": "extracted"}
+{"from": "file:web/src/api.ts", "to": "function:web/src/api.ts:Api.findings", "type": "contains", "evidence": "web/src/api.ts:105", "status": "extracted"}
+{"from": "function:web/src/api.ts:Api.findings", "to": "endpoint:GET /api/findings", "type": "calls", "evidence": "web/src/api.ts:105", "status": "extracted"}
+{"from": "file:web/src/api.ts", "to": "function:web/src/api.ts:Api.finding", "type": "contains", "evidence": "web/src/api.ts:111", "status": "extracted"}
+{"from": "function:web/src/api.ts:Api.finding", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/api.ts:111", "status": "extracted"}
+{"from": "file:web/src/api.ts", "to": "function:web/src/api.ts:Api.aggregate", "type": "contains", "evidence": "web/src/api.ts:125", "status": "extracted"}
+{"from": "function:web/src/api.ts:Api.aggregate", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/api.ts:125", "status": "extracted"}
+{"from": "file:web/src/api.ts", "to": "function:web/src/api.ts:getJson", "type": "contains", "evidence": "web/src/api.ts:24", "status": "extracted"}
+{"from": "file:web/src/api.ts", "to": "function:web/src/api.ts:qs", "type": "contains", "evidence": "web/src/api.ts:10", "status": "extracted"}
+{"from": "file:web/src/api.ts", "to": "function:web/src/api.ts:setTagFilter", "type": "contains", "evidence": "web/src/api.ts:43", "status": "extracted"}
+{"from": "file:web/src/api.ts", "to": "function:web/src/api.ts:tagFilterKey", "type": "contains", "evidence": "web/src/api.ts:47", "status": "extracted"}
+{"from": "file:web/src/api.ts", "to": "function:web/src/api.ts:_tagParams", "type": "contains", "evidence": "web/src/api.ts:53", "status": "extracted"}
+{"from": "function:web/src/components/tag_rollup.tsx:tagRollupFetch", "to": "endpoint:GET /api/rollup/keys", "type": "calls", "evidence": "web/src/components/tag_rollup.tsx:135", "status": "extracted"}
+{"from": "function:web/src/components/tag_rollup.tsx:tagRollupFetch", "to": "endpoint:GET /api/rollup", "type": "calls", "evidence": "web/src/components/tag_rollup.tsx:150", "status": "extracted"}
+{"from": "function:web/src/components/tag_rollup.tsx:tagRollupFetch", "to": "endpoint:GET /api/rollup/top", "type": "calls", "evidence": "web/src/components/tag_rollup.tsx:170", "status": "extracted"}
+{"from": "function:web/src/components/tag_rollup.tsx:tagRollupFetch", "to": "endpoint:GET /api/rollup", "type": "calls", "evidence": "web/src/components/tag_rollup.tsx:259", "status": "extracted"}
+{"from": "file:web/src/components/hooks.ts", "to": "function:web/src/components/hooks.ts:useFindingData", "type": "contains", "evidence": "web/src/components/hooks.ts:85", "status": "extracted"}
+{"from": "function:web/src/components/hooks.ts:useFindingData", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/components/hooks.ts:97", "status": "extracted"}
+{"from": "file:web/src/components/hooks.ts", "to": "function:web/src/components/hooks.ts:useFindingAgg", "type": "contains", "evidence": "web/src/components/hooks.ts:114", "status": "extracted"}
+{"from": "function:web/src/components/hooks.ts:useFindingAgg", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/components/hooks.ts:130", "status": "extracted"}
+{"from": "file:web/src/components/hooks.ts", "to": "function:web/src/components/hooks.ts:useMultiFindingData", "type": "contains", "evidence": "web/src/components/hooks.ts:227", "status": "extracted"}
+{"from": "function:web/src/components/hooks.ts:useMultiFindingData", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/components/hooks.ts:240", "status": "extracted"}
+{"from": "file:web/src/components/hooks.ts", "to": "function:web/src/components/hooks.ts:useDims", "type": "contains", "evidence": "web/src/components/hooks.ts:261", "status": "extracted"}
+{"from": "function:web/src/components/hooks.ts:useDims", "to": "endpoint:GET /api/dims", "type": "calls", "evidence": "web/src/components/hooks.ts:265", "status": "extracted"}
+{"from": "file:web/src/components/first_run.tsx", "to": "function:web/src/components/first_run.tsx:useRefresh", "type": "contains", "evidence": "web/src/components/first_run.tsx:10", "status": "extracted"}
+{"from": "function:web/src/components/first_run.tsx:useRefresh", "to": "endpoint:GET /api/refresh", "type": "calls", "evidence": "web/src/components/first_run.tsx:12", "status": "extracted"}
+{"from": "file:web/src/components/guide_drawer.tsx", "to": "function:web/src/components/guide_drawer.tsx:fetchGuideData", "type": "contains", "evidence": "web/src/components/guide_drawer.tsx:20", "status": "extracted"}
+{"from": "function:web/src/components/guide_drawer.tsx:fetchGuideData", "to": "endpoint:GET /api/guide", "type": "calls", "evidence": "web/src/components/guide_drawer.tsx:22", "status": "extracted"}
+{"from": "file:web/src/components/primitives.tsx", "to": "function:web/src/components/primitives.tsx:TagOriginNote", "type": "contains", "evidence": "web/src/components/primitives.tsx:671", "status": "extracted"}
+{"from": "function:web/src/components/primitives.tsx:TagOriginNote", "to": "endpoint:GET /api/tag_origins", "type": "calls", "evidence": "web/src/components/primitives.tsx:679", "status": "extracted"}
+{"from": "file:web/src/components/finding_detail.tsx", "to": "function:web/src/components/finding_detail.tsx:FindingDetail", "type": "contains", "evidence": "web/src/components/finding_detail.tsx:1223", "status": "extracted"}
+{"from": "function:web/src/components/finding_detail.tsx:FindingDetail", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/components/finding_detail.tsx:1262", "status": "extracted"}
+{"from": "function:web/src/components/first_run.tsx:useRefresh", "to": "endpoint:POST /api/refresh", "type": "calls", "evidence": "web/src/components/first_run.tsx:21", "status": "extracted"}
+{"from": "function:web/src/components/hooks.ts:useFindingData", "to": "function:web/src/api.ts:Api.finding", "type": "calls", "evidence": "web/src/components/hooks.ts:97", "status": "extracted"}
+{"from": "function:web/src/components/hooks.ts:useFindingAgg", "to": "function:web/src/api.ts:Api.aggregate", "type": "calls", "evidence": "web/src/components/hooks.ts:130", "status": "extracted"}
+{"from": "function:web/src/components/hooks.ts:useMultiFindingData", "to": "function:web/src/api.ts:Api.finding", "type": "calls", "evidence": "web/src/components/hooks.ts:240", "status": "extracted"}
+{"from": "file:web/src/App.tsx", "to": "function:web/src/App.tsx:App", "type": "contains", "evidence": "web/src/App.tsx:744", "status": "extracted"}
+{"from": "file:web/src/App.tsx", "to": "function:web/src/App.tsx:TopBar", "type": "contains", "evidence": "web/src/App.tsx:471", "status": "extracted"}
+{"from": "file:web/src/App.tsx", "to": "function:web/src/App.tsx:Rail", "type": "contains", "evidence": "web/src/App.tsx:566", "status": "extracted"}
+{"from": "file:web/src/App.tsx", "to": "function:web/src/App.tsx:SideNav", "type": "contains", "evidence": "web/src/App.tsx:525", "status": "extracted"}
+{"from": "file:web/src/App.tsx", "to": "function:web/src/App.tsx:SideNavDrawer", "type": "contains", "evidence": "web/src/App.tsx:610", "status": "extracted"}
+{"from": "file:web/src/App.tsx", "to": "function:web/src/App.tsx:FiltersButton", "type": "contains", "evidence": "web/src/App.tsx:421", "status": "extracted"}
+{"from": "file:web/src/App.tsx", "to": "function:web/src/App.tsx:MainFilters", "type": "contains", "evidence": "web/src/App.tsx:405", "status": "extracted"}
+{"from": "file:web/src/App.tsx", "to": "function:web/src/App.tsx:WindowControl", "type": "contains", "evidence": "web/src/App.tsx:266", "status": "extracted"}
+{"from": "file:web/src/App.tsx", "to": "function:web/src/App.tsx:WorkspacesControl", "type": "contains", "evidence": "web/src/App.tsx:362", "status": "extracted"}
+{"from": "file:web/src/App.tsx", "to": "function:web/src/App.tsx:RefreshControl", "type": "contains", "evidence": "web/src/App.tsx:212", "status": "extracted"}
+{"from": "file:web/src/App.tsx", "to": "function:web/src/App.tsx:SnapshotStatus", "type": "contains", "evidence": "web/src/App.tsx:164", "status": "extracted"}
+{"from": "file:web/src/App.tsx", "to": "function:web/src/App.tsx:LensSelect", "type": "contains", "evidence": "web/src/App.tsx:138", "status": "extracted"}
+{"from": "file:web/src/App.tsx", "to": "function:web/src/App.tsx:clampTabForRole", "type": "contains", "evidence": "web/src/App.tsx:50", "status": "extracted"}
+{"from": "file:web/src/App.tsx", "to": "function:web/src/App.tsx:workspaceSetFromHash", "type": "contains", "evidence": "web/src/App.tsx:709", "status": "extracted"}
+{"from": "file:web/src/components/nav_hash.ts", "to": "function:web/src/components/nav_hash.ts:readNavHash", "type": "contains", "evidence": "web/src/components/nav_hash.ts:29", "status": "extracted"}
+{"from": "file:web/src/components/nav_hash.ts", "to": "function:web/src/components/nav_hash.ts:navHref", "type": "contains", "evidence": "web/src/components/nav_hash.ts:59", "status": "extracted"}
+{"from": "file:web/src/components/nav_hash.ts", "to": "function:web/src/components/nav_hash.ts:guideLinkProps", "type": "contains", "evidence": "web/src/components/nav_hash.ts:75", "status": "extracted"}
+{"from": "file:web/src/components/nav_hash.ts", "to": "function:web/src/components/nav_hash.ts:filtersFromHash", "type": "contains", "evidence": "web/src/components/nav_hash.ts:88", "status": "extracted"}
+{"from": "file:web/src/components/nav_hash.ts", "to": "function:web/src/components/nav_hash.ts:applyOldKeyRedirects", "type": "contains", "evidence": "web/src/components/nav_hash.ts:112", "status": "extracted"}
+{"from": "file:web/src/components/roles.ts", "to": "function:web/src/components/roles.ts:homeForRole", "type": "contains", "evidence": "web/src/components/roles.ts:14", "status": "extracted"}
+{"from": "file:web/src/components/roles.ts", "to": "function:web/src/components/roles.ts:roleAreasFor", "type": "contains", "evidence": "web/src/components/roles.ts:42", "status": "extracted"}
+{"from": "file:web/src/components/roles.ts", "to": "function:web/src/components/roles.ts:sidebarKeysForRole", "type": "contains", "evidence": "web/src/components/roles.ts:48", "status": "extracted"}
+{"from": "file:web/src/components/primitives.tsx", "to": "function:web/src/components/primitives.tsx:AreaPage", "type": "contains", "evidence": "web/src/components/primitives.tsx:702", "status": "extracted"}
+{"from": "file:web/src/components/findings_table.tsx", "to": "function:web/src/components/findings_table.tsx:FindingsTable", "type": "contains", "evidence": "web/src/components/findings_table.tsx:251", "status": "extracted"}
+{"from": "file:web/src/components/tab_registry.ts", "to": "function:web/src/components/tab_registry.ts:homeForQuery", "type": "contains", "evidence": "web/src/components/tab_registry.ts:412", "status": "extracted"}
+{"from": "file:web/src/components/tab_registry.ts", "to": "function:web/src/components/tab_registry.ts:bandOf", "type": "contains", "evidence": "web/src/components/tab_registry.ts:440", "status": "extracted"}
+{"from": "file:web/src/components/tab_registry.ts", "to": "function:web/src/components/tab_registry.ts:countsForIds", "type": "contains", "evidence": "web/src/components/tab_registry.ts:354", "status": "extracted"}
+{"from": "file:web/src/components/tag_picker.tsx", "to": "function:web/src/components/tag_picker.tsx:TagPicker", "type": "contains", "evidence": "web/src/components/tag_picker.tsx:237", "status": "extracted"}
+{"from": "file:web/src/components/tag_picker.tsx", "to": "function:web/src/components/tag_picker.tsx:MandatoryTagPicker", "type": "contains", "evidence": "web/src/components/tag_picker.tsx:166", "status": "extracted"}
+{"from": "file:web/src/components/tag_picker.tsx", "to": "function:web/src/components/tag_picker.tsx:narrowingTag", "type": "contains", "evidence": "web/src/components/tag_picker.tsx:78", "status": "extracted"}
+{"from": "file:web/src/components/tag_picker.tsx", "to": "function:web/src/components/tag_picker.tsx:dropMandatoryAttrs", "type": "contains", "evidence": "web/src/components/tag_picker.tsx:158", "status": "extracted"}
+{"from": "file:web/src/components/filters.tsx", "to": "function:web/src/components/filters.tsx:AttributePicker", "type": "contains", "evidence": "web/src/components/filters.tsx:32", "status": "extracted"}
+{"from": "file:web/src/components/filters.tsx", "to": "function:web/src/components/filters.tsx:AttributeFilters", "type": "contains", "evidence": "web/src/components/filters.tsx:131", "status": "extracted"}
+{"from": "file:web/src/components/scope.tsx", "to": "function:web/src/components/scope.tsx:RegionScopeBanner", "type": "contains", "evidence": "web/src/components/scope.tsx:75", "status": "extracted"}
+{"from": "file:web/src/components/first_run.tsx", "to": "function:web/src/components/first_run.tsx:FirstRunScreen", "type": "contains", "evidence": "web/src/components/first_run.tsx:145", "status": "extracted"}
+{"from": "file:web/src/components/guide.tsx", "to": "function:web/src/components/guide.tsx:GuideTab", "type": "contains", "evidence": "web/src/components/guide.tsx:2737", "status": "extracted"}
+{"from": "file:web/src/components/guide_drawer.tsx", "to": "function:web/src/components/guide_drawer.tsx:GuideDrawer", "type": "contains", "evidence": "web/src/components/guide_drawer.tsx:137", "status": "extracted"}
+{"from": "file:web/src/components/guide_drawer.tsx", "to": "function:web/src/components/guide_drawer.tsx:openGuideDrawer", "type": "contains", "evidence": "web/src/components/guide_drawer.tsx:109", "status": "extracted"}
+{"from": "file:web/src/components/tag_rollup.tsx", "to": "function:web/src/components/tag_rollup.tsx:TagRollupView", "type": "contains", "evidence": "web/src/components/tag_rollup.tsx:476", "status": "extracted"}
+{"from": "file:web/src/components/hash_state.tsx", "to": "function:web/src/components/hash_state.tsx:HashState", "type": "contains", "evidence": "web/src/components/hash_state.tsx:6", "status": "extracted"}
+{"from": "file:web/src/components/primitives.tsx", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "contains", "evidence": "web/src/components/primitives.tsx:604", "status": "extracted"}
+{"from": "function:web/src/App.tsx:App", "to": "endpoint:GET /api/status", "type": "calls", "evidence": "web/src/App.tsx:842", "status": "extracted"}
+{"from": "function:web/src/App.tsx:App", "to": "endpoint:GET /api/meta", "type": "calls", "evidence": "web/src/App.tsx:849", "status": "extracted"}
+{"from": "function:web/src/App.tsx:App", "to": "endpoint:GET /api/workspaces", "type": "calls", "evidence": "web/src/App.tsx:858", "status": "extracted"}
+{"from": "function:web/src/App.tsx:App", "to": "endpoint:GET /api/findings", "type": "calls", "evidence": "web/src/App.tsx:910", "status": "extracted"}
+{"from": "function:web/src/App.tsx:App", "to": "function:web/src/components/hash_state.tsx:HashState", "type": "calls", "evidence": "web/src/App.tsx:803", "status": "extracted"}
+{"from": "function:web/src/App.tsx:App", "to": "function:web/src/components/nav_hash.ts:readNavHash", "type": "calls", "evidence": "web/src/App.tsx:772", "status": "extracted"}
+{"from": "function:web/src/App.tsx:App", "to": "function:web/src/components/nav_hash.ts:filtersFromHash", "type": "calls", "evidence": "web/src/App.tsx:756", "status": "extracted"}
+{"from": "function:web/src/App.tsx:App", "to": "function:web/src/components/nav_hash.ts:applyOldKeyRedirects", "type": "calls", "evidence": "web/src/App.tsx:772", "status": "extracted"}
+{"from": "function:web/src/App.tsx:App", "to": "function:web/src/components/roles.ts:sidebarKeysForRole", "type": "calls", "evidence": "web/src/App.tsx:973", "status": "extracted"}
+{"from": "function:web/src/App.tsx:App", "to": "function:web/src/components/roles.ts:homeForRole", "type": "calls", "evidence": "web/src/App.tsx:775", "status": "extracted"}
+{"from": "function:web/src/App.tsx:App", "to": "function:web/src/components/roles.ts:roleAreasFor", "type": "calls", "evidence": "web/src/App.tsx:1168", "status": "extracted"}
+{"from": "function:web/src/App.tsx:App", "to": "function:web/src/components/primitives.tsx:AreaPage", "type": "calls", "evidence": "web/src/App.tsx:1152", "status": "extracted"}
+{"from": "function:web/src/App.tsx:App", "to": "function:web/src/components/tag_picker.tsx:narrowingTag", "type": "calls", "evidence": "web/src/App.tsx:833", "status": "extracted"}
+{"from": "function:web/src/App.tsx:App", "to": "function:web/src/components/hooks.ts:useDims", "type": "calls", "evidence": "web/src/App.tsx:830", "status": "extracted"}
+{"from": "function:web/src/App.tsx:App", "to": "function:web/src/components/tab_registry.ts:homeForQuery", "type": "calls", "evidence": "web/src/App.tsx:1005", "status": "extracted"}
+{"from": "function:web/src/App.tsx:App", "to": "function:web/src/components/guide_drawer.tsx:openGuideDrawer", "type": "calls", "evidence": "web/src/App.tsx:991", "status": "extracted"}
+{"from": "function:web/src/App.tsx:App", "to": "function:web/src/components/first_run.tsx:FirstRunScreen", "type": "calls", "evidence": "web/src/App.tsx:1028", "status": "extracted"}
+{"from": "function:web/src/App.tsx:App", "to": "function:web/src/components/guide.tsx:GuideTab", "type": "calls", "evidence": "web/src/App.tsx:1186", "status": "extracted"}
+{"from": "function:web/src/App.tsx:App", "to": "function:web/src/App.tsx:TopBar", "type": "calls", "evidence": "web/src/App.tsx:1073", "status": "extracted"}
+{"from": "function:web/src/App.tsx:App", "to": "function:web/src/App.tsx:Rail", "type": "calls", "evidence": "web/src/App.tsx:1067", "status": "extracted"}
+{"from": "function:web/src/App.tsx:App", "to": "function:web/src/App.tsx:SideNavDrawer", "type": "calls", "evidence": "web/src/App.tsx:1100", "status": "extracted"}
+{"from": "function:web/src/App.tsx:App", "to": "function:web/src/components/guide_drawer.tsx:GuideDrawer", "type": "calls", "evidence": "web/src/App.tsx:1199", "status": "extracted"}
+{"from": "function:web/src/App.tsx:TopBar", "to": "function:web/src/App.tsx:MainFilters", "type": "calls", "evidence": "web/src/App.tsx:498", "status": "extracted"}
+{"from": "function:web/src/App.tsx:TopBar", "to": "function:web/src/App.tsx:FiltersButton", "type": "calls", "evidence": "web/src/App.tsx:499", "status": "extracted"}
+{"from": "function:web/src/App.tsx:TopBar", "to": "function:web/src/App.tsx:WindowControl", "type": "calls", "evidence": "web/src/App.tsx:497", "status": "extracted"}
+{"from": "function:web/src/App.tsx:TopBar", "to": "function:web/src/App.tsx:RefreshControl", "type": "calls", "evidence": "web/src/App.tsx:507", "status": "extracted"}
+{"from": "function:web/src/App.tsx:TopBar", "to": "function:web/src/App.tsx:SnapshotStatus", "type": "calls", "evidence": "web/src/App.tsx:506", "status": "extracted"}
+{"from": "function:web/src/App.tsx:TopBar", "to": "function:web/src/components/scope.tsx:RegionScopeBanner", "type": "calls", "evidence": "web/src/App.tsx:505", "status": "extracted"}
+{"from": "function:web/src/App.tsx:Rail", "to": "function:web/src/App.tsx:SideNav", "type": "calls", "evidence": "web/src/App.tsx:583", "status": "extracted"}
+{"from": "function:web/src/App.tsx:Rail", "to": "function:web/src/App.tsx:LensSelect", "type": "calls", "evidence": "web/src/App.tsx:580", "status": "extracted"}
+{"from": "function:web/src/App.tsx:FiltersButton", "to": "function:web/src/components/filters.tsx:AttributeFilters", "type": "calls", "evidence": "web/src/App.tsx:450", "status": "extracted"}
+{"from": "function:web/src/App.tsx:FiltersButton", "to": "function:web/src/components/tag_picker.tsx:TagPicker", "type": "calls", "evidence": "web/src/App.tsx:457", "status": "extracted"}
+{"from": "function:web/src/App.tsx:FiltersButton", "to": "function:web/src/App.tsx:WorkspacesControl", "type": "calls", "evidence": "web/src/App.tsx:459", "status": "extracted"}
+{"from": "function:web/src/App.tsx:MainFilters", "to": "function:web/src/components/filters.tsx:AttributePicker", "type": "calls", "evidence": "web/src/App.tsx:409", "status": "extracted"}
+{"from": "function:web/src/App.tsx:MainFilters", "to": "function:web/src/components/tag_picker.tsx:MandatoryTagPicker", "type": "calls", "evidence": "web/src/App.tsx:410", "status": "extracted"}
+{"from": "function:web/src/App.tsx:RefreshControl", "to": "function:web/src/components/first_run.tsx:useRefresh", "type": "calls", "evidence": "web/src/App.tsx:215", "status": "extracted"}
+{"from": "function:web/src/components/tag_picker.tsx:TagPicker", "to": "endpoint:GET /api/tags", "type": "calls", "evidence": "web/src/components/tag_picker.tsx:49", "status": "inferred"}
+{"from": "function:web/src/components/tag_picker.tsx:MandatoryTagPicker", "to": "endpoint:GET /api/tags", "type": "calls", "evidence": "web/src/components/tag_picker.tsx:179", "status": "extracted"}
+{"from": "function:web/src/components/primitives.tsx:AreaPage", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/components/primitives.tsx:781", "status": "extracted"}
+{"from": "function:web/src/components/primitives.tsx:AreaPage", "to": "function:web/src/components/findings_table.tsx:FindingsTable", "type": "calls", "evidence": "web/src/components/primitives.tsx:834", "status": "extracted"}
+{"from": "function:web/src/components/primitives.tsx:AreaPage", "to": "function:web/src/components/primitives.tsx:TagOriginNote", "type": "calls", "evidence": "web/src/components/primitives.tsx:829", "status": "extracted"}
+{"from": "function:web/src/components/findings_table.tsx:FindingsTable", "to": "function:web/src/components/finding_detail.tsx:FindingDetail", "type": "calls", "evidence": "web/src/components/findings_table.tsx:234", "status": "extracted"}
+{"from": "function:web/src/components/findings_table.tsx:FindingsTable", "to": "function:web/src/components/hash_state.tsx:HashState", "type": "calls", "evidence": "web/src/components/findings_table.tsx:268", "status": "extracted"}
+{"from": "function:web/src/components/guide_drawer.tsx:GuideDrawer", "to": "function:web/src/components/guide_drawer.tsx:fetchGuideData", "type": "calls", "evidence": "web/src/components/guide_drawer.tsx:146", "status": "extracted"}
+{"from": "function:web/src/components/guide.tsx:GuideTab", "to": "endpoint:GET /api/guide/sql/{query_id}", "type": "calls", "evidence": "web/src/components/guide.tsx:2321", "status": "extracted"}
+{"from": "function:web/src/components/guide.tsx:GuideTab", "to": "function:web/src/components/guide_drawer.tsx:fetchGuideData", "type": "calls", "evidence": "web/src/components/guide.tsx:2771", "status": "extracted"}
+{"from": "function:web/src/components/nav_hash.ts:applyOldKeyRedirects", "to": "file:web/src/components/tab_registry.ts", "type": "reads", "evidence": "web/src/components/nav_hash.ts:124", "status": "extracted"}
+{"from": "function:web/src/components/roles.ts:sidebarKeysForRole", "to": "function:web/src/components/roles.ts:roleAreasFor", "type": "calls", "evidence": "web/src/components/roles.ts:50", "status": "extracted"}
+{"from": "ui_screen:tab_overview", "to": "file:web/src/components/tab_registry.ts", "type": "configures", "evidence": "web/src/components/tab_registry.ts:315", "status": "extracted"}
+{"from": "function:web/src/components/primitives.tsx:AreaPage", "to": "ui_screen:tab_overview", "type": "implements", "evidence": "web/src/components/primitives.tsx:702", "status": "extracted"}
+{"from": "ui_screen:tab_actions", "to": "file:web/src/components/tab_registry.ts", "type": "configures", "evidence": "web/src/components/tab_registry.ts:316", "status": "extracted"}
+{"from": "function:web/src/components/primitives.tsx:AreaPage", "to": "ui_screen:tab_actions", "type": "implements", "evidence": "web/src/components/primitives.tsx:702", "status": "extracted"}
+{"from": "function:web/src/App.tsx:App", "to": "ui_screen:tab_money", "type": "calls", "evidence": "web/src/App.tsx:1177", "status": "extracted"}
+{"from": "ui_screen:tab_cost", "to": "file:web/src/components/tab_registry.ts", "type": "configures", "evidence": "web/src/components/tab_registry.ts:317", "status": "extracted"}
+{"from": "function:web/src/components/primitives.tsx:AreaPage", "to": "ui_screen:tab_cost", "type": "implements", "evidence": "web/src/components/primitives.tsx:702", "status": "extracted"}
+{"from": "ui_screen:tab_waste", "to": "file:web/src/components/tab_registry.ts", "type": "configures", "evidence": "web/src/components/tab_registry.ts:318", "status": "extracted"}
+{"from": "function:web/src/components/primitives.tsx:AreaPage", "to": "ui_screen:tab_waste", "type": "implements", "evidence": "web/src/components/primitives.tsx:702", "status": "extracted"}
+{"from": "ui_screen:tab_compute", "to": "file:web/src/components/tab_registry.ts", "type": "configures", "evidence": "web/src/components/tab_registry.ts:325", "status": "extracted"}
+{"from": "function:web/src/components/primitives.tsx:AreaPage", "to": "ui_screen:tab_compute", "type": "implements", "evidence": "web/src/components/primitives.tsx:702", "status": "extracted"}
+{"from": "ui_screen:tab_jobs", "to": "file:web/src/components/tab_registry.ts", "type": "configures", "evidence": "web/src/components/tab_registry.ts:326", "status": "extracted"}
+{"from": "function:web/src/components/primitives.tsx:AreaPage", "to": "ui_screen:tab_jobs", "type": "implements", "evidence": "web/src/components/primitives.tsx:702", "status": "extracted"}
+{"from": "ui_screen:tab_query", "to": "file:web/src/components/tab_registry.ts", "type": "configures", "evidence": "web/src/components/tab_registry.ts:327", "status": "extracted"}
+{"from": "function:web/src/components/primitives.tsx:AreaPage", "to": "ui_screen:tab_query", "type": "implements", "evidence": "web/src/components/primitives.tsx:702", "status": "extracted"}
+{"from": "ui_screen:tab_storage", "to": "file:web/src/components/tab_registry.ts", "type": "configures", "evidence": "web/src/components/tab_registry.ts:333", "status": "extracted"}
+{"from": "function:web/src/components/primitives.tsx:AreaPage", "to": "ui_screen:tab_storage", "type": "implements", "evidence": "web/src/components/primitives.tsx:702", "status": "extracted"}
+{"from": "ui_screen:tab_mlai", "to": "file:web/src/components/tab_registry.ts", "type": "configures", "evidence": "web/src/components/tab_registry.ts:323", "status": "extracted"}
+{"from": "function:web/src/components/primitives.tsx:AreaPage", "to": "ui_screen:tab_mlai", "type": "implements", "evidence": "web/src/components/primitives.tsx:702", "status": "extracted"}
+{"from": "ui_screen:tab_genie", "to": "file:web/src/components/tab_registry.ts", "type": "configures", "evidence": "web/src/components/tab_registry.ts:324", "status": "extracted"}
+{"from": "function:web/src/components/primitives.tsx:AreaPage", "to": "ui_screen:tab_genie", "type": "implements", "evidence": "web/src/components/primitives.tsx:702", "status": "extracted"}
+{"from": "ui_screen:tab_governance", "to": "file:web/src/components/tab_registry.ts", "type": "configures", "evidence": "web/src/components/tab_registry.ts:332", "status": "extracted"}
+{"from": "function:web/src/components/primitives.tsx:AreaPage", "to": "ui_screen:tab_governance", "type": "implements", "evidence": "web/src/components/primitives.tsx:702", "status": "extracted"}
+{"from": "ui_screen:tab_tags", "to": "file:web/src/components/tab_registry.ts", "type": "configures", "evidence": "web/src/components/tab_registry.ts:334", "status": "extracted"}
+{"from": "function:web/src/components/primitives.tsx:AreaPage", "to": "ui_screen:tab_tags", "type": "implements", "evidence": "web/src/components/primitives.tsx:702", "status": "extracted"}
+{"from": "ui_screen:tab_usage", "to": "file:web/src/components/tab_registry.ts", "type": "configures", "evidence": "web/src/components/tab_registry.ts:331", "status": "extracted"}
+{"from": "function:web/src/components/primitives.tsx:AreaPage", "to": "ui_screen:tab_usage", "type": "implements", "evidence": "web/src/components/primitives.tsx:702", "status": "extracted"}
+{"from": "ui_screen:tab_findings", "to": "file:web/src/components/tab_registry.ts", "type": "configures", "evidence": "web/src/components/tab_registry.ts:335", "status": "extracted"}
+{"from": "function:web/src/components/primitives.tsx:AreaPage", "to": "ui_screen:tab_findings", "type": "implements", "evidence": "web/src/components/primitives.tsx:702", "status": "extracted"}
+{"from": "ui_screen:tab_coverage", "to": "file:web/src/components/tab_registry.ts", "type": "configures", "evidence": "web/src/components/tab_registry.ts:336", "status": "extracted"}
+{"from": "function:web/src/components/primitives.tsx:AreaPage", "to": "ui_screen:tab_coverage", "type": "implements", "evidence": "web/src/components/primitives.tsx:702", "status": "extracted"}
+{"from": "ui_screen:tab_guide", "to": "endpoint:GET /api/guide", "type": "calls", "evidence": "web/src/components/guide_drawer.tsx:22", "status": "extracted"}
+{"from": "ui_screen:tab_guide", "to": "endpoint:GET /api/guide/sql/{query_id}", "type": "calls", "evidence": "web/src/components/guide.tsx:2321", "status": "extracted"}
+{"from": "ui_screen:first_run", "to": "endpoint:GET /api/refresh", "type": "calls", "evidence": "web/src/components/first_run.tsx:12", "status": "extracted"}
+{"from": "ui_screen:first_run", "to": "endpoint:POST /api/refresh", "type": "calls", "evidence": "web/src/components/first_run.tsx:21", "status": "extracted"}
+{"from": "ui_screen:shell", "to": "endpoint:GET /api/status", "type": "calls", "evidence": "web/src/App.tsx:842", "status": "extracted"}
+{"from": "ui_screen:shell", "to": "endpoint:GET /api/meta", "type": "calls", "evidence": "web/src/App.tsx:849", "status": "extracted"}
+{"from": "ui_screen:shell", "to": "endpoint:GET /api/workspaces", "type": "calls", "evidence": "web/src/App.tsx:858", "status": "extracted"}
+{"from": "ui_screen:shell", "to": "endpoint:GET /api/findings", "type": "calls", "evidence": "web/src/App.tsx:910", "status": "extracted"}
+{"from": "ui_screen:shell", "to": "endpoint:GET /api/dims", "type": "calls", "evidence": "web/src/App.tsx:830", "status": "extracted"}
+{"from": "ui_screen:shell", "to": "endpoint:GET /api/tags", "type": "calls", "evidence": "web/src/components/tag_picker.tsx:179", "status": "extracted"}
+{"from": "ui_screen:shell", "to": "endpoint:GET /api/refresh", "type": "calls", "evidence": "web/src/components/first_run.tsx:12", "status": "extracted"}
+{"from": "ui_screen:shell", "to": "endpoint:POST /api/refresh", "type": "calls", "evidence": "web/src/components/first_run.tsx:21", "status": "extracted"}
+{"from": "ui_screen:shell", "to": "endpoint:GET /api/guide", "type": "calls", "evidence": "web/src/components/guide_drawer.tsx:22", "status": "extracted"}
+{"from": "ui_screen:shell", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/components/finding_detail.tsx:1262", "status": "extracted"}
+{"from": "ui_screen:shell", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/components/job_panel.tsx:79", "status": "extracted"}
+{"from": "ui_screen:tab_guide", "to": "ui_screen:shell", "type": "part_of", "evidence": "web/src/App.tsx:1184", "status": "extracted"}
+{"from": "ui_screen:first_run", "to": "ui_screen:shell", "type": "part_of", "evidence": "web/src/App.tsx:1028", "status": "extracted"}
+{"from": "ui_screen:tab_overview", "to": "ui_screen:shell", "type": "part_of", "evidence": "web/src/App.tsx:1149", "status": "extracted"}
+{"from": "ui_screen:tab_actions", "to": "ui_screen:shell", "type": "part_of", "evidence": "web/src/App.tsx:1149", "status": "extracted"}
+{"from": "ui_screen:tab_money", "to": "ui_screen:shell", "type": "part_of", "evidence": "web/src/App.tsx:1175", "status": "extracted"}
+{"from": "ui_screen:tab_cost", "to": "ui_screen:shell", "type": "part_of", "evidence": "web/src/App.tsx:1149", "status": "extracted"}
+{"from": "ui_screen:tab_waste", "to": "ui_screen:shell", "type": "part_of", "evidence": "web/src/App.tsx:1149", "status": "extracted"}
+{"from": "ui_screen:tab_compute", "to": "ui_screen:shell", "type": "part_of", "evidence": "web/src/App.tsx:1149", "status": "extracted"}
+{"from": "ui_screen:tab_jobs", "to": "ui_screen:shell", "type": "part_of", "evidence": "web/src/App.tsx:1149", "status": "extracted"}
+{"from": "ui_screen:tab_query", "to": "ui_screen:shell", "type": "part_of", "evidence": "web/src/App.tsx:1149", "status": "extracted"}
+{"from": "ui_screen:tab_storage", "to": "ui_screen:shell", "type": "part_of", "evidence": "web/src/App.tsx:1149", "status": "extracted"}
+{"from": "ui_screen:tab_mlai", "to": "ui_screen:shell", "type": "part_of", "evidence": "web/src/App.tsx:1149", "status": "extracted"}
+{"from": "ui_screen:tab_genie", "to": "ui_screen:shell", "type": "part_of", "evidence": "web/src/App.tsx:1149", "status": "extracted"}
+{"from": "ui_screen:tab_governance", "to": "ui_screen:shell", "type": "part_of", "evidence": "web/src/App.tsx:1149", "status": "extracted"}
+{"from": "ui_screen:tab_tags", "to": "ui_screen:shell", "type": "part_of", "evidence": "web/src/App.tsx:1149", "status": "extracted"}
+{"from": "ui_screen:tab_usage", "to": "ui_screen:shell", "type": "part_of", "evidence": "web/src/App.tsx:1149", "status": "extracted"}
+{"from": "ui_screen:tab_findings", "to": "ui_screen:shell", "type": "part_of", "evidence": "web/src/App.tsx:1149", "status": "extracted"}
+{"from": "ui_screen:tab_coverage", "to": "ui_screen:shell", "type": "part_of", "evidence": "web/src/App.tsx:1149", "status": "extracted"}
+{"from": "ui_screen:tab_query:trend", "to": "ui_screen:tab_query", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:327", "status": "extracted"}
+{"from": "file:web/src/tabs/query_trend.tsx", "to": "function:web/src/tabs/query_trend.tsx:QueryTrendContent", "type": "contains", "evidence": "web/src/tabs/query_trend.tsx:92", "status": "extracted"}
+{"from": "function:web/src/tabs/query_trend.tsx:QueryTrendContent", "to": "ui_screen:tab_query:trend", "type": "implements", "evidence": "web/src/tabs/query_trend.tsx:387", "status": "extracted"}
+{"from": "function:web/src/tabs/query_trend.tsx:QueryTrendContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/query_trend.tsx:387", "status": "extracted"}
+{"from": "ui_screen:tab_query:trend", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/query_trend.tsx:100", "status": "extracted"}
+{"from": "ui_screen:tab_query:trend", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/query_trend.tsx:107", "status": "extracted"}
+{"from": "ui_screen:tab_query:trend", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/query_trend.tsx:108", "status": "extracted"}
+{"from": "ui_screen:tab_query:trend", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/query_trend.tsx:109", "status": "extracted"}
+{"from": "ui_screen:tab_query:trend", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/query_trend.tsx:113", "status": "extracted"}
+{"from": "ui_screen:tab_query:trend", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/query_trend.tsx:114", "status": "extracted"}
+{"from": "ui_screen:tab_query:trend", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/query_trend.tsx:115", "status": "extracted"}
+{"from": "ui_screen:tab_query:trend", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/query_trend.tsx:116", "status": "extracted"}
+{"from": "ui_screen:tab_query:trend", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/query_trend.tsx:117", "status": "extracted"}
+{"from": "file:web/src/tabs/tab_actions.tsx", "to": "function:web/src/tabs/tab_actions.tsx:ActionsPanel", "type": "contains", "evidence": "web/src/tabs/tab_actions.tsx:167", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_actions.tsx:ActionsPanel", "to": "ui_screen:tab_actions", "type": "implements", "evidence": "web/src/tabs/tab_actions.tsx:292", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_actions.tsx:ActionsPanel", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_actions.tsx:292", "status": "extracted"}
+{"from": "ui_screen:tab_actions", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_actions.tsx:169", "status": "extracted"}
+{"from": "ui_screen:tab_actions", "to": "endpoint:GET /api/rollup/top", "type": "calls", "evidence": "web/src/tabs/tab_actions.tsx:175", "status": "extracted"}
+{"from": "ui_screen:tab_actions", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_actions.tsx:86", "status": "extracted"}
+{"from": "ui_screen:tab_compute:warehouses", "to": "ui_screen:tab_compute", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:325", "status": "extracted"}
+{"from": "file:web/src/tabs/tab_compute.tsx", "to": "function:web/src/tabs/tab_compute.tsx:ComputeWarehousesContent", "type": "contains", "evidence": "web/src/tabs/tab_compute.tsx:721", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_compute.tsx:ComputeWarehousesContent", "to": "ui_screen:tab_compute:warehouses", "type": "implements", "evidence": "web/src/tabs/tab_compute.tsx:863", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_compute.tsx:ComputeWarehousesContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_compute.tsx:863", "status": "extracted"}
+{"from": "ui_screen:tab_compute:warehouses", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_compute.tsx:722", "status": "extracted"}
+{"from": "ui_screen:tab_compute:warehouses", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_compute.tsx:723", "status": "extracted"}
+{"from": "ui_screen:tab_compute:warehouses", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_compute.tsx:724", "status": "extracted"}
+{"from": "ui_screen:tab_compute:warehouses", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_compute.tsx:725", "status": "extracted"}
+{"from": "ui_screen:tab_compute:warehouses", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_compute.tsx:726", "status": "extracted"}
+{"from": "ui_screen:tab_compute:warehouses", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_compute.tsx:727", "status": "extracted"}
+{"from": "ui_screen:tab_compute:warehouses", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_compute.tsx:728", "status": "extracted"}
+{"from": "ui_screen:tab_compute:warehouses", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_compute.tsx:729", "status": "extracted"}
+{"from": "ui_screen:tab_compute:warehouses", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_compute.tsx:730", "status": "extracted"}
+{"from": "ui_screen:tab_compute:warehouses", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_compute.tsx:741", "status": "extracted"}
+{"from": "ui_screen:tab_compute:warehouses", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/components/last_activity.tsx:39", "status": "extracted"}
+{"from": "ui_screen:tab_compute:clusters", "to": "ui_screen:tab_compute", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:325", "status": "extracted"}
+{"from": "file:web/src/tabs/tab_compute.tsx", "to": "function:web/src/tabs/tab_compute.tsx:ComputeClustersContent", "type": "contains", "evidence": "web/src/tabs/tab_compute.tsx:867", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_compute.tsx:ComputeClustersContent", "to": "ui_screen:tab_compute:clusters", "type": "implements", "evidence": "web/src/tabs/tab_compute.tsx:981", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_compute.tsx:ComputeClustersContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_compute.tsx:981", "status": "extracted"}
+{"from": "ui_screen:tab_compute:clusters", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_compute.tsx:868", "status": "extracted"}
+{"from": "ui_screen:tab_compute:clusters", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_compute.tsx:870", "status": "extracted"}
+{"from": "ui_screen:tab_compute:clusters", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_compute.tsx:871", "status": "extracted"}
+{"from": "ui_screen:tab_compute:clusters", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_compute.tsx:873", "status": "extracted"}
+{"from": "ui_screen:tab_compute:clusters", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_compute.tsx:874", "status": "extracted"}
+{"from": "ui_screen:tab_compute:clusters", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/components/last_activity.tsx:39", "status": "extracted"}
+{"from": "ui_screen:tab_compute:config", "to": "ui_screen:tab_compute", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:325", "status": "extracted"}
+{"from": "file:web/src/tabs/tab_compute.tsx", "to": "function:web/src/tabs/tab_compute.tsx:ComputeConfigContent", "type": "contains", "evidence": "web/src/tabs/tab_compute.tsx:1039", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_compute.tsx:ComputeConfigContent", "to": "ui_screen:tab_compute:config", "type": "implements", "evidence": "web/src/tabs/tab_compute.tsx:1110", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_compute.tsx:ComputeConfigContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_compute.tsx:1110", "status": "extracted"}
+{"from": "ui_screen:tab_compute:config", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_compute.tsx:1040", "status": "extracted"}
+{"from": "ui_screen:tab_compute:config", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_compute.tsx:1042", "status": "extracted"}
+{"from": "ui_screen:tab_cost:trend", "to": "ui_screen:tab_cost", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:317", "status": "extracted"}
+{"from": "file:web/src/tabs/tab_cost.tsx", "to": "function:web/src/tabs/tab_cost.tsx:CostTrendContent", "type": "contains", "evidence": "web/src/tabs/tab_cost.tsx:279", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_cost.tsx:CostTrendContent", "to": "ui_screen:tab_cost:trend", "type": "implements", "evidence": "web/src/tabs/tab_cost.tsx:475", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_cost.tsx:CostTrendContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_cost.tsx:475", "status": "extracted"}
+{"from": "ui_screen:tab_cost:trend", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_cost.tsx:281", "status": "extracted"}
+{"from": "ui_screen:tab_cost:trend", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_cost.tsx:282", "status": "extracted"}
+{"from": "ui_screen:tab_cost:trend", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_cost.tsx:283", "status": "extracted"}
+{"from": "ui_screen:tab_cost:trend", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_cost.tsx:284", "status": "extracted"}
+{"from": "ui_screen:tab_cost:trend", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_cost.tsx:285", "status": "extracted"}
+{"from": "ui_screen:tab_cost:trend", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_cost.tsx:310", "status": "extracted"}
+{"from": "ui_screen:tab_cost:trend", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_cost.tsx:211", "status": "extracted"}
+{"from": "ui_screen:tab_cost:trend", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/cost_trend_by.tsx:83", "status": "extracted"}
+{"from": "ui_screen:tab_cost:trend", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/cost_trend_by.tsx:84", "status": "extracted"}
+{"from": "ui_screen:tab_cost:product", "to": "ui_screen:tab_cost", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:317", "status": "extracted"}
+{"from": "file:web/src/tabs/tab_cost.tsx", "to": "function:web/src/tabs/tab_cost.tsx:CostProductContent", "type": "contains", "evidence": "web/src/tabs/tab_cost.tsx:478", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_cost.tsx:CostProductContent", "to": "ui_screen:tab_cost:product", "type": "implements", "evidence": "web/src/tabs/tab_cost.tsx:629", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_cost.tsx:CostProductContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_cost.tsx:629", "status": "extracted"}
+{"from": "ui_screen:tab_cost:product", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_cost.tsx:482", "status": "extracted"}
+{"from": "ui_screen:tab_cost:product", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_cost.tsx:483", "status": "extracted"}
+{"from": "ui_screen:tab_cost:product", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_cost.tsx:484", "status": "extracted"}
+{"from": "ui_screen:tab_cost:product", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_cost.tsx:485", "status": "extracted"}
+{"from": "ui_screen:tab_cost:product", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_cost.tsx:488", "status": "extracted"}
+{"from": "ui_screen:tab_cost:allocation", "to": "ui_screen:tab_cost", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:317", "status": "extracted"}
+{"from": "file:web/src/tabs/tab_cost.tsx", "to": "function:web/src/tabs/tab_cost.tsx:CostAllocationContent", "type": "contains", "evidence": "web/src/tabs/tab_cost.tsx:793", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_cost.tsx:CostAllocationContent", "to": "ui_screen:tab_cost:allocation", "type": "implements", "evidence": "web/src/tabs/tab_cost.tsx:947", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_cost.tsx:CostAllocationContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_cost.tsx:947", "status": "extracted"}
+{"from": "ui_screen:tab_cost:allocation", "to": "endpoint:GET /api/rollup/keys", "type": "calls", "evidence": "web/src/tabs/tab_cost.tsx:797", "status": "extracted"}
+{"from": "ui_screen:tab_cost:allocation", "to": "endpoint:GET /api/rollup", "type": "calls", "evidence": "web/src/tabs/tab_cost.tsx:800", "status": "extracted"}
+{"from": "ui_screen:tab_cost:allocation", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_cost.tsx:807", "status": "extracted"}
+{"from": "ui_screen:tab_cost:allocation", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_cost.tsx:808", "status": "extracted"}
+{"from": "ui_screen:tab_cost:allocation", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_cost.tsx:809", "status": "extracted"}
+{"from": "ui_screen:tab_cost:allocation", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_cost.tsx:812", "status": "extracted"}
+{"from": "ui_screen:tab_cost:allocation", "to": "endpoint:GET /api/rollup/keys", "type": "calls", "evidence": "web/src/tabs/tab_cost.tsx:769", "status": "extracted"}
+{"from": "ui_screen:tab_cost:allocation", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_cost.tsx:637", "status": "extracted"}
+{"from": "ui_screen:tab_cost:allocation", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_cost.tsx:638", "status": "extracted"}
+{"from": "ui_screen:tab_cost:allocation", "to": "endpoint:GET /api/rollup/keys", "type": "calls", "evidence": "web/src/components/tag_rollup.tsx:482", "status": "extracted"}
+{"from": "ui_screen:tab_cost:allocation", "to": "endpoint:GET /api/rollup", "type": "calls", "evidence": "web/src/components/tag_rollup.tsx:150", "status": "extracted"}
+{"from": "ui_screen:tab_cost:allocation", "to": "endpoint:GET /api/workspace_tags", "type": "calls", "evidence": "web/src/tabs/tab_cost.tsx:959", "status": "extracted"}
+{"from": "ui_screen:tab_cost:resource", "to": "ui_screen:tab_cost", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:317", "status": "extracted"}
+{"from": "file:web/src/tabs/tab_cost.tsx", "to": "function:web/src/tabs/tab_cost.tsx:CostResourceContent", "type": "contains", "evidence": "web/src/tabs/tab_cost.tsx:1068", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_cost.tsx:CostResourceContent", "to": "ui_screen:tab_cost:resource", "type": "implements", "evidence": "web/src/tabs/tab_cost.tsx:1182", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_cost.tsx:CostResourceContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_cost.tsx:1182", "status": "extracted"}
+{"from": "ui_screen:tab_cost:resource", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_cost.tsx:1070", "status": "extracted"}
+{"from": "ui_screen:tab_cost:resource", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_cost.tsx:1071", "status": "extracted"}
+{"from": "ui_screen:tab_cost:resource", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_cost.tsx:1072", "status": "extracted"}
+{"from": "ui_screen:tab_cost:resource", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_cost.tsx:1073", "status": "extracted"}
+{"from": "ui_screen:tab_cost:resource", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_cost.tsx:1074", "status": "extracted"}
+{"from": "ui_screen:tab_cost:resource", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_cost.tsx:1076", "status": "extracted"}
+{"from": "ui_screen:tab_cost:resource", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_cost.tsx:1078", "status": "extracted"}
+{"from": "ui_screen:tab_cost:resource", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_cost.tsx:1079", "status": "extracted"}
+{"from": "ui_screen:tab_cost:pricing", "to": "ui_screen:tab_cost", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:317", "status": "extracted"}
+{"from": "file:web/src/tabs/tab_cost.tsx", "to": "function:web/src/tabs/tab_cost.tsx:CostPricingContent", "type": "contains", "evidence": "web/src/tabs/tab_cost.tsx:1253", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_cost.tsx:CostPricingContent", "to": "ui_screen:tab_cost:pricing", "type": "implements", "evidence": "web/src/tabs/tab_cost.tsx:1349", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_cost.tsx:CostPricingContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_cost.tsx:1349", "status": "extracted"}
+{"from": "ui_screen:tab_cost:pricing", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_cost.tsx:1254", "status": "extracted"}
+{"from": "ui_screen:tab_cost:pricing", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_cost.tsx:1255", "status": "extracted"}
+{"from": "ui_screen:tab_cost:pricing", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_cost.tsx:1256", "status": "extracted"}
+{"from": "ui_screen:tab_cost:pricing", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_cost.tsx:1257", "status": "extracted"}
+{"from": "ui_screen:tab_cost:pricing", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_cost.tsx:1260", "status": "extracted"}
+{"from": "ui_screen:tab_cost:pricing", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_cost.tsx:1261", "status": "extracted"}
+{"from": "ui_screen:tab_cost:pricing", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_cost.tsx:1196", "status": "extracted"}
+{"from": "ui_screen:tab_cost:pricing", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_cost.tsx:1197", "status": "extracted"}
+{"from": "ui_screen:tab_cost:chargeback", "to": "ui_screen:tab_cost", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:317", "status": "extracted"}
+{"from": "file:web/src/tabs/tab_cost.tsx", "to": "function:web/src/tabs/tab_cost.tsx:CostChargebackContent", "type": "contains", "evidence": "web/src/tabs/tab_cost.tsx:1693", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_cost.tsx:CostChargebackContent", "to": "ui_screen:tab_cost:chargeback", "type": "implements", "evidence": "web/src/tabs/tab_cost.tsx:1974", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_cost.tsx:CostChargebackContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_cost.tsx:1974", "status": "extracted"}
+{"from": "ui_screen:tab_cost:chargeback", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_cost.tsx:1702", "status": "extracted"}
+{"from": "ui_screen:tab_cost:chargeback", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_cost.tsx:1704", "status": "extracted"}
+{"from": "ui_screen:tab_cost:chargeback", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_cost.tsx:1706", "status": "extracted"}
+{"from": "ui_screen:tab_cost_before_after", "to": "ui_screen:tab_cost", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:317", "status": "extracted"}
+{"from": "file:web/src/tabs/tab_cost_before_after.tsx", "to": "function:web/src/tabs/tab_cost_before_after.tsx:CostBeforeAfterContent", "type": "contains", "evidence": "web/src/tabs/tab_cost_before_after.tsx:336", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_cost_before_after.tsx:CostBeforeAfterContent", "to": "ui_screen:tab_cost_before_after", "type": "implements", "evidence": "web/src/tabs/tab_cost_before_after.tsx:557", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_cost_before_after.tsx:CostBeforeAfterContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_cost_before_after.tsx:557", "status": "extracted"}
+{"from": "ui_screen:tab_cost_before_after", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_cost_before_after.tsx:349", "status": "extracted"}
+{"from": "ui_screen:tab_cost_before_after", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_cost_before_after.tsx:350", "status": "extracted"}
+{"from": "ui_screen:tab_cost_before_after", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_cost_before_after.tsx:242", "status": "extracted"}
+{"from": "ui_screen:tab_cost_before_after", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_cost_before_after.tsx:243", "status": "extracted"}
+{"from": "ui_screen:tab_cost_before_after", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_cost_before_after.tsx:244", "status": "extracted"}
+{"from": "ui_screen:tab_coverage:sources", "to": "ui_screen:tab_coverage", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:336", "status": "extracted"}
+{"from": "file:web/src/tabs/tab_coverage.tsx", "to": "function:web/src/tabs/tab_coverage.tsx:CoverageSourcesPanel", "type": "contains", "evidence": "web/src/tabs/tab_coverage.tsx:260", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_coverage.tsx:CoverageSourcesPanel", "to": "ui_screen:tab_coverage:sources", "type": "implements", "evidence": "web/src/tabs/tab_coverage.tsx:634", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_coverage.tsx:CoverageSourcesPanel", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_coverage.tsx:634", "status": "extracted"}
+{"from": "ui_screen:tab_coverage:sources", "to": "endpoint:GET /api/coverage", "type": "calls", "evidence": "web/src/tabs/tab_coverage.tsx:27", "status": "extracted"}
+{"from": "ui_screen:tab_coverage:sources", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_coverage.tsx:160", "status": "extracted"}
+{"from": "ui_screen:tab_coverage:sources", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_coverage.tsx:222", "status": "extracted"}
+{"from": "ui_screen:tab_coverage:couldnt", "to": "ui_screen:tab_coverage", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:336", "status": "extracted"}
+{"from": "file:web/src/tabs/tab_coverage.tsx", "to": "function:web/src/tabs/tab_coverage.tsx:CoverageCouldntPanel", "type": "contains", "evidence": "web/src/tabs/tab_coverage.tsx:484", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_coverage.tsx:CoverageCouldntPanel", "to": "ui_screen:tab_coverage:couldnt", "type": "implements", "evidence": "web/src/tabs/tab_coverage.tsx:635", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_coverage.tsx:CoverageCouldntPanel", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_coverage.tsx:635", "status": "extracted"}
+{"from": "ui_screen:tab_coverage:couldnt", "to": "endpoint:GET /api/coverage", "type": "calls", "evidence": "web/src/tabs/tab_coverage.tsx:27", "status": "extracted"}
+{"from": "ui_screen:tab_coverage:couldnt", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/components/finding_detail.tsx:1238", "status": "extracted"}
+{"from": "ui_screen:tab_coverage:couldnt", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/components/finding_detail.tsx:1262", "status": "extracted"}
+{"from": "ui_screen:tab_coverage:couldnt", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/components/finding_detail.tsx:1266", "status": "extracted"}
+{"from": "ui_screen:tab_coverage:limits", "to": "ui_screen:tab_coverage", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:336", "status": "extracted"}
+{"from": "file:web/src/tabs/tab_coverage.tsx", "to": "function:web/src/tabs/tab_coverage.tsx:CoverageLimitsPanel", "type": "contains", "evidence": "web/src/tabs/tab_coverage.tsx:546", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_coverage.tsx:CoverageLimitsPanel", "to": "ui_screen:tab_coverage:limits", "type": "implements", "evidence": "web/src/tabs/tab_coverage.tsx:636", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_coverage.tsx:CoverageLimitsPanel", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_coverage.tsx:636", "status": "extracted"}
+{"from": "ui_screen:tab_coverage:limits", "to": "endpoint:GET /api/coverage", "type": "calls", "evidence": "web/src/tabs/tab_coverage.tsx:27", "status": "extracted"}
+{"from": "file:web/src/tabs/tab_findings.tsx", "to": "function:web/src/tabs/tab_findings.tsx:AllFindingsPanel", "type": "contains", "evidence": "web/src/tabs/tab_findings.tsx:249", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_findings.tsx:AllFindingsPanel", "to": "ui_screen:tab_findings", "type": "implements", "evidence": "web/src/tabs/tab_findings.tsx:541", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_findings.tsx:AllFindingsPanel", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_findings.tsx:541", "status": "extracted"}
+{"from": "ui_screen:tab_findings", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/components/finding_detail.tsx:1238", "status": "extracted"}
+{"from": "ui_screen:tab_findings", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/components/finding_detail.tsx:1262", "status": "extracted"}
+{"from": "ui_screen:tab_findings", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/components/finding_detail.tsx:1266", "status": "extracted"}
+{"from": "file:web/src/tabs/tab_genie.tsx", "to": "function:web/src/tabs/tab_genie.tsx:GeniePanel", "type": "contains", "evidence": "web/src/tabs/tab_genie.tsx:93", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_genie.tsx:GeniePanel", "to": "ui_screen:tab_genie", "type": "implements", "evidence": "web/src/tabs/tab_genie.tsx:321", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_genie.tsx:GeniePanel", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_genie.tsx:321", "status": "extracted"}
+{"from": "ui_screen:tab_genie", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_genie.tsx:96", "status": "extracted"}
+{"from": "ui_screen:tab_genie", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_genie.tsx:97", "status": "extracted"}
+{"from": "ui_screen:tab_genie", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_genie.tsx:98", "status": "extracted"}
+{"from": "ui_screen:tab_genie", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_genie.tsx:99", "status": "extracted"}
+{"from": "ui_screen:tab_genie", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_genie.tsx:100", "status": "extracted"}
+{"from": "ui_screen:tab_genie", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_genie.tsx:101", "status": "extracted"}
+{"from": "ui_screen:tab_genie", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_genie.tsx:102", "status": "extracted"}
+{"from": "ui_screen:tab_genie", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_genie.tsx:103", "status": "extracted"}
+{"from": "ui_screen:tab_genie", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_genie.tsx:105", "status": "extracted"}
+{"from": "ui_screen:tab_genie", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_genie.tsx:107", "status": "extracted"}
+{"from": "ui_screen:tab_genie", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_genie.tsx:108", "status": "extracted"}
+{"from": "ui_screen:tab_genie", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_genie.tsx:109", "status": "extracted"}
+{"from": "ui_screen:tab_genie", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_genie.tsx:110", "status": "extracted"}
+{"from": "ui_screen:tab_governance:access", "to": "ui_screen:tab_governance", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:332", "status": "extracted"}
+{"from": "file:web/src/tabs/tab_governance.tsx", "to": "function:web/src/tabs/tab_governance.tsx:GovAccessContent", "type": "contains", "evidence": "web/src/tabs/tab_governance.tsx:102", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_governance.tsx:GovAccessContent", "to": "ui_screen:tab_governance:access", "type": "implements", "evidence": "web/src/tabs/tab_governance.tsx:681", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_governance.tsx:GovAccessContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_governance.tsx:681", "status": "extracted"}
+{"from": "ui_screen:tab_governance:access", "to": "endpoint:GET /api/coverage", "type": "calls", "evidence": "web/src/tabs/tab_governance.tsx:69", "status": "extracted"}
+{"from": "ui_screen:tab_governance:access", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_governance.tsx:104", "status": "extracted"}
+{"from": "ui_screen:tab_governance:access", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_governance.tsx:105", "status": "extracted"}
+{"from": "ui_screen:tab_governance:access", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_governance.tsx:106", "status": "extracted"}
+{"from": "ui_screen:tab_governance:access", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_governance.tsx:107", "status": "extracted"}
+{"from": "ui_screen:tab_governance:access", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_governance.tsx:108", "status": "extracted"}
+{"from": "ui_screen:tab_governance:access", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_governance.tsx:109", "status": "extracted"}
+{"from": "ui_screen:tab_governance:access", "to": "endpoint:GET /api/workspace_usage", "type": "calls", "evidence": "web/src/tabs/tab_usage.tsx:184", "status": "extracted"}
+{"from": "ui_screen:tab_governance:admin", "to": "ui_screen:tab_governance", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:332", "status": "extracted"}
+{"from": "file:web/src/tabs/tab_governance.tsx", "to": "function:web/src/tabs/tab_governance.tsx:GovAdminContent", "type": "contains", "evidence": "web/src/tabs/tab_governance.tsx:253", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_governance.tsx:GovAdminContent", "to": "ui_screen:tab_governance:admin", "type": "implements", "evidence": "web/src/tabs/tab_governance.tsx:682", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_governance.tsx:GovAdminContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_governance.tsx:682", "status": "extracted"}
+{"from": "ui_screen:tab_governance:admin", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_governance.tsx:254", "status": "extracted"}
+{"from": "ui_screen:tab_governance:admin", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/components/last_activity.tsx:39", "status": "extracted"}
+{"from": "ui_screen:tab_governance:sensitive", "to": "ui_screen:tab_governance", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:332", "status": "extracted"}
+{"from": "file:web/src/tabs/tab_governance.tsx", "to": "function:web/src/tabs/tab_governance.tsx:GovSensitiveContent", "type": "contains", "evidence": "web/src/tabs/tab_governance.tsx:368", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_governance.tsx:GovSensitiveContent", "to": "ui_screen:tab_governance:sensitive", "type": "implements", "evidence": "web/src/tabs/tab_governance.tsx:683", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_governance.tsx:GovSensitiveContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_governance.tsx:683", "status": "extracted"}
+{"from": "ui_screen:tab_governance:sensitive", "to": "endpoint:GET /api/abac_policies", "type": "calls", "evidence": "web/src/tabs/tab_governance.tsx:329", "status": "extracted"}
+{"from": "ui_screen:tab_governance:sensitive", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_governance.tsx:373", "status": "extracted"}
+{"from": "ui_screen:tab_governance:sensitive", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_governance.tsx:374", "status": "extracted"}
+{"from": "ui_screen:tab_governance:sensitive", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_governance.tsx:375", "status": "extracted"}
+{"from": "ui_screen:tab_governance:sensitive", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_governance.tsx:376", "status": "extracted"}
+{"from": "ui_screen:tab_governance:sensitive", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_governance.tsx:377", "status": "extracted"}
+{"from": "ui_screen:tab_governance:lineage", "to": "ui_screen:tab_governance", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:332", "status": "extracted"}
+{"from": "file:web/src/tabs/tab_governance.tsx", "to": "function:web/src/tabs/tab_governance.tsx:GovLineageContent", "type": "contains", "evidence": "web/src/tabs/tab_governance.tsx:527", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_governance.tsx:GovLineageContent", "to": "ui_screen:tab_governance:lineage", "type": "implements", "evidence": "web/src/tabs/tab_governance.tsx:684", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_governance.tsx:GovLineageContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_governance.tsx:684", "status": "extracted"}
+{"from": "ui_screen:tab_governance:lineage", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_governance.tsx:528", "status": "extracted"}
+{"from": "ui_screen:tab_governance:lineage", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_governance.tsx:530", "status": "extracted"}
+{"from": "ui_screen:tab_governance:lineage", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_governance.tsx:531", "status": "extracted"}
+{"from": "ui_screen:tab_governance:sharing", "to": "ui_screen:tab_governance", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:332", "status": "extracted"}
+{"from": "file:web/src/tabs/tab_governance.tsx", "to": "function:web/src/tabs/tab_governance.tsx:GovSharingContent", "type": "contains", "evidence": "web/src/tabs/tab_governance.tsx:640", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_governance.tsx:GovSharingContent", "to": "ui_screen:tab_governance:sharing", "type": "implements", "evidence": "web/src/tabs/tab_governance.tsx:685", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_governance.tsx:GovSharingContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_governance.tsx:685", "status": "extracted"}
+{"from": "ui_screen:tab_governance:sharing", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_governance.tsx:641", "status": "extracted"}
+{"from": "ui_screen:tab_jobs:failures", "to": "ui_screen:tab_jobs", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:326", "status": "extracted"}
+{"from": "file:web/src/tabs/tab_jobs.tsx", "to": "function:web/src/tabs/tab_jobs.tsx:JobsFailuresContent", "type": "contains", "evidence": "web/src/tabs/tab_jobs.tsx:161", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_jobs.tsx:JobsFailuresContent", "to": "ui_screen:tab_jobs:failures", "type": "implements", "evidence": "web/src/tabs/tab_jobs.tsx:339", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_jobs.tsx:JobsFailuresContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_jobs.tsx:339", "status": "extracted"}
+{"from": "ui_screen:tab_jobs:failures", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_jobs.tsx:162", "status": "extracted"}
+{"from": "ui_screen:tab_jobs:failures", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_jobs.tsx:169", "status": "extracted"}
+{"from": "ui_screen:tab_jobs:failures", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_jobs.tsx:171", "status": "extracted"}
+{"from": "ui_screen:tab_jobs:failures", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_jobs.tsx:176", "status": "extracted"}
+{"from": "ui_screen:tab_jobs:failures", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_jobs.tsx:177", "status": "extracted"}
+{"from": "ui_screen:tab_jobs:failures", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_jobs.tsx:178", "status": "extracted"}
+{"from": "ui_screen:tab_jobs:failures", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_jobs.tsx:179", "status": "extracted"}
+{"from": "ui_screen:tab_jobs:failures", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/job_state.tsx:43", "status": "extracted"}
+{"from": "ui_screen:tab_jobs:failures", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/job_state.tsx:45", "status": "extracted"}
+{"from": "ui_screen:tab_jobs:slow", "to": "ui_screen:tab_jobs", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:326", "status": "extracted"}
+{"from": "file:web/src/tabs/tab_jobs.tsx", "to": "function:web/src/tabs/tab_jobs.tsx:JobsSlowContent", "type": "contains", "evidence": "web/src/tabs/tab_jobs.tsx:373", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_jobs.tsx:JobsSlowContent", "to": "ui_screen:tab_jobs:slow", "type": "implements", "evidence": "web/src/tabs/tab_jobs.tsx:497", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_jobs.tsx:JobsSlowContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_jobs.tsx:497", "status": "extracted"}
+{"from": "ui_screen:tab_jobs:slow", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_jobs.tsx:374", "status": "extracted"}
+{"from": "ui_screen:tab_jobs:slow", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_jobs.tsx:375", "status": "extracted"}
+{"from": "ui_screen:tab_jobs:slow", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_jobs.tsx:376", "status": "extracted"}
+{"from": "ui_screen:tab_jobs:slow", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_jobs.tsx:377", "status": "extracted"}
+{"from": "ui_screen:tab_jobs:slow", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_jobs.tsx:385", "status": "extracted"}
+{"from": "ui_screen:tab_jobs:slow", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/job_state.tsx:157", "status": "extracted"}
+{"from": "ui_screen:tab_jobs:slow", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/job_state.tsx:158", "status": "extracted"}
+{"from": "ui_screen:tab_jobs:slow", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/job_state.tsx:159", "status": "extracted"}
+{"from": "ui_screen:tab_jobs:slow", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/job_state.tsx:160", "status": "extracted"}
+{"from": "ui_screen:tab_jobs:hygiene", "to": "ui_screen:tab_jobs", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:326", "status": "extracted"}
+{"from": "file:web/src/tabs/tab_jobs.tsx", "to": "function:web/src/tabs/tab_jobs.tsx:JobsHygieneContent", "type": "contains", "evidence": "web/src/tabs/tab_jobs.tsx:563", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_jobs.tsx:JobsHygieneContent", "to": "ui_screen:tab_jobs:hygiene", "type": "implements", "evidence": "web/src/tabs/tab_jobs.tsx:665", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_jobs.tsx:JobsHygieneContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_jobs.tsx:665", "status": "extracted"}
+{"from": "ui_screen:tab_jobs:hygiene", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_jobs.tsx:564", "status": "extracted"}
+{"from": "ui_screen:tab_jobs:hygiene", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_jobs.tsx:565", "status": "extracted"}
+{"from": "ui_screen:tab_jobs:hygiene", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_jobs.tsx:566", "status": "extracted"}
+{"from": "ui_screen:tab_jobs:hygiene", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_jobs.tsx:567", "status": "extracted"}
+{"from": "ui_screen:tab_jobs:hygiene", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_jobs.tsx:568", "status": "extracted"}
+{"from": "ui_screen:tab_jobs:hygiene", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_jobs.tsx:569", "status": "extracted"}
+{"from": "ui_screen:tab_jobs:compute_fit", "to": "ui_screen:tab_jobs", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:326", "status": "extracted"}
+{"from": "file:web/src/tabs/tab_jobs.tsx", "to": "function:web/src/tabs/tab_jobs.tsx:JobsComputeFitContent", "type": "contains", "evidence": "web/src/tabs/tab_jobs.tsx:728", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_jobs.tsx:JobsComputeFitContent", "to": "ui_screen:tab_jobs:compute_fit", "type": "implements", "evidence": "web/src/tabs/tab_jobs.tsx:849", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_jobs.tsx:JobsComputeFitContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_jobs.tsx:849", "status": "extracted"}
+{"from": "ui_screen:tab_jobs:compute_fit", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_jobs.tsx:729", "status": "extracted"}
+{"from": "ui_screen:tab_jobs:compute_fit", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_jobs.tsx:731", "status": "extracted"}
+{"from": "ui_screen:tab_jobs:compute_fit", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_jobs.tsx:733", "status": "extracted"}
+{"from": "ui_screen:tab_jobs:compute_fit", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_jobs.tsx:734", "status": "extracted"}
+{"from": "ui_screen:tab_jobs:pipelines", "to": "ui_screen:tab_jobs", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:326", "status": "extracted"}
+{"from": "file:web/src/tabs/tab_jobs.tsx", "to": "function:web/src/tabs/tab_jobs.tsx:JobsPipelinesContent", "type": "contains", "evidence": "web/src/tabs/tab_jobs.tsx:866", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_jobs.tsx:JobsPipelinesContent", "to": "ui_screen:tab_jobs:pipelines", "type": "implements", "evidence": "web/src/tabs/tab_jobs.tsx:914", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_jobs.tsx:JobsPipelinesContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_jobs.tsx:914", "status": "extracted"}
+{"from": "ui_screen:tab_jobs:pipelines", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_jobs.tsx:867", "status": "extracted"}
+{"from": "ui_screen:tab_jobs:pipelines", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_jobs.tsx:868", "status": "extracted"}
+{"from": "ui_screen:tab_jobs:pipelines", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_jobs.tsx:869", "status": "extracted"}
+{"from": "ui_screen:tab_mlai:spend", "to": "ui_screen:tab_mlai", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:323", "status": "extracted"}
+{"from": "file:web/src/tabs/tab_mlai.tsx", "to": "function:web/src/tabs/tab_mlai.tsx:MlaiSpendContent", "type": "contains", "evidence": "web/src/tabs/tab_mlai.tsx:27", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_mlai.tsx:MlaiSpendContent", "to": "ui_screen:tab_mlai:spend", "type": "implements", "evidence": "web/src/tabs/tab_mlai.tsx:117", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_mlai.tsx:MlaiSpendContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_mlai.tsx:117", "status": "extracted"}
+{"from": "ui_screen:tab_mlai:spend", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_mlai.tsx:32", "status": "extracted"}
+{"from": "ui_screen:tab_mlai:spend", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_mlai.tsx:34", "status": "extracted"}
+{"from": "ui_screen:tab_mlai:spend", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_mlai.tsx:35", "status": "extracted"}
+{"from": "ui_screen:tab_mlai:spend", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_mlai.tsx:36", "status": "extracted"}
+{"from": "ui_screen:tab_mlai:spend", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_mlai.tsx:37", "status": "extracted"}
+{"from": "ui_screen:tab_mlai:spend", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_mlai.tsx:40", "status": "extracted"}
+{"from": "ui_screen:tab_mlai:endpoints", "to": "ui_screen:tab_mlai", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:323", "status": "extracted"}
+{"from": "file:web/src/tabs/tab_mlai.tsx", "to": "function:web/src/tabs/tab_mlai.tsx:MlaiEndpointsContent", "type": "contains", "evidence": "web/src/tabs/tab_mlai.tsx:227", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_mlai.tsx:MlaiEndpointsContent", "to": "ui_screen:tab_mlai:endpoints", "type": "implements", "evidence": "web/src/tabs/tab_mlai.tsx:362", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_mlai.tsx:MlaiEndpointsContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_mlai.tsx:362", "status": "extracted"}
+{"from": "ui_screen:tab_mlai:endpoints", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_mlai.tsx:229", "status": "extracted"}
+{"from": "ui_screen:tab_mlai:endpoints", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_mlai.tsx:230", "status": "extracted"}
+{"from": "ui_screen:tab_mlai:endpoints", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_mlai.tsx:231", "status": "extracted"}
+{"from": "ui_screen:tab_mlai:endpoints", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_mlai.tsx:233", "status": "extracted"}
+{"from": "ui_screen:tab_mlai:endpoints", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_mlai.tsx:236", "status": "extracted"}
+{"from": "ui_screen:tab_mlai:gateway", "to": "ui_screen:tab_mlai", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:323", "status": "extracted"}
+{"from": "file:web/src/tabs/tab_mlai.tsx", "to": "function:web/src/tabs/tab_mlai.tsx:MlaiGatewayContent", "type": "contains", "evidence": "web/src/tabs/tab_mlai.tsx:368", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_mlai.tsx:MlaiGatewayContent", "to": "ui_screen:tab_mlai:gateway", "type": "implements", "evidence": "web/src/tabs/tab_mlai.tsx:435", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_mlai.tsx:MlaiGatewayContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_mlai.tsx:435", "status": "extracted"}
+{"from": "ui_screen:tab_mlai:gateway", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_mlai.tsx:369", "status": "extracted"}
+{"from": "ui_screen:tab_mlai:gateway", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_mlai.tsx:370", "status": "extracted"}
+{"from": "ui_screen:tab_mlai:gateway", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_mlai.tsx:371", "status": "extracted"}
+{"from": "ui_screen:tab_mlai:gateway", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_mlai.tsx:372", "status": "extracted"}
+{"from": "ui_screen:tab_mlai:gateway", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_mlai.tsx:373", "status": "extracted"}
+{"from": "ui_screen:tab_mlai:gateway", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_mlai.tsx:374", "status": "extracted"}
+{"from": "ui_screen:tab_mlai:gateway", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_mlai.tsx:376", "status": "extracted"}
+{"from": "ui_screen:tab_mlai:gateway", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_mlai.tsx:377", "status": "extracted"}
+{"from": "file:web/src/tabs/tab_overview.tsx", "to": "function:web/src/tabs/tab_overview.tsx:OverviewContent", "type": "contains", "evidence": "web/src/tabs/tab_overview.tsx:1029", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_overview.tsx:OverviewContent", "to": "ui_screen:tab_overview", "type": "implements", "evidence": "web/src/tabs/tab_overview.tsx:1033", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_overview.tsx:OverviewContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_overview.tsx:1033", "status": "extracted"}
+{"from": "ui_screen:tab_overview", "to": "endpoint:GET /api/tag_compliance", "type": "calls", "evidence": "web/src/tabs/tab_tags.tsx:59", "status": "extracted"}
+{"from": "ui_screen:tab_overview", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_overview.tsx:601", "status": "extracted"}
+{"from": "ui_screen:tab_overview", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_overview.tsx:605", "status": "extracted"}
+{"from": "ui_screen:tab_overview", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_overview.tsx:606", "status": "extracted"}
+{"from": "ui_screen:tab_overview", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_overview.tsx:607", "status": "extracted"}
+{"from": "ui_screen:tab_overview", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_overview.tsx:610", "status": "extracted"}
+{"from": "ui_screen:tab_overview", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_overview.tsx:611", "status": "extracted"}
+{"from": "ui_screen:tab_overview", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_overview.tsx:612", "status": "extracted"}
+{"from": "ui_screen:tab_overview", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_overview.tsx:711", "status": "extracted"}
+{"from": "ui_screen:tab_overview", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_overview.tsx:724", "status": "extracted"}
+{"from": "ui_screen:tab_overview", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_overview.tsx:735", "status": "extracted"}
+{"from": "ui_screen:tab_overview", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_overview.tsx:736", "status": "extracted"}
+{"from": "ui_screen:tab_overview", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_overview.tsx:737", "status": "extracted"}
+{"from": "ui_screen:tab_overview", "to": "endpoint:GET /api/rollup/top", "type": "calls", "evidence": "web/src/tabs/tab_overview.tsx:574", "status": "extracted"}
+{"from": "ui_screen:tab_overview", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/job_state.tsx:43", "status": "extracted"}
+{"from": "ui_screen:tab_overview", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/job_state.tsx:45", "status": "extracted"}
+{"from": "ui_screen:tab_overview", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/query_queue.tsx:37", "status": "extracted"}
+{"from": "ui_screen:tab_overview", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/query_queue.tsx:38", "status": "extracted"}
+{"from": "ui_screen:tab_overview", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/query_queue.tsx:40", "status": "extracted"}
+{"from": "ui_screen:tab_overview", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/query_queue.tsx:41", "status": "extracted"}
+{"from": "ui_screen:tab_query:heavy", "to": "ui_screen:tab_query", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:327", "status": "extracted"}
+{"from": "file:web/src/tabs/tab_query.tsx", "to": "function:web/src/tabs/tab_query.tsx:QueryHeavyContent", "type": "contains", "evidence": "web/src/tabs/tab_query.tsx:229", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_query.tsx:QueryHeavyContent", "to": "ui_screen:tab_query:heavy", "type": "implements", "evidence": "web/src/tabs/tab_query.tsx:1064", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_query.tsx:QueryHeavyContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_query.tsx:1064", "status": "extracted"}
+{"from": "ui_screen:tab_query:heavy", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_query.tsx:230", "status": "extracted"}
+{"from": "ui_screen:tab_query:heavy", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_query.tsx:231", "status": "extracted"}
+{"from": "ui_screen:tab_query:heavy", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_query.tsx:232", "status": "extracted"}
+{"from": "ui_screen:tab_query:heavy", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_query.tsx:233", "status": "extracted"}
+{"from": "ui_screen:tab_query:heavy", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_query.tsx:236", "status": "extracted"}
+{"from": "ui_screen:tab_query:heavy", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_query.tsx:237", "status": "extracted"}
+{"from": "ui_screen:tab_query:efficiency", "to": "ui_screen:tab_query", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:327", "status": "extracted"}
+{"from": "file:web/src/tabs/tab_query.tsx", "to": "function:web/src/tabs/tab_query.tsx:QueryEfficiencyContent", "type": "contains", "evidence": "web/src/tabs/tab_query.tsx:506", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_query.tsx:QueryEfficiencyContent", "to": "ui_screen:tab_query:efficiency", "type": "implements", "evidence": "web/src/tabs/tab_query.tsx:1065", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_query.tsx:QueryEfficiencyContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_query.tsx:1065", "status": "extracted"}
+{"from": "ui_screen:tab_query:efficiency", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_query.tsx:507", "status": "extracted"}
+{"from": "ui_screen:tab_query:efficiency", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_query.tsx:508", "status": "extracted"}
+{"from": "ui_screen:tab_query:efficiency", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_query.tsx:509", "status": "extracted"}
+{"from": "ui_screen:tab_query:efficiency", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_query.tsx:510", "status": "extracted"}
+{"from": "ui_screen:tab_query:efficiency", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_query.tsx:513", "status": "extracted"}
+{"from": "ui_screen:tab_query:reliability", "to": "ui_screen:tab_query", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:327", "status": "extracted"}
+{"from": "file:web/src/tabs/tab_query.tsx", "to": "function:web/src/tabs/tab_query.tsx:QueryReliabilityContent", "type": "contains", "evidence": "web/src/tabs/tab_query.tsx:690", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_query.tsx:QueryReliabilityContent", "to": "ui_screen:tab_query:reliability", "type": "implements", "evidence": "web/src/tabs/tab_query.tsx:1066", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_query.tsx:QueryReliabilityContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_query.tsx:1066", "status": "extracted"}
+{"from": "ui_screen:tab_query:reliability", "to": "endpoint:GET /api/dims", "type": "calls", "evidence": "web/src/tabs/tab_query.tsx:691", "status": "extracted"}
+{"from": "ui_screen:tab_query:reliability", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_query.tsx:692", "status": "extracted"}
+{"from": "ui_screen:tab_query:reliability", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_query.tsx:693", "status": "extracted"}
+{"from": "ui_screen:tab_query:reliability", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_query.tsx:694", "status": "extracted"}
+{"from": "ui_screen:tab_query:capacity", "to": "ui_screen:tab_query", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:327", "status": "extracted"}
+{"from": "file:web/src/tabs/tab_query.tsx", "to": "function:web/src/tabs/tab_query.tsx:QueryCapacityContent", "type": "contains", "evidence": "web/src/tabs/tab_query.tsx:880", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_query.tsx:QueryCapacityContent", "to": "ui_screen:tab_query:capacity", "type": "implements", "evidence": "web/src/tabs/tab_query.tsx:1067", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_query.tsx:QueryCapacityContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_query.tsx:1067", "status": "extracted"}
+{"from": "ui_screen:tab_query:capacity", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_query.tsx:881", "status": "extracted"}
+{"from": "ui_screen:tab_query:capacity", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_query.tsx:884", "status": "extracted"}
+{"from": "ui_screen:tab_query:capacity", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_query.tsx:885", "status": "extracted"}
+{"from": "ui_screen:tab_query:capacity", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_query.tsx:886", "status": "extracted"}
+{"from": "ui_screen:tab_query:capacity", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_query.tsx:888", "status": "extracted"}
+{"from": "ui_screen:tab_query:capacity", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_query.tsx:889", "status": "extracted"}
+{"from": "ui_screen:tab_query:capacity", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_query.tsx:892", "status": "extracted"}
+{"from": "ui_screen:tab_query:capacity", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_query.tsx:893", "status": "extracted"}
+{"from": "ui_screen:tab_query:capacity", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/query_queue.tsx:37", "status": "extracted"}
+{"from": "ui_screen:tab_query:capacity", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/query_queue.tsx:38", "status": "extracted"}
+{"from": "ui_screen:tab_query:capacity", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/query_queue.tsx:40", "status": "extracted"}
+{"from": "ui_screen:tab_query:capacity", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/query_queue.tsx:41", "status": "extracted"}
+{"from": "ui_screen:tab_query:team", "to": "ui_screen:tab_query", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:327", "status": "extracted"}
+{"from": "file:web/src/tabs/tab_query.tsx", "to": "function:web/src/tabs/tab_query.tsx:QueryTeamContent", "type": "contains", "evidence": "web/src/tabs/tab_query.tsx:1060", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_query.tsx:QueryTeamContent", "to": "ui_screen:tab_query:team", "type": "implements", "evidence": "web/src/tabs/tab_query.tsx:1068", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_query.tsx:QueryTeamContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_query.tsx:1068", "status": "extracted"}
+{"from": "ui_screen:tab_query:team", "to": "endpoint:GET /api/rollup/keys", "type": "calls", "evidence": "web/src/components/tag_rollup.tsx:482", "status": "extracted"}
+{"from": "ui_screen:tab_query:team", "to": "endpoint:GET /api/rollup", "type": "calls", "evidence": "web/src/components/tag_rollup.tsx:150", "status": "extracted"}
+{"from": "ui_screen:tab_storage:tables", "to": "ui_screen:tab_storage", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:333", "status": "extracted"}
+{"from": "file:web/src/tabs/tab_storage.tsx", "to": "function:web/src/tabs/tab_storage.tsx:StorageTablesContent", "type": "contains", "evidence": "web/src/tabs/tab_storage.tsx:110", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_storage.tsx:StorageTablesContent", "to": "ui_screen:tab_storage:tables", "type": "implements", "evidence": "web/src/tabs/tab_storage.tsx:660", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_storage.tsx:StorageTablesContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_storage.tsx:660", "status": "extracted"}
+{"from": "ui_screen:tab_storage:tables", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_storage.tsx:111", "status": "extracted"}
+{"from": "ui_screen:tab_storage:tables", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_storage.tsx:112", "status": "extracted"}
+{"from": "ui_screen:tab_storage:tables", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_storage.tsx:114", "status": "extracted"}
+{"from": "ui_screen:tab_storage:tables", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_storage.tsx:116", "status": "extracted"}
+{"from": "ui_screen:tab_storage:tables", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_storage.tsx:24", "status": "extracted"}
+{"from": "ui_screen:tab_storage:tables", "to": "endpoint:GET /api/tables", "type": "calls", "evidence": "web/src/tabs/tab_storage.tsx:32", "status": "extracted"}
+{"from": "ui_screen:tab_storage:tables", "to": "endpoint:GET /api/table_sizes", "type": "calls", "evidence": "web/src/tabs/tab_storage.tsx:304", "status": "extracted"}
+{"from": "ui_screen:tab_storage:maintenance", "to": "ui_screen:tab_storage", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:333", "status": "extracted"}
+{"from": "file:web/src/tabs/tab_storage.tsx", "to": "function:web/src/tabs/tab_storage.tsx:StorageMaintenanceContent", "type": "contains", "evidence": "web/src/tabs/tab_storage.tsx:545", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_storage.tsx:StorageMaintenanceContent", "to": "ui_screen:tab_storage:maintenance", "type": "implements", "evidence": "web/src/tabs/tab_storage.tsx:661", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_storage.tsx:StorageMaintenanceContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_storage.tsx:661", "status": "extracted"}
+{"from": "ui_screen:tab_storage:maintenance", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_storage.tsx:546", "status": "extracted"}
+{"from": "ui_screen:tab_storage:maintenance", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_storage.tsx:547", "status": "extracted"}
+{"from": "ui_screen:tab_storage:maintenance", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_storage.tsx:548", "status": "extracted"}
+{"from": "ui_screen:tab_storage:maintenance", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_storage.tsx:549", "status": "extracted"}
+{"from": "ui_screen:tab_storage:maintenance", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_storage.tsx:550", "status": "extracted"}
+{"from": "ui_screen:tab_storage:maintenance", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_storage.tsx:551", "status": "extracted"}
+{"from": "ui_screen:tab_storage:maintenance", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_storage.tsx:552", "status": "extracted"}
+{"from": "ui_screen:tab_storage:maintenance", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_storage.tsx:553", "status": "extracted"}
+{"from": "file:web/src/tabs/tab_tags.tsx", "to": "function:web/src/tabs/tab_tags.tsx:TagsPanel", "type": "contains", "evidence": "web/src/tabs/tab_tags.tsx:437", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_tags.tsx:TagsPanel", "to": "ui_screen:tab_tags", "type": "implements", "evidence": "web/src/tabs/tab_tags.tsx:484", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_tags.tsx:TagsPanel", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_tags.tsx:484", "status": "extracted"}
+{"from": "ui_screen:tab_tags", "to": "endpoint:GET /api/tag_compliance", "type": "calls", "evidence": "web/src/tabs/tab_tags.tsx:59", "status": "extracted"}
+{"from": "ui_screen:tab_tags", "to": "endpoint:GET /api/workspace_tags", "type": "calls", "evidence": "web/src/tabs/tab_cost.tsx:959", "status": "extracted"}
+{"from": "ui_screen:tab_usage:workspaces", "to": "ui_screen:tab_usage", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:331", "status": "extracted"}
+{"from": "file:web/src/tabs/tab_usage.tsx", "to": "function:web/src/tabs/tab_usage.tsx:UsageWorkspacesContent", "type": "contains", "evidence": "web/src/tabs/tab_usage.tsx:213", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_usage.tsx:UsageWorkspacesContent", "to": "ui_screen:tab_usage:workspaces", "type": "implements", "evidence": "web/src/tabs/tab_usage.tsx:1148", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_usage.tsx:UsageWorkspacesContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_usage.tsx:1148", "status": "extracted"}
+{"from": "ui_screen:tab_usage:workspaces", "to": "endpoint:GET /api/workspace_usage", "type": "calls", "evidence": "web/src/tabs/tab_usage.tsx:218", "status": "extracted"}
+{"from": "ui_screen:tab_usage:workspaces", "to": "endpoint:GET /api/tables", "type": "calls", "evidence": "web/src/tabs/tab_usage.tsx:219", "status": "extracted"}
+{"from": "ui_screen:tab_usage:workspaces", "to": "endpoint:GET /api/people", "type": "calls", "evidence": "web/src/tabs/tab_usage.tsx:220", "status": "extracted"}
+{"from": "ui_screen:tab_usage:tables", "to": "ui_screen:tab_usage", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:331", "status": "extracted"}
+{"from": "file:web/src/tabs/tab_usage.tsx", "to": "function:web/src/tabs/tab_usage.tsx:UsageTablesContent", "type": "contains", "evidence": "web/src/tabs/tab_usage.tsx:400", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_usage.tsx:UsageTablesContent", "to": "ui_screen:tab_usage:tables", "type": "implements", "evidence": "web/src/tabs/tab_usage.tsx:1149", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_usage.tsx:UsageTablesContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_usage.tsx:1149", "status": "extracted"}
+{"from": "ui_screen:tab_usage:tables", "to": "endpoint:GET /api/tables", "type": "calls", "evidence": "web/src/tabs/tab_usage.tsx:402", "status": "extracted"}
+{"from": "ui_screen:tab_usage:tables", "to": "endpoint:GET /api/tables", "type": "calls", "evidence": "web/src/tabs/tab_usage.tsx:406", "status": "extracted"}
+{"from": "ui_screen:tab_usage:tables", "to": "endpoint:GET /api/table", "type": "calls", "evidence": "web/src/tabs/tab_usage.tsx:765", "status": "extracted"}
+{"from": "ui_screen:tab_usage:tables", "to": "endpoint:GET /api/workspace_schemas", "type": "calls", "evidence": "web/src/tabs/tab_usage.tsx:535", "status": "extracted"}
+{"from": "ui_screen:tab_usage:volumes", "to": "ui_screen:tab_usage", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:331", "status": "extracted"}
+{"from": "file:web/src/tabs/tab_usage.tsx", "to": "function:web/src/tabs/tab_usage.tsx:UsageVolumesContent", "type": "contains", "evidence": "web/src/tabs/tab_usage.tsx:878", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_usage.tsx:UsageVolumesContent", "to": "ui_screen:tab_usage:volumes", "type": "implements", "evidence": "web/src/tabs/tab_usage.tsx:1150", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_usage.tsx:UsageVolumesContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_usage.tsx:1150", "status": "extracted"}
+{"from": "ui_screen:tab_usage:volumes", "to": "endpoint:GET /api/volumes", "type": "calls", "evidence": "web/src/tabs/tab_usage.tsx:880", "status": "extracted"}
+{"from": "ui_screen:tab_usage:volumes", "to": "endpoint:GET /api/volume_users", "type": "calls", "evidence": "web/src/tabs/tab_usage.tsx:983", "status": "extracted"}
+{"from": "ui_screen:tab_usage:people", "to": "ui_screen:tab_usage", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:331", "status": "extracted"}
+{"from": "file:web/src/tabs/tab_usage.tsx", "to": "function:web/src/tabs/tab_usage.tsx:UsagePeopleContent", "type": "contains", "evidence": "web/src/tabs/tab_usage.tsx:1012", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_usage.tsx:UsagePeopleContent", "to": "ui_screen:tab_usage:people", "type": "implements", "evidence": "web/src/tabs/tab_usage.tsx:1151", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_usage.tsx:UsagePeopleContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_usage.tsx:1151", "status": "extracted"}
+{"from": "ui_screen:tab_usage:people", "to": "endpoint:GET /api/people", "type": "calls", "evidence": "web/src/tabs/tab_usage.tsx:1016", "status": "extracted"}
+{"from": "ui_screen:tab_usage:people", "to": "endpoint:GET /api/workspaces", "type": "calls", "evidence": "web/src/tabs/tab_usage.tsx:1017", "status": "extracted"}
+{"from": "ui_screen:tab_usage:people", "to": "endpoint:GET /api/person_tables", "type": "calls", "evidence": "web/src/tabs/tab_usage.tsx:1120", "status": "extracted"}
+{"from": "ui_screen:tab_warehouse", "to": "ui_screen:tab_compute", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:325", "status": "extracted"}
+{"from": "file:web/src/tabs/tab_warehouse.tsx", "to": "function:web/src/tabs/tab_warehouse.tsx:WarehouseDetailContent", "type": "contains", "evidence": "web/src/tabs/tab_warehouse.tsx:36", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_warehouse.tsx:WarehouseDetailContent", "to": "ui_screen:tab_warehouse", "type": "implements", "evidence": "web/src/tabs/tab_warehouse.tsx:210", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_warehouse.tsx:WarehouseDetailContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_warehouse.tsx:210", "status": "extracted"}
+{"from": "ui_screen:tab_warehouse", "to": "endpoint:GET /api/warehouses", "type": "calls", "evidence": "web/src/tabs/tab_warehouse.tsx:38", "status": "extracted"}
+{"from": "ui_screen:tab_warehouse", "to": "endpoint:GET /api/warehouse", "type": "calls", "evidence": "web/src/tabs/tab_warehouse.tsx:94", "status": "extracted"}
+{"from": "ui_screen:tab_waste:priced", "to": "ui_screen:tab_waste", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:318", "status": "extracted"}
+{"from": "file:web/src/tabs/tab_waste.tsx", "to": "function:web/src/tabs/tab_waste.tsx:WastePricedContent", "type": "contains", "evidence": "web/src/tabs/tab_waste.tsx:438", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_waste.tsx:WastePricedContent", "to": "ui_screen:tab_waste:priced", "type": "implements", "evidence": "web/src/tabs/tab_waste.tsx:672", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_waste.tsx:WastePricedContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_waste.tsx:672", "status": "extracted"}
+{"from": "ui_screen:tab_waste:priced", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_waste.tsx:440", "status": "extracted"}
+{"from": "ui_screen:tab_waste:priced", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_waste.tsx:441", "status": "extracted"}
+{"from": "ui_screen:tab_waste:priced", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_waste.tsx:450", "status": "extracted"}
+{"from": "ui_screen:tab_waste:unpriced", "to": "ui_screen:tab_waste", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:318", "status": "extracted"}
+{"from": "file:web/src/tabs/tab_waste.tsx", "to": "function:web/src/tabs/tab_waste.tsx:WasteUnpricedContent", "type": "contains", "evidence": "web/src/tabs/tab_waste.tsx:580", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_waste.tsx:WasteUnpricedContent", "to": "ui_screen:tab_waste:unpriced", "type": "implements", "evidence": "web/src/tabs/tab_waste.tsx:673", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_waste.tsx:WasteUnpricedContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_waste.tsx:673", "status": "extracted"}
+{"from": "ui_screen:tab_waste:unpriced", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_waste.tsx:584", "status": "extracted"}
+{"from": "ui_screen:tab_waste:method", "to": "ui_screen:tab_waste", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:318", "status": "extracted"}
+{"from": "file:web/src/tabs/tab_waste.tsx", "to": "function:web/src/tabs/tab_waste.tsx:WasteMethodContent", "type": "contains", "evidence": "web/src/tabs/tab_waste.tsx:641", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_waste.tsx:WasteMethodContent", "to": "ui_screen:tab_waste:method", "type": "implements", "evidence": "web/src/tabs/tab_waste.tsx:674", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_waste.tsx:WasteMethodContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_waste.tsx:674", "status": "extracted"}
+{"from": "ui_screen:tab_usage:activity", "to": "ui_screen:tab_usage", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:331", "status": "extracted"}
+{"from": "file:web/src/tabs/usage_activity.tsx", "to": "function:web/src/tabs/usage_activity.tsx:UsageActivityContent", "type": "contains", "evidence": "web/src/tabs/usage_activity.tsx:254", "status": "extracted"}
+{"from": "function:web/src/tabs/usage_activity.tsx:UsageActivityContent", "to": "ui_screen:tab_usage:activity", "type": "implements", "evidence": "web/src/tabs/usage_activity.tsx:390", "status": "extracted"}
+{"from": "function:web/src/tabs/usage_activity.tsx:UsageActivityContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/usage_activity.tsx:390", "status": "extracted"}
+{"from": "ui_screen:tab_usage:activity", "to": "endpoint:GET /api/activity", "type": "calls", "evidence": "web/src/tabs/usage_activity.tsx:22", "status": "extracted"}
+{"from": "ui_screen:tab_usage:activity", "to": "endpoint:GET /api/workspace_usage", "type": "calls", "evidence": "web/src/tabs/usage_activity.tsx:271", "status": "extracted"}
+{"from": "ui_screen:tab_money", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_money.tsx:443", "status": "extracted"}
+{"from": "ui_screen:tab_money", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_money.tsx:444", "status": "extracted"}
+{"from": "ui_screen:tab_money", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_money.tsx:445", "status": "extracted"}
+{"from": "ui_screen:tab_money", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_money.tsx:446", "status": "extracted"}
+{"from": "ui_screen:tab_money", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_money.tsx:447", "status": "extracted"}
+{"from": "ui_screen:tab_money", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_money.tsx:448", "status": "extracted"}
+{"from": "ui_screen:tab_money", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_money.tsx:449", "status": "extracted"}
+{"from": "ui_screen:tab_money", "to": "endpoint:GET /api/rollup/keys", "type": "calls", "evidence": "web/src/tabs/tab_money.tsx:452", "status": "extracted"}
+{"from": "ui_screen:tab_money", "to": "endpoint:GET /api/rollup", "type": "calls", "evidence": "web/src/tabs/tab_money.tsx:459", "status": "extracted"}
+{"from": "ui_screen:tab_money", "to": "endpoint:GET /api/rollup", "type": "calls", "evidence": "web/src/tabs/tab_money.tsx:460", "status": "extracted"}
+{"from": "ui_screen:tab_money", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_money.tsx:526", "status": "extracted"}
+{"from": "ui_screen:tab_money", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_money.tsx:531", "status": "extracted"}
+{"from": "ui_screen:tab_money", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_money.tsx:537", "status": "extracted"}
+{"from": "ui_screen:tab_money", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_money.tsx:538", "status": "extracted"}
+{"from": "ui_screen:tab_money", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_money.tsx:539", "status": "extracted"}
+{"from": "ui_screen:tab_money", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_money.tsx:540", "status": "extracted"}
+{"from": "ui_screen:tab_money", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_money.tsx:541", "status": "extracted"}
+{"from": "ui_screen:tab_money", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_money.tsx:542", "status": "extracted"}
+{"from": "ui_screen:tab_money", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_money.tsx:543", "status": "extracted"}
+{"from": "ui_screen:tab_money", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_money.tsx:545", "status": "extracted"}
+{"from": "ui_screen:tab_money", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_money.tsx:546", "status": "extracted"}
+{"from": "ui_screen:tab_money", "to": "endpoint:GET /api/tag_origins", "type": "calls", "evidence": "web/src/components/primitives.tsx:679", "status": "extracted"}
+{"from": "ui_screen:tab_money", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_money.tsx:119", "status": "extracted"}
+{"from": "ui_screen:tab_money", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_money.tsx:122", "status": "extracted"}
+{"from": "ui_screen:tab_money", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_money.tsx:123", "status": "extracted"}
+{"from": "ui_screen:tab_actions", "to": "dbt_model:f_compute_idle_node_ratio", "type": "reads", "evidence": "web/src/tabs/tab_actions.tsx:169", "status": "inferred"}
+{"from": "ui_screen:tab_actions", "to": "dbt_model:f_compute_serving_dormant_endpoints", "type": "reads", "evidence": "web/src/tabs/tab_actions.tsx:169", "status": "inferred"}
+{"from": "ui_screen:tab_actions", "to": "dbt_model:f_compute_serving_endpoint_cost_status", "type": "reads", "evidence": "web/src/tabs/tab_actions.tsx:169", "status": "inferred"}
+{"from": "ui_screen:tab_actions", "to": "dbt_model:f_compute_warehouse_idle_minutes", "type": "reads", "evidence": "web/src/tabs/tab_actions.tsx:169", "status": "inferred"}
+{"from": "ui_screen:tab_actions", "to": "dbt_model:f_cost_failed_statement_waste", "type": "reads", "evidence": "web/src/tabs/tab_actions.tsx:169", "status": "inferred"}
+{"from": "ui_screen:tab_actions", "to": "dbt_model:f_cost_premium_serverless_photon", "type": "reads", "evidence": "web/src/tabs/tab_actions.tsx:169", "status": "inferred"}
+{"from": "ui_screen:tab_actions", "to": "dbt_model:f_instance_pools_idle_capacity", "type": "reads", "evidence": "web/src/tabs/tab_actions.tsx:169", "status": "inferred"}
+{"from": "ui_screen:tab_actions", "to": "dbt_model:f_lakeflow_failed_jobs_wasted_dbus", "type": "reads", "evidence": "web/src/tabs/tab_actions.tsx:169", "status": "inferred"}
+{"from": "ui_screen:tab_actions", "to": "dbt_model:f_lakeflow_jobs_on_all_purpose", "type": "reads", "evidence": "web/src/tabs/tab_actions.tsx:169", "status": "inferred"}
+{"from": "ui_screen:tab_actions", "to": "dbt_model:f_lakeflow_pipeline_idle_tail_duration", "type": "reads", "evidence": "web/src/tabs/tab_actions.tsx:169", "status": "inferred"}
+{"from": "ui_screen:tab_actions", "to": "dbt_model:f_lakeflow_stale_zombie_jobs", "type": "reads", "evidence": "web/src/tabs/tab_actions.tsx:169", "status": "inferred"}
+{"from": "ui_screen:tab_compute:clusters", "to": "dbt_model:f_classic_clusters_config_current", "type": "reads", "evidence": "web/src/tabs/tab_compute.tsx:870", "status": "inferred"}
+{"from": "ui_screen:tab_compute:clusters", "to": "dbt_model:f_compute_idle_node_ratio", "type": "reads", "evidence": "web/src/tabs/tab_compute.tsx:868", "status": "inferred"}
+{"from": "ui_screen:tab_compute:clusters", "to": "dbt_model:f_compute_last_activity", "type": "reads", "evidence": "web/src/components/last_activity.tsx:39", "status": "inferred"}
+{"from": "ui_screen:tab_compute:clusters", "to": "dbt_model:f_instance_pools_idle_capacity", "type": "reads", "evidence": "web/src/tabs/tab_compute.tsx:874", "status": "inferred"}
+{"from": "ui_screen:tab_compute:config", "to": "dbt_model:f_compute_cluster_config_posture", "type": "reads", "evidence": "web/src/tabs/tab_compute.tsx:1040", "status": "inferred"}
+{"from": "ui_screen:tab_compute:config", "to": "dbt_model:f_compute_warehouse_config_posture", "type": "reads", "evidence": "web/src/tabs/tab_compute.tsx:1042", "status": "inferred"}
+{"from": "ui_screen:tab_compute:warehouses", "to": "dbt_model:f_compute_last_activity", "type": "reads", "evidence": "web/src/components/last_activity.tsx:39", "status": "inferred"}
+{"from": "ui_screen:tab_compute:warehouses", "to": "dbt_model:f_compute_warehouse_autoscale_churn", "type": "reads", "evidence": "web/src/tabs/tab_compute.tsx:724", "status": "inferred"}
+{"from": "ui_screen:tab_compute:warehouses", "to": "dbt_model:f_compute_warehouse_autostop_churn", "type": "reads", "evidence": "web/src/tabs/tab_compute.tsx:727", "status": "inferred"}
+{"from": "ui_screen:tab_compute:warehouses", "to": "dbt_model:f_compute_warehouse_cache_reuse", "type": "reads", "evidence": "web/src/tabs/tab_compute.tsx:728", "status": "inferred"}
+{"from": "ui_screen:tab_compute:warehouses", "to": "dbt_model:f_compute_warehouse_idle_gaps", "type": "reads", "evidence": "web/src/tabs/tab_compute.tsx:723", "status": "inferred"}
+{"from": "ui_screen:tab_compute:warehouses", "to": "dbt_model:f_compute_warehouse_idle_minutes", "type": "reads", "evidence": "web/src/tabs/tab_compute.tsx:722", "status": "inferred"}
+{"from": "ui_screen:tab_compute:warehouses", "to": "dbt_model:f_compute_warehouse_late_autostop", "type": "reads", "evidence": "web/src/tabs/tab_compute.tsx:729", "status": "inferred"}
+{"from": "ui_screen:tab_compute:warehouses", "to": "dbt_model:f_perf_daily_by_resource", "type": "reads", "evidence": "web/src/tabs/tab_compute.tsx:741", "status": "inferred"}
+{"from": "ui_screen:tab_compute:warehouses", "to": "dbt_model:f_query_warehouse_pressure", "type": "reads", "evidence": "web/src/tabs/tab_compute.tsx:730", "status": "inferred"}
+{"from": "ui_screen:tab_compute:warehouses", "to": "dbt_model:f_sql_warehouse_config_current", "type": "reads", "evidence": "web/src/tabs/tab_compute.tsx:725", "status": "inferred"}
+{"from": "ui_screen:tab_compute:warehouses", "to": "dbt_model:f_sql_warehouse_events_activity", "type": "reads", "evidence": "web/src/tabs/tab_compute.tsx:726", "status": "inferred"}
+{"from": "ui_screen:tab_cost:allocation", "to": "dbt_model:f_cost_chargeback_by_identity", "type": "reads", "evidence": "web/src/tabs/tab_cost.tsx:809", "status": "inferred"}
+{"from": "ui_screen:tab_cost:allocation", "to": "dbt_model:f_cost_dollarized_by_sku_day", "type": "reads", "evidence": "web/src/tabs/tab_cost.tsx:807", "status": "inferred"}
+{"from": "ui_screen:tab_cost:allocation", "to": "dbt_model:f_cost_unnamed_workspaces", "type": "reads", "evidence": "web/src/tabs/tab_cost.tsx:812", "status": "inferred"}
+{"from": "ui_screen:tab_cost:chargeback", "to": "dbt_model:f_cost_chargeback_by_cluster", "type": "reads", "evidence": "web/src/tabs/tab_cost.tsx:1702", "status": "inferred"}
+{"from": "ui_screen:tab_cost:chargeback", "to": "dbt_model:f_cost_chargeback_by_job", "type": "reads", "evidence": "web/src/tabs/tab_cost.tsx:1702", "status": "inferred"}
+{"from": "ui_screen:tab_cost:chargeback", "to": "dbt_model:f_cost_chargeback_by_service", "type": "reads", "evidence": "web/src/tabs/tab_cost.tsx:1702", "status": "inferred"}
+{"from": "ui_screen:tab_cost:chargeback", "to": "dbt_model:f_cost_chargeback_by_sku", "type": "reads", "evidence": "web/src/tabs/tab_cost.tsx:1702", "status": "inferred"}
+{"from": "ui_screen:tab_cost:chargeback", "to": "dbt_model:f_cost_chargeback_by_tag_value", "type": "reads", "evidence": "web/src/tabs/tab_cost.tsx:1702", "status": "inferred"}
+{"from": "ui_screen:tab_cost:chargeback", "to": "dbt_model:f_cost_chargeback_by_warehouse", "type": "reads", "evidence": "web/src/tabs/tab_cost.tsx:1702", "status": "inferred"}
+{"from": "ui_screen:tab_cost:chargeback", "to": "dbt_model:f_cost_chargeback_by_workspace", "type": "reads", "evidence": "web/src/tabs/tab_cost.tsx:1702", "status": "inferred"}
+{"from": "ui_screen:tab_cost:chargeback", "to": "dbt_model:f_cost_chargeback_identity_by_source", "type": "reads", "evidence": "web/src/tabs/tab_cost.tsx:1702", "status": "inferred"}
+{"from": "ui_screen:tab_cost:chargeback", "to": "dbt_model:f_cost_chargeback_reconcile", "type": "reads", "evidence": "web/src/tabs/tab_cost.tsx:1706", "status": "inferred"}
+{"from": "ui_screen:tab_cost:pricing", "to": "dbt_model:f_cost_actual_vs_list_by_sku", "type": "reads", "evidence": "web/src/tabs/tab_cost.tsx:1256", "status": "inferred"}
+{"from": "ui_screen:tab_cost:pricing", "to": "dbt_model:f_cost_cloud_infra", "type": "reads", "evidence": "web/src/tabs/tab_cost.tsx:1261", "status": "inferred"}
+{"from": "ui_screen:tab_cost:pricing", "to": "dbt_model:f_cost_dollarized_by_sku_day", "type": "reads", "evidence": "web/src/tabs/tab_cost.tsx:1197", "status": "inferred"}
+{"from": "ui_screen:tab_cost:pricing", "to": "dbt_model:f_cost_monthly_actuals", "type": "reads", "evidence": "web/src/tabs/tab_cost.tsx:1196", "status": "inferred"}
+{"from": "ui_screen:tab_cost:pricing", "to": "dbt_model:f_cost_networking_egress", "type": "reads", "evidence": "web/src/tabs/tab_cost.tsx:1260", "status": "inferred"}
+{"from": "ui_screen:tab_cost:pricing", "to": "dbt_model:f_cost_restatement_trust_metric", "type": "reads", "evidence": "web/src/tabs/tab_cost.tsx:1257", "status": "inferred"}
+{"from": "ui_screen:tab_cost:pricing", "to": "dbt_model:f_cost_usage_policy_coverage", "type": "reads", "evidence": "web/src/tabs/tab_cost.tsx:1254", "status": "inferred"}
+{"from": "ui_screen:tab_cost:product", "to": "dbt_model:f_cost_by_billing_origin_product", "type": "reads", "evidence": "web/src/tabs/tab_cost.tsx:483", "status": "inferred"}
+{"from": "ui_screen:tab_cost:product", "to": "dbt_model:f_cost_dollarized_by_sku_day", "type": "reads", "evidence": "web/src/tabs/tab_cost.tsx:482", "status": "inferred"}
+{"from": "ui_screen:tab_cost:product", "to": "dbt_model:f_cost_premium_serverless_photon", "type": "reads", "evidence": "web/src/tabs/tab_cost.tsx:484", "status": "inferred"}
+{"from": "ui_screen:tab_cost:product", "to": "dbt_model:f_cost_sku_trend_12m", "type": "reads", "evidence": "web/src/tabs/tab_cost.tsx:488", "status": "inferred"}
+{"from": "ui_screen:tab_cost:product", "to": "dbt_model:f_overview_serverless_classic_split", "type": "reads", "evidence": "web/src/tabs/tab_cost.tsx:485", "status": "inferred"}
+{"from": "ui_screen:tab_cost:resource", "to": "dbt_model:f_compute_warehouse_idle_minutes", "type": "reads", "evidence": "web/src/tabs/tab_cost.tsx:1079", "status": "inferred"}
+{"from": "ui_screen:tab_cost:resource", "to": "dbt_model:f_cost_by_compute_resource", "type": "reads", "evidence": "web/src/tabs/tab_cost.tsx:1071", "status": "inferred"}
+{"from": "ui_screen:tab_cost:resource", "to": "dbt_model:f_cost_by_job", "type": "reads", "evidence": "web/src/tabs/tab_cost.tsx:1070", "status": "inferred"}
+{"from": "ui_screen:tab_cost:resource", "to": "dbt_model:f_cost_by_notebook", "type": "reads", "evidence": "web/src/tabs/tab_cost.tsx:1072", "status": "inferred"}
+{"from": "ui_screen:tab_cost:resource", "to": "dbt_model:f_cost_default_storage_dsu", "type": "reads", "evidence": "web/src/tabs/tab_cost.tsx:1073", "status": "inferred"}
+{"from": "ui_screen:tab_cost:resource", "to": "dbt_model:f_cost_genai_token_gpu", "type": "reads", "evidence": "web/src/tabs/tab_cost.tsx:1074", "status": "inferred"}
+{"from": "ui_screen:tab_cost:trend", "to": "dbt_model:f_cost_by_hour_of_day", "type": "reads", "evidence": "web/src/tabs/tab_cost.tsx:285", "status": "inferred"}
+{"from": "ui_screen:tab_cost:trend", "to": "dbt_model:f_cost_chargeback_by_cluster", "type": "reads", "evidence": "web/src/tabs/tab_cost.tsx:211", "status": "inferred"}
+{"from": "ui_screen:tab_cost:trend", "to": "dbt_model:f_cost_chargeback_by_job", "type": "reads", "evidence": "web/src/tabs/tab_cost.tsx:211", "status": "inferred"}
+{"from": "ui_screen:tab_cost:trend", "to": "dbt_model:f_cost_chargeback_by_warehouse", "type": "reads", "evidence": "web/src/tabs/tab_cost.tsx:211", "status": "inferred"}
+{"from": "ui_screen:tab_cost:trend", "to": "dbt_model:f_cost_daily_by_resource", "type": "reads", "evidence": "web/src/tabs/cost_trend_by.tsx:83", "status": "inferred"}
+{"from": "ui_screen:tab_cost:trend", "to": "dbt_model:f_cost_daily_spikes", "type": "reads", "evidence": "web/src/tabs/tab_cost.tsx:283", "status": "inferred"}
+{"from": "ui_screen:tab_cost:trend", "to": "dbt_model:f_cost_dollarized_by_sku_day", "type": "reads", "evidence": "web/src/tabs/tab_cost.tsx:281", "status": "inferred"}
+{"from": "ui_screen:tab_cost:trend", "to": "dbt_model:f_cost_monthly_actuals", "type": "reads", "evidence": "web/src/tabs/tab_cost.tsx:284", "status": "inferred"}
+{"from": "ui_screen:tab_cost:trend", "to": "dbt_model:f_cost_period_over_period", "type": "reads", "evidence": "web/src/tabs/tab_cost.tsx:282", "status": "inferred"}
+{"from": "ui_screen:tab_cost:trend", "to": "dbt_model:f_cost_sku_trend_12m", "type": "reads", "evidence": "web/src/tabs/cost_trend_by.tsx:84", "status": "inferred"}
+{"from": "ui_screen:tab_cost_before_after", "to": "dbt_model:f_cost_daily_by_resource", "type": "reads", "evidence": "web/src/tabs/tab_cost_before_after.tsx:349", "status": "inferred"}
+{"from": "ui_screen:tab_cost_before_after", "to": "dbt_model:f_cost_dollarized_by_sku_day", "type": "reads", "evidence": "web/src/tabs/tab_cost_before_after.tsx:243", "status": "inferred"}
+{"from": "ui_screen:tab_cost_before_after", "to": "dbt_model:f_perf_daily_by_resource", "type": "reads", "evidence": "web/src/tabs/tab_cost_before_after.tsx:349", "status": "inferred"}
+{"from": "ui_screen:tab_cost_before_after", "to": "dbt_model:f_perf_failure_causes_daily", "type": "reads", "evidence": "web/src/tabs/tab_cost_before_after.tsx:244", "status": "inferred"}
+{"from": "ui_screen:tab_coverage:sources", "to": "dbt_model:f_access_source_table_coverage", "type": "reads", "evidence": "web/src/tabs/tab_coverage.tsx:160", "status": "inferred"}
+{"from": "ui_screen:tab_coverage:sources", "to": "dbt_model:f_cost_audit_self_usage", "type": "reads", "evidence": "web/src/tabs/tab_coverage.tsx:222", "status": "inferred"}
+{"from": "ui_screen:tab_genie", "to": "dbt_model:f_cost_monthly_actuals", "type": "reads", "evidence": "web/src/tabs/tab_genie.tsx:105", "status": "inferred"}
+{"from": "ui_screen:tab_genie", "to": "dbt_model:f_genie_usage", "type": "reads", "evidence": "web/src/tabs/tab_genie.tsx:96", "status": "inferred"}
+{"from": "ui_screen:tab_genie", "to": "dbt_model:f_query_provenance_by_source", "type": "reads", "evidence": "web/src/tabs/tab_genie.tsx:110", "status": "inferred"}
+{"from": "ui_screen:tab_governance:access", "to": "dbt_model:f_access_broad_grants", "type": "reads", "evidence": "web/src/tabs/tab_governance.tsx:104", "status": "inferred"}
+{"from": "ui_screen:tab_governance:access", "to": "dbt_model:f_access_grants_inventory", "type": "reads", "evidence": "web/src/tabs/tab_governance.tsx:105", "status": "inferred"}
+{"from": "ui_screen:tab_governance:access", "to": "dbt_model:f_access_login_concentration", "type": "reads", "evidence": "web/src/tabs/tab_governance.tsx:107", "status": "inferred"}
+{"from": "ui_screen:tab_governance:access", "to": "dbt_model:f_access_network_inbound_denials", "type": "reads", "evidence": "web/src/tabs/tab_governance.tsx:108", "status": "inferred"}
+{"from": "ui_screen:tab_governance:access", "to": "dbt_model:f_access_network_outbound_denials", "type": "reads", "evidence": "web/src/tabs/tab_governance.tsx:109", "status": "inferred"}
+{"from": "ui_screen:tab_governance:access", "to": "dbt_model:f_access_runas_escalation", "type": "reads", "evidence": "web/src/tabs/tab_governance.tsx:106", "status": "inferred"}
+{"from": "ui_screen:tab_governance:admin", "to": "dbt_model:f_access_admin_role_change_events", "type": "reads", "evidence": "web/src/tabs/tab_governance.tsx:254", "status": "inferred"}
+{"from": "ui_screen:tab_governance:admin", "to": "dbt_model:f_compute_last_activity", "type": "reads", "evidence": "web/src/components/last_activity.tsx:39", "status": "inferred"}
+{"from": "ui_screen:tab_governance:lineage", "to": "dbt_model:f_access_column_lineage_sensitive_reach", "type": "reads", "evidence": "web/src/tabs/tab_governance.tsx:530", "status": "inferred"}
+{"from": "ui_screen:tab_governance:lineage", "to": "dbt_model:f_access_pii_propagation_untagged", "type": "reads", "evidence": "web/src/tabs/tab_governance.tsx:531", "status": "inferred"}
+{"from": "ui_screen:tab_governance:lineage", "to": "dbt_model:f_access_table_lineage_blast_radius", "type": "reads", "evidence": "web/src/tabs/tab_governance.tsx:528", "status": "inferred"}
+{"from": "ui_screen:tab_governance:sensitive", "to": "dbt_model:f_access_classified_unmasked", "type": "reads", "evidence": "web/src/tabs/tab_governance.tsx:377", "status": "inferred"}
+{"from": "ui_screen:tab_governance:sensitive", "to": "dbt_model:f_access_column_masks_inventory", "type": "reads", "evidence": "web/src/tabs/tab_governance.tsx:374", "status": "inferred"}
+{"from": "ui_screen:tab_governance:sensitive", "to": "dbt_model:f_access_pii_outside_tables", "type": "reads", "evidence": "web/src/tabs/tab_governance.tsx:373", "status": "inferred"}
+{"from": "ui_screen:tab_governance:sensitive", "to": "dbt_model:f_access_row_filters_inventory", "type": "reads", "evidence": "web/src/tabs/tab_governance.tsx:375", "status": "inferred"}
+{"from": "ui_screen:tab_governance:sensitive", "to": "dbt_model:f_access_tags_inventory", "type": "reads", "evidence": "web/src/tabs/tab_governance.tsx:376", "status": "inferred"}
+{"from": "ui_screen:tab_governance:sharing", "to": "dbt_model:f_access_delta_sharing_exposure", "type": "reads", "evidence": "web/src/tabs/tab_governance.tsx:641", "status": "inferred"}
+{"from": "ui_screen:tab_jobs:compute_fit", "to": "dbt_model:f_lakeflow_job_compute_pressure", "type": "reads", "evidence": "web/src/tabs/tab_jobs.tsx:729", "status": "inferred"}
+{"from": "ui_screen:tab_jobs:compute_fit", "to": "dbt_model:f_lakeflow_job_oversized", "type": "reads", "evidence": "web/src/tabs/tab_jobs.tsx:734", "status": "inferred"}
+{"from": "ui_screen:tab_jobs:compute_fit", "to": "dbt_model:f_task_cluster_utilization", "type": "reads", "evidence": "web/src/tabs/tab_jobs.tsx:731", "status": "inferred"}
+{"from": "ui_screen:tab_jobs:failures", "to": "dbt_model:f_lakeflow_daily_state", "type": "reads", "evidence": "web/src/tabs/job_state.tsx:43", "status": "inferred"}
+{"from": "ui_screen:tab_jobs:failures", "to": "dbt_model:f_lakeflow_failed_jobs_wasted_dbus", "type": "reads", "evidence": "web/src/tabs/tab_jobs.tsx:169", "status": "inferred"}
+{"from": "ui_screen:tab_jobs:failures", "to": "dbt_model:f_lakeflow_job_reliability", "type": "reads", "evidence": "web/src/tabs/tab_jobs.tsx:162", "status": "inferred"}
+{"from": "ui_screen:tab_jobs:failures", "to": "dbt_model:f_lakeflow_termination_taxonomy", "type": "reads", "evidence": "web/src/tabs/tab_jobs.tsx:171", "status": "inferred"}
+{"from": "ui_screen:tab_jobs:hygiene", "to": "dbt_model:f_lakeflow_health_rule_coverage", "type": "reads", "evidence": "web/src/tabs/tab_jobs.tsx:566", "status": "inferred"}
+{"from": "ui_screen:tab_jobs:hygiene", "to": "dbt_model:f_lakeflow_job_ownership_orphans", "type": "reads", "evidence": "web/src/tabs/tab_jobs.tsx:567", "status": "inferred"}
+{"from": "ui_screen:tab_jobs:hygiene", "to": "dbt_model:f_lakeflow_job_tasks_no_timeout", "type": "reads", "evidence": "web/src/tabs/tab_jobs.tsx:565", "status": "inferred"}
+{"from": "ui_screen:tab_jobs:hygiene", "to": "dbt_model:f_lakeflow_jobs_no_timeout", "type": "reads", "evidence": "web/src/tabs/tab_jobs.tsx:564", "status": "inferred"}
+{"from": "ui_screen:tab_jobs:hygiene", "to": "dbt_model:f_lakeflow_retries_repairs", "type": "reads", "evidence": "web/src/tabs/tab_jobs.tsx:568", "status": "inferred"}
+{"from": "ui_screen:tab_jobs:hygiene", "to": "dbt_model:f_lakeflow_stale_zombie_jobs", "type": "reads", "evidence": "web/src/tabs/tab_jobs.tsx:569", "status": "inferred"}
+{"from": "ui_screen:tab_jobs:pipelines", "to": "dbt_model:f_lakeflow_pipeline_cost", "type": "reads", "evidence": "web/src/tabs/tab_jobs.tsx:867", "status": "inferred"}
+{"from": "ui_screen:tab_jobs:pipelines", "to": "dbt_model:f_lakeflow_pipeline_idle_tail_duration", "type": "reads", "evidence": "web/src/tabs/tab_jobs.tsx:868", "status": "inferred"}
+{"from": "ui_screen:tab_jobs:pipelines", "to": "dbt_model:f_lakeflow_pipeline_update_failures_retries", "type": "reads", "evidence": "web/src/tabs/tab_jobs.tsx:869", "status": "inferred"}
+{"from": "ui_screen:tab_jobs:slow", "to": "dbt_model:f_cost_by_job", "type": "reads", "evidence": "web/src/tabs/tab_jobs.tsx:385", "status": "inferred"}
+{"from": "ui_screen:tab_jobs:slow", "to": "dbt_model:f_lakeflow_daily_state", "type": "reads", "evidence": "web/src/tabs/job_state.tsx:157", "status": "inferred"}
+{"from": "ui_screen:tab_jobs:slow", "to": "dbt_model:f_lakeflow_failed_cluster_starts", "type": "reads", "evidence": "web/src/tabs/tab_jobs.tsx:377", "status": "inferred"}
+{"from": "ui_screen:tab_jobs:slow", "to": "dbt_model:f_lakeflow_job_duration_regression", "type": "reads", "evidence": "web/src/tabs/tab_jobs.tsx:374", "status": "inferred"}
+{"from": "ui_screen:tab_jobs:slow", "to": "dbt_model:f_lakeflow_job_queue_time", "type": "reads", "evidence": "web/src/tabs/tab_jobs.tsx:375", "status": "inferred"}
+{"from": "ui_screen:tab_jobs:slow", "to": "dbt_model:f_lakeflow_phase_cold_start", "type": "reads", "evidence": "web/src/tabs/tab_jobs.tsx:376", "status": "inferred"}
+{"from": "ui_screen:tab_mlai:endpoints", "to": "dbt_model:f_compute_serving_endpoint_cost_status", "type": "reads", "evidence": "web/src/tabs/tab_mlai.tsx:229", "status": "inferred"}
+{"from": "ui_screen:tab_mlai:endpoints", "to": "dbt_model:f_compute_serving_endpoint_usage", "type": "reads", "evidence": "web/src/tabs/tab_mlai.tsx:231", "status": "inferred"}
+{"from": "ui_screen:tab_mlai:endpoints", "to": "dbt_model:f_cost_serving_mode_by_endpoint", "type": "reads", "evidence": "web/src/tabs/tab_mlai.tsx:233", "status": "inferred"}
+{"from": "ui_screen:tab_mlai:endpoints", "to": "dbt_model:f_serving_endpoint_traffic_by_endpoint", "type": "reads", "evidence": "web/src/tabs/tab_mlai.tsx:230", "status": "inferred"}
+{"from": "ui_screen:tab_mlai:gateway", "to": "dbt_model:f_compute_ai_gateway_usage", "type": "reads", "evidence": "web/src/tabs/tab_mlai.tsx:369", "status": "inferred"}
+{"from": "ui_screen:tab_mlai:spend", "to": "dbt_model:f_cost_by_serving_endpoint", "type": "reads", "evidence": "web/src/tabs/tab_mlai.tsx:32", "status": "inferred"}
+{"from": "ui_screen:tab_mlai:spend", "to": "dbt_model:f_cost_dollarized_by_sku_day", "type": "reads", "evidence": "web/src/tabs/tab_mlai.tsx:40", "status": "inferred"}
+{"from": "ui_screen:tab_mlai:spend", "to": "dbt_model:f_cost_serving_mode_by_endpoint", "type": "reads", "evidence": "web/src/tabs/tab_mlai.tsx:35", "status": "inferred"}
+{"from": "ui_screen:tab_mlai:spend", "to": "dbt_model:f_cost_vector_search_spend", "type": "reads", "evidence": "web/src/tabs/tab_mlai.tsx:37", "status": "inferred"}
+{"from": "ui_screen:tab_money", "to": "dbt_model:f_compute_idle_node_ratio", "type": "reads", "evidence": "web/src/tabs/tab_money.tsx:449", "status": "inferred"}
+{"from": "ui_screen:tab_money", "to": "dbt_model:f_compute_serving_dormant_endpoints", "type": "reads", "evidence": "web/src/tabs/tab_money.tsx:449", "status": "inferred"}
+{"from": "ui_screen:tab_money", "to": "dbt_model:f_compute_serving_endpoint_cost_status", "type": "reads", "evidence": "web/src/tabs/tab_money.tsx:449", "status": "inferred"}
+{"from": "ui_screen:tab_money", "to": "dbt_model:f_compute_warehouse_idle_minutes", "type": "reads", "evidence": "web/src/tabs/tab_money.tsx:449", "status": "inferred"}
+{"from": "ui_screen:tab_money", "to": "dbt_model:f_cost_chargeback_by_cluster", "type": "reads", "evidence": "web/src/tabs/tab_money.tsx:546", "status": "inferred"}
+{"from": "ui_screen:tab_money", "to": "dbt_model:f_cost_chargeback_by_tag_value", "type": "reads", "evidence": "web/src/tabs/tab_money.tsx:123", "status": "inferred"}
+{"from": "ui_screen:tab_money", "to": "dbt_model:f_cost_chargeback_by_warehouse", "type": "reads", "evidence": "web/src/tabs/tab_money.tsx:545", "status": "inferred"}
+{"from": "ui_screen:tab_money", "to": "dbt_model:f_cost_dollarized_by_sku_day", "type": "reads", "evidence": "web/src/tabs/tab_money.tsx:443", "status": "inferred"}
+{"from": "ui_screen:tab_money", "to": "dbt_model:f_cost_failed_statement_waste", "type": "reads", "evidence": "web/src/tabs/tab_money.tsx:449", "status": "inferred"}
+{"from": "ui_screen:tab_money", "to": "dbt_model:f_cost_monthly_actuals", "type": "reads", "evidence": "web/src/tabs/tab_money.tsx:445", "status": "inferred"}
+{"from": "ui_screen:tab_money", "to": "dbt_model:f_cost_period_over_period", "type": "reads", "evidence": "web/src/tabs/tab_money.tsx:444", "status": "inferred"}
+{"from": "ui_screen:tab_money", "to": "dbt_model:f_cost_premium_serverless_photon", "type": "reads", "evidence": "web/src/tabs/tab_money.tsx:449", "status": "inferred"}
+{"from": "ui_screen:tab_money", "to": "dbt_model:f_cost_unnamed_workspaces", "type": "reads", "evidence": "web/src/tabs/tab_money.tsx:448", "status": "inferred"}
+{"from": "ui_screen:tab_money", "to": "dbt_model:f_instance_pools_idle_capacity", "type": "reads", "evidence": "web/src/tabs/tab_money.tsx:449", "status": "inferred"}
+{"from": "ui_screen:tab_money", "to": "dbt_model:f_lakeflow_failed_jobs_wasted_dbus", "type": "reads", "evidence": "web/src/tabs/tab_money.tsx:449", "status": "inferred"}
+{"from": "ui_screen:tab_money", "to": "dbt_model:f_lakeflow_job_duration_regression", "type": "reads", "evidence": "web/src/tabs/tab_money.tsx:543", "status": "inferred"}
+{"from": "ui_screen:tab_money", "to": "dbt_model:f_lakeflow_job_reliability", "type": "reads", "evidence": "web/src/tabs/tab_money.tsx:542", "status": "inferred"}
+{"from": "ui_screen:tab_money", "to": "dbt_model:f_lakeflow_jobs_on_all_purpose", "type": "reads", "evidence": "web/src/tabs/tab_money.tsx:449", "status": "inferred"}
+{"from": "ui_screen:tab_money", "to": "dbt_model:f_lakeflow_pipeline_idle_tail_duration", "type": "reads", "evidence": "web/src/tabs/tab_money.tsx:449", "status": "inferred"}
+{"from": "ui_screen:tab_money", "to": "dbt_model:f_lakeflow_stale_zombie_jobs", "type": "reads", "evidence": "web/src/tabs/tab_money.tsx:449", "status": "inferred"}
+{"from": "ui_screen:tab_money", "to": "dbt_model:f_overview_serverless_classic_split", "type": "reads", "evidence": "web/src/tabs/tab_money.tsx:119", "status": "inferred"}
+{"from": "ui_screen:tab_money", "to": "dbt_model:f_perf_daily_by_resource", "type": "reads", "evidence": "web/src/tabs/tab_money.tsx:541", "status": "inferred"}
+{"from": "ui_screen:tab_money", "to": "dbt_model:f_query_failed_queries_daily", "type": "reads", "evidence": "web/src/tabs/tab_money.tsx:537", "status": "inferred"}
+{"from": "ui_screen:tab_money", "to": "dbt_model:f_query_queuing_waits", "type": "reads", "evidence": "web/src/tabs/tab_money.tsx:539", "status": "inferred"}
+{"from": "ui_screen:tab_money", "to": "dbt_model:f_storage_unused_table_cost", "type": "reads", "evidence": "web/src/tabs/tab_money.tsx:531", "status": "inferred"}
+{"from": "ui_screen:tab_overview", "to": "dbt_model:f_compute_idle_node_ratio", "type": "reads", "evidence": "web/src/tabs/tab_overview.tsx:605", "status": "inferred"}
+{"from": "ui_screen:tab_overview", "to": "dbt_model:f_compute_serving_dormant_endpoints", "type": "reads", "evidence": "web/src/tabs/tab_overview.tsx:605", "status": "inferred"}
+{"from": "ui_screen:tab_overview", "to": "dbt_model:f_compute_serving_endpoint_cost_status", "type": "reads", "evidence": "web/src/tabs/tab_overview.tsx:605", "status": "inferred"}
+{"from": "ui_screen:tab_overview", "to": "dbt_model:f_compute_warehouse_idle_minutes", "type": "reads", "evidence": "web/src/tabs/tab_overview.tsx:605", "status": "inferred"}
+{"from": "ui_screen:tab_overview", "to": "dbt_model:f_cost_daily_spikes", "type": "reads", "evidence": "web/src/tabs/tab_overview.tsx:612", "status": "inferred"}
+{"from": "ui_screen:tab_overview", "to": "dbt_model:f_cost_dollarized_by_sku_day", "type": "reads", "evidence": "web/src/tabs/tab_overview.tsx:606", "status": "inferred"}
+{"from": "ui_screen:tab_overview", "to": "dbt_model:f_cost_failed_statement_waste", "type": "reads", "evidence": "web/src/tabs/tab_overview.tsx:605", "status": "inferred"}
+{"from": "ui_screen:tab_overview", "to": "dbt_model:f_cost_monthly_actuals", "type": "reads", "evidence": "web/src/tabs/tab_overview.tsx:610", "status": "inferred"}
+{"from": "ui_screen:tab_overview", "to": "dbt_model:f_cost_period_over_period", "type": "reads", "evidence": "web/src/tabs/tab_overview.tsx:711", "status": "inferred"}
+{"from": "ui_screen:tab_overview", "to": "dbt_model:f_cost_premium_serverless_photon", "type": "reads", "evidence": "web/src/tabs/tab_overview.tsx:605", "status": "inferred"}
+{"from": "ui_screen:tab_overview", "to": "dbt_model:f_instance_pools_idle_capacity", "type": "reads", "evidence": "web/src/tabs/tab_overview.tsx:605", "status": "inferred"}
+{"from": "ui_screen:tab_overview", "to": "dbt_model:f_lakeflow_daily_state", "type": "reads", "evidence": "web/src/tabs/job_state.tsx:43", "status": "inferred"}
+{"from": "ui_screen:tab_overview", "to": "dbt_model:f_lakeflow_failed_jobs_wasted_dbus", "type": "reads", "evidence": "web/src/tabs/tab_overview.tsx:605", "status": "inferred"}
+{"from": "ui_screen:tab_overview", "to": "dbt_model:f_lakeflow_job_reliability", "type": "reads", "evidence": "web/src/tabs/tab_overview.tsx:737", "status": "inferred"}
+{"from": "ui_screen:tab_overview", "to": "dbt_model:f_lakeflow_jobs_on_all_purpose", "type": "reads", "evidence": "web/src/tabs/tab_overview.tsx:605", "status": "inferred"}
+{"from": "ui_screen:tab_overview", "to": "dbt_model:f_lakeflow_pipeline_idle_tail_duration", "type": "reads", "evidence": "web/src/tabs/tab_overview.tsx:605", "status": "inferred"}
+{"from": "ui_screen:tab_overview", "to": "dbt_model:f_lakeflow_stale_zombie_jobs", "type": "reads", "evidence": "web/src/tabs/tab_overview.tsx:605", "status": "inferred"}
+{"from": "ui_screen:tab_overview", "to": "dbt_model:f_overview_list_prices_raw", "type": "reads", "evidence": "web/src/tabs/tab_overview.tsx:601", "status": "inferred"}
+{"from": "ui_screen:tab_overview", "to": "dbt_model:f_overview_serverless_classic_split", "type": "reads", "evidence": "web/src/tabs/tab_overview.tsx:601", "status": "inferred"}
+{"from": "ui_screen:tab_overview", "to": "dbt_model:f_overview_spend_estimate", "type": "reads", "evidence": "web/src/tabs/tab_overview.tsx:601", "status": "inferred"}
+{"from": "ui_screen:tab_overview", "to": "dbt_model:f_perf_queue_by_hour", "type": "reads", "evidence": "web/src/tabs/query_queue.tsx:37", "status": "inferred"}
+{"from": "ui_screen:tab_query:capacity", "to": "dbt_model:f_perf_daily_by_resource", "type": "reads", "evidence": "web/src/tabs/tab_query.tsx:889", "status": "inferred"}
+{"from": "ui_screen:tab_query:capacity", "to": "dbt_model:f_perf_queue_by_hour", "type": "reads", "evidence": "web/src/tabs/query_queue.tsx:37", "status": "inferred"}
+{"from": "ui_screen:tab_query:capacity", "to": "dbt_model:f_query_queuing_waits", "type": "reads", "evidence": "web/src/tabs/tab_query.tsx:884", "status": "inferred"}
+{"from": "ui_screen:tab_query:capacity", "to": "dbt_model:f_query_slices", "type": "reads", "evidence": "web/src/tabs/tab_query.tsx:885", "status": "inferred"}
+{"from": "ui_screen:tab_query:capacity", "to": "dbt_model:f_query_warehouse_pressure", "type": "reads", "evidence": "web/src/tabs/tab_query.tsx:881", "status": "inferred"}
+{"from": "ui_screen:tab_query:capacity", "to": "dbt_model:f_query_workload_mix_hours", "type": "reads", "evidence": "web/src/tabs/tab_query.tsx:888", "status": "inferred"}
+{"from": "ui_screen:tab_query:efficiency", "to": "dbt_model:f_perf_daily_by_resource", "type": "reads", "evidence": "web/src/tabs/tab_query.tsx:513", "status": "inferred"}
+{"from": "ui_screen:tab_query:efficiency", "to": "dbt_model:f_query_cache_coldstart", "type": "reads", "evidence": "web/src/tabs/tab_query.tsx:510", "status": "inferred"}
+{"from": "ui_screen:tab_query:efficiency", "to": "dbt_model:f_query_local_spillage", "type": "reads", "evidence": "web/src/tabs/tab_query.tsx:507", "status": "inferred"}
+{"from": "ui_screen:tab_query:efficiency", "to": "dbt_model:f_query_pruning_effectiveness", "type": "reads", "evidence": "web/src/tabs/tab_query.tsx:509", "status": "inferred"}
+{"from": "ui_screen:tab_query:efficiency", "to": "dbt_model:f_query_shuffle_write_amplification", "type": "reads", "evidence": "web/src/tabs/tab_query.tsx:508", "status": "inferred"}
+{"from": "ui_screen:tab_query:heavy", "to": "dbt_model:f_cost_audit_self_usage", "type": "reads", "evidence": "web/src/tabs/tab_query.tsx:232", "status": "inferred"}
+{"from": "ui_screen:tab_query:heavy", "to": "dbt_model:f_query_costly_statements_grouped", "type": "reads", "evidence": "web/src/tabs/tab_query.tsx:233", "status": "inferred"}
+{"from": "ui_screen:tab_query:heavy", "to": "dbt_model:f_query_provenance_by_source", "type": "reads", "evidence": "web/src/tabs/tab_query.tsx:231", "status": "inferred"}
+{"from": "ui_screen:tab_query:heavy", "to": "dbt_model:f_query_top_by_cost", "type": "reads", "evidence": "web/src/tabs/tab_query.tsx:230", "status": "inferred"}
+{"from": "ui_screen:tab_query:reliability", "to": "dbt_model:f_cost_failed_statement_waste", "type": "reads", "evidence": "web/src/tabs/tab_query.tsx:694", "status": "inferred"}
+{"from": "ui_screen:tab_query:reliability", "to": "dbt_model:f_query_failed_queries_daily", "type": "reads", "evidence": "web/src/tabs/tab_query.tsx:693", "status": "inferred"}
+{"from": "ui_screen:tab_query:reliability", "to": "dbt_model:f_query_failed_statements_grouped", "type": "reads", "evidence": "web/src/tabs/tab_query.tsx:692", "status": "inferred"}
+{"from": "ui_screen:tab_query:trend", "to": "dbt_model:f_perf_daily_by_resource", "type": "reads", "evidence": "web/src/tabs/query_trend.tsx:100", "status": "inferred"}
+{"from": "ui_screen:tab_query:trend", "to": "dbt_model:f_query_slices", "type": "reads", "evidence": "web/src/tabs/query_trend.tsx:100", "status": "inferred"}
+{"from": "ui_screen:tab_storage:maintenance", "to": "dbt_model:f_po_clustering_activity", "type": "reads", "evidence": "web/src/tabs/tab_storage.tsx:548", "status": "inferred"}
+{"from": "ui_screen:tab_storage:maintenance", "to": "dbt_model:f_po_clustering_column_churn", "type": "reads", "evidence": "web/src/tabs/tab_storage.tsx:549", "status": "inferred"}
+{"from": "ui_screen:tab_storage:maintenance", "to": "dbt_model:f_po_data_skipping_backfill", "type": "reads", "evidence": "web/src/tabs/tab_storage.tsx:550", "status": "inferred"}
+{"from": "ui_screen:tab_storage:maintenance", "to": "dbt_model:f_po_failure_reasons", "type": "reads", "evidence": "web/src/tabs/tab_storage.tsx:553", "status": "inferred"}
+{"from": "ui_screen:tab_storage:maintenance", "to": "dbt_model:f_po_maintenance_cost_by_table", "type": "reads", "evidence": "web/src/tabs/tab_storage.tsx:546", "status": "inferred"}
+{"from": "ui_screen:tab_storage:maintenance", "to": "dbt_model:f_po_vacuum_reclaimed_bytes", "type": "reads", "evidence": "web/src/tabs/tab_storage.tsx:547", "status": "inferred"}
+{"from": "ui_screen:tab_storage:maintenance", "to": "dbt_model:f_storage_po_coverage", "type": "reads", "evidence": "web/src/tabs/tab_storage.tsx:552", "status": "inferred"}
+{"from": "ui_screen:tab_storage:maintenance", "to": "dbt_model:f_storage_small_files", "type": "reads", "evidence": "web/src/tabs/tab_storage.tsx:551", "status": "inferred"}
+{"from": "ui_screen:tab_storage:tables", "to": "dbt_model:f_access_dead_table_candidates", "type": "reads", "evidence": "web/src/tabs/tab_storage.tsx:114", "status": "inferred"}
+{"from": "ui_screen:tab_storage:tables", "to": "dbt_model:f_storage_growth", "type": "reads", "evidence": "web/src/tabs/tab_storage.tsx:116", "status": "inferred"}
+{"from": "ui_screen:tab_storage:tables", "to": "dbt_model:f_storage_target_table_discovery", "type": "reads", "evidence": "web/src/tabs/tab_storage.tsx:111", "status": "inferred"}
+{"from": "ui_screen:tab_storage:tables", "to": "dbt_model:f_storage_unused_table_cost", "type": "reads", "evidence": "web/src/tabs/tab_storage.tsx:24", "status": "inferred"}
+{"from": "ui_screen:tab_storage:tables", "to": "dbt_model:f_table_inventory_type", "type": "reads", "evidence": "web/src/tabs/tab_storage.tsx:112", "status": "inferred"}
+{"from": "ui_screen:tab_waste:priced", "to": "dbt_model:f_compute_idle_node_ratio", "type": "reads", "evidence": "web/src/tabs/tab_waste.tsx:440", "status": "inferred"}
+{"from": "ui_screen:tab_waste:priced", "to": "dbt_model:f_compute_serving_dormant_endpoints", "type": "reads", "evidence": "web/src/tabs/tab_waste.tsx:440", "status": "inferred"}
+{"from": "ui_screen:tab_waste:priced", "to": "dbt_model:f_compute_serving_endpoint_cost_status", "type": "reads", "evidence": "web/src/tabs/tab_waste.tsx:440", "status": "inferred"}
+{"from": "ui_screen:tab_waste:priced", "to": "dbt_model:f_compute_warehouse_cache_reuse", "type": "reads", "evidence": "web/src/tabs/tab_waste.tsx:441", "status": "inferred"}
+{"from": "ui_screen:tab_waste:priced", "to": "dbt_model:f_compute_warehouse_idle_minutes", "type": "reads", "evidence": "web/src/tabs/tab_waste.tsx:440", "status": "inferred"}
+{"from": "ui_screen:tab_waste:priced", "to": "dbt_model:f_cost_failed_statement_waste", "type": "reads", "evidence": "web/src/tabs/tab_waste.tsx:440", "status": "inferred"}
+{"from": "ui_screen:tab_waste:priced", "to": "dbt_model:f_cost_premium_serverless_photon", "type": "reads", "evidence": "web/src/tabs/tab_waste.tsx:440", "status": "inferred"}
+{"from": "ui_screen:tab_waste:priced", "to": "dbt_model:f_instance_pools_idle_capacity", "type": "reads", "evidence": "web/src/tabs/tab_waste.tsx:440", "status": "inferred"}
+{"from": "ui_screen:tab_waste:priced", "to": "dbt_model:f_lakeflow_failed_jobs_wasted_dbus", "type": "reads", "evidence": "web/src/tabs/tab_waste.tsx:440", "status": "inferred"}
+{"from": "ui_screen:tab_waste:priced", "to": "dbt_model:f_lakeflow_jobs_on_all_purpose", "type": "reads", "evidence": "web/src/tabs/tab_waste.tsx:440", "status": "inferred"}
+{"from": "ui_screen:tab_waste:priced", "to": "dbt_model:f_lakeflow_pipeline_idle_tail_duration", "type": "reads", "evidence": "web/src/tabs/tab_waste.tsx:440", "status": "inferred"}
+{"from": "ui_screen:tab_waste:priced", "to": "dbt_model:f_lakeflow_stale_zombie_jobs", "type": "reads", "evidence": "web/src/tabs/tab_waste.tsx:440", "status": "inferred"}
+{"from": "ui_screen:tab_overview", "to": "ui_screen:tab_money", "type": "depends_on", "evidence": "web/src/App.tsx:1175", "status": "extracted"}
+{"from": "process:build_web", "to": "file:web/vite.config.ts", "type": "depends_on", "evidence": "web/package.json:7", "status": "extracted"}
+{"from": "process:build_web", "to": "file:web/src/main.tsx", "type": "depends_on", "evidence": "web/index.html:27", "status": "inferred"}
+{"from": "process:serve_web", "to": "process:build_web", "type": "depends_on", "evidence": "app/api/app.py:1444", "status": "extracted"}
+{"from": "function:web/src/components/nav_hash.ts:readNavHash", "to": "flow:ui_navigation", "type": "part_of", "evidence": "web/src/components/nav_hash.ts:29", "status": "extracted"}
+{"from": "function:web/src/components/nav_hash.ts:filtersFromHash", "to": "flow:ui_navigation", "type": "part_of", "evidence": "web/src/components/nav_hash.ts:88", "status": "extracted"}
+{"from": "function:web/src/components/hash_state.tsx:HashState", "to": "flow:ui_navigation", "type": "part_of", "evidence": "web/src/components/hash_state.tsx:6", "status": "extracted"}
+{"from": "function:web/src/components/primitives.tsx:AreaPage", "to": "flow:ui_navigation", "type": "part_of", "evidence": "web/src/components/primitives.tsx:702", "status": "extracted"}
+{"from": "function:web/src/components/hooks.ts:useFindingData", "to": "flow:ui_navigation", "type": "part_of", "evidence": "web/src/components/hooks.ts:85", "status": "extracted"}
+{"from": "function:web/src/components/hooks.ts:useFindingAgg", "to": "flow:ui_navigation", "type": "part_of", "evidence": "web/src/components/hooks.ts:114", "status": "extracted"}
+{"from": "function:web/src/components/roles.ts:sidebarKeysForRole", "to": "business_rule:ui_role_lenses", "type": "implements", "evidence": "web/src/components/roles.ts:48", "status": "extracted"}
+{"from": "function:web/src/App.tsx:App", "to": "business_rule:ui_no_workspace_match", "type": "implements", "evidence": "web/src/App.tsx:888", "status": "extracted"}
+{"from": "function:web/src/components/hash_state.tsx:HashState", "to": "business_rule:ui_hash_replace_state", "type": "implements", "evidence": "web/src/components/hash_state.tsx:17", "status": "extracted"}
+{"from": "function:web/src/components/tag_picker.tsx:narrowingTag", "to": "business_rule:ui_tag_filter_semantics", "type": "implements", "evidence": "web/src/components/tag_picker.tsx:78", "status": "extracted"}
+{"from": "function:web/src/App.tsx:App", "to": "business_rule:ui_window_from_meta", "type": "implements", "evidence": "web/src/App.tsx:855", "status": "extracted"}
+{"from": "function:web/src/components/nav_hash.ts:applyOldKeyRedirects", "to": "business_rule:ui_old_key_redirects", "type": "implements", "evidence": "web/src/components/nav_hash.ts:112", "status": "extracted"}
+{"from": "test_case:tests/test_web_dist.py:test_page_is_built_from_the_current_source", "to": "process:build_web", "type": "depends_on", "evidence": "tests/test_web_dist.py:36", "status": "extracted"}
+{"from": "test_case:tests/test_web_dist.py:test_page_is_built_from_the_current_source", "to": "business_rule:ui_dist_matches_source", "type": "depends_on", "evidence": "tests/test_web_dist.py:36", "status": "extracted"}
+{"from": "test_case:tests/test_web_dist.py:test_page_keeps_what_runs_before_first_paint", "to": "file:web/index.html", "type": "depends_on", "evidence": "tests/test_web_dist.py:42", "status": "extracted"}
+{"from": "test_case:tests/test_web_dist.py:test_page_keeps_what_runs_before_first_paint", "to": "process:serve_web", "type": "depends_on", "evidence": "tests/test_web_dist.py:42", "status": "extracted"}
+{"from": "test_case:tests/test_web_dist.py:test_page_loads_nothing_from_other_sites", "to": "process:build_web", "type": "depends_on", "evidence": "tests/test_web_dist.py:51", "status": "extracted"}
+{"from": "test_case:web/src/components/nav_hash.test.ts:navHref", "to": "function:web/src/components/nav_hash.ts:navHref", "type": "depends_on", "evidence": "web/src/components/nav_hash.test.ts:10", "status": "extracted"}
+{"from": "test_case:web/src/components/nav_hash.test.ts:readNavHash", "to": "function:web/src/components/nav_hash.ts:readNavHash", "type": "depends_on", "evidence": "web/src/components/nav_hash.test.ts:27", "status": "extracted"}
+{"from": "test_case:web/src/components/nav_hash.test.ts:applyOldKeyRedirects", "to": "function:web/src/components/nav_hash.ts:applyOldKeyRedirects", "type": "depends_on", "evidence": "web/src/components/nav_hash.test.ts:48", "status": "extracted"}
+{"from": "test_case:web/src/components/nav_hash.test.ts:filtersFromHash", "to": "function:web/src/components/nav_hash.ts:filtersFromHash", "type": "depends_on", "evidence": "web/src/components/nav_hash.test.ts:67", "status": "extracted"}
+{"from": "test_case:web/src/components/roles.test.ts:roles", "to": "function:web/src/components/roles.ts:sidebarKeysForRole", "type": "depends_on", "evidence": "web/src/components/roles.test.ts:5", "status": "extracted"}
+{"from": "test_case:web/src/components/roles.test.ts:roles", "to": "business_rule:ui_role_lenses", "type": "depends_on", "evidence": "web/src/components/roles.test.ts:5", "status": "extracted"}
+{"from": "test_case:web/src/components/tag_picker.test.ts:dropMandatoryAttrs", "to": "function:web/src/components/tag_picker.tsx:dropMandatoryAttrs", "type": "depends_on", "evidence": "web/src/components/tag_picker.test.ts:4", "status": "extracted"}
+{"from": "test_case:web/src/components/honesty.test.tsx:rowsOf", "to": "file:web/src/components/hooks.ts", "type": "depends_on", "evidence": "web/src/components/honesty.test.tsx:14", "status": "extracted"}
+{"from": "test_case:web/src/components/honesty.test.tsx:ChartNote", "to": "file:web/src/components/charts.tsx", "type": "depends_on", "evidence": "web/src/components/honesty.test.tsx:24", "status": "extracted"}
