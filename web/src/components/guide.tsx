@@ -279,7 +279,7 @@ const GUIDE_TABS: Record<string, GuideTabInfo> = {
       { sub: "trend", d: "Spend by day/month with spikes marked; Spend / Change by product, workspace, warehouse, cluster or job; top 5 stacked, all in a table, one picked." },
       { sub: "product", d: "Spend by product and SKU, the SKUs that grew, and serverless or Photon premiums." },
       { sub: "allocation", d: "The share of spend each tag or policy reaches, where each dollar lands, and each workspace's tags: which count and why the others don't." },
-      { sub: "chargeback", d: "This period vs the last, by workspace, tag, warehouse, job, cluster or identity; By tag value lists only workspaces with tagged spend." },
+      { sub: "chargeback", d: "This period vs the last, by workspace, tag, warehouse, job, cluster or identity. Workspace: each bar split into SQL warehouses, jobs, pipelines, clusters, AI and other. Warehouse, job and cluster: workspaces ranked by their spend on them, every one in the table with its workspace. By tag value lists only workspaces with tagged spend." },
       { sub: "resource", d: "Spend by cluster, warehouse, pool, job and notebook." },
       { sub: "before_after", d: "Pick a fix day: each resource's average before vs after ($, DBUs, time, runs, failures, queue, start-up, spill), daily chart, and the drivers of the change." },
       { sub: "pricing", d: "Usage-policy and tag coverage, effective price by SKU, restatements, egress and cloud infra." },
