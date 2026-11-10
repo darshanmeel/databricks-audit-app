@@ -3256,7 +3256,7 @@ def _canonical_manifest_tables(tables: dict) -> dict:
     """Normalise snapshot-manifest table keys to "system.<schema>.<table>".
 
     tools/snapshot.py writes the manifest keyed by the parquet folder name, "<schema>__<table>"
-    (tools/check_snapshot.py reads it that way, and so does the on-disk layout). The app keys
+    (the on-disk layout). The app keys
     everything else on the dotted source name: ENABLE_HINTS, RETENTION_DAYS, the dependent-finding
     counts on the Coverage page, and the lookups in finding_status / window_coverage. Before this
     normalisation those lookups missed on every real snapshot, so `state` fell through to its
