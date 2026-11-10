@@ -1370,6 +1370,8 @@ const CB_DIMENSIONS = [
 // The only chargeback dimensions whose rows are split by workspace.
 type CbDim = (typeof CB_DIMENSIONS)[number];
 const CB_WORKSPACE_SPLIT = new Set(["service", "sku", "tag_value"]);
+// Cuts whose not-attributed spend is one row per workspace: in the chart it is one bar, after the real ones.
+const CB_FOLD_NOT_ATTR = new Set(["warehouse", "job", "cluster"]);
 // job/cluster carry the est_ prefix on their money columns; every other dimension doesn't -- so
 // pricing.apply()'s server-side "_disc" twin (^est_(?:[a-z]+_)?usd_list$) only ever exists for
 // job/cluster. Every dimension still owes the account's own configured discount (Cost's Trend/By
@@ -1660,6 +1662,8 @@ function CostChargebackContent({ filters, maxCat, meta, onVerdict }: TabProps) {
   const dim = CB_DIMENSIONS.find((d) => d.key === dimKey) || CB_DIMENSIONS[0];
 
   const rowsState = useFindingData(dim.id, filters.window, filters.workspaceIds, filters.envs, 5000);
+  // Workspace cut: each workspace's spend on SQL warehouses, from the warehouse cut
+  const whState = useFindingData(dimKey === "workspace" ? "cost_chargeback_by_warehouse" : null, filters.window, filters.workspaceIds, filters.envs, 5000);
   // One row per workspace per check, so a small cap cut off whole checks.
   const reconcileState = useFindingData("cost_chargeback_reconcile", filters.window, filters.workspaceIds, filters.envs, 5000);
   const reconcileReady = reconcileState.phase === "ready" && reconcileState.outcome === "ok_rows";
@@ -1721,8 +1725,9 @@ function CostChargebackContent({ filters, maxCat, meta, onVerdict }: TabProps) {
   const naReasonCodes = naRows ? [...new Set<string>(naRows.map((r) => r.not_assessed_reason).filter(Boolean))] : [];
   const naReasonText = naReasonCodes.length ? naReasonCodes.map((c) => (naReasonWords && naReasonWords[c]) || c).join("; ") : null;
 
+  const fold = CB_FOLD_NOT_ATTR.has(dim.key);
   const movers = judged
-    ? judged.map((r) => ({ row: r, label: cbChartLabel(dim, r), change: numOrZero(cbMoney(dim, r, disc).change) }))
+    ? judged.filter((r) => !(fold && cbIsNotAttributed(dim, r))).map((r) => ({ row: r, label: cbChartLabel(dim, r), change: numOrZero(cbMoney(dim, r, disc).change) }))
         .filter((m) => Math.abs(m.change) >= CB_MIN_MOVER_USD)
     : null;
   const gainer = movers ? movers.filter((m) => m.change > 0).sort((a, b) => b.change - a.change)[0] : null;
@@ -1738,12 +1743,41 @@ function CostChargebackContent({ filters, maxCat, meta, onVerdict }: TabProps) {
     const na = rows.filter((r) => !r.is_other && r.status === "NOT_ASSESSED");
     const other = rows.filter((r) => r.is_other);
     const all = [...real, ...na, ...other];
-    return [...all.filter((r) => cbIsNotAttributed(dim, r)), ...all.filter((r) => !cbIsNotAttributed(dim, r))];
+    const notAttrFirst = [...all.filter((r) => cbIsNotAttributed(dim, r)), ...all.filter((r) => !cbIsNotAttributed(dim, r))];
+    return CB_FOLD_NOT_ATTR.has(dim.key) ? [...all.filter((r) => !cbIsNotAttributed(dim, r)), ...all.filter((r) => cbIsNotAttributed(dim, r))] : notAttrFirst;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rows, dim.key, disc]);
+  const notAttr = rows ? rows.filter((r) => cbIsNotAttributed(dim, r)) : [];
+  const notAttrUsd = notAttr.reduce((s, r) => s + numOrZero(cbMoney(dim, r, disc).cur), 0);
+  // per workspace: its spend on SQL warehouses (warehouse cut, not-attributed rows left out)
+  const whByWs = React.useMemo(() => {
+    if (dimKey !== "workspace" || whState.phase !== "ready" || whState.outcome !== "ok_rows") return null;
+    const whDim = CB_DIMENSIONS.find((d) => d.key === "warehouse")!;
+    const whDisc = numOrZero(whState.data.discount_pct);
+    const m = new Map<string, number>();
+    whState.data.rows.forEach((r: Row) => {
+      if (r.is_other || cbIsNotAttributed(whDim, r)) return;
+      const k = String(r.workspace_id);
+      m.set(k, (m.get(k) || 0) + numOrZero(cbMoney(whDim, r, whDisc).cur));
+    });
+    return m;
+  }, [dimKey, whState]);
   const spendItems = displayRows
     // The check's own pooled row is renamed so it isn't confused with the chart's "Other" bar.
-    ? displayRows.map((r) => ({ name: r.is_other ? cbLabel(dim, r).replace(/^Other/, "Smaller ones pooled") : cbLabel(dim, r), value: numOrZero(cbMoney(dim, r, disc).cur), untagged: cbIsNotAttributed(dim, r) })).filter((e) => e.value > 0)
+    ? displayRows.filter((r) => !(fold && cbIsNotAttributed(dim, r)))
+        .map((r) => {
+          const cur = numOrZero(cbMoney(dim, r, disc).cur);
+          const name = r.is_other ? cbLabel(dim, r).replace(/^Other/, "Smaller ones pooled") : cbLabel(dim, r);
+          // workspace cut: the bar is the workspace, its dark part what ran on SQL warehouses
+          if (whByWs) {
+            const listed = new Set((rows || []).filter((x) => !x.is_other).map((x) => String(x.workspace_id)));
+            const wh = r.is_other ? [...whByWs.entries()].filter(([k]) => !listed.has(k)).reduce((t, [, v]) => t + v, 0)
+              : whByWs.get(String(r.workspace_id)) || 0;
+            return { name, value: Math.min(cur, wh), whole: cur, untagged: cbIsNotAttributed(dim, r) };
+          }
+          return { name, value: cur, untagged: cbIsNotAttributed(dim, r) };
+        })
+        .filter((e) => ((e as { whole?: number }).whole ?? e.value) > 0)
     : null;
 
   // price_join_fanout is a self-check on the shared price join every one of these 8 cuts uses, not
@@ -1766,8 +1800,6 @@ function CostChargebackContent({ filters, maxCat, meta, onVerdict }: TabProps) {
     ? cbReconcileNote(dim, reconcileState.data.rows, isTagDim && !activeTagWs ? { keyTotal: rawKeyTotal, billTotal } : null)
     : null;
 
-  const notAttr = rows ? rows.filter((r) => cbIsNotAttributed(dim, r)) : [];
-  const notAttrUsd = notAttr.reduce((s, r) => s + numOrZero(cbMoney(dim, r, disc).cur), 0);
   const notAttrPct = total && total > 0 ? (notAttrUsd / total) * 100 : 0;
   // Summed over every workspace, so the label drops the one workspace name.
   const notAttrName = notAttr.length ? cbLabel(dim, notAttr.length > 1 ? { ...notAttr[0], workspace_id: null } : notAttr[0]) : null;
@@ -1831,7 +1863,10 @@ function CostChargebackContent({ filters, maxCat, meta, onVerdict }: TabProps) {
                 untaggedFirst
                 valueFmt={(v) => fmtMoney(v, 0)}
                 unitLabel="$"
-                note={`Each ${dim.noun}'s total this window; the change against the previous period is under Change and in the table below.`}
+                note={whByWs
+                  ? "Each workspace's total this window; the dark part ran on SQL warehouses, the rest on jobs, clusters, pipelines and serverless. The change is under Change and in the table below."
+                  : fold ? `Each ${dim.noun}'s total this window, biggest first. Spend ${CB_SCOPE_NOTE[dim.key]} is in the first card and at the end of the table.`
+                  : `Each ${dim.noun}'s total this window; the change against the previous period is under Change and in the table below.`}
               />
             ) : <div className="chart-note ok"><div className="chart-note-text">{`No spend by ${dim.noun} in this window.`}</div></div>)
             : movers && movers.length ? (
