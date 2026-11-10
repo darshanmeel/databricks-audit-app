@@ -1370,7 +1370,7 @@ const CB_DIMENSIONS = [
 // The only chargeback dimensions whose rows are split by workspace.
 type CbDim = (typeof CB_DIMENSIONS)[number];
 const CB_WORKSPACE_SPLIT = new Set(["service", "sku", "tag_value"]);
-// Cuts whose not-attributed spend is one row per workspace: in the chart it is one bar, after the real ones.
+// Cuts charted per workspace (its spend on them against all its spend); not-attributed rows go last in the table.
 const CB_FOLD_NOT_ATTR = new Set(["warehouse", "job", "cluster"]);
 // job/cluster carry the est_ prefix on their money columns; every other dimension doesn't -- so
 // pricing.apply()'s server-side "_disc" twin (^est_(?:[a-z]+_)?usd_list$) only ever exists for
@@ -1743,8 +1743,8 @@ function CostChargebackContent({ filters, maxCat, meta, onVerdict }: TabProps) {
     const na = rows.filter((r) => !r.is_other && r.status === "NOT_ASSESSED");
     const other = rows.filter((r) => r.is_other);
     const all = [...real, ...na, ...other];
-    const notAttrFirst = [...all.filter((r) => cbIsNotAttributed(dim, r)), ...all.filter((r) => !cbIsNotAttributed(dim, r))];
-    return CB_FOLD_NOT_ATTR.has(dim.key) ? [...all.filter((r) => !cbIsNotAttributed(dim, r)), ...all.filter((r) => cbIsNotAttributed(dim, r))] : notAttrFirst;
+    const last = CB_FOLD_NOT_ATTR.has(dim.key);
+    return [...all.filter((r) => cbIsNotAttributed(dim, r) !== last), ...all.filter((r) => cbIsNotAttributed(dim, r) === last)];
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rows, dim.key, disc]);
   const notAttr = rows ? rows.filter((r) => cbIsNotAttributed(dim, r)) : [];
@@ -1779,6 +1779,7 @@ function CostChargebackContent({ filters, maxCat, meta, onVerdict }: TabProps) {
       .filter((e) => e.whole > 0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fold, rows, dim.key, disc]);
+  const listedWs = new Set((rows || []).filter((x) => !x.is_other).map((x) => String(x.workspace_id)));
   const spendItems = byWsItems ? byWsItems : displayRows
     // The check's own pooled row is renamed so it isn't confused with the chart's "Other" bar.
     ? displayRows
@@ -1787,8 +1788,7 @@ function CostChargebackContent({ filters, maxCat, meta, onVerdict }: TabProps) {
           const name = r.is_other ? cbLabel(dim, r).replace(/^Other/, "Smaller ones pooled") : cbLabel(dim, r);
           // workspace cut: the bar is the workspace, its dark part what ran on SQL warehouses
           if (whByWs) {
-            const listed = new Set((rows || []).filter((x) => !x.is_other).map((x) => String(x.workspace_id)));
-            const wh = r.is_other ? [...whByWs.entries()].filter(([k]) => !listed.has(k)).reduce((t, [, v]) => t + v, 0)
+            const wh = r.is_other ? [...whByWs.entries()].filter(([k]) => !listedWs.has(k)).reduce((t, [, v]) => t + v, 0)
               : whByWs.get(String(r.workspace_id)) || 0;
             return { name, value: Math.min(cur, wh), whole: cur, untagged: cbIsNotAttributed(dim, r) };
           }
