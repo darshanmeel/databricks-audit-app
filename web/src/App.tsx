@@ -1,13 +1,6 @@
-// root orchestrator: filters (window + workspace, ALL workspaces selected by
-// default), the shell (logo, a left sidebar listing every area, top-bar window/env/cost-center/
-// tag/workspace controls plus as-of date/theme, a menu button below ~900px), and cross-tab
-// navigation (next:-chips, Overview's top-findings list and every "How is this worked out?" link
-// land on the right area via QUERY_HOME / homeForQuery, tab_registry.ts). Every area (except
-// Guide) renders through AreaPage (primitives.tsx) -- this file owns the shell only, never an
-// area's own content.
-//
-// P2-FILTERS' tag/attribute-filter plumbing, P4-T-IDX's tag seam and P4-44's shareable-hash-state
-// discipline are unchanged from before this redesign -- only the shell around them is new.
+// Root: the filters (window, env, tags, workspaces; all workspaces by default), the shell (sidebar, top bar,
+// menu button below ~900px) and cross-tab navigation via homeForQuery. Areas render through AreaPage; this file
+// owns the shell only.
 
 import { Tip, type TipPoint } from "./components/tip";
 import React from "react";
@@ -706,8 +699,7 @@ function SideNavDrawer({
   );
 }
 
-// P4-44: this page's own address bar at mount time, read exactly once -- every "restore on load"
-// below reads off this ONE snapshot rather than location.hash directly.
+// The address at mount time, read once; every restore below reads this snapshot.
 function useInitialHash() {
   return React.useState(() => {
     try { return HashState.get(); } catch (e) { return new URLSearchParams(); }

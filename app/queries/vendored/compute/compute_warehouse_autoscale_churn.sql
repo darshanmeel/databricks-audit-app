@@ -52,7 +52,9 @@ ev AS (
          LAG(cluster_count) OVER (PARTITION BY warehouse_id ORDER BY event_time) AS prev_cluster_count,
          LEAD(event_time) OVER (PARTITION BY warehouse_id ORDER BY event_time)   AS next_event_time
   FROM system.compute.warehouse_events
-  WHERE event_time >= current_timestamp() - INTERVAL :period_days DAYS
+  -- whole days, the same window as the cost rollup
+  WHERE event_time >= current_date() - INTERVAL :period_days DAYS
+    AND event_time <  current_date()
 )
 SELECT
     e.warehouse_id,

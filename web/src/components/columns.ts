@@ -1,13 +1,4 @@
-// F2 (U-UI-03/04, N-N9/N-N10/N-N11): human column names, units
-// and one-sentence help for a wide finding's own data table (finding_detail.tsx's DataTable is the
-// only reader). Before this file, DataTable printed c.name verbatim -- raw UPPERCASE snake_case
-// (WASTED_DBUS_PROXY, LAST_FAILED_TERMINATION_CODE) with no unit and no explanation, which is
-// exactly what the user's own screenshot flagged: a table nobody outside this codebase can read.
-//
-// This is a DISPLAY layer only. It never changes what a column IS (that is classify_columns'
-// job, app/api/service.py) or what a header TEXT says (P4-03 owns read_this/investigate_if/
-// actions -- this file only decides how one column NAME renders, and always keeps the raw name
-// one hover away so a reader can still match it back to that header text).
+// Column names, units and one-line help for a finding's data table. Display only: the raw name stays one hover away.
 
 import { resolveName } from "./names";
 import type { Column, Row } from "../types";
@@ -178,14 +169,8 @@ function suffixUnit(name: string): { unit: string; bareName: string } | null {
   return null;
 }
 
-// columnMeta(name, kind) -> {label, unit, help, raw}. `raw` is always the column name verbatim --
-// a reader hovering the header sees "column: <raw>" so this label can always be matched back to
-// whatever a header's own read_this/investigate_if/actions text says about that column (P4-03
-// owns that text; this file never rewords it, only the column NAME above the data). Always the
-// real unit, even when the label text happens to end in that same symbol -- a caller rendering
-// label and unit as ONE inline string (planColumns' own toMeta below) suppresses the repeat
-// itself; the Guide's Columns table renders them as two separate cells, where suppressing it here
-// instead left a plainly wrong "-- " unit next to a dollar column.
+// columnMeta(name, kind) -> {label, unit, help, raw}; `raw` is the column name. Always the real unit; a caller that
+// joins label and unit drops the repeat itself.
 function escapeRegExp(s: string): string { return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }
 
 export function columnMeta(name: string, kind: string | null): ColumnMeta {
@@ -276,15 +261,8 @@ const ENTITY_NOUN: Record<string, { s: string; p: string }> = {
   group_id: { s: "query group", p: "query groups" },
 };
 
-// The one numeric column a summary (verdict line, top-N chart, grouped table) leads with --
-// wasted money first, then any money, then wasted DBUs, then any DBU, then a rate, then a
-// duration/size (all unchanged: a check that already headlines correctly off a classified column,
-// e.g. compute_warehouse_idle_minutes' own est_wasted_usd_list, keeps doing exactly that). Only a
-// candidate with NO classified magnitude at all -- a plain count column classify_columns has no
-// kind for, e.g. lakeflow_failed_runs' own failed_run_rows/distinct_runs pair -- reaches the two
-// T-75B review fallbacks below: a column named failed/wasted/idle (the check's own verdict column,
-// whatever it happens to be called), then the check's own sort column (meta.order_by), before
-// finally falling back to whichever numeric column the query's SELECT list put first.
+// The one numeric column a summary leads with: wasted $, then $, wasted DBU, DBU, a rate, a duration or size; for
+// plain counts, a failed/wasted/idle column, then the sort column, then the first numeric one.
 // A configured setting (worker count, auto-stop minutes) is not a measure to add up or rank by.
 const SETTING_COLUMN_RE = /^(worker_count|num_workers|min_workers|max_workers|min_num_clusters|max_num_clusters|cluster_count|autotermination_minutes|auto_termination_minutes|auto_stop_minutes|served_entity_count)$/;
 
@@ -318,10 +296,7 @@ function firstOrderByColumn(orderBy: string | null | undefined): string | null {
   return m ? m[1] : null;
 }
 
-// A non-id entity column (table_id) whose own value is not itself readable -- the column to show
-// INSTEAD as that entity's display name (table_name), so grouping by the stable id never forces
-// the table/chart to print a raw UUID (T-75B review item 5: table_id fixes the merge bug, but the
-// reader still needs to see table_name, not the id, per row).
+// The display column for an id entity (table_id -> table_name), so grouping by id never prints a raw UUID.
 const ENTITY_DISPLAY_COL: Record<string, string> = { table_id: "table_name" };
 
 // planColumns(columns, rows, discountPct, orderBy) -- the column PLAN for a finding's data table:
@@ -337,12 +312,8 @@ export function planColumns(columns: Column[] | null, rows: Row[] | null, discou
   cols.forEach((c) => { byName[c.name] = c; });
   const loadedRows = rows || [];
 
-  // table_id ranks above the bare table_name it always rides alongside (T-75B review item 5: two
-  // different tables sharing a name were silently merged when table_name was the entity) -- a
-  // check with no table_id at all still falls back to table_name exactly as before. group_id
-  // (query_top_by_cost's own saved-query/dashboard/job/text-hash grain, no other query emits this
-  // column) ranks above warehouse_id so a warehouse a query group happened to run on is never
-  // mistaken for the entity itself.
+  // table_id ranks above table_name (two tables can share a name); group_id ranks above warehouse_id, since a query
+  // group's warehouse is not the entity.
   const ENTITY_PRIORITY = [
     "job_id", "pipeline_id", "notebook_id", "group_id", "warehouse_id", "cluster_id", "endpoint_name", "served_entity_name",
     "statement_fingerprint", "table_full_name", "target_table", "table_id", "table_name",

@@ -116,19 +116,19 @@ models:
       price column to compare it against, because a "realization ratio" between two list-price estimates
       would not be a real discount signal - that is why this query always emits status = NOT_ASSESSED
       with not_assessed_reason = ''no_negotiated_rate_source'' rather than a fabricated band. The join
-      is scoped to the price row that was active on each usage_date: active rows carry price_end_time
-      = NULL, so the window predicate is (price_end_time IS NULL OR usage_date < DATE(price_end_time))
-      - using only usage_date < DATE(price_end_time) would silently zero out recent usage. Join keys are
-      cloud + usage_unit + sku_name, not sku_name alone (multi-cloud accounts have several rows per sku_name).
-      currency_code is not a column on system.billing.usage, so it cannot drive the join; multi-currency
-      accounts may match more than one list_prices currency row and that is not disambiguated here. net_usage_quantity
-      sums usage_quantity across all record_types (corrections already net out). usage_unit is filtered
-      to DBU so storage-bytes/hours/tokens are never priced against a per-DBU rate. The price is LEFT-joined:
-      a SKU with no matching price row keeps net_dbus but a null net_list_cost - read that as a priced-coverage
-      gap, never as $0. No price_basis column here (free/priced/unpriced) since every row is NOT_ASSESSED
-      regardless of pricing coverage. workspace_id lets this check obey the workspace/env filter the way
-      every other per-workspace finding already does; a NULL workspace_id is a genuine account-level usage
-      row, never dropped.'
+      is scoped to the price row that was active at each usage row''s usage_end_time, the same timestamp
+      join every other priced check uses: active rows carry price_end_time = NULL, so the window predicate
+      is (price_end_time IS NULL OR usage_end_time < price_end_time) - using only usage_end_time < price_end_time
+      would silently zero out recent usage. Join keys are cloud + usage_unit + sku_name, not sku_name
+      alone (multi-cloud accounts have several rows per sku_name). currency_code is not a column on system.billing.usage,
+      so it cannot drive the join; multi-currency accounts may match more than one list_prices currency
+      row and that is not disambiguated here. net_usage_quantity sums usage_quantity across all record_types
+      (corrections already net out). usage_unit is filtered to DBU so storage-bytes/hours/tokens are never
+      priced against a per-DBU rate. The price is LEFT-joined: a SKU with no matching price row keeps
+      net_dbus but a null net_list_cost - read that as a priced-coverage gap, never as $0. No price_basis
+      column here (free/priced/unpriced) since every row is NOT_ASSESSED regardless of pricing coverage.
+      workspace_id lets this check obey the workspace/env filter the way every other per-workspace finding
+      already does; a NULL workspace_id is a genuine account-level usage row, never dropped.'
     sql_url: https://github.com/darshanmeel/crosshire-audit-databricks-admin/blob/master/queries/cost/cost_actual_vs_list_by_sku.sql
     order_by: net_list_cost DESC NULLS LAST
   columns:

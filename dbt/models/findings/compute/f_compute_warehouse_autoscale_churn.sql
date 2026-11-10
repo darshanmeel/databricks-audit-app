@@ -45,7 +45,9 @@ ev AS (
          LAG(cluster_count) OVER (PARTITION BY warehouse_id ORDER BY event_time) AS prev_cluster_count,
          LEAD(event_time) OVER (PARTITION BY warehouse_id ORDER BY event_time)   AS next_event_time
   FROM {{ source('system_compute', 'warehouse_events') }}
-  WHERE event_time >= {{ audit_now() }} - (({{ w }}) * INTERVAL 1 DAY)
+  -- whole days, the same window as the cost rollup
+  WHERE event_time >= {{ audit_today() }} - (({{ w }}) * INTERVAL 1 DAY)
+    AND event_time <  {{ audit_today() }}
 )
 SELECT
     e.warehouse_id,
@@ -153,7 +155,9 @@ ev AS (
          LAG(cluster_count) OVER (PARTITION BY warehouse_id ORDER BY event_time) AS prev_cluster_count,
          LEAD(event_time) OVER (PARTITION BY warehouse_id ORDER BY event_time)   AS next_event_time
   FROM {{ source('system_compute', 'warehouse_events') }}
-  WHERE event_time >= {{ audit_now() }} - INTERVAL {{ w }} DAYS
+  -- whole days, the same window as the cost rollup
+  WHERE event_time >= {{ audit_today() }} - INTERVAL {{ w }} DAYS
+    AND event_time <  {{ audit_today() }}
 )
 SELECT
     e.warehouse_id,

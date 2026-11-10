@@ -1,0 +1,12 @@
+version: 2
+
+# Typed here, not inferred: the shipped seed is header-only and the test one has a numeric-looking id.
+seeds:
+  - name: workspace_env_overrides
+    config:
+      column_types:
+        workspace_id: varchar
+        env: varchar
+        name: varchar
+        url: varchar
+        note: varchar

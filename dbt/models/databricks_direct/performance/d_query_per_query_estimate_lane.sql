@@ -1,4 +1,4 @@
-{{ config(enabled=(target.type == "databricks"), materialized=("table" if var("direct_mode", "run") == "table" else "direct_check"), schema="audit_direct", tags=['inventory', 'domain:performance', 'tier:deep', 'databricks_direct']) }}
+{{ config(enabled=false, tags=['inventory', 'domain:performance', 'tier:deep', 'databricks_direct']) }}
 -- generated from app/queries/vendored/performance/query_per_query_estimate_lane.sql; fix the source query and regenerate, never edit this file.
 {%- set windows = var('windows', [7, 30, 90]) %}
 {%- for w in windows %}

@@ -14,8 +14,8 @@
 -- no per-row tag component (unlike cost_unit's), so it is safe to ref() it directly here rather
 -- than recompute the grouping. Work-level needs PER-STATEMENT detail query.history alone has, so
 -- that half recomputes the same (workspace_id, compute_kind, compute_id) classification and unit_id
--- formula from tags.perf_unit.sql, duplicated on purpose (same reasoning as cost_unit_tag.sql's
--- header note) -- the two MUST hash identically or a statement's tag never finds its unit.
+-- formula from tags.perf_unit.sql -- the two must hash identically or a statement's tag never
+-- finds its unit.
 {% if target.type != 'duckdb' %}
 {{ exceptions.raise_compiler_error("tags.perf_unit_tag is DuckDB-only for now (tasks/P4-T-SPEC.md, todo later)") }}
 {% endif %}

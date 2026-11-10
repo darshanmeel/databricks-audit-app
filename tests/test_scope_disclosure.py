@@ -231,7 +231,6 @@ def test_is_regional_follows_the_account_wide_sources():
             continue
         expected_regional = s.domain != "cost" or s.query_id in REGIONAL_COST_EXCEPTIONS
         assert app_core_data.spec_is_regional(s) is expected_regional, s.query_id
-        assert app_core_data.is_regional(s.query_id) is app_core_data.spec_is_regional(s)
 
 
 # ------------------------------------------------------------------------------------------
@@ -276,10 +275,6 @@ def test_region_split_on_the_fixture_db():
     assert app_core_data.region_split(["not-a-real-workspace"]) == {
         "filtered": True, "selected": [], "outside": [], "unknown": [],
     }
-    assert app_core_data.region_split(attributes={"cost_center": ["engineering"]}) == {
-        "filtered": True, "selected": ["cc_ws1"], "outside": [], "unknown": [],
-    }
-    assert app_core_data.region_split(attributes={"not_a_real_key": ["x"]})["filtered"] is False
 
 
 # ------------------------------------------------------------------------------------------
@@ -482,7 +477,7 @@ def test_findings_list_outside_only_selection():
     rows = body["findings"]
     for r in rows:
         assert r["has_workspace_id"] == app_core_data.workspace_filterable(app_core_data.finding_columns(r["query_id"]))
-        assert r["regional"] is app_core_data.is_regional(r["query_id"])
+        assert r["regional"] is app_core_data.spec_is_regional(registry.by_id(r["query_id"]))
     regional_ws = [r for r in rows if r["regional"] and r["has_workspace_id"]]
     account_wide = [r for r in rows if not r["regional"]]
     no_ws = [r for r in rows if r["has_workspace_id"] is False]

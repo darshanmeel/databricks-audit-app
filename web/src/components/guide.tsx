@@ -404,6 +404,7 @@ const GUIDE_TABS: Record<string, GuideTabInfo> = {
     ],
     limits: [
       "Pool floors bill on your cloud VM, so they rank by instance count, not dollars.",
+      "A warehouse's users, tables and slowest queries are from the Time Window.",
     ],
   },
   jobs: {
@@ -500,7 +501,7 @@ const GUIDE_TABS: Record<string, GuideTabInfo> = {
       "Indexes are relative to the workspaces shown: 100 is the largest of them.",
       "Only direct table grants show; access through a schema, catalog or group isn't expanded.",
       "Volume reads by Spark jobs on a cluster may not be in the audit log, so a volume can read unused when a job reads it.",
-      "Sizes are from the last export, not the Time Window; reads and writes are from the Time Window.",
+      "Sizes are from the last export, not the Time Window. Reads, writes and each person's queries and tables read are from the Time Window.",
       "Changes and maintenance hold each table's last 100 DESCRIBE HISTORY operations and run with the sizes; without them only predictive optimization shows.",
       "Reads before and after a compaction compare 7 days each side and need 3+ reads on both; other changes in that time count too.",
       "Slowest queries come from query history (SQL warehouses and serverless only), matched to the table through lineage; a join's bytes and files show on each table it reads.",
@@ -986,6 +987,7 @@ function renderHowBody(slug: string, app: GuideApp, findings: GuideFinding[]): R
           <ul>
             <li>Each level has its own "no tag, cannot be attributed" row with a count and $.</li>
             <li>Levels always sum to the same billing total: nothing is invented or dropped.</li>
+            <li>The rollup and the Tag filter on spend split each warehouse's DBUs the same way, so their dollars per tag agree.</li>
             <li>Filters offer the tag keys your account uses, not a fixed list.</li>
           </ul>
           <p><b>What the Tag filter does today</b></p>

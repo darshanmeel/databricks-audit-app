@@ -1,12 +1,5 @@
-// section 5.2/5.3 of the redesign brief: a plain display title
-// and one-line "why it matters" for every check the redesign places (tab_registry.ts's
-// AREA_REGISTRY), and a word for every enum code the UI would otherwise print raw (termination
-// codes, not-assessed reason codes). Compute-pressure verdicts (WAITING_OR_IDLE, MEMORY_PRESSURE,
-// ...) already have their own map in pressure.tsx (T-65) -- not duplicated here.
-//
-// getCheckLabel(queryId, fallbackTitle) is the one function every screen calls: a query_id with an
-// entry below gets that title/why; one without falls back to the finding's own `.title` (from
-// GET /api/findings, already a plain sentence) with no why line, rather than inventing one.
+// A plain title and one-line why for every placed check, and words for enum codes the UI would print raw.
+// Pressure verdicts live in pressure.tsx. getCheckLabel falls back to the finding's own title with no why.
 
 import { PRESSURE_LABELS } from "./pressure";
 
@@ -188,9 +181,7 @@ export const CHECK_LABELS: Record<string, CheckLabel> = {
   cost_audit_self_usage: { title: "This audit's own usage, by warehouse", why: "How much of each warehouse's traffic and spend this audit itself was, not your own workloads -- for reference." },
 };
 
-// Termination codes -- the Databricks Jobs API's fixed run-termination-code vocabulary, plus a
-// few reason codes this library's own checks emit (not_assessed_reason values that are not
-// already a compute-pressure verdict -- those are pressure.tsx's own map, T-65).
+// Termination codes: the Jobs API's run-termination vocabulary plus this library's own not-assessed reason codes.
 const ENUM_LABELS: Record<string, string> = {
   // job_run_timeline.result_state (a coarser, separate vocabulary from termination_code below)
   SUCCESS: "Succeeded",

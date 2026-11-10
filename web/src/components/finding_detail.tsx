@@ -86,12 +86,7 @@ function capitalize(s: string): string {
   return s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
 }
 
-// tasks/T-61-names-links-job-focus.md: which Ref kind (names.tsx) an "id"-kind column renders
-// as, detected by column NAME alone -- a column this does not recognise keeps its existing raw
-// fallback (fmtCell), never a blank. Exact names first (the common case across every finding);
-// a small suffix set covers the few columns that qualify a role rather than being the plain id
-// (e.g. lakeflow_long_running_runs.top_task_cluster_id) -- every one of them still has its own
-// workspace_id column on the same row to build a link from.
+// Which Ref kind an id column renders as, by column name; an unknown column keeps the raw value.
 function refKindForColumn(name: string): string | null {
   if (name === "workspace_id") return "workspace";
   if (name === "job_id") return "job";
@@ -154,14 +149,8 @@ function grainNounFor(plan: ColumnPlan, dayCol: string | null): Noun {
   return dayCol ? { s: "day", p: "days" } : { s: "row", p: "rows" };
 }
 
-// T-75B review must-fix 1: the verdict line's own headline counted ROWS and labelled them with the
-// entity's name ("681 warehouse-days" that was really 163 warehouses' worth of daily rows) --
-// wrong whenever more than one row shares an entity (or an entity+day). This tallies the worst
-// status per distinct GRAIN UNIT instead: one entity when the check has no day column, one
-// (entity, day) pair when it does (matching whatever grainNounFor already calls that combination),
-// so "N <noun> CRITICAL" always counts the same units the noun names. Returns null when the check
-// has no entity at all -- the raw per-row tally (tallyStatusCounts) is already exactly right then,
-// since each row already IS the grain unit.
+// Worst status per grain unit (entity, or entity + day), so "N <noun> CRITICAL" counts what the noun names;
+// null when the check has no entity.
 function buildGrainCounts(rows: Row[], plan: ColumnPlan, dayCol: string | null, hasStatus: boolean): { size: number; counts: Record<string, number> } | null {
   const entity = plan.entity;
   if (!entity) return null;
@@ -280,12 +269,8 @@ function worstGroupClause(topGroup: EntityGroup | null, plan: ColumnPlan, band: 
   return `${verb}: ${name}${metricText}`;
 }
 
-// The one verdict sentence: counts by status in the check's own grain noun, plus the entity that
-// matters most -- everything a reader used to have to infer from a wide raw table, in one line.
-// T-75B review must-fix 1: the headline now counts distinct GRAIN UNITS (buildGrainCounts), never
-// raw rows, whenever the check has an entity to count -- a raw-row total that collapsed onto fewer
-// units is kept as a parenthetical ("4 grantees CRITICAL (3,432 rows)") rather than silently
-// dropped, so the reader can still see how many individual rows that headline came from.
+// The verdict sentence: counts by status in the check's grain noun, plus the entity that matters most.
+// When units collapse many rows, the row count is kept in brackets.
 function buildVerdictText(data: FindingData, plan: ColumnPlan, band: Band | null, hasStatus: boolean, statusCounts: Record<string, number>,
   worstRow: Row | null, topGroup: EntityGroup | null, entitySummary: EntitySummary | null): string {
   const dayCol = findDayColumn(data.columns);
@@ -378,16 +363,8 @@ function actionLine(actions: string[] | null | undefined, queryId: string | null
   return s;
 }
 
-// One (entity, worst status, row count, key-metric total) per distinct entity value, computed
-// from every loaded row (up to INITIAL_LIMIT) -- the source both the grouped table and the top-N
-// chart read from, so the two can never disagree. job_id/pipeline_id are unique only WITHIN a
-// workspace (names.tsx's own dim-key rule), so those two group on workspace_id+id, never the bare
-// id alone, or two different jobs that happen to share a number would silently merge into one row.
-//
-// T-75B review must-fix 4: a row with NO entity value (query_pruning_effectiveness's serverless
-// rows, which carry no warehouse_id) used to be dropped from this map entirely -- invisible in
-// both the chart and the table, however large its own share of the total. Those rows now land in
-// one explicit "(no <entity>)" group instead of vanishing.
+// One summary per entity from the loaded rows, shared by the grouped table and the chart. Job and pipeline ids
+// are per workspace, so they group on workspace + id; rows with no entity go to one "(no <entity>)" group.
 const COMPUTE_TYPE_LABEL: Record<string, string> = { SERVERLESS_COMPUTE: "Serverless notebooks & jobs", CLUSTER: "Clusters (notebooks & jobs)" };
 
 function buildEntitySummary(rows: Row[], plan: ColumnPlan, hasStatus: boolean, dayCol: string | null): EntitySummary | null {
@@ -434,8 +411,7 @@ function buildEntitySummary(rows: Row[], plan: ColumnPlan, hasStatus: boolean, d
         if (v > g.max) g.max = v;
       }
     }
-    // A non-id entity column already IS the name; an id entity with its own display column
-    // (table_id -> table_name, T-75B review item 5) shows THAT instead of the raw id.
+    // An id entity with its own display column shows that name.
     if (hasEntity && !refKind && g.name === null) g.name = displayCol ? (row[displayCol] || raw) : raw;
   });
   const list = Array.from(map.values()).map((g): EntityGroup => ({
@@ -446,12 +422,7 @@ function buildEntitySummary(rows: Row[], plan: ColumnPlan, hasStatus: boolean, d
   return { entity, refKind, metric, list };
 }
 
-// T-75B review should-fix "header still carries extra chips": starred/needs-confirmation/scope
-// used to sit in the header next to the pill and window chip, competing with them -- they read as
-// detail, not verdict, so they move in here with everything else a reader only needs on request.
-// A check's caveats are written for reviewers and can run to hundreds of words: the first two
-// plain sentences here, the rest in the Guide. Sentences about masking are replaced by what the
-// current setting actually does.
+// Detail on request: scope chips, and the first two plain sentences of the caveats (masking ones say what the setting does).
 const MASKING_SENTENCE_RE = /\bMASKING\b|masked in-SQL|\bREDACTED\b|sha2\(|\bmask(ed|ing)\b[^.]*\b(user|identit|email|principal|run_as|owned_by|created_by|people|person)/;
 function readerCaveats(text: string | null | undefined): { text: string; more: boolean } | null {
   if (!text) return null;
@@ -521,10 +492,7 @@ function Guidance({ header, queryId, hasStatus, stars, confidenceNote, scopeBadg
   );
 }
 
-// T-75A (DEC-66.2): the library-corrections register's own entries for this query_id, if any --
-// a small "N known issue(s)"/"corrected" badge that opens the full problem/effect/fix list on
-// click; no sentence competing with the verdict line above it. Renders nothing when the array is
-// empty (the common case -- most vendored queries carry no known defect).
+// Known library issues for this check, as a small badge that opens the list.
 function LibraryIssueBadge({ corrections }: { corrections: LibraryCorrection[] | null }) {
   const [open, setOpen] = React.useState(false);
   if (!corrections || corrections.length === 0) return null;
@@ -559,11 +527,7 @@ function LibraryIssueBadge({ corrections }: { corrections: LibraryCorrection[] |
   );
 }
 
-// P2-PARTIAL: a source app_core_data.finding_status() classified as name-lookup-only or
-// partially-exported never blocks a finding any more (it still computes), but the finding is not
-// perfectly clean either -- this renders a small note saying exactly what is degraded/partial and
-// why, on top of whichever outcome card the finding actually reached (never its own card, so it
-// reads next to real rows/an empty window/etc. instead of pre-empting them).
+// Degraded or partially exported sources: a note beside whatever outcome the check reached.
 const NAME_COLUMN_LABEL: Record<string, string> = {
   workspace_name: "Workspace names",
   job_name: "Job names",
@@ -624,9 +588,7 @@ function friendlySourceName(src: string | null | undefined): string {
   return last.replace(/_/g, " ");
 }
 
-// T-75B review should-fix "not-assessed card shows the full SQL error": `info.message` is this
-// model's own raw exception text (can be a multi-line "Search path: ..." dump) -- now one line
-// naming which source is missing, with that raw text (and the per-source detail) behind Details.
+// One line naming the missing source; the raw error sits behind Details.
 export function NotAssessedCard({ data }: { data: Partial<FindingData> }) {
   const info = data.status_info || {};
   if (info.outside_region) return <OutsideRegionCard info={info} />;
@@ -678,9 +640,7 @@ export function NotAssessedCard({ data }: { data: Partial<FindingData> }) {
   );
 }
 
-// T-75B review should-fix "empty state is text-heavy and out of order": "a longer window may have
-// rows" only makes sense on a windowed check (a snapshot has no other window to try); raw source
-// names/states move behind Details instead of an always-open list.
+// "A longer window may have rows" only on a windowed check; source states sit behind Details.
 const CELL_CARRIES_UNIT = new Set<string | null>(["money", "dbu", "pct", "hours"]);
 
 // Every column of every loaded row, raw values, for evidence outside the app.
@@ -924,9 +884,7 @@ function DataTable({ data, plan, onLoadMore, loadingMore }: { data: FindingData;
                       ? <Ref kind="run" id={row.job_id} workspaceId={wsId} runId={value} />
                       : <Ref kind={refKind} id={value} workspaceId={wsId} />;
                   } else if (c.name === "not_assessed_reason" && hasValue) {
-                    // P4-03: the header's own not_assessed_reasons dict (service.
-                    // substitute_header_params) puts this code into words -- never the raw code
-                    // (e.g. "no_cluster_recorded") a reader has no way to look up.
+                    // The header's words for the code, never the raw code.
                     const words = data.header && data.header.not_assessed_reasons;
                     content = (words && words[value]) || value;
                   } else if (underFloor) {
@@ -989,9 +947,7 @@ function DataTable({ data, plan, onLoadMore, loadingMore }: { data: FindingData;
 // the list.
 const GROUPED_PAGE_SIZE = 25;
 
-// T-75B review should-fix "grouped table headers are unclear": "Rows" reads as "Days" when the
-// check groups by day (each row already IS one day for that entity); the metric column says
-// Total/Avg up front instead of only in its hover tip.
+// "Rows" reads "Days" when the check groups by day; the metric column says Total or Avg.
 function GroupedTable({ summary, plan, statusMeaningful, dayCol }: { summary: EntitySummary; plan: ColumnPlan; statusMeaningful: boolean; dayCol: string | null }) {
   const [showAll, setShowAll] = React.useState(false);
   const noun = plan.entityNoun || { s: "row", p: "rows" };
@@ -1082,10 +1038,7 @@ function GroupedTable({ summary, plan, statusMeaningful, dayCol }: { summary: En
   );
 }
 
-// T-75B review must-fix 3 (accepted fallback: "or at least mark the table as partial"): the
-// entity summary is built only from the rows this page actually fetched (INITIAL_LIMIT), so a
-// check with more rows than that has a grouped table/chart built from a subset -- said here
-// rather than silently shown as if it were the whole table.
+// The grouped table is built from the fetched rows only, so a capped check says so.
 function PartialGroupNote({ data }: { data: FindingData }) {
   if (!data.rows || data.rows.length >= data.rows_total) return null;
   return (
@@ -1186,8 +1139,7 @@ function RelatedChecks({ next, findingsIndex, onJumpTo }: {
   );
 }
 
-// P4-T-IDX (section 5.7): one line from scope.tag, only while a tag filter is actually set
-// (data.tag is non-null -- app/api/app.py's own "tag": {...} | null echo).
+// One line from scope.tag while a tag filter is set.
 function TagScopeLine({ data }: { data: FindingData }) {
   const tag = data && data.tag;
   const scopeTag = data && data.scope && data.scope.tag;
@@ -1198,8 +1150,7 @@ function TagScopeLine({ data }: { data: FindingData }) {
   return <div className="scope-note">{text}</div>;
 }
 
-// T-71: the same region-gap fact scope.tsx's RegionGapLine states, worded as one short line with
-// the affected workspace names one click away instead of only in a hover title.
+// The region gap in one line, workspace names one click away.
 function RegionScopeLine({ data }: { data: FindingData }) {
   const [open, setOpen] = React.useState(false);
   if (isOutsideRegion(data)) return null; // that case gets its own NotAssessedCard already
@@ -1273,10 +1224,7 @@ export function FindingDetail({ queryId, windowDays, workspaceIds, envs, onJumpT
   queryId: string; windowDays: number; workspaceIds: string[]; envs: string[]; onJumpTo: (queryId: string) => void;
   findingsIndex: Record<string, FindingSummary> | null | undefined;
 }) {
-  // T-75B review must-fix 2: subscribes this component to Names' cache -- without it, a name that
-  // finishes loading AFTER plan/entitySummary below were first computed (names.tsx's own /api/dims
-  // fetch can take many seconds) never triggered a re-render, so the verdict line and chart kept
-  // showing raw ids/"no name: not in system tables" forever, even once Names actually had the name.
+  // Re-render when a name finishes loading.
   useNames();
   const [data, setData] = React.useState<FindingData | null>(null);
   const [loading, setLoading] = React.useState(true);
@@ -1353,10 +1301,7 @@ export function FindingDetail({ queryId, windowDays, workspaceIds, envs, onJumpT
     [rows, plan, hasStatus, isOkRows, dayCol, Names.isReady()]
   );
   const canGroup = !!(entitySummary && entitySummary.list.length > 0);
-  // T-75B review must-fix 6: a check with no status column at all, or whose every entity has only
-  // one row (a plain reference list, e.g. sql_warehouse_config_current), has nothing for grouping
-  // to add -- "Rows = 1" on every line and a chart whose every bar is the same height. Those checks
-  // keep the plain raw table and no chart, exactly as if they had no entity at all.
+  // No grouping when it adds nothing: no status column, or one row per entity.
   const groupingMeaningful = canGroup && hasStatus && entitySummary!.list.some((g) => g.count > 1);
   const topGroup = canGroup ? sortEntityGroups(entitySummary!.list, plan.keyMetric, statusMeaningful)[0] : null;
 
@@ -1379,9 +1324,7 @@ export function FindingDetail({ queryId, windowDays, workspaceIds, envs, onJumpT
             <Badge kind="info">{data.windowed ? `${data.window_days} d window` : "snapshot"}</Badge>
           </div>
         </div>
-        {/* P4-44: this row is already open by the time this renders -- FindingsTable syncs its own
-            expanded/drilled-into query_id to location.hash (the "focus" key) the moment it opens,
-            so the current address already reopens straight into this same finding. */}
+        {/* the address already carries this finding (the "focus" key) */}
         <CopyLinkButton label="Copy link to this finding" />
         {isOkRows && data.rows && data.rows.length > 0 && (
           <button type="button" className="copy-link-btn" onClick={() => downloadFindingRows(data)}>
@@ -1418,9 +1361,7 @@ export function FindingDetail({ queryId, windowDays, workspaceIds, envs, onJumpT
         </React.Fragment>
       )}
 
-      {/* T-75B review should-fix "empty state is out of order": the outcome card for a non-ok_rows
-          result IS this finding's own content -- it used to render below Details/Also check,
-          which is backwards for a page whose whole point is summary-before-detail. */}
+      {/* a non-ok_rows outcome card is the content, so it comes first */}
       {data.outcome === "not_assessed" && <NotAssessedCard data={data} />}
       {data.outcome === "error" && <ErrorCard data={data} />}
       {data.outcome === "ok_empty_window" && <EmptyWindowCard data={data} />}

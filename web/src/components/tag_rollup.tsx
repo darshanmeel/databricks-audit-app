@@ -1,13 +1,5 @@
-// P4-T-ROLL (tasks/P4-T-SPEC.md section 6.6): the nested
-// cost/performance rollup view, TagRollupView. Fetches GET /api/rollup and
-// GET /api/rollup/keys with plain `fetch` (no api.ts changes -- that file is TAG-IDX's,
-// section 4.7). Before the TAG-IDX merge, `filters.tag` is undefined and this view falls back to
-// its own key chooser; after the merge it reads `filters.tag.key` when a tag filter is set
-// elsewhere on the page.
-//
-// No new styles.css classes: every element below reuses an existing class (chart-card,
-// section-title, hbar-list, faint, mono, subtabs) or a plain inline style, since styles.css is
-// TAG-IDX's file to edit (section 4.7).
+// TagRollupView: the nested cost/performance rollup (GET /api/rollup, /api/rollup/keys). Uses the page's tag filter
+// key when one is set, else its own key chooser.
 
 import React from "react";
 
@@ -167,10 +159,7 @@ function useRollupData(area: string, tagKey: string | null, windowDays: number, 
   return state;
 }
 
-// useRollupTop -- GET /api/rollup/top (by_tag_top): the top `top` tag VALUES for one key, ranked
-// by $ (or query time for performance), one row per (level, value) -- levels are never merged, so
-// a value tagged on both a job and a workspace shows as two separate rows (P4-CM's own "By tag"
-// panel, tag_rollup.tsx section 6).
+// useRollupTop -- GET /api/rollup/top: the top values for one key, one row per (level, value); levels never merge.
 export function useRollupTop(area: string, tagKey: string | null, windowDays: number, workspaceIds: string[], envs: string[], top: number) {
   const [state, setState] = React.useState<RollupState<RollupTopData>>({ phase: "loading", data: null });
   const depKey = JSON.stringify({ area, tagKey, windowDays, workspaceIds, envs, top, tag: Api.tagFilterKey() });

@@ -1,9 +1,5 @@
-// Waste & savings (redesign section 6, DEC-74): a roll-up
-// with no checks table of its own -- every WASTE_ITEMS id is homed on another area's own sub-tab
-// (tab_registry.ts). Three sub-tabs, each its own registered Content component: priced (the
-// resources actually costing money), unpriced (flagged checks with no $ column), method (how the
-// $18,955-style total is counted). The shared worklist/total math lives in waste_total.ts --
-// this file only fetches raw rows for the "top offenders" detail and lays the page out.
+// Waste & savings: a roll-up with no checks table; each id lives on another area's sub-tab. Sub-tabs: priced,
+// unpriced, method. The total is computed in waste_total.ts.
 
 // A query on this tab may also appear on its own home tab -- these are views, not a partition.
 

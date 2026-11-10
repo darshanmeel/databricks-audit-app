@@ -1,10 +1,5 @@
-// data-fetching hooks and aggregation helpers shared by every
-// tab (tasks/T-58-web-tabs-and-charts.md). Nothing here renders markup; it only fetches rows
-// through Api.finding (the same endpoint the findings table itself uses) and reduces them into
-// the small {name, value} shapes charts.tsx draws. Keeping this in one place means every tab's
-// chart is backed by the SAME honesty-rule outcome the finding's own detail panel would show --
-// a chart is only ever computed from an "ok_rows" fetch; every other outcome is threaded through
-// unchanged for ChartNote to render.
+// Fetch hooks and aggregation helpers shared by every tab. A chart is computed only from an ok_rows fetch;
+// every other outcome passes through for ChartNote.
 
 import React from "react";
 import { TONE_MONTHS, nextTone } from "./trend_tone";
@@ -83,14 +78,7 @@ export function useIgnoredFilterSummary() {
 }
 
 // ---------------------------------------------------------------------------------------------
-// useFindingData -- one query_id's full row set (up to `limit`) for aggregation, independent of
-// the paginated 100-row view FindingDetail renders inside an expanded table row.
-//
-// `statuses` (T-68, optional, e.g. ["CRITICAL", "WARN"]) scopes the fetch to those status values
-// SERVER-side, on a finding that carries a status column -- a caller that only needs flagged rows
-// (a tile summing a column across CRITICAL/WARN rows) gets only those, up to the SAME `limit`, so
-// the cap applies to the flagged subset rather than to the whole unfiltered table. A caller that
-// wants every row regardless of status still passes nothing (the existing default).
+// useFindingData -- one check's rows (up to `limit`); `statuses` filters server-side, so the cap applies to that subset.
 // ---------------------------------------------------------------------------------------------
 const LOADING = { phase: "loading", outcome: null, data: null, error: null } as const;
 
@@ -98,9 +86,7 @@ export function useFindingData(queryId: string | null, windowDays: number, works
   envs: string[] | null, limit?: number, statuses?: string[] | null, columns?: string[] | null): FindingState {
   const lim = limit || 5000;
   const [state, setState] = React.useState<FindingState>(LOADING);
-  // P4-T-IDX: Api.tagFilterKey() joins the memo key -- the stored tag filter is not one of this
-  // hook's own arguments (Api.finding reads it internally), so without this the fetch would not
-  // re-run when only the tag filter changed.
+  // The tag filter is not an argument, so its key joins the memo key.
   const key = queryId + "|" + windowDays + "|" + JSON.stringify(workspaceIds) + "|" + JSON.stringify(envs) + "|" + lim + "|" + JSON.stringify(statuses || null) + "|" + JSON.stringify(columns || null) + "|" + Api.tagFilterKey();
   React.useEffect(() => {
     let cancelled = false;
@@ -122,15 +108,8 @@ export function useFindingData(queryId: string | null, windowDays: number, works
 }
 
 // ---------------------------------------------------------------------------------------------
-// useFindingAgg -- T-68: the server-side aggregate twin of useFindingData. `group` is an array of
-// 0-2 real column names; `agg` is "sum" | "count" | "count_distinct"; `value` is the column to
-// sum/count-distinct (ignored for "count"). `opts` is {statuses, top} (both optional; `top` folds
-// the tail past that many groups into one "other" bucket, keeping the true total exact). Returns
-// the same {phase, outcome, data, error} shape as useFindingData -- `data` carries
-// {groups, other, total_value, rows_total, matched_rows, discount_pct, window_coverage, ...}
-// instead of `rows` on an ok_rows outcome. See overview_tile.tsx's aggregateGroupTileProps for the
-// shared four-outcome handling every caller should route through, same discipline as
-// aggregateTileProps for a row-shaped useFindingData state.
+// useFindingAgg -- the server-side aggregate twin of useFindingData: `group` 0-2 columns, `agg` sum | count |
+// count_distinct, `opts` {statuses, top}. Same {phase, outcome, data, error} shape; route it through aggregateGroupTileProps.
 // ---------------------------------------------------------------------------------------------
 export function useFindingAgg(queryId: string | null, windowDays: number, workspaceIds: string[] | null,
   envs: string[] | null, group: string[] | null, agg: string, value?: string | null, opts?: AggOptions): AggState {
@@ -204,11 +183,7 @@ export function regroupByKeyIndex(data: { groups: AggGroup[]; other?: AggregateD
   return order.map((k) => ({ name: k, value: totals.get(k)! }));
 }
 
-// data.rows_total / data.returned (a plain finding fetch) says a raw-row view is showing fewer
-// rows than exist -- the "make every remaining capped view say it is capped" half of T-68, for any
-// chart/tile that still reads `.rows` directly instead of going through useFindingAgg. null when
-// nothing was cut (the common case, once useFindingAgg has replaced the views that can realistically
-// exceed the cap).
+// Says a raw-row view shows fewer rows than exist; null when nothing was cut.
 export function cappedRowsNote(data: { rows_total: number; returned: number } | null | undefined, noun?: string): string | null {
   if (!data || !(data.rows_total > data.returned)) return null;
   return `showing ${fmtInt(data.returned)} of ${fmtInt(data.rows_total)} ${noun || "rows"}`;
@@ -281,9 +256,7 @@ export function useMultiFindingData(queryIds: string[] | null, windowDays: numbe
 }
 
 // ---------------------------------------------------------------------------------------------
-// useDims -- dims.dim_job/cluster/warehouse/pipeline, fetched once and turned into lookup maps
-// ("Names, not ids" -- T-58's own rule). Falls back to the raw id when a dim row is missing (a
-// deleted job, a dim not yet built) -- never a blank label.
+// useDims -- dim lookups fetched once; a missing row falls back to the raw id, never a blank.
 // ---------------------------------------------------------------------------------------------
 export function useDims(): DimMaps | null {
   const [maps, setMaps] = React.useState<DimMaps | null>(null);
@@ -404,16 +377,6 @@ export function dailySeries(rows: Row[] | null | undefined, dayKey: string, valK
   });
   const days = [...totals.keys()].sort();
   return { days, values: days.map((d) => totals.get(d)!) };
-}
-
-// Pull the curated rows for a tab out of the already-loaded full findings list, in the order
-// `ids` names them (falls back to whatever order `findings` is in for any id not found --
-// should not happen for a curated id, but never crashes if the registry and a stale ids list
-// disagree).
-function filterByIds<T extends { query_id: string }>(findings: T[] | null, ids: string[]): T[] {
-  const idx: Record<string, T> = {};
-  (findings || []).forEach((f) => { idx[f.query_id] = f; });
-  return (ids || []).map((id) => idx[id]).filter(Boolean);
 }
 
 // fillDays -- one {day, value} per calendar day (UTC) from as_of minus min(windowDays,

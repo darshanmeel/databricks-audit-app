@@ -351,6 +351,8 @@ def run_build(target: str, select: str | None, exclude: str | None) -> int:
 
     env = os.environ.copy()
     env["AUDIT_SNAPSHOT_DIR"] = resolve_snapshot_dir(target, env)
+    if target == "test":
+        env["AUDIT_SEED_DIR"] = str(ROOT / "tests" / "fixtures" / "seeds")
     # T-89 (F4): read the as_of anchor from THIS build's own snapshot folder, not always the
     # hard-coded default ROOT/snapshot -- a `first_run.py --out <folder>` snapshot otherwise left
     # the as_of window silently anchored on a stale (or absent) ./snapshot/manifest.json. A

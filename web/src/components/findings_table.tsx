@@ -189,9 +189,7 @@ export function OtherMoneyCell({ row }: { row: { money: Money | null } }) {
   return <span className="ck-money">{fmtMoney(m.usd, 0)}<span className="ck-money-kind">{m.kind}</span></span>;
 }
 
-// tag_picker.tsx's own banner promises a "tag n/a" mark on a check the active tag filter cannot
-// reach -- row.tag_applied is null/undefined unless a tag filter is set (P4-T-IDX), so this only
-// ever shows while one is active.
+// "tag n/a" on a check the active tag filter cannot reach; tag_applied is unset without a tag filter.
 export function TagNotApplicableChip({ row }: { row: { tag_applied: boolean | null } }) {
   if (row.tag_applied !== false) return null;
   return <Badge kind="info">tag n/a</Badge>;
@@ -311,9 +309,7 @@ export function FindingsTable({ findings, refIds, filters, initialFocusId, allFi
   const visible = React.useMemo(() => sortByWasteThenMoney(searched.filter((f) => f.tab === tab)), [searched, tab]);
 
   const downloadCsv = () => {
-    // Column order predates this table's redesign (DEC-74) and stays exactly as it was --
-    // new columns, if any, are appended after these, never inserted before or renamed. Every
-    // check matching the current search, across every tab -- not just the one on screen.
+    // Keep this column order; append new columns. Rows match the search across every tab.
     const lines = [["Finding", "Query ID", "Domain", "Tier", "Status", "Rows"].map(csvField).join(",")];
     searched.forEach(({ row, band }) => {
       lines.push([

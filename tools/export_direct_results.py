@@ -63,6 +63,9 @@ TAG_KEY_FILTER_MARKER = "__TAG_KEY_FILTER__"
 # app/direct_sql/tags/_workspace_history.sql, the workspace tag history's CTEs, pasted in where a
 # tags query asks for them (the queries run separately, so they cannot read one another's output)
 WORKSPACE_HISTORY_MARKER = "__WORKSPACE_HISTORY__"
+# app/direct_sql/tags/_cost_alloc.sql, the shared dollar split, pasted in for every billed day or
+# for the export's window.
+COST_ALLOC_MARKER, COST_ALLOC_WINDOW_MARKER = "__COST_ALLOC__", "__COST_ALLOC_WINDOW__"
 SHARE_FLOOR_PCT_MARKER = "__SHARE_FLOOR_PCT__"
 COVERAGE_FLOOR_PCT_MARKER = "__COVERAGE_FLOOR_PCT__"
 BUILD_SQL_HINT = "python tools/build_direct_sql.py"
@@ -615,11 +618,16 @@ def load_tags_sql(
     coverage_floor = dbt_run.load_coverage_floor()
     history_path = tags_dir / "_workspace_history.sql"
     history_sql = history_path.read_text(encoding="utf-8") if history_path.exists() else ""
+    alloc_path = tags_dir / "_cost_alloc.sql"
+    alloc_sql = alloc_path.read_text(encoding="utf-8") if alloc_path.exists() else ""
     out: dict[str, str] = {}
     for name in TAG_TABLE_NAMES:
         path = tags_dir / f"{name}.sql"
         if path.exists():
             text = path.read_text(encoding="utf-8").replace(WORKSPACE_HISTORY_MARKER, history_sql)
+            text = text.replace(COST_ALLOC_WINDOW_MARKER, alloc_sql.replace(
+                "__ALLOC_SINCE__", f"{AS_OF_DATE_MARKER} - INTERVAL {WINDOW_MARKER} DAYS"))
+            text = text.replace(COST_ALLOC_MARKER, alloc_sql.replace("__ALLOC_SINCE__", "DATE'1970-01-01'"))
             text = text.replace(AS_OF_DATE_MARKER, as_of_sql)
             text = text.replace(SHARE_FLOOR_MARKER, repr(share_floor))
             text = text.replace(COVERAGE_FLOOR_MARKER, repr(coverage_floor))
@@ -1228,7 +1236,7 @@ def run_export(
     warehouse_info = None
     if not partial:
         warehouse_info = warehouse_activity.export(
-            connect, work_dir, end=_cutoff(now, include_today).date(), days=max(labels),
+            connect, work_dir, end=_cutoff(now, include_today).date(), windows=labels,
             redact=lambda text: _redact(text, token), mask=_mask_user if mask_users else None)
     for qid, tables in optional_missing.items():
         if qid in entries_by_id:

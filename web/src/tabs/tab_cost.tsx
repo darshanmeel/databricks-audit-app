@@ -792,12 +792,8 @@ function TagKeysBySpendCard({ filters, maxCat }: { filters: Filters; maxCat: num
 
 function CostAllocationContent({ filters, meta, dims, maxCat, onVerdict }: TabProps) {
   useNames(); // re-render once workspace names (names.tsx) are ready -- resolveName below is read at render time
-  // DEC-74/section 7 item 1: cost_chargeback_by_allocation_tag is the ONE dollar basis here --
-  // every other allocation view on this sub-tab either reads off this same id or is labelled as
-  // the workspace-level view it actually is (the tag-rollup tree below). Api.aggregate accepts at
-  // most 2 group columns, so the by-value cut and the per-workspace cut are two separate calls.
-  // Every allocation figure below follows one top tag (the switch), read off GET /api/rollup.
-  // "Who ran it" reads no tag.
+  // cost_chargeback_by_allocation_tag is the one $ basis here; Api.aggregate takes at most 2 group columns, so the
+  // by-value and per-workspace cuts are two calls. Figures follow one top tag (GET /api/rollup); "Who ran it" reads no tag.
   const topTags = useTopTags(meta, filters.window);
   const [chosenTag, setChosenTag] = React.useState<string | null>(null);
   const shownTag = topTags.find((t) => t.key === chosenTag) || topTags[0] || null;

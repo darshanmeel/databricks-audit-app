@@ -16,35 +16,31 @@ and app/core/registry.py:
                         window_days=0; forwarding the caller's own 7/30/90 filter straight through
                         would read it as falsely empty.
     Outcome             the typed result load_outcome()/list_findings() produce.
-    load_outcome(query_id, window_days, workspace_ids=None, env=None, limit=None, offset=None,
+    load_outcome(query_id, window_days, workspace_ids=None, env=None, limit=None, offset=0,
                  statuses=None)
                         one query_id's full outcome, mirroring app/ui/data.load()'s five-step
                         derivation order exactly (see that module's docstring, copied into this
                         function's own docstring below). `statuses` (T-68) is threaded straight to
                         app/core/data.read_finding/count_finding.
     load_aggregate(query_id, window_days, group, agg, value=None, *, workspace_ids=None,
-                    env=None, attributes=None, statuses=None, top=None)
+                    env=None, statuses=None, top=None)
                         T-68: the same four-outcome derivation as load_outcome (reruns it at
                         limit=1, cheap, so the two endpoints can never disagree about NOT_ASSESSED/
                         ERROR/empty-window/empty-filters for the same query_id+filters), but an
                         OK_ROWS result carries app/core/data.aggregate_finding's groups instead of
                         a row page -- the server-side SUM/COUNT this task exists to add.
-    list_findings(window_days, workspace_ids=None, env=None, attributes=None, tag=None)
+    list_findings(window_days, workspace_ids=None, env=None, tag=None)
                         one row per executable registry query -- outcome + (for a finding with a
                         status column) a verified CRITICAL/WARN/NOT_ASSESSED/OK breakdown via
                         app/core/data.count_by_status -- the findings table app/web renders.
-                        `attributes` (T-63/DEC-60, wired in for P2-FILTERS) is the same
-                        {canonical_key: [value, ...]} contract load_outcome already honours --
-                        narrows the row/status counts and the outside-region check the same way
-                        workspace_ids does, on any query that carries workspace_id. `tag`
+                        `tag`
                         (P4-T-IDX section 5.5) narrows the same way through
                         app/core/data.finding_window_counts, and each row also carries
                         tag_applied/tag_chain/tag_chain_label.
     classify_columns(columns, discount_pct)
                         {column: {"kind", "label"}} -- "money" (via app.core.pricing's own
-                        list-price regex plus its NON_DISCOUNT_MONEY_LABELS own-basis columns, so
-                        the two modules can never disagree about which columns are dollars or how
-                        they are labelled), "id", or one of the non-money magnitude categories
+                        list-price regex, so the two modules can never disagree about which
+                        columns are dollars), "id", or one of the non-money magnitude categories
                         (dbu/pct/hours/gb/gb_bytes) PLAN.md 6.1 documents. A column matching none
                         of those is left out of the dict, exactly like app/ui/style.column_config_for.
     records(df, kinds)  df -> a list of JSON-safe dicts: NaN/NaT -> None, numpy scalars -> native
@@ -133,38 +129,17 @@ def window_for(spec: registry.QuerySpec, window_days: int) -> int:
 
 
 # ---------------------------------------------------------------------------------------------
-# resolve_params / row_cap -- T-70 review round 2 gave row_cap this precedence for :top_n alone;
-# P4-03 generalises it to every :param a header declares, exactly the way dbt/macros/param.sql
-# resolves a param at build time (config/thresholds.yml[query_id][name], then [_all][name], then
-# the query header's own default), the same order app/ui/drilldown._resolve_param already uses for
-# warn_run_hours -- reimplemented here rather than imported, because drilldown.py is
-# Streamlit-coupled and outside app/api's own dependency set.
+# resolve_params / row_cap -- one resolver for every :param (app_config.resolve_params), the same
+# order dbt/macros/param.sql uses at build time.
 # ---------------------------------------------------------------------------------------------
 
 
 def resolve_params(spec: registry.QuerySpec) -> dict[str, tuple[Any, str]]:
-    """{param name: (value in effect, source)} for every `:param` this query's header declares.
-    `source` is "your setting" when config/thresholds.yml overrides the header default for this
-    query_id (checked first) or `_all` (checked second), else "default" -- never a literal guessed
-    here. Reruns the thresholds.yml load per call (cheap: a handful of params, one small YAML file
-    already cached by app_config)."""
+    """app_config.resolve_params; header defaults only when thresholds.yml cannot be read."""
     try:
-        thresholds = app_config.load_thresholds()
-    except Exception:
-        thresholds = {}
-    out: dict[str, tuple[Any, str]] = {}
-    for param in spec.params or []:
-        name = param.get("name")
-        if not name:
-            continue
-        value, source = param.get("default"), "default"
-        for scope in (spec.query_id, "_all"):
-            override = (thresholds.get(scope) or {}).get(name)
-            if isinstance(override, (int, float)) and not isinstance(override, bool):
-                value, source = override, "your setting"
-                break
-        out[name] = (value, source)
-    return out
+        return app_config.resolve_params(spec)
+    except app_config.ConfigError:
+        return {p["name"]: (p.get("default"), "default") for p in spec.params or [] if p.get("name")}
 
 
 def row_cap(query_id: str) -> int | None:
@@ -365,12 +340,11 @@ def gap_entries(outside: list[dict]) -> list[dict]:
 def region_split_or_none(
     workspace_ids: list[str] | None = None,
     env: list[str] | None = None,
-    attributes: dict[str, list[str]] | None = None,
 ) -> dict | None:
     """app/core/data.region_split, or None when dims.dim_workspace cannot be read (a locked or
     corrupt db, a failed dims build): region facts are then unknown, and nothing is forced."""
     try:
-        return app_core_data.region_split(workspace_ids, env, attributes)
+        return app_core_data.region_split(workspace_ids, env)
     except (duckdb.Error, OSError):
         return None
 
@@ -395,11 +369,10 @@ def billed_gap(split: dict | None) -> list[dict] | None:
 def region_gap(
     workspace_ids: list[str] | None = None,
     env: list[str] | None = None,
-    attributes: dict[str, list[str]] | None = None,
 ) -> list[dict] | None:
     """The selected workspaces WITH spend that no regional table holds a row for (all
     workspaces when unfiltered). None when dims.dim_workspace cannot be read."""
-    return billed_gap(region_split_or_none(workspace_ids, env, attributes))
+    return billed_gap(region_split_or_none(workspace_ids, env))
 
 
 def _outside_region_info(status_info: dict, split: dict) -> dict:
@@ -457,7 +430,7 @@ def load_outcome(
     workspace_ids: list[str] | None = None,
     env: list[str] | None = None,
     limit: int | None = None,
-    attributes: dict[str, list[str]] | None = None,
+    offset: int = 0,
     job_id: str | None = None,
     statuses: list[str] | None = None,
     tag: "app_core_tags.TagFilter | app_core_tags.TagFilterSet | None" = None,
@@ -476,10 +449,6 @@ def load_outcome(
     3. OK, empty in window: rows_in_window (window alone, no other filter) is 0.
     4. OK, empty by filters: rows_in_window > 0 but the caller's own filters exclude every row.
     5. OK, rows: otherwise.
-
-    `attributes` ({canonical_key: [value, ...]}, T-63/DEC-60) applies the same way env does --
-    only on a finding that carries workspace_id (DEC-60 rule 6, app/core/data._build_filters'
-    own contract); it never reduces a finding with none.
 
     `job_id` (T-70, the job focus panel) scopes to one job server-side, the same way -- applies
     only on a finding that carries job_id, never reduces one that doesn't. A finding whose window
@@ -557,7 +526,7 @@ def load_outcome(
     scope["has_workspace_id"] = has_workspace_id
     split = None
     if scope["regional"] and has_workspace_id:
-        split = region_split_or_none(workspace_ids, env, attributes)
+        split = region_split_or_none(workspace_ids, env)
         scope["region_gap"] = billed_gap(split)
     blocked = outside_only(split)
 
@@ -578,7 +547,7 @@ def load_outcome(
 
     try:
         result = app_core_data.read_finding(
-            query_id, eff_window, workspace_ids, env, None, limit, attributes=attributes,
+            query_id, eff_window, workspace_ids, env, limit, offset,
             job_id=job_id, statuses=statuses, tag_filter=tag,
         )
     except app_core_tags.TagModelsNotBuiltError:
@@ -681,7 +650,6 @@ def load_aggregate(
     *,
     workspace_ids: list[str] | None = None,
     env: list[str] | None = None,
-    attributes: dict[str, list[str]] | None = None,
     statuses: list[str] | None = None,
     top: int | None = None,
     tag: "app_core_tags.TagFilter | app_core_tags.TagFilterSet | None" = None,
@@ -701,7 +669,7 @@ def load_aggregate(
     follow the filter (section 5.5's "aggregate_finding currently passes None, and that is
     fixed")."""
     base = load_outcome(
-        query_id, window_days, workspace_ids, env, limit=1, attributes=attributes, statuses=statuses,
+        query_id, window_days, workspace_ids, env, limit=1, statuses=statuses,
         tag=tag,
     )
     if base.outcome != OUTCOME_OK_ROWS:
@@ -715,7 +683,7 @@ def load_aggregate(
     try:
         agg_result = app_core_data.aggregate_finding(
             query_id, base.window_days, group, agg, value,
-            workspace_ids=workspace_ids, env=env, attributes=attributes,
+            workspace_ids=workspace_ids, env=env,
             statuses=statuses, top=top, tag_filter=tag, below_floor=below_floor,
         )
     except app_core_tags.TagModelsNotBuiltError:
@@ -800,7 +768,6 @@ def list_findings(
     window_days: int,
     workspace_ids: list[str] | None = None,
     env: list[str] | None = None,
-    attributes: dict[str, list[str]] | None = None,
     tag: "app_core_tags.TagFilter | app_core_tags.TagFilterSet | None" = None,
 ) -> list[FindingRow]:
     """One row per EXECUTABLE registry query (both vendored + app-owned, every domain -- no
@@ -823,11 +790,6 @@ def list_findings(
     finding_status() reported a degraded name-lookup source or a partially-exported source for
     this query -- neither one blocks the finding any more (app_core_data.finding_status's own
     contract), but the row still says so rather than looking indistinguishable from a clean one.
-
-    `attributes` (P2-FILTERS) reaches both the bulk row/status counts (finding_window_counts) and
-    the outside-region check (region_split_or_none) -- the same two places workspace_ids/env
-    already reach -- so selecting a cost centre narrows this table exactly the way selecting a
-    workspace does, for every query that carries workspace_id.
 
     `tag` (P4-T-IDX section 5.5) reaches finding_window_counts the same way, so a tag filter
     narrows this table's own row/status counts exactly the way it already narrows a single
@@ -880,7 +842,7 @@ def list_findings(
     if pairs:
         try:
             bulk = app_core_data.finding_window_counts(
-                pairs, workspace_ids, env, attributes, tag_filter=tag,
+                pairs, workspace_ids, env, tag_filter=tag,
             )
         except (duckdb.Error, OSError) as exc:
             bulk_error = str(exc)
@@ -899,7 +861,7 @@ def list_findings(
         for s in specs
     }
 
-    blocked_selection = outside_only(region_split_or_none(workspace_ids, env, attributes))
+    blocked_selection = outside_only(region_split_or_none(workspace_ids, env))
 
     rows: list[FindingRow] = []
     for s in specs:
@@ -994,13 +956,7 @@ def list_findings(
 # Column classification + JSON-safe row serialisation.
 # ---------------------------------------------------------------------------------------------
 
-# PLAN.md 6.1's own regex (app/ui/catalog.MONEY_COLS' base case) plus app_pricing.
-# NON_DISCOUNT_MONEY_LABELS -- a column app.core.pricing never discounts (T-69: it fails
-# _LIST_COL_RE on purpose) carries its own honest label text instead of "at list", the same way
-# the Streamlit table (app/ui/style.column_config_for) always has. Empty as of DEC-66.1/T-69A
-# (integrator pass): every dollar column in this app is now the one list-price basis -- see
-# app/core/pricing.py's own comment on NON_DISCOUNT_MONEY_LABELS. Kept for a future dollar
-# column whose basis genuinely is not the list price.
+# PLAN.md 6.1's own regex: every dollar column in this app is the one list-price basis.
 # `_disc` is pricing.apply()'s own suffix for the discounted twin of a raw list-price column.
 _ID_RE = re.compile(r"(^id$)|(_id$)")
 _MAGNITUDE: dict[str, re.Pattern] = {
@@ -1029,14 +985,6 @@ def est_label(discount_pct: float | None) -> str:
 def _money_label(col: str, discount_pct: float) -> str | None:
     is_disc = col.endswith(_DISC_SUFFIX)
     base = col[: -len(_DISC_SUFFIX)] if is_disc else col
-    # T-69: an own-basis column (one whose money is not the list price) is labelled by what it
-    # actually is, the same dict app/ui/style.column_config_for already reads from, so both UIs
-    # agree -- currently empty (DEC-66.1/T-69A ended this app's last two own-basis columns; see
-    # app/core/pricing.py's own comment on NON_DISCOUNT_MONEY_LABELS), so this always falls
-    # through to the list-price branch below today.
-    own_label = app_pricing.NON_DISCOUNT_MONEY_LABELS.get(base)
-    if own_label is not None:
-        return own_label
     # Reuses app.core.pricing's own list-price column regex (the exact set pricing.apply() adds a
     # "_disc" column for) -- so app/api and app/core.pricing can never disagree about what counts
     # as a discountable dollar column (T-57's "reuse app/core/pricing.py" instruction).

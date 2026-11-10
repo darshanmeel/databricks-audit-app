@@ -6,7 +6,7 @@ belongs to, for Governance > Workspaces. Plain statements, not checks:
 - catalog_workspace: each catalog's lineage events per workspace (its home workspace is the one
   that reads and writes it most);
 - table_access: per window, workspace and table, last read and write, reads, writes, readers and writers;
-- user_access: per workspace and identity, last seen, logins, queries, tables read and written;
+- user_access: per window, workspace and identity, last seen, logins, queries, tables read and written;
 - user_tables: per window, workspace and identity, the 50 tables it used most and when;
 - user_last_seen: per workspace and identity, its last audit event and last login over a year,
   so people who stopped coming show up as inactive;
@@ -59,7 +59,7 @@ TABLE_SCHEMA = pa.schema([
 ])
 NAMES_SHOWN = 3  # reader_names, writer_names: the first few, alphabetically
 USER_SCHEMA = pa.schema([
-    ("workspace_id", pa.string()), ("identity", pa.string()), ("last_seen", pa.string()), ("logins", pa.int64()),
+    ("window_days", pa.int64()), ("workspace_id", pa.string()), ("identity", pa.string()), ("last_seen", pa.string()), ("logins", pa.int64()),
     ("queries", pa.int64()), ("last_query", pa.string()), ("tables_read", pa.int64()), ("tables_written", pa.int64()),
 ])
 USER_TABLES_SCHEMA = pa.schema([
@@ -282,41 +282,44 @@ LEFT JOIN win n ON n.days = w.days AND n.workspace_id = a.workspace_id AND n.tab
 """
 
 
-def user_access_sql(end: dt.date, days: int) -> str:
+def user_access_sql(end: dt.date, windows: list[int] | int) -> str:
     e = f"DATE'{end.isoformat()}'"
+    ws = _windows(windows)
+    days = max(ws)
     return f"""
 WITH {_lineage(e, days)},
+w AS (SELECT explode(array({", ".join(map(str, ws))})) AS days),
 a AS (
-  SELECT CAST(workspace_id AS STRING) AS workspace_id,
+  SELECT w.days, CAST(workspace_id AS STRING) AS workspace_id,
          lower(COALESCE(user_identity.email, user_identity.subject_name)) AS who, MAX(event_time) AS last_event,
          COUNT_IF(service_name = 'accounts' AND action_name RLIKE '(?i)login' AND response.status_code = 200) AS logins
-  FROM system.access.audit
+  FROM system.access.audit JOIN w ON event_date >= date_sub({e}, w.days)
   WHERE event_date >= date_sub({e}, {days}) AND event_date < {e} AND workspace_id IS NOT NULL AND workspace_id <> 0
-  GROUP BY 1, 2
+  GROUP BY 1, 2, 3
 ),
 q AS (
-  SELECT CAST(workspace_id AS STRING) AS workspace_id, lower(executed_by) AS who, COUNT(*) AS queries,
+  SELECT w.days, CAST(workspace_id AS STRING) AS workspace_id, lower(executed_by) AS who, COUNT(*) AS queries,
          MAX(start_time) AS last_query
-  FROM system.query.history
+  FROM system.query.history JOIN w ON start_time >= date_sub({e}, w.days)
   WHERE start_time >= date_sub({e}, {days}) AND start_time < {e}
-  GROUP BY 1, 2
+  GROUP BY 1, 2, 3
 ),
 l AS (
-  SELECT workspace_id, who, COUNT(DISTINCT CASE WHEN is_read = 1 THEN table_full_name END) AS tables_read,
+  SELECT w.days, workspace_id, who, COUNT(DISTINCT CASE WHEN is_read = 1 THEN table_full_name END) AS tables_read,
          COUNT(DISTINCT CASE WHEN is_write = 1 THEN table_full_name END) AS tables_written, MAX(event_time) AS last_table
-  FROM lin GROUP BY 1, 2
+  FROM lin JOIN w ON event_time >= date_sub({e}, w.days) GROUP BY 1, 2, 3
 ),
 k AS (
-  SELECT workspace_id, who FROM a UNION SELECT workspace_id, who FROM q UNION SELECT workspace_id, who FROM l
+  SELECT days, workspace_id, who FROM a UNION SELECT days, workspace_id, who FROM q UNION SELECT days, workspace_id, who FROM l
 )
-SELECT k.workspace_id, k.who AS identity,
+SELECT k.days AS window_days, k.workspace_id, k.who AS identity,
        CAST(GREATEST(a.last_event, q.last_query, l.last_table) AS STRING) AS last_seen,
        COALESCE(a.logins, 0) AS logins, COALESCE(q.queries, 0) AS queries, CAST(q.last_query AS STRING) AS last_query,
        COALESCE(l.tables_read, 0) AS tables_read, COALESCE(l.tables_written, 0) AS tables_written
 FROM k
-LEFT JOIN a ON a.workspace_id = k.workspace_id AND a.who = k.who
-LEFT JOIN q ON q.workspace_id = k.workspace_id AND q.who = k.who
-LEFT JOIN l ON l.workspace_id = k.workspace_id AND l.who = k.who
+LEFT JOIN a ON a.days = k.days AND a.workspace_id = k.workspace_id AND a.who = k.who
+LEFT JOIN q ON q.days = k.days AND q.workspace_id = k.workspace_id AND q.who = k.who
+LEFT JOIN l ON l.days = k.days AND l.workspace_id = k.workspace_id AND l.who = k.who
 WHERE k.workspace_id IS NOT NULL AND k.who IS NOT NULL
 """
 
@@ -613,7 +616,7 @@ def export(connect_fn: Callable, out_dir: Path, *, end: dt.date, windows: list[i
             ("activity", activity_sql(end, windows), ACTIVITY_FILE, ACTIVITY_SCHEMA),
             ("catalogs", catalog_sql(end, max(windows)), CATALOG_FILE, CATALOG_SCHEMA),
             ("tables", table_access_sql(end, windows), TABLE_FILE, TABLE_SCHEMA),
-            ("users", user_access_sql(end, max(windows)), USER_FILE, USER_SCHEMA),
+            ("users", user_access_sql(end, windows), USER_FILE, USER_SCHEMA),
             ("user_tables", user_tables_sql(end, windows), USER_TABLES_FILE, USER_TABLES_SCHEMA),
             ("last_seen", last_seen_sql(end), LAST_SEEN_FILE, LAST_SEEN_SCHEMA),
             ("volume_access", volume_access_sql(end, windows), VOLUME_ACCESS_FILE, VOLUME_ACCESS_SCHEMA),

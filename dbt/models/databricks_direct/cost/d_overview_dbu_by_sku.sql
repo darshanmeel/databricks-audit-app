@@ -1,4 +1,4 @@
-{{ config(enabled=(target.type == "databricks"), materialized=("table" if var("direct_mode", "run") == "table" else "direct_check"), schema="audit_direct", tags=['inventory', 'domain:cost', 'tier:lite', 'databricks_direct']) }}
+{{ config(enabled=false, tags=['inventory', 'domain:cost', 'tier:lite', 'databricks_direct']) }}
 -- generated from app/queries/app/cost/overview_dbu_by_sku.sql; fix the source query and regenerate, never edit this file.
 {%- set windows = var('windows', [7, 30, 90]) %}
 {%- for w in windows %}

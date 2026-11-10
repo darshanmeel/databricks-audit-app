@@ -1,15 +1,5 @@
-// SVG-only chart primitives, no charting library (tasks/
-// T-58-web-tabs-and-charts.md hard requirement). Adapted from the reference dashboards
-// components/primitives.tsx (Sparkline/Donut/Treemap-squarify/HBar/MiniBar), ported to this
-// apps own theme tokens and extended with a few widgets the reference file did not need: Kpi
-// (a numeric tile for the Overview KPI row), MultiLine (the daily-DBU trend, one line per
-// series), ParetoLine (PLAN.md 6.3s "Top N of M = X% of net DBUs" line), and ChartNote (the
-// honesty rules own reach into chart space -- a chart backed by a non-ok_rows outcome must say
-// so, never render as an empty/zero chart that could be misread as "nothing to see").
-//
-// Every primitive here is presentation-only: it takes already-aggregated {name/label, value}
-// data and draws it. Aggregation itself (group-by, top-N-plus-Other, sums) lives in hooks.ts so
-// it can be reasoned about independently of markup.
+// SVG chart primitives, no charting library. Presentation only: data arrives aggregated (hooks.ts). ChartNote makes
+// a chart backed by a non-ok_rows outcome say so instead of drawing an empty chart.
 
 import React from "react";
 

@@ -186,14 +186,11 @@ def _date_sql(d) -> str:
 
 
 def _param(query_id: str, name: str) -> str:
-    """The check's own threshold: thresholds.yml's per-check value, then its `_all` value, then
-    the header default -- the order dbt/macros/param.sql uses."""
-    thresholds = app_config.load_thresholds()
-    values = [scope[name] for scope in (thresholds.get(query_id) or {}, thresholds.get("_all") or {}) if name in scope]
-    values += [p["default"] for p in registry.by_id(query_id).params if p["name"] == name and p.get("default") is not None]
-    if not values:
+    """The check's own threshold, as SQL text (app_config.resolve_params)."""
+    value, _source = app_config.resolve_params(registry.by_id(query_id)).get(name, (None, None))
+    if value is None:
         raise ValueError(f"{query_id}: no value for :{name}")
-    v = float(values[0])
+    v = float(value)
     return str(int(v)) if v.is_integer() else repr(v)
 
 

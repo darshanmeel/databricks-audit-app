@@ -35,13 +35,17 @@
       "Fix compute checks found wrong in review"
     ],
     "compute/compute_warehouse_autoscale_churn.sql": [
-      "Fix compute checks found wrong in review"
+      "Fix compute checks found wrong in review",
+      "Timestamp price join and whole-day event window"
     ],
     "compute/compute_warehouse_idle_gaps.sql": [
       "Fix compute checks found wrong in review"
     ],
     "compute/sql_warehouse_events_activity.sql": [
       "Fix compute checks found wrong in review"
+    ],
+    "cost/cost_actual_vs_list_by_sku.sql": [
+      "Timestamp price join and whole-day event window"
     ],
     "cost/cost_by_job.sql": [
       "Fix cost checks found wrong in review"
@@ -119,7 +123,7 @@
     "jobs_pipelines/lakeflow_pipeline_idle_tail_duration.sql": [
       "Fix job and pipeline checks found wrong in review",
       "Workspace tag history and the remaining review fixes",
-      "P5-REVIEW"
+      "Timestamp price join and whole-day event window"
     ],
     "jobs_pipelines/lakeflow_retries_repairs.sql": [
       "Workspace tag history and the remaining review fixes"
@@ -192,7 +196,7 @@
     "LICENSE": "9a408792949a36d3d36a701d4307a330cf50f084c3bd2b50e7f0138d836d8c8a",
     "compute/classic_clusters_config_current.sql": "7620d66f964b1feed20b5b4441dc11e867c28b51f452e9680204bdfe1f33ec92",
     "compute/compute_idle_node_ratio.sql": "6ddbe667009157ee36dced869a977b013826bd90e6c4245eea00e51fdc9a8bd5",
-    "compute/compute_warehouse_autoscale_churn.sql": "5c9d930bf933bcea63b49f5d9dc82b9face5cd604269ad0007579d018e253224",
+    "compute/compute_warehouse_autoscale_churn.sql": "64a43a21d4a7ab0963c887f3cbc2459fe82596fa0bae571cb7dd1e7038be2202",
     "compute/compute_warehouse_idle_gaps.sql": "814c067d0c00bae9b99e54d6d9cba19d36d85d88ed27aa382fb16c2f30c6eca3",
     "compute/instance_events_idle_active.sql": "6a14c7aaeec845673816a9cd4b326d9dd1600daac312a12117ec64d8e5732e98",
     "compute/instance_pools_idle_capacity.sql": "b1185d2778a1e6f938cac1fda28904d7f24bbaeecac5455ea43c3d7152db30c6",
@@ -202,7 +206,7 @@
     "compute/sql_warehouse_events_activity.sql": "f7e5362ce8555ecb3803eec6b38ccf53db8ab5b81c594723daca10db77ba1ea3",
     "compute/task_cluster_utilization.sql": "10127bd97ef7be24f00ee75c8167941e178ea7f0585ca10a86111fac0419aac1",
     "cost/cost_account_prices_raw.sql": "be108acd5862ae2026c26bf46419a2218a07c099e4834ae21d1ff1fe4b2f9e30",
-    "cost/cost_actual_vs_list_by_sku.sql": "ac2eb7a1752d9922a4c3a9b78688bc73e078edff2bcbe472cb6742908745ba3b",
+    "cost/cost_actual_vs_list_by_sku.sql": "bf8b63a52f9dd8e9955873b9c8b2d1ead469e7f22e8b0f49ec625ea467d18b51",
     "cost/cost_by_billing_origin_product.sql": "71f80a14e0bdf2bce69f00b8d7d09cc020328853c2a7387458a0a9bfa40d43ef",
     "cost/cost_by_compute_resource.sql": "12d3dbb41d32d22dac400a9fef9ebf10a51d6121b7e8b6d4b48259f1388271ff",
     "cost/cost_by_job.sql": "739898ec7bc28c5c5cd5d2a1139897f0e49fb3d7d1bc4de290e19ca5349a8b40",
@@ -230,7 +234,7 @@
     "governance_access/access_column_lineage_sensitive_reach.sql": "71afb42e3350f5ab21738f2cf68f8460da3754f34fcd95a8e9fa08b559866563",
     "governance_access/access_column_masks_inventory.sql": "22d51ceee98cf63d7f978e23e706043bc62da6be2cc2ca253c13c4a87b3da213",
     "governance_access/access_data_classification_inventory.sql": "4117c0ec732f02e5d0af925f567eb2261447fe24c0dfe2c1a6a5b9ebbf31ff5f",
-    "governance_access/access_dead_table_candidates.sql": "83c891338a13c7638b08c260ea199c51c5223beacca8d00b65d1dfa7dd14d6fd",
+    "governance_access/access_dead_table_candidates.sql": "5e0db81c56f10b2c8334cee347cd96029ccbae92e76e2bf80a14973589be5539",
     "governance_access/access_delta_sharing_exposure.sql": "fff0f8839ea1a4627540e1d4fea0f44981a9500039af9cf93705d329581c8097",
     "governance_access/access_grants_inventory.sql": "0f7c48db2352e3881b1a62f73fc4ff3a1a97eaa5918f40ba9a162676b9f4bc20",
     "governance_access/access_grants_inventory_extended.sql": "329014a69c68beb94dc34f716f2398af1cfe64f216ebc202e6185338dcb96d39",
@@ -294,7 +298,7 @@
     "storage/po_maintenance_cost_by_table.sql": "bd186c43d47964d2b733243cb8c8e9a1f189509ef8f27c8b86633ea00baf873a",
     "storage/po_vacuum_reclaimed_bytes.sql": "c4e5d80fae05b753a9e5be16e0b51e9129859f8e5e2277bc575d637be5843b86",
     "storage/storage_breakdown_analyze.sql": "6de26d09556e70e3b38c6935f6e8eef28290333907edafb15befc658b6906ef8",
-    "storage/table_inventory_type.sql": "6de53ab41fdcc0acb36719fbf7c104e6952a9c9d90f54715d74d77e18e173f6d",
+    "storage/table_inventory_type.sql": "106fa46d4ca40c4d55ac45e9e0e81e2b2565ba5855bed86a3c55af09ecf1d017",
     "storage/table_props_time_travel_config.sql": "271506c7f3c4a4bed49eb99a2151b471acccf4892d8ea31bfec89d6eb8380759"
   },
   "synced_at": "2026-09-21T22:42:49Z",

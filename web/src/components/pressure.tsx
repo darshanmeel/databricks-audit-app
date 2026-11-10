@@ -1,39 +1,8 @@
-// the ONE place the compute-pressure enums become words
-// (tasks/T-65-compute-pressure-verdicts.md "The words", DEC-65 rule 3). Two finding queries emit
-// them: lakeflow_job_compute_pressure (one row per job) and query_warehouse_pressure (one row per
-// SQL warehouse). Each carries `pressure` (the verdict) and `scaling_hint` (the lever) as enums
-// written by the SQL, and `pressure_reason` (the WHY, built in SQL from the row's own numbers).
-// Every screen that shows a verdict or a lever -- the Jobs strip and Compute fit sub-tab, the job
-// focus panel, the Query performance strip and charts -- reads its words from this file and
-// nowhere else, so no screen paraphrases a lever.
-//
-// SCALING_HINTS[*].text is copied VERBATIM from the two headers' `actions:` ladders -- the clause
-// on the rung whose cost tier the hint carries (free / config / spend, DEC-59) -- except SCALE_OUT,
-// which both queries emit, so its text is the task file's own wording that reads for both. "Scale
-// up" and "scale out" are the user's words and Databricks uses them differently (a warehouse's
-// warehouse_events logs SCALED_UP when it ADDS A CLUSTER), so each label says which knob it means
-// and the chip's title carries the full clause, one hover away (T-65 rule 9).
-//
-// No dollars anywhere (DEC-61.1, DEC-65 rule 6): the `spend` chip is a cost TIER, never a figure.
-//
-// PRESSURE_FIRST_STEPS (review round 1, DEC-65 rule 7 / DEC-59): the FREE rung-1 clause of each
-// verdict, copied verbatim from the same two ladders (the MEMORY clause of the jobs ladder is its
-// remedy half, "first cut the input per run ...", shortened but never rewritten, so a tile's
-// 90-character head names the fix rather than the diagnosis). It is keyed by query and verdict,
-// because the two ladders give MEMORY different first steps. A verdict whose ladder has no free
-// clause -- CPU at the ceiling, NONE -- has none here; review round 2: the tile then carries NO
-// action (the header's rung 1 for that verdict is the meta-instruction "read scaling_hint with
-// ...", not a remedy), and the lever chip on its reading is the only suggestion (DEC-59.2: omitted
-// rather than invented).
-//
-// Review round 2, a display-only derivation (every word still lives here): a CPU row whose
-// scaling_hint is NONE (status OK -- CPU-bound with no scale-out lever, DEC-65 rule 4) is its own
-// chart segment and badge, "CPU-bound, not flagged", so a healthy CPU job never counts beside the
-// flagged CPU-at-ceiling ones.
-//
-// SCALE_UP_THEN_WARM is the SQL's own lever for a MEMORY_AND_CAPACITY warehouse that queued BELOW
-// its maximum (at_ceiling FALSE): size first, then a warm cluster. It is shown as the two chips
-// SCALE_UP then KEEP_WARM, so each step keeps its own tier (spend, then config).
+// The one place the compute-pressure enums become words, for lakeflow_job_compute_pressure (per job) and
+// query_warehouse_pressure (per warehouse); every screen reads its words from here.
+// Lever texts are verbatim from the headers' actions ladders; chips show a cost tier, never dollars.
+// A verdict with no free first step carries no action. A CPU row with no lever reads "CPU-bound, not flagged".
+// SCALE_UP_THEN_WARM shows as two chips, SCALE_UP then KEEP_WARM, each with its own tier.
 
 import React from "react";
 import type { FindingState, Row } from "../types";
@@ -322,10 +291,8 @@ export function pressureColor(pressure: unknown): string {
   return CHART_OTHER_COLOR;
 }
 
-// Donut segments: one per verdict present (a CPU row with no lever as its own "CPU-bound, not
-// flagged" segment -- pressureRowKey), plus ONE "Not assessed" segment for the rows whose pressure
-// is NULL (status NOT_ASSESSED) -- kept, never dropped (T-65 rule 4). A verdict this file does not
-// know still gets its own segment under its raw name.
+// One segment per verdict present, plus one "Not assessed" segment for rows with no pressure; an unknown verdict
+// keeps its raw name.
 export function pressureSegments(rows: Row[] | null | undefined): Segment[] {
   const counts = new Map<string | null, number>();
   (rows || []).forEach((r) => {
@@ -362,20 +329,8 @@ function pressureNotAssessedLine(rows: Row[] | null | undefined): string | null 
   return `${fmtInt(na.length)} not assessed (${parts.join(", ")}).`;
 }
 
-// T-67: singleIdTileProps (overview_tile.tsx) now derives the tile straight from the finding's own
-// band, including ERROR/NOT_ASSESSED/EMPTY_WINDOW/EMPTY_FILTERS (it used to fall through all four
-// to a green "0 flagged"), and bandOf (primitives.tsx) now reads a finding whose rows are ALL
-// NOT_ASSESSED (every job serverless, say) as band NOT_ASSESSED rather than OK -- so callers pass
-// their own EMPTY_WINDOW words straight to singleIdTileProps' own `emptyWindowReading` argument.
-// Review round 2: singleIdTileProps' own CRITICAL/WARN branch now also reads THIS tile's own
-// per-row fetch (`state`) honestly -- phase 'error' and outcome 'error'/'not_assessed'/
-// 'ok_empty_window'/'ok_empty_filters' are all caught there before it ever builds a flagged tile
-// -- so a fetch failure on this tile's own call no longer needs catching here too. The one thing
-// that still belongs in this file, not the shared helper, is naming WHICH not_assessed_reason
-// codes drove the verdict (no_cluster_recorded, too_few_slices, ...), and -- when the finding is
-// genuinely OK (some rows judged clean) but a few rows are NOT_ASSESSED too -- keeping OK and
-// just annotating it, never downgrading it (DEC-65): only an ALL-NOT_ASSESSED result is
-// downgraded, and bandOf already did that.
+// The shared helper handles every outcome; this adds only which not_assessed_reason codes drove the verdict.
+// An OK result with a few unassessed rows stays OK, just annotated.
 function pressureTileHonesty(tile: TileProps, state: FindingState | null | undefined): TileProps {
   if (!tile) return tile;
   if (!state || state.phase !== "ready" || state.outcome !== "ok_rows") return tile;

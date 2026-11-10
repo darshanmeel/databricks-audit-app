@@ -3,8 +3,8 @@ and performance rollup. Reads tags.cost_unit / tags.cost_unit_tag / tags.cost_re
 their performance twins) plus the shared tags.tag_workspace (TAG-IDX-owned, never edited here)
 through its own read-only DuckDB connection -- this module never imports app/api/service.py and
 never edits app/core/data.py (section 4.7: app/core/rollup.py is TAG-ROLL's own new file). The one
-function it calls on app/core/data.py is its already-public read_dim_workspace() (for the `env`/
-attribute-key filters GET /api/rollup accepts, same as every other route), never a private one.
+function it calls on app/core/data.py is its already-public read_dim_workspace() (for the `env`
+filter GET /api/rollup accepts, same as every other route), never a private one.
 
 Everything here works from ONE tag key at a time (the nested rollup's own contract, section 3.1):
 walk each cost/performance "unit" from the work level outward to the workspace level, take the
@@ -479,14 +479,12 @@ def _round_metrics(metrics: dict, discount_pct: float, area: str) -> dict:
     return {"usd": round(usd, 2), "usd_disc": round(usd * (1 - discount_pct), 2)}
 
 
-def _resolve_workspace_scope(
-    workspace_ids: list[str] | None, env: list[str] | None, attributes: dict[str, list[str]] | None
-) -> set[str] | None:
-    """The workspace id set workspace_ids/env/attributes resolve to, via read_dim_workspace() (the
+def _resolve_workspace_scope(workspace_ids: list[str] | None, env: list[str] | None) -> set[str] | None:
+    """The workspace id set workspace_ids/env resolve to, via read_dim_workspace() (the
     same public dim every other route reads) -- None means "no scope filter at all" (every path
     kept); an empty df read failure degrades to an empty set (nothing kept) rather than raising, the
     same defensive shape every other route's guard uses. Shared by rollup() and by_tag_top()."""
-    if not (workspace_ids or env or attributes):
+    if not (workspace_ids or env):
         return None
     try:
         df = app_core_data.read_dim_workspace()
@@ -499,11 +497,6 @@ def _resolve_workspace_scope(
     if env and "env" in df.columns:
         m = df["env"].isin(env)
         mask = m if mask is None else (mask & m)
-    if attributes:
-        for key, values in attributes.items():
-            if key in df.columns:
-                m = df[key].isin(values)
-                mask = m if mask is None else (mask & m)
     if mask is not None:
         return set(df.loc[mask, "workspace_id"].astype(str))
     return set(df["workspace_id"].astype(str))
@@ -594,7 +587,6 @@ def rollup(
     tag_value: str | None = None,
     workspace_ids: list[str] | None = None,
     env: list[str] | None = None,
-    attributes: dict[str, list[str]] | None = None,
     tag_values: list[str] | None = None,
     tag_filter: "app_core_tags.TagFilter | app_core_tags.TagFilterSet | None" = None,
 ) -> dict:
@@ -602,7 +594,7 @@ def rollup(
     within this one key -- rollup always builds the tree for a single `tag_key`) additionally marks
     every matching entry in the new `selected_values` list. `tag_filter` (C26) is the SAME active
     tag filter /api/finding's `aggregate` applies -- narrows the units this rollup sums to those
-    matching it, the same way workspace_ids/env/attributes already do."""
+    matching it, the same way workspace_ids/env already do."""
     norm_key = _validate(area, tag_key, window_days)
     primary_key = "usd" if area == "cost" else "statements"
     metric_keys = COST_METRIC_KEYS if area == "cost" else PERF_METRIC_KEYS
@@ -616,7 +608,7 @@ def rollup(
         if not required_ok:
             return _not_assessed_body(area, norm_key, window_days, na_reason, source_status=source_status, display_key=tag_key)
 
-        resolved_ws = _resolve_workspace_scope(workspace_ids, env, attributes)
+        resolved_ws = _resolve_workspace_scope(workspace_ids, env)
         unit_ids = _matching_unit_ids(con, area, window_days, tag_filter, exclude_key=norm_key)
 
         paths = _fetch_cost_paths(con, window_days, norm_key, unit_ids) if area == "cost" \
@@ -1154,7 +1146,6 @@ def by_tag_top(
     top: int = 10,
     workspace_ids: list[str] | None = None,
     env: list[str] | None = None,
-    attributes: dict[str, list[str]] | None = None,
     tag_filter: "app_core_tags.TagFilter | app_core_tags.TagFilterSet | None" = None,
 ) -> dict:
     """The top `top` tag VALUES for one key, ranked by $ (area="cost") or by total query time
@@ -1179,7 +1170,7 @@ def by_tag_top(
         if not required_ok:
             return _by_tag_not_assessed(area, norm_key, window_days, na_reason, source_status=source_status)
 
-        resolved_ws = _resolve_workspace_scope(workspace_ids, env, attributes)
+        resolved_ws = _resolve_workspace_scope(workspace_ids, env)
         unit_ids = _matching_unit_ids(con, area, window_days, tag_filter)
         paths = _fetch_cost_paths(con, window_days, norm_key, unit_ids) if area == "cost" \
             else _fetch_perf_paths(con, window_days, norm_key, unit_ids)

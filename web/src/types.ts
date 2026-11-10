@@ -132,7 +132,6 @@ export interface FindingData {
   requested_window_days: number;
   is_finding: boolean;
   windowed: boolean;
-  attributes: Record<string, string[]>;
   tag: Record<string, any> | null;
   scope: Scope;
   status: string[];

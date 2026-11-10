@@ -1185,25 +1185,8 @@ def test_finding_detail_money_label_reflects_discount(monkeypatch, tmp_path):
     # own-basis dollar column (net_default_cost) here too, but T-69A dropped it entirely -- the
     # query now emits only net_list_cost, and always reads NOT_ASSESSED (no negotiated-rate
     # source exists anywhere in system.billing; see config/library_corrections.yml). Every dollar
-    # column in this app is now the one list-price basis, so NON_DISCOUNT_MONEY_LABELS
-    # (app/core/pricing.py) is empty and no real finding exercises its own-basis label path any
-    # more; that path is unit-tested directly (below) so it stays provably correct for a future
-    # dollar column whose basis genuinely is not the list price.
+    # column in this app is now the one list-price basis.
     assert "net_default_cost" not in cols
-
-
-def test_money_label_own_basis_path_still_works(monkeypatch):
-    """app/api/service._money_label's NON_DISCOUNT_MONEY_LABELS branch (DEC-66.1's escape hatch
-    for a future dollar column whose basis is not the list price) is unit-tested directly, since
-    no live finding exercises it today (see the test above) -- the mechanism itself must stay
-    correct even while it is unused."""
-    monkeypatch.setitem(service.app_pricing.NON_DISCOUNT_MONEY_LABELS, "net_fake_cost", "as billed")
-    assert service._money_label("net_fake_cost", 0.2) == "as billed"
-    # pricing.apply() never actually creates a "_disc" twin for an own-basis column (it fails
-    # _LIST_COL_RE on purpose, so no real "net_fake_cost_disc" column would ever reach this
-    # function) -- but the own-basis lookup strips a "_disc" suffix before it looks up `base`
-    # regardless, so it still wins over the list-price branch below if one somehow did.
-    assert service._money_label("net_fake_cost_disc", 0.2) == "as billed"
 
 
 def test_json_scalar_nat_is_null_not_the_literal_text_nat():
@@ -1593,6 +1576,9 @@ def test_finding_aggregate_matches_direct_sql_sum():
 # -------------------------------------------------------------------------------------------
 
 
+COST_CENTER_WORKSPACE_ID = "1111"  # WS_PROD -- tests/fixtures/billing.py's own constant
+
+
 def test_excluded_no_workspace_partitions_add_up_to_the_unfiltered_total():
     query_id = "cost_dollarized_by_sku_day"
     value_col = "net_list_cost"
@@ -1938,108 +1924,6 @@ def test_finding_aggregate_captures_the_full_flooded_group(flood_env):
     # row_count and value both cover the WHOLE flood, never a 5,000-row slice of it.
     assert flood_group["row_count"] == FLOOD_ROWS
     assert flood_group["value"] == pytest.approx(float(FLOOD_ROWS))
-
-
-# -------------------------------------------------------------------------------------------
-# P2-FILTERS: the T-63/DEC-60 workspace-attribute filters (cost_center/team/business_unit/domain)
-# reach GET /api/findings and GET /api/finding/{id}/aggregate. tests/test_attribute_filter.py
-# already proves GET /api/finding/{id} itself (T-63's own task, DEC-60 rules 1/5/6); before this
-# task the OTHER two endpoints either ignored the filter entirely (GET /api/findings never even
-# read the query params) or were simply untested (the aggregate endpoint's own plumbing already
-# threaded `attributes` through, app/api/app.py's get_finding_aggregate, but nothing exercised it).
-#
-# Same fixture fact tests/test_attribute_filter.py relies on (tests/fixtures/billing.py's "SEC L
-# (T-63)"): workspace 1111 (WS_PROD) is the only workspace tagged cost_center="engineering", and
-# PLAIN_QUERY_ID ("cost_by_job") carries real window=30 rows for it with no account-level
-# (workspace_id IS NULL) row to confuse an explicit-workspace-list comparison.
-# -------------------------------------------------------------------------------------------
-
-COST_CENTER_WORKSPACE_ID = "1111"  # WS_PROD -- tests/fixtures/billing.py's own constant
-# the one workspace whose current cost_center is "engineering" (tests/fixtures/compute_coverage.py)
-ENGINEERING_WORKSPACE_ID = "cc_ws1"
-ATTRIBUTE_QUERY_ID = "cost_dollarized_by_sku_day"
-
-
-def test_findings_list_attribute_filter_matches_the_explicit_workspace_filter():
-    """?cost_center=engineering must narrow GET /api/findings' bulk row/status counts exactly the
-    way an explicit filter on the engineering workspace does."""
-    by_attribute = client.get("/api/findings", params={"window": 30, "cost_center": "engineering"}).json()
-    by_workspace = client.get(
-        "/api/findings", params={"window": 30, "workspace_ids": [ENGINEERING_WORKSPACE_ID]}
-    ).json()
-    assert by_attribute["attributes"] == {"cost_center": ["engineering"]}
-
-    row_by_attribute = next(f for f in by_attribute["findings"] if f["query_id"] == ATTRIBUTE_QUERY_ID)
-    row_by_workspace = next(f for f in by_workspace["findings"] if f["query_id"] == ATTRIBUTE_QUERY_ID)
-    assert row_by_attribute["outcome"] == row_by_workspace["outcome"] == "ok_rows"
-    assert row_by_attribute["row_count"] == row_by_workspace["row_count"] > 0
-    assert row_by_attribute["status_counts"] == row_by_workspace["status_counts"]
-
-
-def test_findings_list_attribute_filter_excludes_non_matching_workspaces():
-    """The same filter, scoped to workspaces that are NOT 'engineering', must exclude every one of
-    cost_by_job's rows -- proving this is a real join against dims.dim_workspace, not a no-op that
-    happens to pass the previous test by coincidence."""
-    r = client.get(
-        "/api/findings",
-        params={"window": 30, "workspace_ids": ["2222", "3333"], "cost_center": "engineering"},
-    ).json()
-    row = next(f for f in r["findings"] if f["query_id"] == PLAIN_QUERY_ID)
-    assert row["outcome"] == "ok_empty_filters"
-    assert row["row_count"] == 0
-
-
-def test_findings_list_region_gap_reflects_the_attribute_filter():
-    # T-71: region_gap is computed over the SAME selection this list endpoint's rows are -- an
-    # attribute filter must narrow it exactly the way workspace_ids already does (both go through
-    # service.region_gap(workspace_ids, env, attributes) now).
-    by_attribute = client.get("/api/findings", params={"window": 30, "cost_center": "engineering"}).json()
-    by_workspace = client.get(
-        "/api/findings", params={"window": 30, "workspace_ids": [ENGINEERING_WORKSPACE_ID]}
-    ).json()
-    assert by_attribute["region_gap"] == by_workspace["region_gap"]
-
-
-def test_findings_list_unknown_attribute_query_param_is_ignored_not_an_error():
-    r = client.get("/api/findings", params={"window": 30, "not_a_real_canonical_key": "drop table x"})
-    assert r.status_code == 200
-    assert r.json()["attributes"] == {}
-
-
-def test_finding_aggregate_attribute_filter_matches_the_explicit_workspace_filter():
-    """The same DEC-60 rule 1 proof tests/test_attribute_filter.py runs against GET /api/finding,
-    but through the T-68 aggregate endpoint: a real server-side SQL SUM, not a row page."""
-    by_attribute = client.get(
-        f"/api/finding/{ATTRIBUTE_QUERY_ID}/aggregate",
-        params={
-            "window": 30, "cost_center": "engineering",
-            "group": "usage_date", "agg": "sum", "value": "net_list_cost",
-        },
-    ).json()
-    by_workspace = client.get(
-        f"/api/finding/{ATTRIBUTE_QUERY_ID}/aggregate",
-        params={
-            "window": 30, "workspace_ids": [ENGINEERING_WORKSPACE_ID],
-            "group": "usage_date", "agg": "sum", "value": "net_list_cost",
-        },
-    ).json()
-    assert by_attribute["outcome"] == by_workspace["outcome"] == "ok_rows"
-    assert by_attribute["matched_rows"] == by_workspace["matched_rows"] > 0
-    assert by_attribute["total_value"] == pytest.approx(by_workspace["total_value"])
-
-
-def test_finding_aggregate_attribute_filter_excludes_non_matching_workspaces():
-    r = client.get(
-        f"/api/finding/{PLAIN_QUERY_ID}/aggregate",
-        params={
-            "window": 30, "workspace_ids": ["2222", "3333"], "cost_center": "engineering",
-            "group": "job_id", "agg": "sum", "value": "net_usage_quantity",
-        },
-    )
-    assert r.status_code == 200
-    body = r.json()
-    assert body["outcome"] == "ok_empty_filters"
-    assert "groups" not in body
 
 
 # -------------------------------------------------------------------------------------------

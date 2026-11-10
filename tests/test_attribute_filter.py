@@ -12,17 +12,13 @@ autouse `_app_env`, AUDIT_DB=tests/db_audit_test.duckdb built by
 Proves, against tests/fixtures/billing.py's "SEC L (T-63)" fixture rows:
   - GET /api/meta reports which canonical keys are actually populated (DEC-60 rule 5).
   - GET /api/workspaces carries the new <key>/<key>_share/<key>_reason columns.
-  - a cost_center filter on a finding that carries workspace_id returns exactly that workspace's
-    rows (DEC-60 rule 1).
-  - the same filter does not reduce a finding with no workspace_id column at all (DEC-60 rule 6,
-    the four-outcome rule).
+The filter itself runs in the browser: the top bar turns a picked value into workspace ids.
 """
 from __future__ import annotations
 
 import sys
 from pathlib import Path
 
-import pytest
 from fastapi.testclient import TestClient
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -89,81 +85,3 @@ def test_workspaces_endpoint_carries_attribute_columns():
     # 55/45 split, but tagged on under half its DBUs: the coverage floor reads it not_tagged.
     assert rows[bl.WS_DEV]["cost_center"] == "not_tagged"
     assert rows[bl.WS_UAT]["cost_center"] == "not_tagged"
-
-
-# -------------------------------------------------------------------------------------------
-# DEC-60 rule 1 -- a cost_center filter on a finding that carries workspace_id.
-# -------------------------------------------------------------------------------------------
-
-
-def test_attribute_filter_matches_the_explicit_workspace_filter():
-    """?cost_center=engineering resolves to exactly the one 'engineering' workspace -- so it must
-    return the identical row set an explicit workspace_ids filter on it does,
-    on a finding whose grain has nothing to do with cost_center at all."""
-    by_attribute = client.get(
-        f"/api/finding/{WS_SCOPED_QUERY_ID}",
-        params={"window": 30, "cost_center": "engineering", "limit": 5000},
-    ).json()
-    by_workspace = client.get(
-        f"/api/finding/{WS_SCOPED_QUERY_ID}",
-        params={"window": 30, "workspace_ids": [ENGINEERING_WS], "limit": 5000},
-    ).json()
-
-    assert by_attribute["outcome"] == by_workspace["outcome"] == "ok_rows"
-    assert by_attribute["rows_total"] == by_workspace["rows_total"] > 0
-    ids_by_attribute = {r["workspace_id"] for r in by_attribute["rows"]}
-    ids_by_workspace = {r["workspace_id"] for r in by_workspace["rows"]}
-    assert ids_by_attribute == ids_by_workspace == {ENGINEERING_WS}
-
-
-def test_attribute_filter_excludes_non_matching_workspaces():
-    """The same filter, scoped to workspaces that are NOT 'engineering', must exclude their
-    rows entirely -- proving the filter is a real join, not a no-op that happens to pass the
-    previous test by coincidence."""
-    r = client.get(
-        f"/api/finding/{WS_SCOPED_QUERY_ID}",
-        params={
-            "window": 30,
-            "workspace_ids": [bl.WS_DEV, bl.WS_UAT],
-            "cost_center": "engineering",
-            "limit": 5000,
-        },
-    ).json()
-    assert r["outcome"] == "ok_empty_filters"
-    assert r["rows_in_window"] > 0  # the window has rows -- the FILTER excludes all of them
-
-
-# -------------------------------------------------------------------------------------------
-# DEC-60 rule 6 -- the four-outcome rule is untouched: a finding with no workspace_id is
-# unaffected by this filter.
-# -------------------------------------------------------------------------------------------
-
-
-def test_attribute_filter_does_not_reduce_a_finding_with_no_workspace_id():
-    unfiltered = client.get(
-        f"/api/finding/{NO_WORKSPACE_ID_QUERY_ID}", params={"window": 30, "limit": 5000}
-    ).json()
-    filtered = client.get(
-        f"/api/finding/{NO_WORKSPACE_ID_QUERY_ID}",
-        params={"window": 30, "cost_center": "engineering", "limit": 5000},
-    ).json()
-
-    assert unfiltered["outcome"] == "ok_rows"
-    assert unfiltered["rows_total"] > 0
-    assert filtered["outcome"] == unfiltered["outcome"]
-    assert filtered["rows_total"] == unfiltered["rows_total"]
-    assert filtered["rows"] == unfiltered["rows"]
-
-
-# -------------------------------------------------------------------------------------------
-# An unknown canonical key never becomes a SQL identifier (app/core/data._attribute_canonical_keys'
-# whitelist) -- a query param that is not a configured canonical key is simply ignored, not a 500.
-# -------------------------------------------------------------------------------------------
-
-
-def test_unknown_attribute_query_param_is_ignored_not_an_error():
-    r = client.get(
-        f"/api/finding/{WS_SCOPED_QUERY_ID}",
-        params={"window": 30, "not_a_real_canonical_key": "drop table x", "limit": 5000},
-    )
-    assert r.status_code == 200

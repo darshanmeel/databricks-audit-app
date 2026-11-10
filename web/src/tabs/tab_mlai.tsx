@@ -290,7 +290,7 @@ function MlaiEndpointsContent({ filters, meta, onVerdict, onExternalJump }: Loos
     trafficByKey.forEach((t) => { totalErrors += t.errors; });
     const idleBilled = endpoints.filter((e) => requestsOf(e) === 0 && numOrZero(e.est_usd_list) > 0 && e.status !== "NOT_ASSESSED");
     const idleUsd = idleBilled.reduce((s, e) => s + numOrZero(e.est_usd_list), 0) * (1 - discPct);
-    // Only waste above the floor reaches Waste & savings (DEC-68); the rest is shown apart, not counted.
+    // Only waste above the floor reaches Waste & savings; the rest is shown apart, not counted.
     const wasteOf = (rows: any) => rows.reduce((s: any, e: any) => s + numOrZero(e.est_wasted_usd_list), 0) * (1 - discPct);
     const idleWasteUsd = wasteOf(idleBilled.filter((e) => !e.below_floor));
     const idleWasteUnderFloor = wasteOf(idleBilled.filter((e) => e.below_floor));

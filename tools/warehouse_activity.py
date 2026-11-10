@@ -4,10 +4,10 @@ One SQL warehouse in detail, for Compute > Warehouses (click a warehouse). Plain
 - warehouse_daily: per warehouse and day, minutes it was up (warehouse events), minutes with a query
   running (query history), queries, failed queries, people and service principals, time queued;
   up minus busy is its idle time that day;
-- warehouse_users: per warehouse and identity, queries, failed, run time and the last query;
-- warehouse_tables: per warehouse and table, reads and writes from lineage joined to the query that
+- warehouse_users: per window, warehouse and identity, queries, failed, run time and the last query;
+- warehouse_tables: per window, warehouse and table, reads and writes from lineage joined to the query that
   caused them (statement_id); fails alone, with its error, when lineage has no statement_id;
-- warehouse_slow: per warehouse, its slowest queries: who, when, how long, the first words of the text.
+- warehouse_slow: per window and warehouse, its slowest queries: who, when, how long, the first words of the text.
 Cost per day comes from the cost_daily_by_resource check, idle gaps from compute_warehouse_idle_minutes.
 
 Called by tools/export_direct_results.py after the checks; writes warehouse/<name>.parquet.
@@ -31,20 +31,20 @@ DAILY_SCHEMA = pa.schema([
     ("queued_ms", pa.int64()), ("run_ms", pa.int64()),
 ])
 USERS_SCHEMA = pa.schema([
-    ("workspace_id", pa.string()), ("warehouse_id", pa.string()), ("identity", pa.string()),
+    ("window_days", pa.int64()), ("workspace_id", pa.string()), ("warehouse_id", pa.string()), ("identity", pa.string()),
     ("queries", pa.int64()), ("failed", pa.int64()), ("run_ms", pa.int64()), ("last_query", pa.string()),
 ])
 TABLES_SCHEMA = pa.schema([
-    ("workspace_id", pa.string()), ("warehouse_id", pa.string()), ("table_full_name", pa.string()),
+    ("window_days", pa.int64()), ("workspace_id", pa.string()), ("warehouse_id", pa.string()), ("table_full_name", pa.string()),
     ("reads", pa.int64()), ("writes", pa.int64()), ("people", pa.int64()), ("last_access", pa.string()),
 ])
 SLOW_SCHEMA = pa.schema([
-    ("workspace_id", pa.string()), ("warehouse_id", pa.string()), ("statement_id", pa.string()),
+    ("window_days", pa.int64()), ("workspace_id", pa.string()), ("warehouse_id", pa.string()), ("statement_id", pa.string()),
     ("identity", pa.string()), ("start_time", pa.string()), ("total_ms", pa.int64()), ("queued_ms", pa.int64()),
     ("status", pa.string()), ("statement_type", pa.string()), ("text", pa.string()),
 ])
-TABLES_MAX = 50  # per warehouse
-SLOW_MAX = 20  # per warehouse
+TABLES_MAX = 50  # per window and warehouse
+SLOW_MAX = 20  # per window and warehouse
 TEXT_CHARS = 200
 _UUID = "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
 UP_EVENTS = "'STARTING', 'RUNNING', 'SCALED_UP', 'SCALED_DOWN'"
@@ -115,21 +115,31 @@ WHERE k.d >= date_sub({e}, {days}) AND k.d < {e}
 """
 
 
-def users_sql(end: dt.date, days: int) -> str:
+def _qw(end: dt.date, windows: list[int]) -> str:
+    """q once per window: each statement under every window that covers it."""
+    e = f"DATE'{end.isoformat()}'"
+    ws = sorted({int(x) for x in windows})
+    return f"""{_q(end, max(ws))},
+w AS (SELECT explode(array({", ".join(map(str, ws))})) AS days),
+qw AS (SELECT w.days AS window_days, q.* FROM q JOIN w ON q.start_time >= date_sub({e}, w.days))"""
+
+
+def users_sql(end: dt.date, windows: list[int]) -> str:
     return f"""
-WITH {_q(end, days)}
-SELECT workspace_id, warehouse_id, who AS identity, COUNT(*) AS queries, COUNT_IF(execution_status = 'FAILED') AS failed,
-       SUM(run_ms) AS run_ms, CAST(MAX(start_time) AS STRING) AS last_query
-FROM q WHERE who IS NOT NULL
-GROUP BY 1, 2, 3
+WITH {_qw(end, windows)}
+SELECT window_days, workspace_id, warehouse_id, who AS identity, COUNT(*) AS queries,
+       COUNT_IF(execution_status = 'FAILED') AS failed, SUM(run_ms) AS run_ms, CAST(MAX(start_time) AS STRING) AS last_query
+FROM qw WHERE who IS NOT NULL
+GROUP BY 1, 2, 3, 4
 """
 
 
-def tables_sql(end: dt.date, days: int) -> str:
+def tables_sql(end: dt.date, windows: list[int]) -> str:
     """Tables read and written by this warehouse's queries: lineage rows of the same statement."""
     e = f"DATE'{end.isoformat()}'"
+    days = max(windows)
     return f"""
-WITH {_q(end, days)},
+WITH {_qw(end, windows)},
 lin AS (
   SELECT statement_id, source_table_full_name AS t, 1 AS is_read, 0 AS is_write, event_time
   FROM system.access.table_lineage
@@ -140,25 +150,25 @@ lin AS (
   WHERE event_date >= date_sub({e}, {days}) AND event_date < {e} AND statement_id IS NOT NULL AND target_table_full_name IS NOT NULL
 ),
 per AS (
-  SELECT q.workspace_id, q.warehouse_id, l.t AS table_full_name,
+  SELECT q.window_days, q.workspace_id, q.warehouse_id, l.t AS table_full_name,
          COUNT(DISTINCT CASE WHEN l.is_read = 1 THEN q.statement_id END) AS reads,
          COUNT(DISTINCT CASE WHEN l.is_write = 1 THEN q.statement_id END) AS writes,
          COUNT(DISTINCT q.who) AS people, CAST(MAX(l.event_time) AS STRING) AS last_access
-  FROM q JOIN lin l ON l.statement_id = q.statement_id
-  GROUP BY 1, 2, 3
+  FROM qw q JOIN lin l ON l.statement_id = q.statement_id
+  GROUP BY 1, 2, 3, 4
 )
 SELECT * FROM per
-QUALIFY ROW_NUMBER() OVER (PARTITION BY workspace_id, warehouse_id ORDER BY reads + writes DESC, table_full_name) <= {TABLES_MAX}
+QUALIFY ROW_NUMBER() OVER (PARTITION BY window_days, workspace_id, warehouse_id ORDER BY reads + writes DESC, table_full_name) <= {TABLES_MAX}
 """
 
 
-def slow_sql(end: dt.date, days: int) -> str:
+def slow_sql(end: dt.date, windows: list[int]) -> str:
     return f"""
-WITH {_q(end, days)}
-SELECT workspace_id, warehouse_id, statement_id, who AS identity, CAST(start_time AS STRING) AS start_time, total_ms,
+WITH {_qw(end, windows)}
+SELECT window_days, workspace_id, warehouse_id, statement_id, who AS identity, CAST(start_time AS STRING) AS start_time, total_ms,
        queued_ms, execution_status AS status, statement_type, left(regexp_replace(statement_text, '\\\\s+', ' '), {TEXT_CHARS}) AS text
-FROM q
-QUALIFY ROW_NUMBER() OVER (PARTITION BY workspace_id, warehouse_id ORDER BY total_ms DESC, statement_id) <= {SLOW_MAX}
+FROM qw
+QUALIFY ROW_NUMBER() OVER (PARTITION BY window_days, workspace_id, warehouse_id ORDER BY total_ms DESC, statement_id) <= {SLOW_MAX}
 """
 
 
@@ -176,7 +186,7 @@ def _write(folder: Path, name: str, rows: list[dict], schema: pa.Schema) -> None
     pq.write_table(pa.Table.from_pylist(clean, schema=schema), str(folder / name), compression="snappy")
 
 
-def export(connect_fn: Callable, out_dir: Path, *, end: dt.date, days: int,
+def export(connect_fn: Callable, out_dir: Path, *, end: dt.date, windows: list[int],
            redact: Callable[[str], str] = str, mask: Callable[[str], str] | None = None) -> dict:
     """Run every statement on one connection; each failing alone is reported, not raised."""
     t0 = time.perf_counter()
@@ -186,14 +196,15 @@ def export(connect_fn: Callable, out_dir: Path, *, end: dt.date, days: int,
         return {"exported": False, "error": redact(str(exc))}
     folder = out_dir / "warehouse"
     folder.mkdir(parents=True, exist_ok=True)
-    info: dict = {"exported": True, "days": days, "end": end.isoformat()}
+    days = max(windows)
+    info: dict = {"exported": True, "days": days, "windows": sorted(set(windows)), "end": end.isoformat()}
     try:
         cur = connected.conn.cursor()
         for key, sql, name, schema in (
             ("daily", daily_sql(end, days), DAILY_FILE, DAILY_SCHEMA),
-            ("users", users_sql(end, days), USERS_FILE, USERS_SCHEMA),
-            ("tables", tables_sql(end, days), TABLES_FILE, TABLES_SCHEMA),
-            ("slow", slow_sql(end, days), SLOW_FILE, SLOW_SCHEMA),
+            ("users", users_sql(end, windows), USERS_FILE, USERS_SCHEMA),
+            ("tables", tables_sql(end, windows), TABLES_FILE, TABLES_SCHEMA),
+            ("slow", slow_sql(end, windows), SLOW_FILE, SLOW_SCHEMA),
         ):
             try:
                 rows = _rows(cur, sql)

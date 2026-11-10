@@ -1,10 +1,5 @@
-// scalar formatters, the client-side twin of app/ui/fmt.py. Every
-// formatter returns "-" for null/undefined/NaN/anything that is not really a number, never a
-// fabricated "$0"/"0%"/"0 DBU" that would read as a verified zero (PLAN.md 6.2's honesty rule
-// extends to number formatting, not just which card renders) and never a bare "NaN" printed
-// because a non-numeric value was handed to a magnitude formatter anyway (P2-KINDS). fmtCell's
-// own "money" branch is the one exception: see its comment (DEC-66.1/T-69) for why a missing/zero
-// money CELL gets its own, more specific words.
+// Scalar formatters. Anything that is not really a number prints "-", never a made-up "$0" or "NaN";
+// fmtCell's money branch has its own words for a missing or zero cell.
 
 import { fmtChangePct } from "./components/hooks";
 import { Tip } from "./components/primitives";
@@ -22,21 +17,8 @@ function isMissing(v: unknown): boolean {
   return v === null || v === undefined || (typeof v === "number" && Number.isNaN(v));
 }
 
-// P2-KINDS: every magnitude formatter below (fmtMoney/fmtDbu/fmtPct/fmtHours/fmtGb/fmtInt) used
-// to check ONLY isMissing() and then blindly Number()-coerce whatever was left -- fine for every
-// caller that already hands it a real number (the vast majority: a computed sum, a KPI figure),
-// but a raw server value can be a non-numeric string (e.g. a text or ISO-timestamp column whose
-// NAME happens to match app/api/service.py's regex-only kind guess, classify_columns -- "hours"
-// matches any column ending in "hours", "dbu" matches any column with "dbu" anywhere in it, with
-// no look at the actual value). Number("2026-09-24T00:00:00") is NaN, and NaN.toLocaleString()
-// prints the literal text "NaN" -- so that cell read "NaN DBU"/"NaN h" instead of the timestamp it
-// actually held (review finding). isNumericValue is the one gate every magnitude formatter now
-// shares: true for a real finite number, or a string that parses cleanly (Number() on the trimmed
-// string) to a finite number -- false for everything else, including "", booleans, objects, and a
-// non-numeric string. A value that fails this gate is treated exactly like a missing one by the
-// formatters below (still just "-", a plain string every existing template-literal caller already
-// expects -- see the file-top note); fmtCell is the one caller that additionally knows what to
-// show INSTEAD when a cell's value fails this gate (its own text/date fallback, below).
+// True for a finite number or a string that parses to one. Column kinds are guessed from the name, so a text or
+// timestamp column can reach a magnitude formatter; this gate keeps it from printing "NaN".
 export function isNumericValue(v: unknown): boolean {
   if (typeof v === "number") return Number.isFinite(v);
   if (typeof v === "string") {
@@ -62,16 +44,8 @@ export function fmtMoney(value: unknown, decimals = 0): string {
   })}`;
 }
 
-// "list price (effective)" at the 0% default (DEC-66.1: one price basis, no discount assumed by
-// default), or "what-if: list price (effective), -X%" once the Settings discount is set away from
-// 0 -- the client-side twin of app/api/service.est_label / app/ui/fmt.est_label, so
-// every tile/chart/table that carries a discount label says the exact same thing (T-69: this was
-// five copy-pasted "est - at list -${...}%%" template literals across the tab files before,
-// one of them wrong in a different way each time). X = the percentage to one decimal, trailing
-// zeros dropped (12.5% stays "-12.5%") -- NOT a plain Math.round(d*100) (that gave -13% for a
-// 12.5% discount, the opposite rounding direction from Python's round() on the same number, so
-// the two sides used to disagree on exactly the value the Settings input's 0.5-step default
-// produces). Only a falsy discount (0/null/undefined/NaN) returns the base label.
+// "list price (effective)", or "what-if: list price (effective), -X%" with a discount set; X to one decimal, the
+// same rounding as the server's est_label.
 export function estLabel(discountPct: unknown): string {
   const d = Number(discountPct);
   if (!d) return "list price (effective)";
@@ -215,15 +189,8 @@ export function fmtBytes(value: unknown, decimals = 1): string {
   return `${Math.round(v).toLocaleString(LOCALE)} B`;
 }
 
-// P2-KINDS: `kind` here is app/api/service.py's classify_columns -- a NAME-only guess (a regex
-// over the column name, no look at any actual value: "hours" matches any column ending in
-// "hours", "dbu" matches any column with "dbu" anywhere in it). A text or timestamp column whose
-// name happens to match has no numbers in it at all, so it needs its own fallback, not a magnitude
-// formatter's "-"/isNumericValue rejection (that would just throw the real value away). A bare ISO
-// date ("2026-09-24") or timestamp ("2026-09-24T10:15:00", the shape app/api/service.py's
-// _json_scalar always writes a pandas Timestamp as) gets a short, fixed-locale reading; anything
-// else prints as plain text. Returns null for anything that is not one of those two shapes, so
-// callers can fall back without parsing twice.
+// Kinds are guessed from column names, so a text or date column can carry a magnitude kind: show an ISO date or
+// timestamp short, other text as is; null for anything else.
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const ISO_DATETIME_RE = /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})?$/;
 export function fmtDate(value: unknown): string | null {
@@ -287,34 +254,12 @@ function missingCell(): React.ReactElement {
   return <Tip text="no value"><span className="muted">{"—"}</span></Tip>;
 }
 
-// The kinds whose formatter treats its input as a magnitude (a "$"/"DBU"/"%"/"h"/"GB" suffix) --
-// every one of these is gated on isNumericValue below before it ever reaches its formatter, so a
-// text/timestamp column that merely shares a name pattern with a magnitude column (P2-KINDS) falls
-// through to textOrDateCell instead of printing "NaN <unit>".
+// Kinds with a unit suffix; each is gated on isNumericValue first.
 const NUMERIC_CELL_KINDS = new Set(["dbu", "pct", "hours", "gb", "gb_bytes"]);
 
-// review round 1 (T-69B): a bare "isMissing -> unpriced, 0 -> free" rule was wrong in both
-// directions once checked against the vendored bodies. 16 vendored queries COALESCE a genuinely
-// unpriced or not-yet-computed cost to a literal 0 (lakeflow_stale_zombie_jobs,
-// lakeflow_jobs_no_timeout, compute_idle_node_ratio's est_wasted_usd_list = 0 when idle_ratio = 0,
-// and others; tests/test_findings/test_lakeflow_dims.py pins an unpriced SKU's est_usd_list at
-// exactly 0.0) -- those zeros are not verified free usage and must not read "(free)". A free-tier
-// SKU (FREE_USAGE_* etc.) has no list_prices row AT ALL, so its cost is NULL, not 0 -- the
-// opposite of what a NULL was supposed to mean. And a NULL that means "not assessed" (e.g.
-// lakeflow_jobs_on_all_purpose's NOT_ASSESSED branch, CAST(NULL AS DOUBLE) AS est_usd_list) must
-// not read "unpriced" either, which implies a real priced-coverage gap that was actually judged.
-// So this is now row-aware: `row` (the record this cell came from, when the caller has it) is
-// read for two signals a query MAY carry -- `price_basis` (an explicit "free"/"unpriced" the SQL
-// itself sets, the future-proof path once such a column exists) and, failing that, `sku_name`
-// matched against FREE_USAGE (the one convention already in the vendored library today). Only
-// those two signals ever produce "(free)"/"unpriced"; every other missing/zero value keeps the
-// plain, un-editorialised fmtMoney() text, exactly as it did before this cell existed.
-//
-// P2-KINDS: every numeric kind (money included) is now value-gated -- it only reaches its
-// magnitude formatter when the value actually IS a number (isNumericValue: a real number, or a
-// string that parses cleanly and finitely). A present-but-non-numeric value falls to
-// textOrDateCell (text, or a formatted date) instead; a missing value renders as an em-dash tip
-// (missingCell), never the bare "-" a table cell could otherwise show with no explanation.
+// Money cells: "(free)" or "unpriced" only from a row's price_basis or a FREE_USAGE sku_name; many queries write
+// an unpriced cost as 0 or a not-assessed one as NULL, so those keep plain fmtMoney text.
+// A non-numeric value falls to textOrDateCell; a missing one gets a tip, not a bare "-".
 export function fmtCell(value: unknown, kind: string | null, row?: Row | null): React.ReactNode {
   // review round 2: an empty/whitespace-only string is "no value" exactly like null/undefined/NaN
   // -- the item promises a missing value is never a blank, unexplained cell, and finding_detail.tsx's

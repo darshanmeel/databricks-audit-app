@@ -21,8 +21,8 @@ LEFT JOIN (
   ON  u.sku_name      = lp.sku_name
   AND u.cloud         = lp.cloud
   AND u.usage_unit    = lp.usage_unit
-  AND u.usage_date    >= CAST(lp.price_start_time AS DATE)
-  AND (lp.price_end_time IS NULL OR u.usage_date < CAST(lp.price_end_time AS DATE))   -- active rows carry NULL end_time
+  AND u.usage_end_time >= lp.price_start_time
+  AND (lp.price_end_time IS NULL OR u.usage_end_time < lp.price_end_time)   -- active rows carry NULL end_time
 WHERE u.usage_date >= ({{ audit_today() }} - ({{ w }}) * INTERVAL 1 DAY)
   AND u.usage_date < {{ audit_today() }}
   AND upper(u.usage_unit) = 'DBU'   -- price only DBU rows against a per-DBU rate; never blend bytes/hours/tokens
@@ -45,8 +45,8 @@ LEFT JOIN (
   ON  u.sku_name      = lp.sku_name
   AND u.cloud         = lp.cloud
   AND u.usage_unit    = lp.usage_unit
-  AND u.usage_date    >= DATE(lp.price_start_time)
-  AND (lp.price_end_time IS NULL OR u.usage_date < DATE(lp.price_end_time))   -- active rows carry NULL end_time
+  AND u.usage_end_time >= lp.price_start_time
+  AND (lp.price_end_time IS NULL OR u.usage_end_time < lp.price_end_time)   -- active rows carry NULL end_time
 WHERE u.usage_date >= dateadd(day, -{{ w }}, {{ audit_today() }})
   AND u.usage_date < {{ audit_today() }}
   AND upper(u.usage_unit) = 'DBU'   -- price only DBU rows against a per-DBU rate; never blend bytes/hours/tokens

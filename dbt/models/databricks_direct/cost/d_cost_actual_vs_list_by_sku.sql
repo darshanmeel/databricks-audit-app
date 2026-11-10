@@ -1,4 +1,4 @@
-{{ config(enabled=(target.type == "databricks"), materialized=("table" if var("direct_mode", "run") == "table" else "direct_check"), schema="audit_direct", tags=['finding', 'domain:cost', 'tier:deep', 'databricks_direct']) }}
+{{ config(enabled=false, tags=['finding', 'domain:cost', 'tier:deep', 'databricks_direct']) }}
 -- generated from app/queries/vendored/cost/cost_actual_vs_list_by_sku.sql; fix the source query and regenerate, never edit this file.
 {%- set windows = var('windows', [7, 30, 90]) %}
 {%- for w in windows %}
@@ -20,8 +20,8 @@ LEFT JOIN (
   ON  u.sku_name      = lp.sku_name
   AND u.cloud         = lp.cloud
   AND u.usage_unit    = lp.usage_unit
-  AND u.usage_date    >= DATE(lp.price_start_time)
-  AND (lp.price_end_time IS NULL OR u.usage_date < DATE(lp.price_end_time))   -- active rows carry NULL end_time
+  AND u.usage_end_time >= lp.price_start_time
+  AND (lp.price_end_time IS NULL OR u.usage_end_time < lp.price_end_time)   -- active rows carry NULL end_time
 WHERE u.usage_date >= dateadd(day, -{{ w }}, {{ audit_today() }})
   AND u.usage_date < {{ audit_today() }}
   AND upper(u.usage_unit) = 'DBU'   -- price only DBU rows against a per-DBU rate; never blend bytes/hours/tokens

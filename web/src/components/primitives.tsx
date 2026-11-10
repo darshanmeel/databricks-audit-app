@@ -199,11 +199,8 @@ export const BAND_LABEL: Record<string, string> = {
   ERROR: "Read error",
 };
 
-// T-67: every band that is NOT a verified CRITICAL/WARN/OK verdict for a finding -- the model
-// failed/was skipped (NOT_ASSESSED), a local read failed (ERROR), or the result was a real but
-// unjudged zero (EMPTY_WINDOW/EMPTY_FILTERS). A caller tallying "how many of these checks can I
-// trust" must count all four the same way, or a domain made entirely of read errors / empty
-// windows / filtered-out rows quietly reads as a verified "0 flagged" clean pass.
+// Bands that are not a verified verdict (not assessed, error, empty window, empty filters); count all four alike,
+// or read errors and empty windows look like a clean "0 flagged".
 export function isUncertainBand(band: string): boolean {
   return band === "NOT_ASSESSED" || band === "ERROR" || band === "EMPTY_WINDOW" || band === "EMPTY_FILTERS";
 }
@@ -260,16 +257,8 @@ export function bandPillKind(band: string | null | undefined): string {
   }
 }
 
-// P2-BOUNDARY: a React error boundary. getDerivedStateFromError/componentDidCatch only exist on
-// a class component (no hooks equivalent), so this is the one class component in app/web. It
-// catches a render error anywhere in its children and shows a small card in the app's own
-// honest-card style (finding_detail.tsx's NotAssessedCard/EmptyWindowCard/ErrorCard family)
-// instead of letting one bad row or one broken component blank the whole page. "Try again"
-// clears the caught error and re-renders the same children fresh -- no page reload, no refetch --
-// so a one-off render glitch gets a real second chance without losing whatever else is on screen.
-//
-// Wrapping pattern for any other top-level panel (App.tsx and every other tab wrap their own
-// panels the same way, tracked as later work): <ErrorBoundary><ThePanel ... /></ErrorBoundary>
+// Error boundary (a class: hooks have none): one broken panel shows a small card instead of blanking the page;
+// "Try again" re-renders the children without a reload.
 export class ErrorBoundary extends React.Component<{ children?: React.ReactNode }, { error: unknown }> {
   constructor(props: { children?: React.ReactNode }) {
     super(props);
@@ -567,9 +556,7 @@ export function NoDataBlock({ sources, unlocks, howToFill, meta, windowDays, tit
   );
 }
 
-// PageFooter: the brief's per-page footer line -- the one money basis on the left, a link to
-// Coverage & Gaps on the right. Distinct from App.tsx's BrandFooter (copyright/brand, DEC-69),
-// which stays at the very bottom of the shell once, not on every area page.
+// PageFooter: the money basis on the left, a Coverage & Gaps link on the right; the brand footer is App.tsx's.
 export function PageFooter({ meta, areaKey }: { meta: Meta | null; areaKey?: string }) {
   const discount = meta && meta.discount_pct;
   const caveat = EST_SPEND_CAVEAT || "excludes your cloud provider's own VM bill";

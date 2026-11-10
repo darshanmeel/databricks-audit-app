@@ -1,4 +1,4 @@
-{{ config(enabled=(target.type == "databricks"), materialized=("table" if var("direct_mode", "run") == "table" else "direct_check"), schema="audit_direct", tags=['finding', 'domain:compute', 'tier:standard', 'databricks_direct']) }}
+{{ config(enabled=false, tags=['finding', 'domain:compute', 'tier:standard', 'databricks_direct']) }}
 -- generated from app/queries/app/compute/compute_last_activity.sql; fix the source query and regenerate, never edit this file.
 SELECT 0 AS window_days, q.*
 FROM (

@@ -5802,8 +5802,8 @@ LEFT JOIN (
   ON  u.sku_name      = lp.sku_name
   AND u.cloud         = lp.cloud
   AND u.usage_unit    = lp.usage_unit
-  AND u.usage_date    >= DATE(lp.price_start_time)
-  AND (lp.price_end_time IS NULL OR u.usage_date < DATE(lp.price_end_time))   -- active rows carry NULL end_time
+  AND u.usage_end_time >= lp.price_start_time
+  AND (lp.price_end_time IS NULL OR u.usage_end_time < lp.price_end_time)   -- active rows carry NULL end_time
 WHERE u.usage_date >= dateadd(day, -30, current_date())
   AND u.usage_date < current_date()
   AND upper(u.usage_unit) = 'DBU'   -- price only DBU rows against a per-DBU rate; never blend bytes/hours/tokens
@@ -6484,7 +6484,9 @@ ev AS (
          LAG(cluster_count) OVER (PARTITION BY warehouse_id ORDER BY event_time) AS prev_cluster_count,
          LEAD(event_time) OVER (PARTITION BY warehouse_id ORDER BY event_time)   AS next_event_time
   FROM `system`.`compute`.`warehouse_events`
-  WHERE event_time >= current_timestamp() - INTERVAL 30 DAYS
+  -- whole days, the same window as the cost rollup
+  WHERE event_time >= current_date() - INTERVAL 30 DAYS
+    AND event_time <  current_date()
 )
 SELECT
     e.warehouse_id,

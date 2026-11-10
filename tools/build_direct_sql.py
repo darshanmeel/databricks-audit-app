@@ -68,8 +68,6 @@ def render_model(text: str, qid: str, thresholds: dict, sources: dict) -> str:
     def var(name, default=None):
         if name == "windows":
             return [WINDOW_MARKER]
-        if name == "direct_mode":
-            return "run"
         if name == "query_source":
             return QUERY_SOURCE_MARKER
         raise BuildError(f"{qid}: var('{name}') has no plain-SQL value")

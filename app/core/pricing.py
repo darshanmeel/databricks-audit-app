@@ -42,10 +42,7 @@ _LIST_COL_RE = re.compile(r"^(?:est_(?:[a-z]+_)?usd_list|net_list_cost(?:_usd)?)
 # anywhere in system.billing, so an "actual vs list" comparison, the reason a second, non-list
 # column existed at all, is not assessable -- see config/library_corrections.yml). DEC-66.1's
 # "one basis everywhere" is therefore now literally true: every dollar column in this app is the
-# effective list price. This dict and the labelling path that reads it (app/api/service.py's
-# _money_label, app/ui/style.column_config_for) are kept, unused, for a future dollar column
-# whose basis genuinely is not the list price -- not deleted, so that path needs no new plumbing.
-NON_DISCOUNT_MONEY_LABELS: dict[str, str] = {}
+# effective list price.
 
 
 def apply(df: pd.DataFrame, discount_pct: float) -> pd.DataFrame:

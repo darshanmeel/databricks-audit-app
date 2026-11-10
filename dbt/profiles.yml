@@ -1,7 +1,4 @@
-# GENERATED-ish (hand-written, T-05-owned). Three targets: dev (default), test, databricks
-# (used only by tools/verify_databricks.py to check the dbt/models/databricks_direct and
-# databricks_admin copies against a live workspace; dbt-databricks is an optional extra, never in
-# requirements.txt -- DECISIONS.md DEC-67 supersedes T-04's "never invoked" note). `AUDIT_DB` / `AUDIT_SNAPSHOT_DIR` / the three DATABRICKS_* vars are all resolved
+# Hand-written. Two DuckDB targets: dev (default) and test. `AUDIT_DB` / `AUDIT_SNAPSHOT_DIR` are resolved
 # at call time via env_var(), never baked in (DEC-27's env-vars-at-call-time rule applies here
 # too, even though DEC-27 itself names app/core/config.py and app/core/data.py).
 #
@@ -37,31 +34,3 @@ databricks_audit:
       settings:
         TimeZone: UTC
         temp_directory: "dbt/target/tmp"
-
-    # DBX-DIRECT: used by tools/verify_databricks.py, the one place that ever passes
-    # --target databricks (`dbt run --select path:models/databricks_direct`) to execute the
-    # dbt/models/databricks_direct/** copies against a live workspace and report which queries
-    # still work. dbt-databricks stays OUT of requirements.txt (see requirements-databricks.txt,
-    # an optional extra) so the day-to-day DuckDB dev/test path is completely unchanged when it is
-    # not installed -- tools/verify_databricks.py checks for it itself and exits with the install
-    # command when it is missing, rather than letting dbt fail with an unclear adapter error.
-    # tools/snapshot.py remains the only script that exports a parquet snapshot; this output is a
-    # second, deliberate way to reach a live workspace (verification, not the snapshot pipeline) --
-    # see docs/DATABRICKS_VERIFY.md.
-    # The env_var(...) calls below keep every one of these schema-safe: they carry empty-string
-    # defaults purely so a full-file profile render (e.g. `dbt parse --target test`, which dbt
-    # renders the whole profiles.yml for even though only the `test` output is selected) never
-    # raises "env var required but not provided" when these vars are unset, which is the normal
-    # case for every dev machine and CI runner in this repo and for `--target databricks` itself
-    # before tools/verify_databricks.py's own preflight checks run (it reads the same four vars
-    # from the environment / the git-ignored .env and refuses with a clear, named-vars message
-    # before it ever invokes dbt, so an unset var is never dbt's cryptic "env var required" error
-    # in practice).
-    databricks:
-      type: databricks
-      host: "{{ env_var('DATABRICKS_SERVER_HOSTNAME', '') }}"
-      http_path: "{{ env_var('DATABRICKS_HTTP_PATH', '') }}"
-      token: "{{ env_var('DATABRICKS_TOKEN', '') }}"
-      catalog: "{{ env_var('AUDIT_DBX_CATALOG', '') }}"
-      schema: db_audit
-      threads: 4

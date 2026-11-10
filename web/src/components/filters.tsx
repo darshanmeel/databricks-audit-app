@@ -1,20 +1,5 @@
-// T-63 (DEC-60): one picker per POPULATED workspace
-// tag-attribute canonical key (cost_center, team, business_unit, domain -- whatever
-// config/tag_aliases.yml declares AND at least one workspace actually carries, GET /api/meta's
-// own `attribute_keys_populated`, DEC-60 rule 5), meant to render beside the env picker in the
-// same filter bar. Reuses the EXISTING .filterbar/.filter-group/.filter-label/.ws-picker/
-// .ws-trigger/.ws-pop/.ws-actions/.ws-list/.ws-row/.ws-empty/.ws-foot/.caret/.muted classes
-// App.tsx's own FilterBar/WorkspacePicker already use (styles.css) -- no new
-// class is introduced anywhere in this file.
-//
-// A key GET /api/meta does not list in attribute_keys_populated renders NOTHING (DEC-60 rule 5:
-// an always-empty dropdown reads as "nothing has cost centres", never "nothing is tagged" -- so
-// absence from the UI must mean absence, not an empty control offered anyway).
-//
-// Ownership note (T-63): this component is deliberately self-contained -- it takes everything it
-// needs as props (the workspace rows GET /api/workspaces already returns, the populated-key
-// list, the caller's own {key: Set(values)} selection state, and an onChange(key, nextSet)
-// callback) rather than reaching into App.tsx's own state or fetching anything itself.
+// One picker per workspace tag key that at least one workspace carries (GET /api/meta attribute_keys_populated);
+// an unpopulated key renders nothing. Takes everything as props and fetches nothing.
 
 import React from "react";
 import type { Workspace } from "../types";
@@ -22,9 +7,7 @@ import type { Workspace } from "../types";
 const ATTRIBUTE_OUTCOME_VALUES: Record<string, boolean> = { not_tagged: true, no_usage: true, mixed: true };
 
 function attributeLabel(key: string): string {
-  // "cost_center" -> "Cost center" -- no hard-coded per-key strings anywhere in this file
-  // (DEC-60 rule 4: canonical keys are config-driven; this file must never assume which ones
-  // exist, only how to render whichever ones GET /api/meta says are populated).
+  // "cost_center" -> "Cost center": keys come from config, never hard-coded.
   const spaced = String(key).replace(/_/g, " ");
   return spaced.charAt(0).toUpperCase() + spaced.slice(1);
 }
@@ -50,9 +33,7 @@ export function AttributePicker({ attrKey, label: shownLabel, workspaces, select
   attrKey: string; label?: string; workspaces: Workspace[] | null; selectedValues: Set<string> | null;
   onChange: (next: Set<string>) => void;
 }) {
-  // Same dropdown interaction shape as App.tsx's own WorkspacePicker ("a dropdown, not a
-  // wall of chips" -- a real account can carry many distinct cost-centre values, T-58's own
-  // reasoning for env/workspace applies here too).
+  // A dropdown, not a wall of chips: an account can carry many values.
   const [open, setOpen] = React.useState(false);
   const boxRef = React.useRef<HTMLDivElement>(null);
 
@@ -70,10 +51,7 @@ export function AttributePicker({ attrKey, label: shownLabel, workspaces, select
     };
   }, [open]);
 
-  // One row per distinct value this key actually carries on at least one workspace -- 'no_usage'
-  // is not a filterable business value (it means "this workspace has no billed DBUs at all", not
-  // a tag), so it never appears as an option; 'not_tagged'/'mixed' are real, selectable outcomes
-  // (DEC-60 rule 3) and sink to the bottom, alphabetical otherwise.
+  // One row per value a workspace carries; 'no_usage' is not a tag so it is left out; 'not_tagged' and 'mixed' sort last.
   const valueCounts = React.useMemo(() => {
     const counts = new Map<string, number>();
     const shares = new Map<string, number[]>();
@@ -158,7 +136,7 @@ export function AttributeFilters({ workspaces, populatedKeys, topTags, selected,
   // toggleWorkspace/setManyWorkspaces callback shape (set-by-key, not one big reducer) so a
   // caller can lift this state with minimal glue once it wires this component in.
   const keys = populatedKeys || [];
-  if (keys.length === 0) return null; // DEC-60 rule 5: nothing populated, render nothing at all
+  if (keys.length === 0) return null;
   return (
     <React.Fragment>
       {keys.map((key) => (

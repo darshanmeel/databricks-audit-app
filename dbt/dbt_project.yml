@@ -9,13 +9,14 @@ profile: 'databricks_audit'
 model-paths: ["models"]
 test-paths: ["tests"]
 macro-paths: ["macros"]
-seed-paths: ["seeds"]
+# the test build points this at tests/fixtures/seeds (tools/dbt_run.py)
+seed-paths: ["{{ env_var('AUDIT_SEED_DIR', 'seeds') }}"]
 analysis-paths: ["analyses"]
 
 target-path: "target"
 log-path: "logs"
 
-# F12: this repo's dbt runs (tools/dbt_run.py, tools/verify_databricks.py, every test in
+# F12: this repo's dbt runs (tools/dbt_run.py, every test in
 # tests/test_dbt_skeleton.py and friends) should not send anonymous usage events on every build.
 flags:
   send_anonymous_usage_stats: false

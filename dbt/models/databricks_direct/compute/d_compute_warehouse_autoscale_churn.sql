@@ -1,4 +1,4 @@
-{{ config(enabled=(target.type == "databricks"), materialized=("table" if var("direct_mode", "run") == "table" else "direct_check"), schema="audit_direct", tags=['finding', 'domain:compute', 'tier:standard', 'databricks_direct']) }}
+{{ config(enabled=false, tags=['finding', 'domain:compute', 'tier:standard', 'databricks_direct']) }}
 -- generated from app/queries/vendored/compute/compute_warehouse_autoscale_churn.sql; fix the source query and regenerate, never edit this file.
 {%- set windows = var('windows', [7, 30, 90]) %}
 {%- for w in windows %}
@@ -44,7 +44,9 @@ ev AS (
          LAG(cluster_count) OVER (PARTITION BY warehouse_id ORDER BY event_time) AS prev_cluster_count,
          LEAD(event_time) OVER (PARTITION BY warehouse_id ORDER BY event_time)   AS next_event_time
   FROM {{ source('system_compute', 'warehouse_events') }}
-  WHERE event_time >= {{ audit_now() }} - INTERVAL {{ w }} DAYS
+  -- whole days, the same window as the cost rollup
+  WHERE event_time >= {{ audit_today() }} - INTERVAL {{ w }} DAYS
+    AND event_time <  {{ audit_today() }}
 )
 SELECT
     e.warehouse_id,

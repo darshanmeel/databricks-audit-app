@@ -39,11 +39,8 @@ const TOP_COST_GROUP_LABEL: Record<string, string> = {
 };
 function topCostGroupLabel(kind: any) { return TOP_COST_GROUP_LABEL[kind] || kind || "(unknown)"; }
 
-// The group's own identity cell when it has no real source (a "text hash" group with no captured
-// query_source, or the "ad-hoc" bucket): a job resolves through the name store (Ref); every other
-// kind has no dim to resolve against, so it shows its raw id -- shortened, except the ad-hoc
-// bucket's id, which is already a short masked identity (DEC-66.3), not a system id worth
-// truncating.
+// A group with no real source: a job resolves through Ref; other kinds show the id shortened, except the ad-hoc
+// bucket's, which is already a short masked identity.
 function topCostGroupCell(row: any) {
   if (row.group_kind === "job") {
     return <Ref kind="job" id={row.group_id} workspaceId={row.workspace_id} />;

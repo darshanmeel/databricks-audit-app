@@ -1,9 +1,5 @@
-// P4-44: the one place the app reads/writes location.hash,
-// so every view (tab/subtab/focus, window/workspaces/attributes/tag, and a job focus panel) has a
-// URL that reproduces it -- paste it anywhere and it opens to the same place. Plain "key=value"
-// pairs in the hash (never JSON, so a pasted link stays readable), merged additively: a caller's
-// own set() only ever touches the keys it passes, so App.tsx's own filter sync and names.tsx's
-// job-focus sync can never clobber each other's keys.
+// The one place location.hash is read and written, so every view has a link that reopens it. Plain key=value
+// pairs; set() touches only the keys it passes, so the filter sync and the job-focus sync never clobber each other.
 
 import React from "react";
 

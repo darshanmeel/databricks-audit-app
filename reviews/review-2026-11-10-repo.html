@@ -37,14 +37,14 @@ ul{margin:4px 0;padding-left:20px}
   <li>Email column type, partial-export guard, masking of owner / user_name / grantee, one product map, tag filter cache, ignored-filter notes.</li>
   <li>Comments and visual items: dead dim comments, the duplicate key, unused import and code, and dark-mode contrast. Month labels, the failed-queries spacing, the Spike days text, and the "so far" month on By calendar month (it named the first partial month instead of the current one).</li>
   </ul></li>
-<li><b>Not done, needs a decision first:</b>
+<li><b>Done in the second pass:</b>
   <ul>
-  <li>People and warehouse counts per window (changes the export format, so a new export is needed).</li>
-  <li>Merging the two dollar-by-tag pipelines (a redesign).</li>
-  <li>Moving the seed test row into the test setup (needs a dbt test-harness change; 2222 is not a real-format workspace id).</li>
-  <li>Removing the dead <code>databricks</code> dbt target (it regenerates 160 models and the tests).</li>
-  <li>The vendored query fixes (each needs a lock refresh, and the lock already has 2 old mismatches).</li>
-  <li>The task-id comment cleanup, the server-side attribute filter, paging, and the threshold resolver.</li>
+  <li>People, warehouse users, tables and slowest queries are exported per window (<code>window_days</code>); the fake data writes them the same way. Needs a fresh export.</li>
+  <li>One dollar split: <code>tags.cost_alloc</code> (dbt, ephemeral) and <code>_cost_alloc.sql</code> (direct) feed cost_day, cost_unit and cost_unit_tag. Results are identical to before on the fixture data; cost_reconciliation stays independent as the check.</li>
+  <li>The seed test row lives in <code>tests/fixtures/seeds</code>; the shipped seed is header-only.</li>
+  <li>The <code>databricks</code> dbt target and <code>direct_check</code> macro are removed; direct models are <code>enabled=false</code>.</li>
+  <li>Vendored fixes: timestamp price join in cost_actual_vs_list_by_sku, whole-day event window in compute_warehouse_autoscale_churn; lock refreshed (no mismatches).</li>
+  <li>Task-id comments in web/src cut to one line; server-side attribute filter and Streamlit leftovers removed; paging uses LIMIT/OFFSET; one threshold resolver.</li>
   </ul></li>
 <li><b>Left as is:</b> Top queries table: it scrolls inside its card, and shortening it would break the "name (id)" rule.</li>
 </ul></div></section>

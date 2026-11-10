@@ -16,7 +16,7 @@
     tests/dbutil.py's own rows() helper reads, so this file opens its own read-only connection
     instead): the 3 shared fixture workspaces (tests/fixtures/billing.py: 1111 acme-prod, 2222
     acme-dev, 3333 acme-uat) classify prod/dev/uat by name, EXCEPT 2222, which
-    dbt/seeds/workspace_env_overrides.csv overrides to 'uat' (env_source 'override') -- proving a
+    tests/fixtures/seeds/workspace_env_overrides.csv overrides to 'uat' (env_source 'override') -- proving a
     seed override wins over the name-derived classification. The drill-down workspace 9001
     dd-prod (tests/fixtures/drilldown.py) also classifies prod by name.
 
@@ -196,7 +196,7 @@ FIXTURE_WORKSPACES_BY_NAME = {
 }
 OVERRIDDEN_WORKSPACE_ID = "2222"
 OVERRIDDEN_WORKSPACE_NAME = "acme-dev"
-OVERRIDDEN_ENV = "uat"  # dbt/seeds/workspace_env_overrides.csv
+OVERRIDDEN_ENV = "uat"  # tests/fixtures/seeds/workspace_env_overrides.csv
 
 
 @pytest.fixture(scope="module")

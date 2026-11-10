@@ -85,13 +85,7 @@ Routes:
     GET /api/findings                   one row per executable registry query: query_id, title,
                                          domain, tier, stars, outcome, status_counts, row_count.
                                          region_gap, and per row has_workspace_id, regional,
-                                         not_assessed_reason (T-71). Accepts the same T-63/DEC-60
-                                         workspace-attribute filters (cost_center/team/
-                                         business_unit/domain, whatever config/tag_aliases.yml
-                                         declares) as GET /api/finding -- P2-FILTERS wired this
-                                         list endpoint's own bulk counts and region_gap to them,
-                                         so a cost-centre filter narrows the findings table the
-                                         same way a workspace/env filter already does. P4-T-IDX:
+                                         not_assessed_reason (T-71). P4-T-IDX:
                                          optional tag_key/tag_value, same contract as GET
                                          /api/finding -- echoed as "tag", with each row's own
                                          tag_applied/tag_chain/tag_chain_label (None/[]/None when
@@ -321,15 +315,6 @@ def _tag_json(tag: "app_core_tags.TagFilterSet | None") -> dict | None:
 
 def _canonical_keys() -> list[str]:
     return list(app_config.load_top_tags())
-
-
-def _read_attribute_filters(request: Request, canonical_keys: list[str]) -> dict[str, list[str]]:
-    out: dict[str, list[str]] = {}
-    for key in canonical_keys:
-        values = request.query_params.getlist(key)
-        if values:
-            out[key] = values
-    return out
 
 
 _UNPOPULATED_ATTRIBUTE_VALUES = {"not_tagged", "no_usage"}
@@ -749,7 +734,6 @@ def get_guide_sql(query_id: str, window: int | None = Query(default=None)) -> di
 
 @app.get("/api/rollup")
 def get_rollup(
-    request: Request,
     area: str = Query(default="cost"),
     tag_key: str = Query(...),
     window: int | None = Query(default=None),
@@ -765,13 +749,12 @@ def get_rollup(
 ) -> dict:
     settings = app_config.load_settings()
     eff_window = _resolve_window(window, settings)
-    attributes = _read_attribute_filters(request, _canonical_keys()) or None
     tag_filter = _parse_tag_filter(None, None, tag)
     try:
         return app_rollup.rollup(
             area, tag_key, eff_window,
             tag_value=tag_value[0] if tag_value else None, tag_values=tag_value or None,
-            workspace_ids=workspace_ids or None, env=env or None, attributes=attributes,
+            workspace_ids=workspace_ids or None, env=env or None,
             tag_filter=tag_filter,
         )
     except app_rollup.RollupError as exc:
@@ -780,7 +763,6 @@ def get_rollup(
 
 @app.get("/api/rollup/top")
 def get_rollup_top(
-    request: Request,
     area: str = Query(default="cost"),
     tag_key: str = Query(...),
     window: int | None = Query(default=None),
@@ -791,12 +773,11 @@ def get_rollup_top(
 ) -> dict:
     settings = app_config.load_settings()
     eff_window = _resolve_window(window, settings)
-    attributes = _read_attribute_filters(request, _canonical_keys()) or None
     tag_filter = _parse_tag_filter(None, None, tag)
     try:
         return app_rollup.by_tag_top(
             area, tag_key, eff_window, top=top,
-            workspace_ids=workspace_ids or None, env=env or None, attributes=attributes,
+            workspace_ids=workspace_ids or None, env=env or None,
             tag_filter=tag_filter,
         )
     except app_rollup.RollupError as exc:
@@ -805,29 +786,25 @@ def get_rollup_top(
 
 @app.get("/api/tag_origins")
 def get_tag_origins(
-    request: Request,
     window: int | None = Query(default=None),
     workspace_ids: list[str] = Query(default=[]),
     env: list[str] = Query(default=[]),
     tag: list[str] = Query(default=[]),
 ) -> dict:
     eff_window = _resolve_window(window, app_config.load_settings())
-    attributes = _read_attribute_filters(request, _canonical_keys()) or None
     tag_filter = _parse_tag_filter(None, None, tag)
-    scope = app_rollup._resolve_workspace_scope(workspace_ids or None, env or None, attributes)
+    scope = app_rollup._resolve_workspace_scope(workspace_ids or None, env or None)
     found = app_core_data.read_tag_origins(tag_filter, eff_window, scope)
     return found or {"window_days": eff_window, "usd": 0.0, "keys": []}
 
 
 @app.get("/api/workspace_tags")
 def get_workspace_tags(
-    request: Request,
     workspace_ids: list[str] = Query(default=[]),
     env: list[str] = Query(default=[]),
     tag: list[str] = Query(default=[]),
 ) -> dict:
-    attributes = _read_attribute_filters(request, _canonical_keys()) or None
-    scope = app_rollup._resolve_workspace_scope(workspace_ids or None, env or None, attributes)
+    scope = app_rollup._resolve_workspace_scope(workspace_ids or None, env or None)
     rows = app_core_data.read_workspace_tags(scope, _parse_tag_filter(None, None, tag))
     settings = app_config.load_settings()
     floors = {"coverage_floor": settings["tag_coverage_floor"], "share_floor": settings["tag_share_floor"]}
@@ -843,15 +820,13 @@ def get_abac_policies() -> dict:
 
 @app.get("/api/workspace_usage")
 def get_workspace_usage(
-    request: Request,
     window: int | None = Query(default=None),
     workspace_ids: list[str] = Query(default=[]),
     env: list[str] = Query(default=[]),
     tag: list[str] = Query(default=[]),
 ) -> dict:
     window = window if window is not None else app_config.load_settings()["default_window"]
-    attributes = _read_attribute_filters(request, _canonical_keys()) or None
-    scope = app_rollup._resolve_workspace_scope(workspace_ids or None, env or None, attributes)
+    scope = app_rollup._resolve_workspace_scope(workspace_ids or None, env or None)
     return app_core_data.read_workspaces(window, scope, _parse_tag_filter(None, None, tag))
 
 
@@ -863,15 +838,13 @@ def get_workspace_schemas(workspace_id: str | None = Query(default=None), window
 
 @app.get("/api/activity")
 def get_activity(
-    request: Request,
     window: int | None = Query(default=None),
     workspace_ids: list[str] = Query(default=[]),
     env: list[str] = Query(default=[]),
     workspace_id: str | None = Query(default=None),
 ) -> dict:
     window = window if window is not None else app_config.load_settings()["default_window"]
-    attributes = _read_attribute_filters(request, _canonical_keys()) or None
-    scope = app_rollup._resolve_workspace_scope(workspace_ids or None, env or None, attributes)
+    scope = app_rollup._resolve_workspace_scope(workspace_ids or None, env or None)
     return app_core_data.read_activity(window, scope, workspace_id)
 
 
@@ -883,15 +856,13 @@ def get_person_tables(identity: str = Query(...), window: int | None = Query(def
 
 @app.get("/api/volumes")
 def get_volumes(
-    request: Request,
     window: int | None = Query(default=None),
     workspace_ids: list[str] = Query(default=[]),
     env: list[str] = Query(default=[]),
     tag: list[str] = Query(default=[]),
 ) -> dict:
     window = window if window is not None else app_config.load_settings()["default_window"]
-    attributes = _read_attribute_filters(request, _canonical_keys()) or None
-    scope = app_rollup._resolve_workspace_scope(workspace_ids or None, env or None, attributes)
+    scope = app_rollup._resolve_workspace_scope(workspace_ids or None, env or None)
     return app_core_data.read_volumes(scope, _parse_tag_filter(None, None, tag), window)
 
 
@@ -903,18 +874,16 @@ def get_volume_users(volume: str = Query(...), window: int | None = Query(defaul
 
 @app.get("/api/tables")
 def get_tables(
-    request: Request,
     window: int | None = Query(default=None),
     workspace_ids: list[str] = Query(default=[]),
     env: list[str] = Query(default=[]),
     tag: list[str] = Query(default=[]),
 ) -> dict:
     window = window if window is not None else app_config.load_settings()["default_window"]
-    attributes = _read_attribute_filters(request, _canonical_keys()) or None
     # "none": tables whose catalog no workspace read or wrote in the window
     no_home = "none" in workspace_ids
     ids = [w for w in workspace_ids if w != "none"]
-    scope = app_rollup._resolve_workspace_scope(ids or None, env or None, attributes)
+    scope = app_rollup._resolve_workspace_scope(ids or None, env or None)
     if no_home and scope is None:
         scope = set()
     return app_core_data.read_tables(scope, _parse_tag_filter(None, None, tag), window=window, no_home=no_home)
@@ -922,26 +891,22 @@ def get_tables(
 
 @app.get("/api/people")
 def get_people(
-    request: Request,
     window: int | None = Query(default=None),
     workspace_ids: list[str] = Query(default=[]),
     env: list[str] = Query(default=[]),
 ) -> dict:
     window = window if window is not None else app_config.load_settings()["default_window"]
-    attributes = _read_attribute_filters(request, _canonical_keys()) or None
-    scope = app_rollup._resolve_workspace_scope(workspace_ids or None, env or None, attributes)
+    scope = app_rollup._resolve_workspace_scope(workspace_ids or None, env or None)
     return app_core_data.read_people(window, scope)
 
 @app.get("/api/warehouses")
 def get_warehouses(
-    request: Request,
     window: int | None = Query(default=None),
     workspace_ids: list[str] = Query(default=[]),
     env: list[str] = Query(default=[]),
 ) -> dict:
     window = window if window is not None else app_config.load_settings()["default_window"]
-    attributes = _read_attribute_filters(request, _canonical_keys()) or None
-    scope = app_rollup._resolve_workspace_scope(workspace_ids or None, env or None, attributes)
+    scope = app_rollup._resolve_workspace_scope(workspace_ids or None, env or None)
     return app_core_data.read_warehouses(window, scope)
 
 
@@ -965,15 +930,13 @@ def get_table_sizes() -> dict:
 
 @app.get("/api/tag_compliance")
 def get_tag_compliance(
-    request: Request,
     window: int | None = Query(default=None),
     workspace_ids: list[str] = Query(default=[]),
     env: list[str] = Query(default=[]),
     tag: list[str] = Query(default=[]),
 ) -> dict:
     eff_window = _resolve_window(window, app_config.load_settings())
-    attributes = _read_attribute_filters(request, _canonical_keys()) or None
-    scope = app_rollup._resolve_workspace_scope(workspace_ids or None, env or None, attributes)
+    scope = app_rollup._resolve_workspace_scope(workspace_ids or None, env or None)
     tag_filter = _parse_tag_filter(None, None, tag)
     return _cached(("tag_compliance", eff_window, tuple(sorted(scope)) if scope is not None else None, repr(tag_filter)),
                    lambda: app_core_data.read_tag_compliance(eff_window, scope, tag_filter))
@@ -1035,7 +998,6 @@ def _data_version() -> tuple:
 
 @app.get("/api/findings")
 def get_findings(
-    request: Request,
     window: int | None = Query(default=None),
     workspace_ids: list[str] = Query(default=[]),
     env: list[str] = Query(default=[]),
@@ -1049,33 +1011,26 @@ def get_findings(
 ) -> dict:
     settings = app_config.load_settings()
     eff_window = _resolve_window(window, settings)
-    # T-63 (DEC-60) / P2-FILTERS: one query param per canonical key, same _read_attribute_filters
-    # convention GET /api/finding and its /aggregate twin already use -- this list endpoint used
-    # to ignore them entirely, which left chargeback-by-cost-centre unreachable from the findings
-    # table (only a single finding's own detail/aggregate could be scoped that way).
-    attributes = _read_attribute_filters(request, _canonical_keys()) or None
     tag_filter = _parse_tag_filter(tag_key, tag_value, tag)
-    return _findings_answer(eff_window, workspace_ids, env, attributes, tag_filter)
+    return _findings_answer(eff_window, workspace_ids, env, tag_filter)
 
 
-def _findings_answer(eff_window: int, workspace_ids: list[str], env: list[str], attributes, tag_filter) -> dict:
-    cache_key = (_data_version(), eff_window, tuple(workspace_ids), tuple(env),
-                 json.dumps(attributes, sort_keys=True, default=str), repr(tag_filter))
+def _findings_answer(eff_window: int, workspace_ids: list[str], env: list[str], tag_filter) -> dict:
+    cache_key = (_data_version(), eff_window, tuple(workspace_ids), tuple(env), repr(tag_filter))
     if cache_key in _FINDINGS_CACHE:
         return _FINDINGS_CACHE[cache_key]
     rows = service.list_findings(
-        eff_window, workspace_ids or None, env or None, attributes, tag=tag_filter,
+        eff_window, workspace_ids or None, env or None, tag=tag_filter,
     )
     out = {
         "window_days": eff_window,
         "workspace_ids": workspace_ids,
         "env": env,
-        "attributes": attributes or {},
         "tag": _tag_json(tag_filter),
         "count": len(rows),
         # T-71: the selected workspaces WITH spend no regional table holds a row for (null when
         # dims.dim_workspace could not be read).
-        "region_gap": service.region_gap(workspace_ids or None, env or None, attributes),
+        "region_gap": service.region_gap(workspace_ids or None, env or None),
         "findings": [
             {
                 "query_id": r.query_id,
@@ -1139,7 +1094,7 @@ def warm_findings() -> None:
     try:
         if rls.mode() == "query":
             return  # no signed-in user at start-up, and each user's answer is their own
-        _findings_answer(_resolve_window(None, app_config.load_settings()), [], [], None, None)
+        _findings_answer(_resolve_window(None, app_config.load_settings()), [], [], None)
     except Exception:  # noqa: BLE001 -- the first request computes it again and reports the error
         pass
 
@@ -1181,7 +1136,6 @@ def _clean_header_prose(fields: dict) -> dict:
 
 @app.get("/api/finding/{query_id}")
 def get_finding(
-    request: Request,
     query_id: str,
     window: int | None = Query(default=None),
     workspace_ids: list[str] = Query(default=[]),
@@ -1213,17 +1167,12 @@ def get_finding(
     settings = app_config.load_settings()
     requested_window = _resolve_window(window, settings)
     _validate_statuses(status)
-    # T-63 (DEC-60): one query param per canonical key (e.g. ?cost_center=engineering&
-    # cost_center=sales), read by name since the key set is config-driven -- see
-    # _read_attribute_filters above. DEC-60 rule 6: applies only on a finding that carries
-    # workspace_id (app/core/data._build_filters' own contract) -- never reduces one that doesn't.
-    attributes = _read_attribute_filters(request, _canonical_keys()) or None
     tag_filter = _parse_tag_filter(tag_key, tag_value, tag)
 
     try:
         outcome = service.load_outcome(
             query_id, requested_window, workspace_ids or None, env or None,
-            limit=offset + limit, attributes=attributes, job_id=job_id, statuses=status or None,
+            limit=limit, offset=offset, job_id=job_id, statuses=status or None,
             tag=tag_filter,
         )
     except service.QueryNotFoundError:
@@ -1237,7 +1186,6 @@ def get_finding(
         "requested_window_days": requested_window,
         "is_finding": spec.is_finding,
         "windowed": spec.windowed,
-        "attributes": attributes or {},
         "tag": _tag_json(tag_filter),
         "scope": outcome.scope,
         "status": status,
@@ -1297,15 +1245,12 @@ def get_finding(
         )
         return body
 
-    # OUTCOME_OK_ROWS -- apply the same list-price discount app/ui/panel.py applies before a
-    # table is rendered or downloaded (T-57's "reuse app/core/pricing.py" instruction), then page
-    # the already-capped frame in Python (never a second SQL OFFSET -- the API layer builds no
-    # SQL of its own).
+    # OUTCOME_OK_ROWS -- one page (LIMIT/OFFSET in read_finding), with the list-price discount applied.
     df = app_pricing.apply(outcome.df, settings["discount_pct"])
     if columns:
         wanted = set(columns) | {"status", "status_raw", "below_floor", "workspace_id"}
         df = df[[c for c in df.columns if c in wanted]]
-    page_df = df.iloc[offset : offset + limit]
+    page_df = df
     kinds = service.classify_columns(list(df.columns), settings["discount_pct"])
     # Materiality floor (config/materiality.yml): app/core/data.read_finding already selected the
     # EFFECTIVE status as "status" (raw kept alongside as status_raw) and a real "below_floor"
@@ -1360,7 +1305,6 @@ def get_finding(
 
 @app.get("/api/finding/{query_id}/aggregate")
 def get_finding_aggregate(
-    request: Request,
     query_id: str,
     window: int | None = Query(default=None),
     workspace_ids: list[str] = Query(default=[]),
@@ -1384,13 +1328,12 @@ def get_finding_aggregate(
     settings = app_config.load_settings()
     requested_window = _resolve_window(window, settings)
     _validate_statuses(status)
-    attributes = _read_attribute_filters(request, _canonical_keys()) or None
     tag_filter = _parse_tag_filter(tag_key, tag_value, tag)
 
     try:
         outcome = service.load_aggregate(
             query_id, requested_window, group, agg, value,
-            workspace_ids=workspace_ids or None, env=env or None, attributes=attributes,
+            workspace_ids=workspace_ids or None, env=env or None,
             statuses=status or None, top=top, tag=tag_filter, below_floor=below_floor,
         )
     except service.QueryNotFoundError:

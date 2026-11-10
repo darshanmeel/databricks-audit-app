@@ -1,34 +1,9 @@
-// tasks/T-61-names-links-job-focus.md: "names, not ids" plus a
-// Databricks deep link, everywhere a job/cluster/warehouse/pipeline/run/workspace id renders, and
-// the small global store that lets a click on a job ANYWHERE in the app open the Jobs tab's job
-// focus panel (tab_jobs.tsx).
-//
-// Fetches GET /api/dims and GET /api/workspaces exactly once (module-level cache, not a React
-// hook state -- <Ref> instances live inside tables that are not otherwise connected to each
-// other, so a plain pub/sub cache is simpler than plumbing a context through every tab). Mirrors
-// hooks.ts's useDims() id-namespacing rules exactly (T-40's own caveats, re-read off the vendored
-// queries): job_id and pipeline_id are unique only WITHIN a workspace (key = workspace_id + ":" +
-// id); cluster_id and warehouse_id are globally-unique GUIDs (key = id alone).
-//
-// Exposes:
-//   Names.load() / Names.isReady() / Names.subscribe(fn)   the cache itself
-//   resolveName(kind, workspaceId, id)   -> display name string, or null if unresolved
-//   deepLink(kind, workspaceId, id, runId)   -> Databricks URL string, or null (links.py's own
-//         four shapes, reproduced client-side; null workspace_url -> null link, never a bare/
-//         broken one -- links.py's own rule, kept exactly)
-//   <Ref kind id workspaceId runId label />   the name-with-link-and-copy-affordance cell
-//   JobFocus.open(workspaceId, jobId) / .close() / .subscribe(fn) / .getState()
-//         the tiny store a job <Ref> uses to open tab_jobs.tsx's JobFocusPanel from anywhere --
-//         the panel self-mounts as its own React root at the bottom of tab_jobs.tsx, so this
-//         works even when the Jobs tab is not the active tab.
-//
-// Job-id fallback (compute_jobs lane): a job whose own workspace_id:job_id key has no name (a dim
-// row from before the job was renamed, or one this account's dim build has not reached yet) still
-// often has a unique numeric job_id account-wide -- borrow that OTHER workspace's name for it, but
-// only when no second workspace also uses the id, so two workspaces that happen to reuse the same
-// small job_id never display each other's name. Used by resolveName's "job" case (so every <Ref
-// kind="job"> and job_panel.tsx pick it up) and by jobNameFallback() below for tab_jobs.tsx's own
-// chart labels, which read hooks.ts's useDims() map shape instead of this file's own `dims`.
+// Names, not ids, with a Databricks deep link, everywhere a job/cluster/warehouse/pipeline/run/workspace id renders,
+// and the store that lets a job click anywhere open the Jobs focus panel.
+// GET /api/dims and /api/workspaces are fetched once into a module cache (Refs live in unconnected tables).
+// Job and pipeline ids are per workspace (key workspace_id:id); cluster and warehouse ids are global.
+// A job with no name in its own workspace borrows the name from another workspace only when no second workspace
+// uses the same id.
 
 import React from "react";
 
@@ -251,13 +226,8 @@ export function useNames() {
 }
 
 // ---------------------------------------------------------------------------------------------
-// JobFocus -- open/close store for tab_jobs.tsx's JobFocusPanel, a self-mounted overlay
-// independent of the tab nav (App.tsx). Any <Ref kind="job"> click calls JobFocus.open so the
-// panel is reachable from a job reference anywhere in the app, not only from the Jobs tab.
-//
-// P4-44: also the one place a job focus link is read from / written to location.hash (the "job"
-// key, HashState.setGroup leaves it alone since it lives outside any prefix group) -- so a link
-// copied while this panel is open reopens straight into it.
+// JobFocus -- open/close store for the Jobs focus panel, reachable from any job Ref; it also keeps the "job" key
+// in location.hash, so a copied link reopens the panel.
 // ---------------------------------------------------------------------------------------------
 /** The job focus panel: open or closed, and for which job. */
 export interface JobFocusState {

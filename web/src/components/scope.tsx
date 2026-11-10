@@ -1,15 +1,7 @@
-// T-71: say what the data covers.
-//
-// Two facts a screen must be able to state, and the ONE place their words live:
-//  1. Region. tools/snapshot.py connects through one workspace. system.billing.* and
-//     access.workspaces_latest are account-wide, but every other system table is regional: it
-//     holds rows only for the workspaces of the metastore region the snapshot connected through
-//     (/api/meta `metastore`). app/api/service.py reads a regional finding for workspaces outside
-//     that region alone as NOT_ASSESSED (status_info.outside_region / not_assessed_reason
-//     "outside_region") and reports the selected ones with spend as `region_gap`.
-//  2. Filter reach. A finding with no workspace_id column (most of Governance and Lineage) is not
-//     filtered by workspace: /api/findings rows carry `has_workspace_id` and `regional`.
-// Nothing here decides coverage -- the API computes every fact; this file only words it.
+// Say what the data covers: the one place these words live.
+// 1. Region: billing and workspaces_latest are account-wide, every other system table holds only the snapshot
+//    region's workspaces; the API reads those outside it as not assessed and lists them as `region_gap`.
+// 2. Filter reach: a check with no workspace_id column is not filtered by workspace.
 // OUTSIDE_REGION_LABEL must equal app/api/service.py's (tests/test_scope_disclosure.py checks it).
 
 import React from "react";
@@ -158,9 +150,7 @@ export function TabScopeNote({ findings, meta, filters }: { findings: FindingSum
   if (unfiltered.length === 0 || !narrowed) return null;
   const metastoreWide = unfiltered.filter((f) => f.regional).length;
   const accountWide = unfiltered.length - metastoreWide;
-  // P2-FILTERS: when an attribute filter matches no checked workspace, filters.workspaceIds is
-  // [NO_WORKSPACE_MATCH] (App.tsx's own "no filter = every workspace" convention needs a
-  // sentinel id, not []) -- exclude it so this reads as "0 selected", not "1 selected".
+  // A filter that matches no workspace sends [NO_WORKSPACE_MATCH]; count that as 0 selected.
   const selected = filters && filters.workspaceIds
     ? filters.workspaceIds.filter((id) => id !== NO_WORKSPACE_MATCH).length
     : 0;

@@ -90,7 +90,7 @@ _STALENESS_GLOBS = [
     "tests/fixtures/*.py",
     "dbt/models/**/*.sql",
     "dbt/models/**/*.yml",
-    "dbt/seeds/*.csv",
+    "tests/fixtures/seeds/*.csv",
     "dbt/macros/**/*.sql",
     "dbt/dbt_project.yml",
     # tag_aliases.yml and settings.yml (tag_share_floor) feed the build as --vars through

@@ -1,4 +1,4 @@
-{{ config(enabled=(target.type == "databricks"), materialized=("table" if var("direct_mode", "run") == "table" else "direct_check"), schema="audit_direct", tags=['inventory', 'domain:storage', 'tier:deep', 'databricks_direct']) }}
+{{ config(enabled=false, tags=['inventory', 'domain:storage', 'tier:deep', 'databricks_direct']) }}
 -- generated from app/queries/vendored/storage/table_inventory_type.sql; fix the source query and regenerate, never edit this file.
 SELECT 0 AS window_days, q.*
 FROM (

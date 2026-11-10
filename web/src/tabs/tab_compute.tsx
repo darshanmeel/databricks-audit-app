@@ -73,11 +73,7 @@ export function findingFor(findings: FindingSummary[] | null | undefined, queryI
 
 // ─────────────────────────────────────────── Warehouses ───────────────────────────────────────
 
-// Per-row "the fix": derived from compute_warehouse_idle_minutes' own numeric breakdown of WHERE
-// the counted idle time sits (start/between/tail/no-query), never the row's raw `waste_reason`
-// text (that is a description of what happened, written for the detail panel, not a plain
-// instruction -- and it names raw column-shaped numbers the redesign's plain-words rule (DEC-74)
-// keeps out of a headline table). Whichever bucket has the most minutes drives the sentence.
+// The fix sentence from where the idle minutes sit (start, between, tail, no query): the biggest bucket drives it.
 function warehouseFixText(row: Row): string {
   const start = numOrZero(row.start_gap_minutes), between = numOrZero(row.between_queries_minutes);
   const tail = numOrZero(row.stop_tail_minutes), noQuery = numOrZero(row.no_query_minutes);
@@ -885,8 +881,7 @@ function ComputeClustersContent({ filters, dims, maxCat, goTo, onVerdict, meta }
   const wastedUsd = flagged ? flagged.reduce((s, r) => s + numOrZero(r.est_wasted_usd_list), 0) * (1 - disc) : 0;
   const idleUnderFloor = idleRows ? idleRows.filter((r) => r.below_floor).sort((a, b) => numOrZero(b.idle_ratio) - numOrZero(a.idle_ratio)) : [];
 
-  // Job-run clusters ("job-<id>-run-<id>") grouped into one bucket, not listed one by one --
-  // cluster_source is carried on dim_cluster (T-40) precisely for this split.
+  // Job-run clusters ("job-<id>-run-<id>") as one bucket, split by dim_cluster's cluster_source.
   const clusterKind = (id: string) => { const c = dims && dims.clusters && dims.clusters.get(id); return c && c.cluster_source; };
   const named = idleRows ? idleRows.filter((r) => clusterKind(r.cluster_id) !== "JOB") : null;
   const jobRun = idleRows ? idleRows.filter((r) => clusterKind(r.cluster_id) === "JOB") : null;

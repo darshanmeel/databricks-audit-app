@@ -93,10 +93,8 @@ def test_direct_models_have_no_duckdb_branch_and_the_right_config_line():
         assert "target.type == 'duckdb'" not in text
         assert 'target.type == "duckdb"' not in text
         first_line = text.splitlines()[0]
-        assert 'enabled=(target.type == "databricks")' in first_line
-        assert 'schema="audit_direct"' in first_line
+        assert "enabled=false" in first_line
         assert "'databricks_direct'" in first_line
-        assert 'materialized=("table" if var("direct_mode", "run") == "table" else "direct_check")' in first_line
         # review fix (DBX-DIRECT): the config line's trailing `}}` was previously emitted as a
         # single `}` by an f-string escaping bug -- every generated file failed to parse as Jinja.
         # Pin the whole-line shape so that regresses loudly here, not only in dbt's own parser.
@@ -105,7 +103,7 @@ def test_direct_models_have_no_duckdb_branch_and_the_right_config_line():
         assert "fix the source query and regenerate, never edit this file" in text.splitlines()[1]
 
 
-def test_direct_models_and_macro_parse_as_valid_jinja():
+def test_direct_models_parse_as_valid_jinja():
     """Review fix (DBX-DIRECT): the config-line brace bug above made every generated file fail
     dbt's own Jinja parse (TemplateSyntaxError: unexpected '}'), but the generator's own tests only
     ever checked substrings of line 1, so nothing here caught it. dbt-core is already a dependency
@@ -119,8 +117,6 @@ def test_direct_models_and_macro_parse_as_valid_jinja():
     for m in manifest:
         text = (ROOT / m["path"]).read_text(encoding="utf-8")
         env.parse(text)  # raises jinja2.TemplateSyntaxError on failure
-    macro_text = (ROOT / "dbt" / "macros" / "direct_check.sql").read_text(encoding="utf-8")
-    env.parse(macro_text)
 
 
 def test_direct_model_tags_match_the_finding_models_tags_plus_databricks_direct():

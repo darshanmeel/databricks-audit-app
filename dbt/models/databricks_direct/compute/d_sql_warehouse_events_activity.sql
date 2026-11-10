@@ -1,4 +1,4 @@
-{{ config(enabled=(target.type == "databricks"), materialized=("table" if var("direct_mode", "run") == "table" else "direct_check"), schema="audit_direct", tags=['finding', 'domain:compute', 'tier:lite', 'databricks_direct']) }}
+{{ config(enabled=false, tags=['finding', 'domain:compute', 'tier:lite', 'databricks_direct']) }}
 -- generated from app/queries/vendored/compute/sql_warehouse_events_activity.sql; fix the source query and regenerate, never edit this file.
 {%- set windows = var('windows', [7, 30, 90]) %}
 {%- for w in windows %}

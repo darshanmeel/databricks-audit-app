@@ -85,8 +85,7 @@ export function findingReason(itemId: any, header: any, rows: any) {
     || null;
 }
 
-// Priced items first ($ desc), then CRITICAL before WARN, then size -- the app's one ranking rule
-// for "what to fix first" (DEC-57 rule 4), shared by the waste worklist and the Fix-first list.
+// Priced first ($ desc), then CRITICAL before WARN, then size: the one "fix first" order.
 function rankWorklist(flagged: any) {
   const rank: Record<string, number> = { CRITICAL: 0, WARN: 1 };
   return [...flagged].sort((a, b) => {

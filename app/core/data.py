@@ -16,27 +16,21 @@ and the row cap are pushed into the SQL text with bound parameters; a separate `
 <rows_total>". MAP/STRUCT/LIST columns are selected as `to_json(col)`, never as a raw Python
 object, so no nested structure ever lands in the pandas frame.
 
-    read_finding(query_id, window_days, workspace_ids=None, env=None, tag=None,
-                 limit=None, attributes=None, job_id=None, statuses=None, *,
-                 tag_filter=None) -> FindingResult
-    count_finding(query_id, window_days, workspace_ids=None, env=None, tag=None,
-                  attributes=None, statuses=None, *, tag_filter=None) -> int
-    count_finding_ex(...) -> (int, TagApplication)
-                 count_finding's own twin, also returning the TagApplication (chain/applied/
-                 reason) `tag_filter` produced -- callers that need scope.tag use this instead.
-    finding_window_counts(specs, workspace_ids=None, env=None, attributes=None, *,
+    read_finding(query_id, window_days, workspace_ids=None, env=None, limit=None, offset=0,
+                 job_id=None, statuses=None, *, tag_filter=None) -> FindingResult
+    count_finding(query_id, window_days, workspace_ids=None, env=None, statuses=None, *,
+                  tag_filter=None) -> int
+    finding_window_counts(specs, workspace_ids=None, env=None, *,
                           tag_filter=None) -> dict[query_id, dict]
                  bulk twin of count_finding for a list of (query_id, window_days) pairs, one
-                 connection for the whole batch (app/api's findings-list endpoint). `attributes`
-                 (T-63/DEC-60/P2-FILTERS) is the same {canonical_key: [value, ...]} contract as
-                 count_finding's own -- applies only on a table with workspace_id. `tag_filter`
-                 (P4-T-IDX section 5.5) applies the same chain/clause mechanism as count_finding_ex,
+                 connection for the whole batch (app/api's findings-list endpoint). `tag_filter`
+                 (P4-T-IDX section 5.5) applies the same chain/clause mechanism as count_finding,
                  with tags.tag_entity's existence checked once for the whole batch; a query_id
                  whose chain needs it when the batch already knows it is missing comes back
                  `tag_models_not_built` instead of a tag clause, so the caller can report
                  NOT_ASSESSED rather than a silently-unfiltered count.
     aggregate_finding(query_id, window_days, group, agg, value=None, *, workspace_ids=None,
-                       env=None, attributes=None, statuses=None, top=None,
+                       env=None, statuses=None, top=None,
                        tag_filter=None) -> AggregateResult
                  T-68: a server-side GROUP BY/aggregate over EVERY row matching the filters (no
                  LIMIT before the aggregation -- the fix for "a chart/tile summed only the first
@@ -52,11 +46,8 @@ object, so no nested structure ever lands in the pandas frame.
                  top `top` groups by value desc plus one "other" bucket folding the rest -- so
                  `sum(group.value for group in groups) + (other.value or 0)` always equals the
                  TRUE total over every matching row, never a slice's total.
-    P4-T-IDX: `tag_filter` (app.core.tags.TagFilter or TagFilterSet, keyword-only, additive to the
-                 legacy `tag` dict/`has_tag` row-tags branch) filters a finding through
-                 app.core.tags.tag_chain/tag_set_clause instead -- the search-and-chain mechanism
-                 (tasks/P4-T-SPEC.md section 5.3/5.4), reaching far more tables than the row-tags
-                 branch's own tag_key/tag_value columns. A bare TagFilter (today's single
+    P4-T-IDX: `tag_filter` (app.core.tags.TagFilter or TagFilterSet, keyword-only) filters a
+                 finding through app.core.tags.tag_chain/tag_set_clause. A bare TagFilter (today's single
                  key:value) is normalised into a one-group TagFilterSet in _build_filters; a
                  TagFilterSet ANDs several tag names, ORing each name's own values. Raises
                  TagModelsNotBuiltError when the chain needs tags.tag_entity and that table does
@@ -94,10 +85,10 @@ object, so no nested structure ever lands in the pandas frame.
                  GUIDE-SPEC 3.5: the batch twin of finding_columns above, one connection for many
                  ids -- a query_id whose findings.f_<id> is not built yet is simply absent from the
                  result (never raises), unlike the single-id form.
-    region_split(workspace_ids=None, env=None, attributes=None) -> dict
+    region_split(workspace_ids=None, env=None) -> dict
                  T-71: which workspaces a selection covers, and which of them the snapshot's
                  regional system tables hold no row for (dims.dim_workspace.in_snapshot_region).
-    spec_is_regional(spec) -> bool / is_regional(query_id) -> bool
+    spec_is_regional(spec) -> bool
                  T-71: True when the query reads at least one regional (non-GLOBAL_SOURCES) table.
     GLOBAL_SOURCES                                    (T-71: the four account-wide system tables)
 
@@ -184,7 +175,7 @@ class FindingNotBuiltError(RuntimeError):
 class FindingResult:
     df: pd.DataFrame
     rows_total: int
-    applicability: dict  # {"has_workspace_id": bool, "has_tag": bool, "has_job_id": bool}
+    applicability: dict  # {"has_workspace_id": bool, "has_job_id": bool, "tag_applied": ...}
     # Materiality floor: how many of THESE rows_total rows have their floor column under `min` --
     # 0 when the query has no configured floor or the table does not carry its column (never
     # computed in that case, no extra query run). app/api/service.py's own "floor" field.
@@ -430,10 +421,6 @@ def spec_is_regional(spec: registry.QuerySpec) -> bool:
     return any(f"system.{schema}.{table}" not in GLOBAL_SOURCES for schema, table in spec.sources)
 
 
-def is_regional(query_id: str) -> bool:
-    return spec_is_regional(_validate_query_id(query_id))
-
-
 # ---------------------------------------------------------------------------------------------
 # read_finding / count_finding
 # ---------------------------------------------------------------------------------------------
@@ -482,12 +469,6 @@ def _select_list(cols: list[tuple[str, str]], query_id: str) -> str:
     below_expr = app_materiality.below_floor_expr(query_id, col_names) if floor is not None else None
     parts.append(f'({below_expr}) AS "below_floor"' if below_expr is not None else 'FALSE AS "below_floor"')
     return ", ".join(parts)
-
-
-def _attribute_canonical_keys() -> set[str]:
-    """The workspace-attribute column names _build_filters may splice into a dims.dim_workspace
-    WHERE clause: config/tag_aliases.yml's top tags, never the caller's query-param names."""
-    return set(app_config.load_top_tags())
 
 
 @dataclass
@@ -547,10 +528,7 @@ def _build_filters(
     window_days: int,
     workspace_ids: list[str] | None,
     env: list[str] | str | None,
-    tag: dict[str, str] | None,
     has_workspace_id: bool,
-    has_tag: bool,
-    attributes: dict[str, list[str]] | None = None,
     job_id: str | None = None,
     has_job_id: bool = False,
     statuses: list[str] | None = None,
@@ -564,10 +542,8 @@ def _build_filters(
     con: duckdb.DuckDBPyConnection | None = None,
     tag_prefiltered: bool = False,
 ) -> tuple[str, list, "TagApplication"]:
-    """Returns (where_sql, params, tag_application). The legacy positional `tag`/`has_tag`
-    (DEC-60's original row-tags branch, still consumed by app/ui/data.py's Streamlit filter,
-    unchanged) stay exactly as they were. The NEW tag filter (P4-T-IDX section 5.3/5.4) is
-    keyword-only and additive: give `tag_filter` together with `table_sql` (the FROM clause's own
+    """Returns (where_sql, params, tag_application). The tag filter (P4-T-IDX section 5.3/5.4) is
+    keyword-only: give `tag_filter` together with `table_sql` (the FROM clause's own
     table, aliased `t` -- data.py's own read/count/aggregate helpers always alias it that way) and
     `col_names` and `domain` to have it compiled via app.core.tags.tag_chain/tag_set_clause.
     `tag_filter` is a TagFilter (one key:value, normalised here into a one-group TagFilterSet) or a
@@ -591,37 +567,8 @@ def _build_filters(
             ))
             params.extend(envs)
 
-    # T-63 (DEC-60 rule 1): one branch of the exact same shape as the env branch above, joining
-    # workspace_id against dims.dim_workspace's new <key> column -- never the has_tag/tag_key/
-    # tag_value branch below, which is a different mechanism (row-level custom_tags, DEC-60) left
-    # byte-identical and still unreachable from app/api.
-    if has_workspace_id and attributes:
-        allowed = _attribute_canonical_keys()
-        for key, values in attributes.items():
-            if key not in allowed or not values:
-                continue
-            placeholders = ", ".join("?" for _ in values)
-            clauses.append(_in_workspaces(
-                col_names, f'SELECT workspace_id FROM dims.dim_workspace WHERE "{key}" IN ({placeholders})'
-            ))
-            params.extend(values)
-
-    if has_tag and tag:
-        tag_key = tag.get("tag_key")
-        tag_value = tag.get("tag_value")
-        if tag_key:
-            # Spec 5.5: the legacy Streamlit filter (app/ui/filters.py) matches tag_key the same
-            # normalised way the new tag search filter's row-tags branch does (app/core/tags.py's
-            # _NORM_TAG_KEY_SQL) -- "Cost Center", "cost-center" and "cost_center" are one key
-            # here too, not just in the new mechanism. docs/FILTERS.md already documents this.
-            clauses.append("regexp_replace(lower(tag_key), '[ _-]+', '', 'g') = ?")
-            params.append(app_core_tags.tag_keys.normalize_tag_key(tag_key))
-        if tag_value:
-            clauses.append("tag_value = ?")
-            params.append(tag_value)
-
     # T-70: the job focus panel's own filter -- applies only when the model carries a job_id
-    # column (the same "unaffected, never silently empty" contract as workspace_id/tag above), so
+    # column (the same "unaffected, never silently empty" contract as workspace_id above), so
     # a finding with no job_id in its grain (a warehouse- or cluster-scoped one) ignores it rather
     # than erroring. This is what lets GET /api/finding scope a check to one job server-side,
     # instead of the job focus panel fetching a capped, unfiltered page and matching job_id in the
@@ -633,7 +580,7 @@ def _build_filters(
     # T-68: a status filter so a tile that needs only flagged (or only some-status) rows can ask
     # the store for exactly those, instead of fetching an unfiltered page (capped at ui.max_rows)
     # and filtering by status in the browser -- which silently drops flagged rows sitting past the
-    # cap on a large finding. Same "unaffected, never silently empty" contract as job_id/tag above:
+    # cap on a large finding. Same "unaffected, never silently empty" contract as job_id above:
     # applies only when the table actually has a status column.
     #
     # Materiality floor: filters against the EFFECTIVE status (app/core/materiality.status_expr),
@@ -861,9 +808,8 @@ def read_finding(
     window_days: int,
     workspace_ids: list[str] | None = None,
     env: list[str] | str | None = None,
-    tag: dict[str, str] | None = None,
     limit: int | None = None,
-    attributes: dict[str, list[str]] | None = None,
+    offset: int = 0,
     job_id: str | None = None,
     statuses: list[str] | None = None,
     *,
@@ -871,17 +817,13 @@ def read_finding(
 ) -> FindingResult:
     """SELECT ... FROM findings."f_<query_id>" WHERE window_days = ? [AND workspace_id IN (...)]
     [AND workspace_id IN (SELECT ... WHERE env IN (...))]
-    [AND workspace_id IN (SELECT ... WHERE "<key>" IN (...)) ...] [AND tag_key = ? [AND tag_value
-    = ?]] [AND job_id = ?] [AND status IN (...)] ORDER BY <model order_by,
-    falling back to status rank> LIMIT <ui.max_rows or `limit`>.
-    workspace_ids/env/attributes apply only when the table has a workspace_id column (DEC-60
-    rule 6: a finding with no workspace_id is unaffected, never silently empty); tag applies only
-    when tag_key/tag_value columns exist; job_id (T-70, the job focus panel) applies only when a
-    job_id column exists; statuses (T-68) applies only when a status column exists -- same contract, and the
-    returned `applicability` flags say which.
-    `attributes` is {canonical_key: [value, ...]} (T-63/DEC-60 rule 1) -- keys not present in
-    config/tag_aliases.yml are silently ignored by _build_filters, never trusted as a SQL
-    identifier. rows_total is a separate `count(*)` over the SAME filters, without the LIMIT
+    [AND job_id = ?] [AND status IN (...)] ORDER BY <model order_by, falling back to status rank>
+    LIMIT <ui.max_rows or `limit`> OFFSET <offset>.
+    workspace_ids/env apply only when the table has a workspace_id column (DEC-60 rule 6: a
+    finding with no workspace_id is unaffected, never silently empty); job_id (T-70, the job
+    focus panel) applies only when a job_id column exists; statuses (T-68) applies only when a
+    status column exists -- same contract, and the returned `applicability` flags say which.
+    rows_total is a separate `count(*)` over the SAME filters, without the LIMIT
     (DEC-47 point 2). Materiality floor (see _select_list): a table a floor applies to returns the
     EFFECTIVE status as "status" (raw kept as "status_raw") and a real "below_floor" column, so a
     caller reading `status` off these rows -- for counting, sorting, or a WARN/CRITICAL sum -- gets
@@ -893,13 +835,12 @@ def read_finding(
         cols = _table_columns(con, query_id)
         col_names = [c[0] for c in cols]
         has_workspace_id = workspace_filterable(col_names)
-        has_tag = {"tag_key", "tag_value"}.issubset(col_names)
         has_job_id = "job_id" in col_names
         has_status = "status" in col_names
         spend_table = app_tag_spend.table_sql(con, query_id, window_days, tag_filter)
         table = spend_table or f'findings."f_{query_id}" t'
         where_sql, params, tag_app = _build_filters(
-            window_days, workspace_ids, env, tag, has_workspace_id, has_tag, attributes,
+            window_days, workspace_ids, env, has_workspace_id,
             job_id, has_job_id, statuses, has_status,
             tag_filter=tag_filter, table_sql=table, col_names=col_names, domain=spec.domain,
             query_id=query_id, con=con, tag_prefiltered=spend_table is not None,
@@ -921,11 +862,11 @@ def read_finding(
             )
 
         excluded_no_workspace = None
-        if has_workspace_id and (workspace_ids or env or attributes):
+        if has_workspace_id and (workspace_ids or env):
             no_ws_sql = _no_workspace_clause(col_names)
             if no_ws_sql is not None:
                 no_ws_where, no_ws_params, _ = _build_filters(
-                    window_days, None, None, tag, has_workspace_id, has_tag, None,
+                    window_days, None, None, has_workspace_id,
                     job_id, has_job_id, statuses, has_status,
                     tag_filter=tag_filter, table_sql=table, col_names=col_names, domain=spec.domain,
                     query_id=query_id, con=con, tag_prefiltered=spend_table is not None,
@@ -943,8 +884,8 @@ def read_finding(
         if tag_app.select_sql:
             select_list = f"{select_list}, {tag_app.select_sql}"
         order_sql = _order_by_clause(query_id, col_names)
-        sql = f"SELECT {select_list} FROM {table} WHERE {where_sql}{order_sql} LIMIT ?"
-        df = con.execute(sql, [*tag_app.select_params, *params, eff_limit]).df()
+        sql = f"SELECT {select_list} FROM {table} WHERE {where_sql}{order_sql} LIMIT ? OFFSET ?"
+        df = con.execute(sql, [*tag_app.select_params, *params, eff_limit, offset]).df()
         tag_unreached = _tag_unreached(con, app_core_tags.tag_chain(query_id, col_names, spec.domain), tag_filter)
     finally:
         con.close()
@@ -954,7 +895,7 @@ def read_finding(
         rows_below_floor=rows_below_floor,
         excluded_no_workspace=excluded_no_workspace,
         applicability={
-            "has_workspace_id": has_workspace_id, "has_tag": has_tag, "has_job_id": has_job_id,
+            "has_workspace_id": has_workspace_id, "has_job_id": has_job_id,
             "tag_applied": tag_app.applied, "tag_chain": tag_app.chain_words,
             "tag_chain_label": tag_app.chain_label, "tag_not_applicable_reason": tag_app.reason,
             "tag_unreached": tag_unreached,
@@ -1005,53 +946,27 @@ def count_finding(
     window_days: int,
     workspace_ids: list[str] | None = None,
     env: list[str] | str | None = None,
-    tag: dict[str, str] | None = None,
-    attributes: dict[str, list[str]] | None = None,
     statuses: list[str] | None = None,
     *,
     tag_filter: "app_core_tags.TagFilter | app_core_tags.TagFilterSet | None" = None,
 ) -> int:
-    """Row count only, same filter contract as read_finding (DEC-47 point 2's separate
-    `count(*)`), including the `attributes` param (T-63/DEC-60 rule 1), `statuses` (T-68) and the
-    new `tag_filter` (P4-T-IDX)."""
-    result = count_finding_ex(
-        query_id, window_days, workspace_ids, env, tag, attributes, statuses, tag_filter=tag_filter
-    )
-    return result[0]
-
-
-def count_finding_ex(
-    query_id: str,
-    window_days: int,
-    workspace_ids: list[str] | None = None,
-    env: list[str] | str | None = None,
-    tag: dict[str, str] | None = None,
-    attributes: dict[str, list[str]] | None = None,
-    statuses: list[str] | None = None,
-    *,
-    tag_filter: "app_core_tags.TagFilter | app_core_tags.TagFilterSet | None" = None,
-) -> tuple[int, "TagApplication"]:
-    """count_finding's own twin that also returns the TagApplication (chain/applied/reason) --
-    used by app/api/service.py to fill scope.tag without a second read. count_finding() above is
-    the plain, backward-compatible int-only shape every existing caller keeps using."""
+    """Row count only, same filter contract as read_finding (DEC-47 point 2's separate `count(*)`)."""
     spec = _validate_query_id(query_id)
     con = _connect()
     try:
         cols = _table_columns(con, query_id)
         col_names = [c[0] for c in cols]
         has_workspace_id = workspace_filterable(col_names)
-        has_tag = {"tag_key", "tag_value"}.issubset(col_names)
         has_status = "status" in col_names
         spend_table = app_tag_spend.table_sql(con, query_id, window_days, tag_filter)
         table = spend_table or f'findings."f_{query_id}" t'
-        where_sql, params, tag_app = _build_filters(
-            window_days, workspace_ids, env, tag, has_workspace_id, has_tag, attributes,
+        where_sql, params, _tag_app = _build_filters(
+            window_days, workspace_ids, env, has_workspace_id,
             statuses=statuses, has_status=has_status,
             tag_filter=tag_filter, table_sql=table, col_names=col_names, domain=spec.domain,
             query_id=query_id, con=con, tag_prefiltered=spend_table is not None,
         )
-        n = int(con.execute(f"SELECT count(*) FROM {table} WHERE {where_sql}", params).fetchone()[0])
-        return n, tag_app
+        return int(con.execute(f"SELECT count(*) FROM {table} WHERE {where_sql}", params).fetchone()[0])
     finally:
         con.close()
 
@@ -1070,9 +985,8 @@ def finding_columns(query_id: str) -> list[str]:
 def _dim_scope_count(
     con: duckdb.DuckDBPyConnection, dim_table: str, id_col: str,
     workspace_ids: list[str] | None, env: list[str] | str | None,
-    attributes: dict[str, list[str]] | None,
 ) -> int:
-    """count(DISTINCT id_col) FROM dims.<dim_table>, scoped by workspace_ids/env/attributes the
+    """count(DISTINCT id_col) FROM dims.<dim_table>, scoped by workspace_ids/env the
     same way _build_filters' own branches do -- for affected.total (contract B: "every object of
     that kind in the filtered scope"), against a dim table (no window_days of its own, so
     _build_filters itself does not apply -- same reasoning as region_split's own hand-rolled
@@ -1088,16 +1002,6 @@ def _dim_scope_count(
         placeholders = ", ".join("?" for _ in envs)
         clauses.append(f"workspace_id IN (SELECT workspace_id FROM dims.dim_workspace WHERE env IN ({placeholders}))")
         params.extend(envs)
-    if attributes:
-        allowed = _attribute_canonical_keys()
-        for key, values in attributes.items():
-            if key not in allowed or not values:
-                continue
-            placeholders = ", ".join("?" for _ in values)
-            clauses.append(
-                f'workspace_id IN (SELECT workspace_id FROM dims.dim_workspace WHERE "{key}" IN ({placeholders}))'
-            )
-            params.extend(values)
     where = f" WHERE {' AND '.join(clauses)}" if clauses else ""
     try:
         row = con.execute(f"SELECT count(DISTINCT {_entity_key_sql(id_col, True)}) FROM dims.{dim_table}{where}", params).fetchone()
@@ -1124,16 +1028,11 @@ def finding_window_counts(
     specs: list[tuple[str, int]],
     workspace_ids: list[str] | None = None,
     env: list[str] | str | None = None,
-    attributes: dict[str, list[str]] | None = None,
     *,
     tag_filter: "app_core_tags.TagFilter | app_core_tags.TagFilterSet | None" = None,
 ) -> dict[str, dict]:
     """Bulk twin of count_finding, for a LIST of (query_id, window_days) pairs, opening exactly
     ONE read-only connection for the whole batch instead of one per pair.
-
-    `attributes` (T-63/DEC-60, wired in for P2-FILTERS) is the same {canonical_key: [value, ...]}
-    contract count_finding/read_finding already honour -- applies only on a table that carries
-    workspace_id, via the same _build_filters whitelist-before-splice discipline.
 
     Added for app/api (T-57): the findings-list endpoint reads every executable query's counts on
     every page load (one table per finding); DEC-47's one-connection-per-call model is the right shape for a
@@ -1146,7 +1045,7 @@ def finding_window_counts(
     _build_filters/_validate_query_id helpers -- just once each instead of ~100+ times.
 
     `tag_filter` (P4-T-IDX section 5.5) applies the same way to every table in the batch, via the
-    same app.core.tags chain/clause mechanism read_finding/count_finding_ex already use --
+    same app.core.tags chain/clause mechanism read_finding/count_finding already use --
     tags.tag_entity's existence is checked ONCE for the whole batch (not once per query_id, the
     same one-round-trip discipline as the column-list lookup above), rather than through
     _build_filters' own per-call check -- this function sets `effective_tag_filter` to None ahead
@@ -1219,7 +1118,6 @@ def finding_window_counts(
                 continue  # findings.f_<query_id> does not exist -- FindingNotBuiltError's contract
             has_status = "status" in col_names
             has_workspace_id = workspace_filterable(col_names)
-            has_tag = {"tag_key", "tag_value"}.issubset(col_names)
             table = f'findings."f_{query_id}" t'
 
             rows_in_window = int(
@@ -1229,7 +1127,7 @@ def finding_window_counts(
             # A chain that needs tags.tag_entity when this batch already knows it is missing gets
             # no tag clause at all (it would otherwise reference a table that does not exist) --
             # this query_id comes back `tag_models_not_built` instead, same "never silently
-            # unfiltered" rule as read_finding/count_finding_ex's own TagModelsNotBuiltError.
+            # unfiltered" rule as read_finding/count_finding's own TagModelsNotBuiltError.
             effective_tag_filter = tag_filter
             tag_models_not_built = False
             if tag_filter is not None:
@@ -1242,7 +1140,7 @@ def finding_window_counts(
             spend_table = app_tag_spend.table_sql(con, query_id, window_days, effective_tag_filter)
             filtered_table = spend_table or table
             where_sql, params, tag_app = _build_filters(
-                window_days, workspace_ids, env, None, has_workspace_id, has_tag, attributes,
+                window_days, workspace_ids, env, has_workspace_id,
                 tag_filter=effective_tag_filter, table_sql=filtered_table, col_names=col_names,
                 domain=specs_by_id[query_id].domain, query_id=query_id, con=con,
                 tag_prefiltered=spend_table is not None,
@@ -1297,7 +1195,7 @@ def finding_window_counts(
                     if lists_unflagged or dim_table is None:
                         total = own_total
                     else:
-                        dim_total = _dim_scope_count(con, dim_table, col, workspace_ids, env, attributes)
+                        dim_total = _dim_scope_count(con, dim_table, col, workspace_ids, env)
                         total = max(dim_total, own_total)
                     affected = {"column": col, "noun": noun, "flagged": flagged, "total": total}
                 else:
@@ -1387,7 +1285,7 @@ class AggregateResult:
     total_value: object             # sum(g.value for g in every group, incl. `other`) -- the TRUE total
     group_count: int                 # how many distinct groups exist BEFORE `top` folds the tail --
                                        # "N SKUs"/"N tag values" etc., not just len(groups) after the fold
-    rows_total: int                  # rows matching window + workspace_ids/env/attributes (no status filter)
+    rows_total: int                  # rows matching window + workspace_ids/env (no status filter)
     matched_rows: int                 # rows matching window + every filter INCLUDING statuses -- what
                                        # the aggregate actually scanned; == sum of every group's row_count
     null_value_rows: int = 0          # sum(g.null_rows for g in every group INCLUDING the folded tail,
@@ -1407,7 +1305,6 @@ def aggregate_finding(
     *,
     workspace_ids: list[str] | None = None,
     env: list[str] | str | None = None,
-    attributes: dict[str, list[str]] | None = None,
     statuses: list[str] | None = None,
     top: int | None = None,
     tag_filter: "app_core_tags.TagFilter | app_core_tags.TagFilterSet | None" = None,
@@ -1432,13 +1329,13 @@ def aggregate_finding(
     counts rows. `statuses` filters to those status values, same unaffected-if-no-status-column
     contract as read_finding's own `statuses` param -- applied to matched_rows/the aggregate
     itself, but NOT to `rows_total` (which mirrors read_finding's rows_total: window + workspace/
-    env/attributes only, no status filter -- "how many rows exist here at all" vs "how many did
+    env only, no status filter -- "how many rows exist here at all" vs "how many did
     this particular aggregate scan").
 
     Raises ValueError for a bad group/agg/value (the API layer turns that into a 422); anything
     else (a locked file, a genuine type mismatch DuckDB itself rejects) raises duckdb.Error/OSError
     same as every other read in this module. `tag_filter` (P4-T-IDX) applies to both `rows_total`
-    and the aggregate itself, same as workspace_ids/env/attributes -- section 5.5's fix for
+    and the aggregate itself, same as workspace_ids/env -- section 5.5's fix for
     "aggregate_finding currently passes None [for tag]"."""
     spec = _validate_query_id(query_id)
     if len(group) > _MAX_GROUP_COLS:
@@ -1465,21 +1362,20 @@ def aggregate_finding(
             raise ValueError(f"unknown value column {value!r} on {query_id}")
 
         has_workspace_id = workspace_filterable(col_names)
-        has_tag = {"tag_key", "tag_value"}.issubset(col_names)
         has_status = "status" in col_names
         spend_table = app_tag_spend.table_sql(con, query_id, window_days, tag_filter)
         table = spend_table or f'findings."f_{query_id}" t'
         floor = app_materiality.applicable_floor(query_id, col_names)
 
         base_where_sql, base_params, _base_tag_app = _build_filters(
-            window_days, workspace_ids, env, None, has_workspace_id, has_tag, attributes,
+            window_days, workspace_ids, env, has_workspace_id,
             tag_filter=tag_filter, table_sql=table, col_names=col_names, domain=spec.domain,
             query_id=query_id, con=con, tag_prefiltered=spend_table is not None,
         )
         rows_total = int(con.execute(f"SELECT count(*) FROM {table} WHERE {base_where_sql}", base_params).fetchone()[0])
 
         where_sql, params, tag_app = _build_filters(
-            window_days, workspace_ids, env, None, has_workspace_id, has_tag, attributes,
+            window_days, workspace_ids, env, has_workspace_id,
             statuses=statuses, has_status=has_status,
             tag_filter=tag_filter, table_sql=table, col_names=col_names, domain=spec.domain,
             query_id=query_id, con=con, tag_prefiltered=spend_table is not None,
@@ -1507,11 +1403,11 @@ def aggregate_finding(
             agg_expr = "count(*)"
 
         excluded_no_workspace = None
-        if has_workspace_id and (workspace_ids or env or attributes):
+        if has_workspace_id and (workspace_ids or env):
             no_ws_sql = _no_workspace_clause(col_names)
             if no_ws_sql is not None:
                 no_ws_where, no_ws_params, _ = _build_filters(
-                    window_days, None, None, None, has_workspace_id, has_tag, None,
+                    window_days, None, None, has_workspace_id,
                     statuses=statuses, has_status=has_status,
                     tag_filter=tag_filter, table_sql=table, col_names=col_names, domain=spec.domain,
                     query_id=query_id, con=con, tag_prefiltered=spend_table is not None,
@@ -1756,18 +1652,18 @@ def _columns(con, schema: str, table: str) -> set[str]:
         "AND table_schema = ? AND table_name = ?", [schema, table]).fetchall()}
 
 
-def _windowed(con, have, table: str, window: int | None) -> tuple[str | None, int | None]:
-    """usage.<table> for one window (the smallest exported one covering `window`; None = the largest),
+def _windowed(con, have, table: str, window: int | None, schema: str = "usage") -> tuple[str | None, int | None]:
+    """<schema>.<table> for one window (the smallest exported one covering `window`; None = the largest),
     as a FROM clause; an export from before windows has one set of rows."""
-    if ("usage", table) not in have:
+    if (schema, table) not in have:
         return None, None
-    if "window_days" not in _columns(con, "usage", table):
-        return f"usage.{table}", None
-    got = [r[0] for r in con.execute(f"SELECT DISTINCT window_days FROM usage.{table} ORDER BY 1").fetchall()]
+    if "window_days" not in _columns(con, schema, table):
+        return f"{schema}.{table}", None
+    got = [r[0] for r in con.execute(f"SELECT DISTINCT window_days FROM {schema}.{table} ORDER BY 1").fetchall()]
     if not got:
-        return f"usage.{table}", None
+        return f"{schema}.{table}", None
     used = max(got) if window is None else min((w for w in got if w >= window), default=max(got))
-    return f"(SELECT * FROM usage.{table} WHERE window_days = {int(used)})", used
+    return f"(SELECT * FROM {schema}.{table} WHERE window_days = {int(used)})", used
 
 
 def _table_access(con, have, window: int | None) -> tuple[str | None, int | None]:
@@ -1913,9 +1809,10 @@ def read_workspaces(window: int, workspace_scope: set[str] | None, tag_filter=No
                     f"FROM {ta} GROUP BY 1, 2").fetchall():
                 if home.get(str(cat), (None,))[0] == str(ws):
                     read_held[str(ws)] = read_held.get(str(ws), 0) + int(n or 0)
+        ua, _w = _windowed(con, have, "user_access", used)
         user_rows = con.execute(
-            "SELECT identity, workspace_id, last_seen, logins, queries, tables_read, tables_written FROM usage.user_access"
-        ).fetchall() if ("usage", "user_access") in have else []
+            f"SELECT identity, workspace_id, last_seen, logins, queries, tables_read, tables_written FROM {ua}"
+        ).fetchall() if ua else []
         seen_rows = con.execute(
             "SELECT identity, workspace_id, last_seen, last_login FROM usage.user_last_seen"
         ).fetchall() if ("usage", "user_last_seen") in have else []
@@ -2188,8 +2085,9 @@ def read_activity(window: int, workspace_scope: set[str] | None, workspace_id: s
         va, _w = _windowed(con, have, "volume_access", window)
         vol_use = q(f"SELECT workspace_id, volume_full_name, identity, reads, writes, GREATEST(last_read, last_write) "
                     f"FROM {va}", va is not None)
+        ua, _w = _windowed(con, have, "user_access", None)
         seen = q("SELECT workspace_id, identity, last_seen FROM usage.user_last_seen", ("usage", "user_last_seen") in have) \
-            + q("SELECT workspace_id, identity, last_seen FROM usage.user_access", ("usage", "user_access") in have)
+            + q(f"SELECT workspace_id, identity, last_seen FROM {ua}", ua is not None)
         ut, _w = _windowed(con, have, "user_tables", window)
         used = q(f"SELECT workspace_id, identity, table_full_name, reads, writes, last_access FROM {ut}", ut is not None)
         # per workspace when the export has it, else one row per table
@@ -2854,8 +2752,9 @@ def read_people(window: int, workspace_scope: set[str] | None) -> dict:
             if ("usage", "workspace_activity_info") in have else None
         info = json.loads(info_raw[0]) if info_raw and info_raw[0] else None
         end = _seen_end(info)
+        ua, _w = _windowed(con, have, "user_access", window)
         access = con.execute("SELECT workspace_id, identity, last_seen, queries, tables_read, tables_written "
-                             "FROM usage.user_access").fetchall()
+                             f"FROM {ua}").fetchall()
         ut, _w = _windowed(con, have, "user_tables", window)
         used = con.execute(f"SELECT workspace_id, identity, table_full_name, reads, writes FROM {ut}").fetchall() if ut else []
         seen = con.execute("SELECT workspace_id, identity, last_seen FROM usage.user_last_seen"
@@ -2976,9 +2875,10 @@ def read_warehouses(window: int, workspace_scope: set[str] | None) -> dict:
                 daily = con.execute(
                     "SELECT workspace_id, warehouse_id, SUM(up_minutes), SUM(busy_minutes), SUM(queries), SUM(failed) "
                     "FROM warehouse.warehouse_daily WHERE day >= ? GROUP BY 1, 2", [since]).fetchall()
-        if ("warehouse", "warehouse_users") in have:
+        wu, _w = _windowed(con, have, "warehouse_users", window, "warehouse")
+        if wu:
             users = {str(w): int(n) for w, n in con.execute(
-                "SELECT warehouse_id, COUNT(DISTINCT identity) FROM warehouse.warehouse_users GROUP BY 1").fetchall()}
+                f"SELECT warehouse_id, COUNT(DISTINCT identity) FROM {wu} GROUP BY 1").fetchall()}
         names = {str(w): (str(ws), n) for ws, w, n in con.execute(
             "SELECT workspace_id, warehouse_id, warehouse_name FROM dims.dim_warehouse").fetchall()
         } if ("dims", "dim_warehouse") in have else {}
@@ -3043,15 +2943,18 @@ def read_warehouse(warehouse_id: str, window: int) -> dict:
             since = (_dt.date.fromisoformat(str(end)[:10]) - _dt.timedelta(days=window - 1)).isoformat() if end else "9999"
             daily = rows("SELECT day, up_minutes, busy_minutes, queries, failed, people, service_principals, queued_ms, run_ms "
                          "FROM warehouse.warehouse_daily WHERE warehouse_id = ? AND day >= ? ORDER BY day", [warehouse_id, since])
-        if ("warehouse", "warehouse_users") in have:
-            users = rows("SELECT identity, queries, failed, run_ms, last_query FROM warehouse.warehouse_users "
+        wu, _w = _windowed(con, have, "warehouse_users", window, "warehouse")
+        if wu:
+            users = rows(f"SELECT identity, queries, failed, run_ms, last_query FROM {wu} "
                          "WHERE warehouse_id = ? ORDER BY queries DESC, identity LIMIT 200", wh)
-        if ("warehouse", "warehouse_tables") in have:
-            tables = rows("SELECT table_full_name, reads, writes, people, last_access FROM warehouse.warehouse_tables "
+        wt, _w = _windowed(con, have, "warehouse_tables", window, "warehouse")
+        if wt:
+            tables = rows(f"SELECT table_full_name, reads, writes, people, last_access FROM {wt} "
                           "WHERE warehouse_id = ? ORDER BY reads + writes DESC, table_full_name", wh)
-        if ("warehouse", "warehouse_slow") in have:
+        ws_, _w = _windowed(con, have, "warehouse_slow", window, "warehouse")
+        if ws_:
             slow = rows("SELECT statement_id, identity, start_time, total_ms, queued_ms, status, statement_type, text "
-                        "FROM warehouse.warehouse_slow WHERE warehouse_id = ? ORDER BY total_ms DESC", wh)
+                        f"FROM {ws_} WHERE warehouse_id = ? ORDER BY total_ms DESC", wh)
         if ("warehouse", "warehouse_activity_info") in have:
             raw = con.execute("SELECT info FROM warehouse.warehouse_activity_info LIMIT 1").fetchone()
             info = json.loads(raw[0]) if raw and raw[0] else None
@@ -3109,34 +3012,16 @@ def read_workspace_tags(workspace_scope: set[str] | None, tag_filter=None) -> li
     ]
 
 
+@_file_cached(lambda: _db_path())
 def region_split(
     workspace_ids: list[str] | None = None,
     env: list[str] | str | None = None,
-    attributes: dict[str, list[str]] | None = None,
-) -> dict:
-    """_region_split, cached per db file unless attribute filters apply (their allowed keys come
-    from config, which can change while the db does not)."""
-    if attributes:
-        return _region_split(workspace_ids, env, attributes)
-    return _region_split_no_attributes(workspace_ids, env)
-
-
-@_file_cached(lambda: _db_path())
-def _region_split_no_attributes(workspace_ids, env) -> dict:
-    return _region_split(workspace_ids, env, None)
-
-
-def _region_split(
-    workspace_ids: list[str] | None = None,
-    env: list[str] | str | None = None,
-    attributes: dict[str, list[str]] | None = None,
 ) -> dict:
     """T-71: which workspaces a selection covers, and which of them the snapshot's regional
     system tables hold no row for (dims.dim_workspace.in_snapshot_region = FALSE).
 
     The same filter semantics as _build_filters, applied to dims.dim_workspace itself: every
-    given filter must match (workspace_ids AND env AND each whitelisted attribute key; a key
-    outside config/tag_aliases.yml is ignored, never spliced). Returns
+    given filter must match (workspace_ids AND env). Returns
     {"filtered": bool, "selected": [workspace_id, ...],
      "outside": [{"workspace_id", "name", "billed"}, ...], "unknown": [workspace_id, ...]},
     every list ordered by workspace_id. `filtered` is False when no workspace-level filter is
@@ -3154,13 +3039,6 @@ def _region_split(
         if envs:
             clauses.append(f"env IN ({', '.join('?' for _ in envs)})")
             params.extend(envs)
-        if attributes:
-            allowed = _attribute_canonical_keys()
-            for key, values in attributes.items():
-                if key not in allowed or not values:
-                    continue
-                clauses.append(f'"{key}" IN ({", ".join("?" for _ in values)})')
-                params.extend(values)
         where = f" WHERE {' AND '.join(clauses)}" if clauses else ""
         rows = con.execute(
             "SELECT workspace_id, name, in_snapshot_region, billed_in_snapshot "

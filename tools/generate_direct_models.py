@@ -18,25 +18,10 @@ generate_models.py builds, skipped for the exact same reason -- it writes ONE mo
 dbt/models/databricks_direct/<domain>/d_<query_id>.sql, whose body is byte-for-byte the Databricks
 branch tools/generate_models.py already renders (`render_model(spec, target="databricks")`): same
 translation (app.core.translate.pin_time), same source() substitution, same param()/window-loop
-handling, same output columns as f_<query_id> -- so a `d_<query_id>` table (direct_mode="table")
-is a drop-in replacement for the matching `f_<query_id>` finding table.
+handling, same output columns as f_<query_id>. tools/build_direct_sql.py renders these into
+app/direct_sql/ for the direct export; dbt never runs them, so each carries
 
-Only the model's own config differs (the point of this generator): instead of the findings
-models' `materialized='table'`, every generated file here carries
-
-    {{ config(enabled=(target.type == "databricks"),
-              materialized=("table" if var("direct_mode", "run") == "table" else "direct_check"),
-              schema="audit_direct",
-              tags=[<same tags as the f_ model>, "databricks_direct"]) }}
-
-`enabled=(target.type == "databricks")` keeps every file here a no-op on the `dev`/`test` (DuckDB)
-targets this repo builds day to day -- `dbt parse`/`dbt build --target test` disables the whole
-node, never touches the databricks-only Jinja branch app.core.translate.pin_time produced.
-`direct_mode` (a --vars flag) picks the materialization: `dbt/macros/direct_check.sql`'s custom
-"direct_check" materialization for "run"/"explain" (creates nothing; that macro's own header
-explains why a materialization, not a run-operation), or dbt's own built-in `table` materialization
-for "table" (the drop-in-replacement path, results land in
-`<AUDIT_DBX_CATALOG>.audit_direct.d_<query_id>`).
+    {{ config(enabled=false, tags=[<same tags as the f_ model>, "databricks_direct"]) }}
 
 Also writes ONE combined dbt/models/databricks_direct/_databricks_direct.yml (every model, across
 every domain, unlike generate_models.py's one-yml-per-domain) so `dbt docs generate` describes
@@ -111,11 +96,7 @@ def render_direct_model(spec: QuerySpec, contract: dict[str, set[str]] | None = 
     full = gm.render_model(spec, target="databricks", contract=contract)
     _, _, body = full.split("\n", 2)
     tags = ", ".join(f"'{t}'" for t in direct_tags(spec))
-    config_line = (
-        '{{ config(enabled=(target.type == "databricks"), '
-        'materialized=("table" if var("direct_mode", "run") == "table" else "direct_check"), '
-        f'schema="audit_direct", tags=[{tags}]) }}}}'
-    )
+    config_line = f'{{{{ config(enabled=false, tags=[{tags}]) }}}}'
     return config_line + "\n" + _origin_comment(spec) + "\n" + body
 
 

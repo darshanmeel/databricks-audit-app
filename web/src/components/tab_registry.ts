@@ -98,11 +98,8 @@ const COST_SUBTABS: Subtab[] = [
   },
 ];
 
-// ─────────── Waste & savings ─────────── (DEC-74: no checks table of its own -- every id here
-// is homed on another area's own sub-tab; this is a roll-up that links out). `dollarCol`/`dbuCol`
-// name the one column (DEC-68) that may carry a possible-waste figure; a check with neither ranks
-// by severity alone. Domain keys are the new area keys (section 4.2), so a link built from this
-// list always lands on a real tab.
+// ─────────── Waste & savings ─────────── a roll-up that links out to each check's home tab. `dollarCol`/`dbuCol`
+// name the one column that may carry a possible-waste figure; a check with neither ranks by severity.
 export const WASTE_ITEMS = [
   { id: "compute_warehouse_idle_minutes", area: "compute", dollarCol: "est_wasted_usd_list", dbuCol: null, why: "Warehouse running with no query for more than a minute (the gap is set in config/thresholds.yml): billed while idle. Possible waste." },
   { id: "compute_idle_node_ratio", area: "compute", dollarCol: "est_wasted_usd_list", dbuCol: null, why: "Classic cluster minutes with almost no CPU in use: billed while idle. Possible waste." },
@@ -168,8 +165,7 @@ const COMPUTE_SUBTABS: Subtab[] = [
 ];
 
 // ─────────── Jobs ─────────── (failures · slow · hygiene · compute_fit · pipelines)
-// lakeflow_termination_type_probe is a developer probe, deliberately given no home (DEC-58.5:
-// still executable and still listed on All findings -- never deleted, just not curated here).
+// lakeflow_termination_type_probe is a developer probe: listed on All findings, no home here.
 const JOBS_SUBTABS: Subtab[] = [
   {
     key: "failures", label: "Failures",
@@ -296,8 +292,7 @@ const USAGE_SUBTABS: Subtab[] = [
   { key: "volumes", label: "Volumes", ids: [], refIds: [] },
   { key: "people", label: "People", ids: [], refIds: [] },
 ];
-// ─────────── Overview ─────────── -- a roll-up with no sub-tabs of its own (DEC-74): every id
-// here is a reference feed for its cards, never an individually-flagged check.
+// ─────────── Overview ─────────── no sub-tabs; every id here feeds a card.
 export const OVERVIEW_IDS = [
   "overview_spend_estimate", "overview_dbu_by_sku", "overview_serverless_classic_split",
   "overview_daily_dbu_trend", "overview_list_prices_raw",
@@ -346,8 +341,7 @@ export const AREA_REGISTRY: Record<string, Area> = {
 };
 export const AREA_ORDER = ["overview", "actions", "cost", "waste", "mlai", "genie", "compute", "jobs", "queries", "usage", "governance", "storage", "tags", "findings", "coverage"];
 
-// T-68 (DEC-66.1): the list-price dollar column cost_dollarized_by_sku_day carries -- read at HEAD
-// rather than guessed, since Cost/ML & AI/Overview tiles all sum this same underlying finding.
+// The list-price dollar column of cost_dollarized_by_sku_day, which Cost, ML & AI and Overview tiles sum.
 export const COST_MONEY_COL = "net_list_cost";
 export const EST_SPEND_CAVEAT = "excludes your cloud provider's own VM bill";
 
@@ -432,9 +426,7 @@ export const AF_REFERENCE_IDS = (function () {
   return set;
 })();
 
-// DEC-74: these three checks rank resources by size alone (no critical/warn threshold) --
-// cost_by_job, cost_by_compute_resource, lakeflow_pipeline_cost -- so they must always read
-// "Ranked", never Critical/Warn, regardless of what their own row status happens to be.
+// Size-only rankings (no threshold): always "Ranked", never Critical or Warn.
 export const RANKED_QUERY_IDS = new Set(["cost_by_job", "cost_by_compute_resource", "lakeflow_pipeline_cost"]);
 
 /** What bandOf reads: a check's outcome, status counts and id. */
@@ -453,17 +445,14 @@ export function bandOf(row: BandInput): Band {
   // ok_rows
   const sc = row.status_counts;
   if (!sc) return "INVENTORY";
-  // DEC-74: a magnitude-only ranking never reads Critical/Warn, whatever its own rows say.
+  // A size-only ranking never reads Critical or Warn.
   if (RANKED_QUERY_IDS.has(row.query_id)) return "RANKED";
   // The server caps a report-type check's own CRITICAL rows to WARN before they ever reach here
   // (contract E, app/core/materiality.severity_cap) -- status_counts.CRITICAL is already the
   // capped count, so this band always matches what the row itself carries.
   if ((sc.CRITICAL || 0) > 0) return "CRITICAL";
   if ((sc.WARN || 0) > 0) return "WARN";
-  // T-67: a finding can return real rows where every single one was judged NOT_ASSESSED (no
-  // cluster recorded, too few slices, ...) with zero rows ever reaching a CRITICAL/WARN/OK
-  // verdict -- that is not a verified clean pass, so it must not fall through to OK just
-  // because the row-level status is not one of the two flagged values. NOT_ASSESSED is never OK.
+  // Rows that were all NOT_ASSESSED are not a clean pass.
   if ((sc.NOT_ASSESSED || 0) > 0 && !(sc.OK || 0)) return "NOT_ASSESSED";
   return "OK";
 }

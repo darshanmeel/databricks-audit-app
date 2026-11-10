@@ -210,8 +210,12 @@ def add(db: Path) -> dict:
                 users.append((ws, who, ts(away), rnd.randint(0, 40) if "@" in who else 0, q, ts(away) if q else None,
                               rnd.randint(0, 30), rnd.randint(0, 8)))
     seen.append(("2013", "left.company@acme.example", ts(330), ts(331)))
-    put(con, "usage.user_access", "workspace_id VARCHAR, identity VARCHAR, last_seen VARCHAR, logins BIGINT, queries BIGINT, "
-        "last_query VARCHAR, tables_read BIGINT, tables_written BIGINT", users)
+    # per window: seen in it, counts scaled to its length
+    windowed = [(w, ws, who, last, lg * w // 90, q * w // 90, lq, -(-tr * w // 90), -(-tw * w // 90))
+                for w in WINDOWS for ws, who, last, lg, q, lq, tr, tw in users
+                if (END - date.fromisoformat(last[:10])).days < w]
+    put(con, "usage.user_access", "window_days BIGINT, workspace_id VARCHAR, identity VARCHAR, last_seen VARCHAR, logins BIGINT, queries BIGINT, "
+        "last_query VARCHAR, tables_read BIGINT, tables_written BIGINT", windowed)
     put(con, "usage.user_last_seen", "workspace_id VARCHAR, identity VARCHAR, last_seen VARCHAR, last_login VARCHAR", seen)
 
     # usage.workspace_activity: per window, who was active and how many queries
@@ -360,27 +364,33 @@ def _warehouses(con, rnd) -> None:
                 if n <= window:
                     usd = round(up / 60 * rate, 2)
                     cost.append((window, d, "warehouse", f"{ws}:{wh}", ws, wh, wh, usd, round(usd / 0.7, 2)))
+        # per window: counts scaled to its length; the shortest windows miss a few people and tables
         for who in people:
-            q = rnd.randint(5, 4000)
-            users.append((ws, wh, who, q, int(q * rnd.uniform(0, 0.05)), q * rnd.randint(500, 20000), ts(rnd.randint(0, 6))))
+            q, away = rnd.randint(5, 4000), rnd.randint(0, 20)
+            fail, ms = int(q * rnd.uniform(0, 0.05)), q * rnd.randint(500, 20000)
+            users += [(w, ws, wh, who, max(1, q * w // 90), fail * w // 90, ms * w // 90, ts(away))
+                      for w in WINDOWS if away < w]
         for t in rnd.sample(every, k=8):
-            tables.append((ws, wh, t, rnd.randint(1, 3000), rnd.randint(0, 200), rnd.randint(1, len(people)), ts(rnd.randint(0, 10))))
+            r, wr, last = rnd.randint(1, 3000), rnd.randint(0, 200), rnd.randint(0, 20)
+            tables += [(w, ws, wh, t, max(1, r * w // 90), wr * w // 90, rnd.randint(1, len(people)), ts(last))
+                       for w in WINDOWS if last < w]
         for i in range(10):
-            ms = rnd.randint(60_000, 3_600_000)
-            slow.append((ws, wh, f"stmt-{wh}-{i}", rnd.choice(people), ts(rnd.randint(0, 29), rnd.randint(0, 23)), ms,
-                         rnd.randint(0, ms // 4), rnd.choice(["FINISHED", "FINISHED", "FAILED"]), "SELECT",
-                         f"SELECT * FROM {rnd.choice(every)} WHERE day >= current_date() - 30"))
+            ms, ago = rnd.randint(60_000, 3_600_000), rnd.randint(0, 60)
+            row = (ws, wh, f"stmt-{wh}-{i}", rnd.choice(people), ts(ago, rnd.randint(0, 23)), ms,
+                   rnd.randint(0, ms // 4), rnd.choice(["FINISHED", "FINISHED", "FAILED"]), "SELECT",
+                   f"SELECT * FROM {rnd.choice(every)} WHERE day >= current_date() - 30")
+            slow += [(w, *row) for w in WINDOWS if ago < w]
     put(con, "warehouse.warehouse_daily", "workspace_id VARCHAR, warehouse_id VARCHAR, day VARCHAR, up_minutes DOUBLE, "
         "busy_minutes DOUBLE, queries BIGINT, failed BIGINT, people BIGINT, service_principals BIGINT, queued_ms BIGINT, "
         "run_ms BIGINT", daily)
-    put(con, "warehouse.warehouse_users", "workspace_id VARCHAR, warehouse_id VARCHAR, identity VARCHAR, queries BIGINT, "
+    put(con, "warehouse.warehouse_users", "window_days BIGINT, workspace_id VARCHAR, warehouse_id VARCHAR, identity VARCHAR, queries BIGINT, "
         "failed BIGINT, run_ms BIGINT, last_query VARCHAR", users)
-    put(con, "warehouse.warehouse_tables", "workspace_id VARCHAR, warehouse_id VARCHAR, table_full_name VARCHAR, "
+    put(con, "warehouse.warehouse_tables", "window_days BIGINT, workspace_id VARCHAR, warehouse_id VARCHAR, table_full_name VARCHAR, "
         "reads BIGINT, writes BIGINT, people BIGINT, last_access VARCHAR", tables)
-    put(con, "warehouse.warehouse_slow", "workspace_id VARCHAR, warehouse_id VARCHAR, statement_id VARCHAR, identity VARCHAR, "
+    put(con, "warehouse.warehouse_slow", "window_days BIGINT, workspace_id VARCHAR, warehouse_id VARCHAR, statement_id VARCHAR, identity VARCHAR, "
         "start_time VARCHAR, total_ms BIGINT, queued_ms BIGINT, status VARCHAR, statement_type VARCHAR, text VARCHAR", slow)
     con.execute("CREATE OR REPLACE TABLE warehouse.warehouse_activity_info AS SELECT ? AS info",
-                [json.dumps({"exported": True, "days": 90, "end": END.isoformat(), "tables": {"rows": len(tables), "error": None}})])
+                [json.dumps({"exported": True, "days": 90, "windows": list(WINDOWS), "end": END.isoformat(), "tables": {"rows": len(tables), "error": None}})])
     # the snapshot build has no cost_daily_by_resource; a direct export does
     if not con.execute("SELECT 1 FROM information_schema.tables WHERE table_schema = 'findings' "
                        "AND table_name = 'f_cost_daily_by_resource'").fetchone():

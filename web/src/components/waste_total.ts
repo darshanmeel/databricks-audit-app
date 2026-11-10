@@ -1,14 +1,5 @@
-// P4-01-UI (tasks/P4-WASTE-SPEC.md section 9.3 item 1): the
-// ONE place "how much is being wasted" is computed, so Overview's Waste tile, the Waste tab's own
-// strip/charts and P4-44's printed summary can never silently disagree about the total.
-//
-// DEC-68 / DEC-50 / DEC-57 rule 4: `est_wasted_usd_list` is the only column whose basis is WASTE --
-// verified against the generated SQL for every id in WASTE_ITEMS (e.g. compute_warehouse_idle_gaps.
-// est_usd_list is the warehouse's WHOLE billed cost across every event, not just the idle stretch
-// that earned it a CRITICAL/WARN status -- which is exactly why that id left WASTE_ITEMS). Every
-// other dollar/DBU column on a WASTE_ITEMS entry is a magnitude shown for scale (a resource's own
-// spend, or a waste MEASURE with no price yet), never counted into the $ total. A check that
-// carries neither ranks by severity alone and reads "no cost estimate".
+// The one place the waste total is computed, so Overview, the Waste tab and the printed summary agree.
+// Only est_wasted_usd_list counts as waste $; other $/DBU columns show scale. A check with neither ranks by severity.
 import { numOrZero, useFindingAgg } from "./hooks";
 import { WASTE_ITEMS, bandOf } from "./tab_registry";
 import { firstAction } from "./overview_tile";
@@ -58,10 +49,7 @@ function isWasteDollarColumn(col: string | null): col is string {
   return col === "est_wasted_usd_list";
 }
 
-// One row-per-check identity, matched to the query's own grain (config/grains/*.yml) -- so summing
-// a $/DBU column across a check's flagged rows counts each real-world resource once even if a
-// capped or re-fetched page ever handed back the same key twice (tasks/P4-WASTE-SPEC.md 9.2's "row
-// key (count once)" column). Only the five ids that carry a genuine magnitude column need one.
+// One key per real resource (the check's grain), so a resource is counted once.
 export function wasteRowKey(itemId: string, row: Row): string {
   switch (itemId) {
     case "compute_warehouse_idle_minutes":
@@ -82,12 +70,8 @@ export function flaggedRows(rows: Row[] | null | undefined): Row[] {
   return (rows || []).filter((r) => r.status === "CRITICAL" || r.status === "WARN");
 }
 
-// Sums `col` over `rows`' flagged rows, once per wasteRowKey(item.id, r) -- shared by the $ total
-// below and by the DBU/magnitude figure a dollar-less check shows instead. Also reports whether
-// any de-duplicated flagged row actually carried a non-null value for `col`: a check can be
-// flagged (CRITICAL/WARN) with every row's $/DBU column NULL (e.g. an unpriced or unbilled
-// warehouse, or a "tracking off" WARN with no measurement yet), and that must read as "unknown",
-// never as a priced $0 (DEC-57/58).
+// Sum `col` over flagged rows once per key, and say whether any row had a value: flagged rows with NULL cost
+// read "unknown", never $0.
 function sumFlaggedByKey(item: WasteItem, rows: Row[], col: string): { total: number; anyNonNull: boolean } {
   const seen = new Set<string>();
   let total = 0;
@@ -103,10 +87,7 @@ function sumFlaggedByKey(item: WasteItem, rows: Row[], col: string): { total: nu
   return { total, anyNonNull };
 }
 
-// The ONLY $ figure a WASTE_ITEMS entry ever contributes: null unless the item's own dollarCol IS
-// the one waste-basis column (isWasteDollarColumn) -- never a resource's whole spend (DEC-68). Also
-// null (not 0) when every flagged row's dollarCol was NULL, so the entry falls through to dbuVal
-// and unpricedFlagged instead of reading as "$0 of waste".
+// Waste $ only from est_wasted_usd_list; null (not 0) when every flagged row's value is NULL.
 function possibleWasteUsd(item: WasteItem, rows: Row[], discountPct: number): number | null {
   if (!isWasteDollarColumn(item.dollarCol)) return null;
   const { total, anyNonNull } = sumFlaggedByKey(item, rows, item.dollarCol);
@@ -147,7 +128,7 @@ function buildWasteWorklistEntry(item: WasteItem, findingsById: Record<string, F
       const { total, anyNonNull } = sumFlaggedByKey(item, rows, item.spendCol);
       billedUsd = anyNonNull ? total * (1 - discountPct) : null;
     }
-    // T-67 review round 2 (carried over): a capped row slice never reads as the whole finding.
+    // A capped row slice never reads as the whole finding.
     truncated = !!(data.rows_total > data.returned);
     if (truncated) { returnedRows = data.returned; rowsTotal = data.rows_total; }
     reason = findingReason(item.id, data.header, rows);
@@ -166,8 +147,7 @@ function buildWasteWorklistEntry(item: WasteItem, findingsById: Record<string, F
     title: (f && f.title) || item.id,
     band, isFlagged, dollarUsd, dbuVal, billedUsd, spendWords: item.spendWords || "billed", flaggedCount, discountPct,
     truncated, returnedRows, rowsTotal, reason, topRow,
-    // T-75A review round 1 (DEC-66.2): `f` already carries library_corrections (every
-    // /api/findings row does) -- no extra fetch.
+    // `f` already carries library_corrections.
     corrections: f ? (f.library_corrections || []) : [],
     action: data ? firstAction(data.header) : null,
     rowCount: f ? f.row_count : 0,

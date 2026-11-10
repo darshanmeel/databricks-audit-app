@@ -614,6 +614,25 @@ def _validate_thresholds(thresholds: dict) -> dict:
     return thresholds
 
 
+def resolve_params(spec) -> dict:
+    """{param name: (value in effect, source)} for every :param a query header declares, in
+    dbt/macros/param.sql's order: thresholds.yml[query_id], then [_all], then the header default.
+    `source` is "your setting" for a thresholds.yml value, else "default"."""
+    thresholds = load_thresholds()
+    out: dict = {}
+    for param in spec.params or []:
+        name = param.get("name")
+        if not name:
+            continue
+        value, source = param.get("default"), "default"
+        for scope in (spec.query_id, "_all"):
+            if name in (thresholds.get(scope) or {}):
+                value, source = thresholds[scope][name], "your setting"
+                break
+        out[name] = (value, source)
+    return out
+
+
 def query_tags() -> dict[str, str]:
     """settings query_tags: the tags on every query this app runs."""
     try:

@@ -36,10 +36,8 @@ async function getJson<T = any>(path: string, params?: Params): Promise<T> {
   return res.json();
 }
 
-// P4-T-IDX (tasks/P4-T-SPEC.md section 4.6): the tag filter is module-level state, not a param
-// every caller threads through by hand -- App calls Api.setTagFilter(tagFilter) at the top of its
-// own render, before any child (and so before any of the calls below) runs. `filters.tag` shape:
-// null, or {groups: [{key, display_key, values: [..]}]} (empty values = any value of that name).
+// The tag filter is module state: App sets it before any child calls below.
+// Shape: null, or {groups: [{key, display_key, values}]} (empty values = any value).
 let _tagFilter: TagFilter | null = null;
 
 function setTagFilter(tag: TagFilter | null) {
@@ -68,8 +66,7 @@ export interface AggOptions {
 }
 
 export const Api = {
-  // P2-NOBUILD: the one call App.tsx makes before anything else -- {state, settings_error,
-  // database}, see app/api/app.py's own GET /api/status docstring for the four `state` values.
+  // The first call App makes: {state, settings_error, database}.
   status: () => getJson("/api/status"),
   meta: () => getJson<Meta>("/api/meta"),
   workspaces: () => getJson<Workspace[]>("/api/workspaces"),
@@ -85,12 +82,9 @@ export const Api = {
   setTagFilter,
   tagFilterKey,
   tagParams: _tagParams,
-  // P4-T-IDX: GET /api/tags -- the tag search picker's own feed. `tagKey` (optional) restricts to
-  // one key's "all values".
+  // GET /api/tags, the tag picker's feed; `tagKey` limits it to one key's values.
   tags: (search: string, tagKey?: string | null, limitKeys?: number, limitValues?: number) => getJson<TagsAnswer>("/api/tags", { search, tag_key: tagKey, limit_keys: limitKeys, limit_values: limitValues }),
-  // P4-T-IDX: the stored tag filter (Api.setTagFilter) rides along automatically, same as
-  // `finding`/`aggregate` below -- the findings table's own row/status counts and
-  // tag_applied/tag_chain_label now reflect the active tag filter (section 5.5).
+  // The stored tag filter rides along, so the table's counts follow it.
   tagOrigins: (window_: number, workspaceIds: string[] | null, envs: string[] | null) =>
     getJson<TagOrigins>("/api/tag_origins", { window: window_, workspace_ids: workspaceIds, env: envs, ..._tagParams() }),
   tagCompliance: (window_: number, workspaceIds: string[] | null, envs: string[] | null) => getJson("/api/tag_compliance", { window: window_, workspace_ids: workspaceIds, env: envs, ..._tagParams() }),
@@ -112,17 +106,8 @@ export const Api = {
     getJson("/api/findings", {
       window: window_, workspace_ids: workspaceIds, env: envs, ..._tagParams(),
     }),
-  // jobId (T-70) is optional and scopes the finding to one job server-side, on a finding that
-  // carries a job_id column -- ignored, never an error, on one that doesn't
-  // (app/core/data._build_filters). The job focus panel is the only caller that passes it, and a
-  // job-scoped call is already one job -- the tag filter would only ever narrow it further
-  // in a way the drawer never shows, so it leaves it off (a bare job_id fetch stayed unfiltered
-  // under an active tag filter otherwise).
-  // statuses (T-68) is optional and scopes to those status values server-side, on a finding that
-  // carries a status column -- so a caller that only needs flagged rows (e.g. a tile summing a
-  // column across CRITICAL/WARN rows) fetches only those instead of an unfiltered, capped page.
-  // P4-T-IDX: the stored tag filter (Api.setTagFilter) rides along automatically as tag_key/
-  // tag_value -- no caller of `finding` needs to pass it itself.
+  // jobId scopes to one job on a check with a job_id column; the job panel leaves the tag filter off.
+  // statuses scopes to those status values server-side. The stored tag filter rides along otherwise.
   finding: (queryId: string, window_: number, workspaceIds: string[] | null, envs: string[] | null,
     limit?: number, offset?: number, jobId?: string | null, statuses?: string[] | null, columns?: string[] | null) =>
     getJson<FindingData>(`/api/finding/${encodeURIComponent(queryId)}`, {
@@ -136,10 +121,7 @@ export const Api = {
       columns,
       ...(jobId ? {} : _tagParams()),
     }),
-  // T-68: a server-side GROUP BY/SUM (or COUNT/COUNT DISTINCT) over EVERY row matching the
-  // filters -- no ui.max_rows cap before the aggregation -- for a Cost/ML & AI/Overview tile or
-  // chart that used to derive its number by summing the capped row page `finding` above returns.
-  // `group` is an array of 0-2 real column names; `opts` is {statuses, top, belowFloor}.
+  // A server-side GROUP BY over every matching row (no row cap); `group` is 0-2 columns, `opts` {statuses, top, belowFloor}.
   aggregate: (queryId: string, window_: number, workspaceIds: string[] | null, envs: string[] | null,
     group: string[], agg: string, value?: string | null, opts?: AggOptions) => {
     const o = opts || {};

@@ -1,19 +1,5 @@
-// P2-NOBUILD: the friendly screen App.tsx renders in place of
-// the whole shell whenever GET /api/status says the app is not ready, so a fresh checkout (no
-// database yet), a build that failed or never finished (dims.dim_workspace unreadable), or a typo
-// in config/settings.yml never reads as "Could not load 500 Internal Server Error" -- the exact
-// bug this task fixes. Each screen names the ONE next command (README.md's own "First run"
-// section; never a generic "check the logs"), so a first-time user has something concrete to type
-// instead of a stack trace.
-//
-// Reuses the same "honest-card" look every other "could not X" state in this app already uses
-// (finding_detail.tsx, primitives.tsx's ErrorBoundary) -- .fr-card only enlarges it for a
-// full-page screen; .honest-card.info/.warn (styles.css) are two new tone modifiers alongside the
-// existing not_assessed/empty_filters/error ones.
-//
-// Ownership note: this file only words the FOUR states GET /api/status can report --
-// "settings_invalid" | "no_database" | "build_incomplete" | "ready" (app/api/app.py's own
-// docstring). It decides nothing; the API already has.
+// The screen shown instead of the shell while GET /api/status is not ready (no database, unfinished build, bad
+// settings.yml), naming the one next command. Only words the four states; the API decides.
 
 import React from "react";
 
