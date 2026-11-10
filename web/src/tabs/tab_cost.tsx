@@ -1493,11 +1493,12 @@ function cbChartLabel(dim: CbDim, row: Row): string {
 function CbEntityCell({ dim, row }: { dim: CbDim; row: Row }) {
   if (row.is_other) return <span className="muted">{cbLabel(dim, row)}</span>;
   if (["warehouse", "job", "cluster"].includes(dim.key) && cbIsNotAttributed(dim, row)) return <span>{cbLabel(dim, row)}</span>;
-  if (dim.key === "warehouse") return <Ref kind="warehouse" id={row.warehouse_id} workspaceId={row.workspace_id} />;
-  if (dim.key === "job") return <Ref kind="job" id={row.job_id} workspaceId={row.workspace_id} label={row.job_name} />;
+  const ws = row.workspace_id != null ? <span className="muted">{` (${wsPhrase(row.workspace_id)})`}</span> : null;
+  if (dim.key === "warehouse") return <span><Ref kind="warehouse" id={row.warehouse_id} workspaceId={row.workspace_id} />{ws}</span>;
+  if (dim.key === "job") return <span><Ref kind="job" id={row.job_id} workspaceId={row.workspace_id} label={row.job_name} />{ws}</span>;
   if (dim.key === "cluster") {
     const kind = row.cluster_kind === "job_cluster" ? "job" : row.cluster_kind === "pipeline" ? "pipeline" : "cluster";
-    return <Ref kind={kind} id={row.entity_id} workspaceId={row.workspace_id} label={row.name} />;
+    return <span><Ref kind={kind} id={row.entity_id} workspaceId={row.workspace_id} label={row.name} />{ws}</span>;
   }
   return <span>{cbLabel(dim, row)}</span>;
 }
@@ -1652,6 +1653,55 @@ function TagKeyPickers({ wsOptions, ws, onWs, keyStats, active, onKey }: {
   );
 }
 
+// billing_origin_product -> the kind of spend the Workspace cut splits each bar into; the rest is Other
+const CB_KINDS = ["SQL warehouses", "Jobs", "Pipelines", "Clusters & notebooks", "AI & serving", "Other"];
+const CB_KIND_OF: Record<string, string> = {
+  SQL: "SQL warehouses", JOBS: "Jobs", DLT: "Pipelines", LAKEFLOW_CONNECT: "Pipelines",
+  ALL_PURPOSE: "Clusters & notebooks", INTERACTIVE: "Clusters & notebooks",
+  MODEL_SERVING: "AI & serving", VECTOR_SEARCH: "AI & serving", AI_GATEWAY: "AI & serving", AI_RUNTIME: "AI & serving",
+  AI_FUNCTIONS: "AI & serving", FOUNDATION_MODEL_TRAINING: "AI & serving", AGENT_EVALUATION: "AI & serving",
+  AGENT_BRICKS: "AI & serving", ONLINE_TABLES: "AI & serving",
+};
+
+// One bar per workspace split by kind of spend, biggest total first; the tail folds into Other.
+function KindBars({ rows, n }: { rows: { name: string; parts: Record<string, number> }[]; n: number }) {
+  const total = (p: Record<string, number>) => Object.values(p).reduce((t, v) => t + v, 0);
+  const sorted = rows.filter((r) => total(r.parts) > 0).sort((a, b) => total(b.parts) - total(a.parts));
+  const tail = sorted.slice(n);
+  const tailParts: Record<string, number> = {};
+  tail.forEach((r) => Object.entries(r.parts).forEach(([k, v]) => { tailParts[k] = (tailParts[k] || 0) + v; }));
+  const shown = tail.length ? [...sorted.slice(0, n), { name: `Other (${tail.length})`, parts: tailParts }] : sorted;
+  if (!shown.length) return <div className="chart-note ok"><div className="chart-note-text">No spend by workspace in this window.</div></div>;
+  const max = Math.max(1, ...shown.map((r) => total(r.parts)));
+  const kinds = CB_KINDS.filter((k) => shown.some((r) => (r.parts[k] || 0) > 0));
+  const color = (k: string) => (k === "Other" ? "var(--c-other)" : paletteColor(CB_KINDS.indexOf(k)));
+  return (
+    <div>
+      <div className="hbar-list">
+        {shown.map((r) => (
+          <div className="hbar-list-row" key={r.name}>
+            <div className="hbar-list-label" title={r.name}>{r.name}</div>
+            <div className="hbar-list-track" style={{ height: 14, display: "flex", background: "transparent" }}>
+              {kinds.filter((k) => (r.parts[k] || 0) > 0).map((k) => (
+                <div key={k} title={`${k}: ${fmtMoney(r.parts[k], 0)}`} style={{ width: `${(r.parts[k] / max) * 100}%`, background: color(k) }} />
+              ))}
+            </div>
+            <div className="hbar-list-value mono">{fmtMoney(total(r.parts), 0)}</div>
+          </div>
+        ))}
+      </div>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 14, marginTop: 10 }}>
+        {kinds.map((k) => (
+          <span key={k} style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+            <span style={{ width: 10, height: 10, borderRadius: 2, background: color(k) }} />{k}
+          </span>
+        ))}
+      </div>
+      <div className="metric-note" style={{ marginTop: 8 }}>Each workspace's total this window by kind of spend, biggest first; hover a part for its $. The change is under Change and in the table below.</div>
+    </div>
+  );
+}
+
 function CostChargebackContent({ filters, maxCat, meta, onVerdict }: TabProps) {
   useNames(); // re-render once workspace/job/cluster/warehouse names are ready
   const [dimKey, setDimKey] = React.useState("workspace");
@@ -1662,8 +1712,8 @@ function CostChargebackContent({ filters, maxCat, meta, onVerdict }: TabProps) {
   const dim = CB_DIMENSIONS.find((d) => d.key === dimKey) || CB_DIMENSIONS[0];
 
   const rowsState = useFindingData(dim.id, filters.window, filters.workspaceIds, filters.envs, 5000);
-  // Workspace cut: each workspace's spend on SQL warehouses, from the warehouse cut
-  const whState = useFindingData(dimKey === "workspace" ? "cost_chargeback_by_warehouse" : null, filters.window, filters.workspaceIds, filters.envs, 5000);
+  // Workspace cut: each workspace's spend split by kind, from the product-line cut
+  const prodState = useFindingData(dimKey === "workspace" ? "cost_chargeback_by_service" : null, filters.window, filters.workspaceIds, filters.envs, 5000);
   // One row per workspace per check, so a small cap cut off whole checks.
   const reconcileState = useFindingData("cost_chargeback_reconcile", filters.window, filters.workspaceIds, filters.envs, 5000);
   const reconcileReady = reconcileState.phase === "ready" && reconcileState.outcome === "ok_rows";
@@ -1749,19 +1799,21 @@ function CostChargebackContent({ filters, maxCat, meta, onVerdict }: TabProps) {
   }, [rows, dim.key, disc]);
   const notAttr = rows ? rows.filter((r) => cbIsNotAttributed(dim, r)) : [];
   const notAttrUsd = notAttr.reduce((s, r) => s + numOrZero(cbMoney(dim, r, disc).cur), 0);
-  // per workspace: its spend on SQL warehouses (warehouse cut, not-attributed rows left out)
-  const whByWs = React.useMemo(() => {
-    if (dimKey !== "workspace" || whState.phase !== "ready" || whState.outcome !== "ok_rows") return null;
-    const whDim = CB_DIMENSIONS.find((d) => d.key === "warehouse")!;
-    const whDisc = numOrZero(whState.data.discount_pct);
-    const m = new Map<string, number>();
-    whState.data.rows.forEach((r: Row) => {
-      if (r.is_other || cbIsNotAttributed(whDim, r)) return;
-      const k = String(r.workspace_id);
-      m.set(k, (m.get(k) || 0) + numOrZero(cbMoney(whDim, r, whDisc).cur));
+  // workspace cut: each workspace's spend by kind (product lines grouped)
+  const kindRows = React.useMemo(() => {
+    if (dimKey !== "workspace" || prodState.phase !== "ready" || prodState.outcome !== "ok_rows") return null;
+    const sDim = CB_DIMENSIONS.find((d) => d.key === "service")!;
+    const sDisc = numOrZero(prodState.data.discount_pct);
+    const m = new Map<string, Record<string, number>>();
+    prodState.data.rows.forEach((r: Row) => {
+      const k = r.workspace_id == null ? "" : String(r.workspace_id);
+      const e = m.get(k) || {};
+      const kind = CB_KIND_OF[String(r.billing_origin_product)] || "Other";
+      e[kind] = (e[kind] || 0) + numOrZero(cbMoney(sDim, r, sDisc).cur);
+      m.set(k, e);
     });
-    return m;
-  }, [dimKey, whState]);
+    return [...m.entries()].map(([k, parts]) => ({ name: k ? wsPhrase(k) : "Account-level (no workspace)", parts }));
+  }, [dimKey, prodState]);
   // warehouse, job and cluster cuts: one bar per workspace, its spend on them (dark) of all its spend
   const byWsItems = React.useMemo(() => {
     if (!fold || !rows) return null;
@@ -1779,22 +1831,15 @@ function CostChargebackContent({ filters, maxCat, meta, onVerdict }: TabProps) {
       .filter((e) => e.whole > 0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fold, rows, dim.key, disc]);
-  const listedWs = new Set((rows || []).filter((x) => !x.is_other).map((x) => String(x.workspace_id)));
   const spendItems = byWsItems ? byWsItems : displayRows
     // The check's own pooled row is renamed so it isn't confused with the chart's "Other" bar.
     ? displayRows
         .map((r) => {
           const cur = numOrZero(cbMoney(dim, r, disc).cur);
           const name = r.is_other ? cbLabel(dim, r).replace(/^Other/, "Smaller ones pooled") : cbLabel(dim, r);
-          // workspace cut: the bar is the workspace, its dark part what ran on SQL warehouses
-          if (whByWs) {
-            const wh = r.is_other ? [...whByWs.entries()].filter(([k]) => !listedWs.has(k)).reduce((t, [, v]) => t + v, 0)
-              : whByWs.get(String(r.workspace_id)) || 0;
-            return { name, value: Math.min(cur, wh), whole: cur, untagged: cbIsNotAttributed(dim, r) };
-          }
           return { name, value: cur, untagged: cbIsNotAttributed(dim, r) };
         })
-        .filter((e) => ((e as { whole?: number }).whole ?? e.value) > 0)
+        .filter((e) => e.value > 0)
     : null;
 
   // price_join_fanout is a self-check on the shared price join every one of these 8 cuts uses, not
@@ -1873,17 +1918,15 @@ function CostChargebackContent({ filters, maxCat, meta, onVerdict }: TabProps) {
               </div>
             )}
           >
-            {cbMetric === "spend" ? (spendItems && spendItems.length ? (
+            {cbMetric === "spend" && kindRows ? <KindBars rows={kindRows} n={maxCat} /> : cbMetric === "spend" ? (spendItems && spendItems.length ? (
               <RankedBars
                 items={spendItems}
                 n={maxCat}
                 untaggedFirst
-                rankByWhole={!!whByWs}
+                wholeColor={fold ? "var(--seq-0)" : undefined}
                 valueFmt={(v) => fmtMoney(v, 0)}
                 unitLabel="$"
-                note={whByWs
-                  ? "Each workspace's total this window; the dark part ran on SQL warehouses, the rest on jobs, clusters, pipelines and serverless. The change is under Change and in the table below."
-                  : fold ? `Each workspace by its spend on ${dim.noun}s (dark), most first; light is the rest of its spend. Every ${dim.noun} is in the table below.`
+                note={fold ? `Each workspace by its spend on ${dim.noun}s (dark), most first; light is the rest of its spend. Every ${dim.noun} is in the table below.`
                   : `Each ${dim.noun}'s total this window; the change against the previous period is under Change and in the table below.`}
               />
             ) : <div className="chart-note ok"><div className="chart-note-text">{`No spend by ${dim.noun} in this window.`}</div></div>)
