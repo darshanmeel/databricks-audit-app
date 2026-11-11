@@ -166,9 +166,12 @@ def test_workspace_schemas_and_a_persons_tables(tmp_path, monkeypatch):
     monkeypatch.setenv("AUDIT_DB", str(_detail_db(tmp_path)))
     from app.core import data
 
-    got = data.read_workspace_schemas("1")
-    assert got["catalogs"] == ["sales"]
-    assert {(r["table_schema"], r["tables"], r["views"]) for r in got["schemas"]} == {("work", 1, 1), ("locked", 1, 0)}
+    got = data.read_data_levels("schema", 30, {"1"})["rows"]
+    assert {r["table_catalog"] for r in got} == {"sales"}
+    assert {(r["table_schema"], r["tables"], r["views"]) for r in got} == {("work", 1, 1), ("locked", 1, 0)}
+    # scaled against every schema, so the workspace filter doesn't move a schema's index
+    every = {r["table_schema"]: r["complexity_index"] for r in data.read_data_levels("schema", 30)["rows"] if r["table_catalog"] == "sales"}
+    assert {r["table_schema"]: r["complexity_index"] for r in got} == every
     tables = data.read_person_tables("alice@example.com")["rows"]
     assert tables[0]["table_full_name"] == "sales.work.a" and tables[0]["workspaces"] == ["analytics-prod"]
     assert data.read_table_sizes()["not_described"][0]["table_schema"] == "locked"
@@ -223,7 +226,7 @@ def test_volumes_and_their_access_and_the_schemas_of_a_workspace(tmp_path, monke
     assert data.read_volume_users("sales.work.raw")["rows"][0]["identity"] == "alice@example.com"
     assert [v["volume_full_name"] for v in data.read_volumes({"2"})["volumes"]] == []
 
-    work = next(s for s in data.read_workspace_schemas("1")["schemas"] if s["table_schema"] == "work")
+    work = next(s for s in data.read_data_levels("schema", 30, {"1"})["rows"] if s["table_schema"] == "work")
     assert (work["tables"], work["views"], work["table_columns"], work["view_columns"]) == (1, 1, 10, 5)
     assert (work["volumes"], work["volume_files"], work["volume_bytes"]) == (2, 12, 5070)
     one = next(r for r in data.read_workspaces(30, None)["rows"] if r["workspace_id"] == "1")
@@ -274,4 +277,4 @@ def test_catalogs_pinned_in_workspace_csv_win_over_lineage(tmp_path, monkeypatch
     rows = {r["workspace_id"]: r for r in data.read_workspaces(30, None)["rows"]}
     # sales is read mostly from workspace 1, but the file pins it to 2
     assert rows["2"]["catalogs"] == ["sales", "sandbox"] and rows["1"]["catalogs"] == []
-    assert data.read_workspace_schemas("2")["catalogs"] == ["other", "sales", "sandbox"]
+    assert sorted(r["table_catalog"] for r in data.read_data_levels("catalog", 30, {"2"})["rows"]) == ["sales", "sandbox"]

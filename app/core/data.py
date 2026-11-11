@@ -1979,10 +1979,14 @@ def _identity_kind(who: str | None) -> str:
     return "Person" if "@" in who else "Other"
 
 
-def read_workspace_schemas(workspace_id: str | None, window: int = 30, top: int = 50) -> dict:
-    """Each schema of the catalogs one workspace holds (every workspace when None, the biggest `top`):
-    tables, views and their columns, volumes and their files, size, and its tables by usage class;
-    not_assessed without table sizes."""
+def read_data_levels(level: str, window: int = 30, workspace_scope: set[str] | None = None, tag_filter=None) -> dict:
+    """One row per catalog or schema (level "catalog" / "schema"): what it holds (storage.table_detail,
+    volume_detail), its tables by usage class, reads and writes, people and service principals
+    (usage.user_tables), queries (usage.table_query_daily) and active days (usage.table_daily) in the
+    window, with the workspace's complexity and usage index scaled against every row of that level,
+    so a filter never moves a row's numbers; not_assessed without table sizes."""
+    import datetime as _dt
+
     from app.core import usage
 
     con = _connect()
@@ -1991,47 +1995,108 @@ def read_workspace_schemas(workspace_id: str | None, window: int = 30, top: int 
             "SELECT table_schema, table_name FROM information_schema.tables WHERE table_catalog = current_database()"
         ).fetchall()}
         if ("storage", "table_detail") not in have:
-            return {"outcome": "not_assessed", "schemas": [], "catalogs": []}
+            return {"outcome": "not_assessed", "rows": []}
         info_raw = con.execute("SELECT info FROM usage.workspace_activity_info LIMIT 1").fetchone() \
             if ("usage", "workspace_activity_info") in have else None
         end = _seen_end(json.loads(info_raw[0]) if info_raw and info_raw[0] else None)
-        homes = {c: ws for c, (ws, _s) in _catalog_homes(con, have).items()}
-        catalogs = sorted(c for c, ws in homes.items() if workspace_id is None or ws == str(workspace_id))
-        _home, names, _envs = _home_and_names(con, have)
+        home, names, envs = _home_and_names(con, have)
+        kept = _tag_kept_workspaces(con, tag_filter)
+        tkey = "table_catalog" if level == "catalog" else "table_catalog, table_schema"
         tbl = con.execute(
-            "SELECT table_catalog, table_schema, COUNT(*) FILTER (WHERE detail IS DISTINCT FROM 'view'), "
+            f"SELECT {tkey}, COUNT(DISTINCT table_schema), COUNT(*) FILTER (WHERE detail IS DISTINCT FROM 'view'), "
             "COUNT(*) FILTER (WHERE detail = 'view'), SUM(column_count) FILTER (WHERE detail IS DISTINCT FROM 'view'), "
-            "SUM(column_count) FILTER (WHERE detail = 'view'), SUM(size_in_bytes) FROM storage.table_detail "
-            "WHERE list_contains(?, table_catalog) GROUP BY 1, 2", [catalogs]).fetchall()
+            "SUM(column_count) FILTER (WHERE detail = 'view'), SUM(size_in_bytes) FROM storage.table_detail GROUP BY ALL").fetchall()
+        vkey = "volume_catalog" if level == "catalog" else "volume_catalog, volume_schema"
         vol = con.execute(
-            "SELECT volume_catalog, volume_schema, COUNT(*), SUM(files), SUM(size_in_bytes) FROM storage.volume_detail "
-            "WHERE list_contains(?, volume_catalog) GROUP BY 1, 2", [catalogs]).fetchall() \
-            if ("storage", "volume_detail") in have else []
+            f"SELECT {vkey}, COUNT(DISTINCT volume_schema), COUNT(*), SUM(files), SUM(size_in_bytes) "
+            "FROM storage.volume_detail GROUP BY ALL").fetchall() if ("storage", "volume_detail") in have else []
         classes = _table_classes(con, have, window, end)
+        sensitive = _sensitive(con, have)
+        ut, used = _windowed(con, have, "user_tables", window)
+        who = con.execute(f"SELECT DISTINCT table_full_name, identity FROM {ut} WHERE reads > 0 OR writes > 0").fetchall() \
+            if ut else []
+        since = end - _dt.timedelta(days=window)
+        queries = con.execute(
+            "SELECT table_full_name, SUM(queries) FROM usage.table_query_daily WHERE CAST(day AS DATE) > ? GROUP BY 1",
+            [since]).fetchall() if ("usage", "table_query_daily") in have else []
+        days = con.execute(
+            "SELECT DISTINCT table_full_name, CAST(day AS DATE) FROM usage.table_daily "
+            "WHERE CAST(day AS DATE) > ? AND (reads > 0 OR writes > 0)", [since]).fetchall() \
+            if ("usage", "table_daily") in have else []
     finally:
         con.close()
-    blank = {"tables": 0, "views": 0, "table_columns": 0, "view_columns": 0, "size_in_bytes": 0,
-             "volumes": 0, "volume_files": 0, "volume_bytes": 0}
-    by: dict[tuple, dict] = {}
-    for c, s, t, v, tc, vc, size in tbl:
-        by.setdefault((c, s), dict(blank)).update({"tables": int(t or 0), "views": int(v or 0), "table_columns": int(tc or 0),
-                                                    "view_columns": int(vc or 0), "size_in_bytes": int(size or 0)})
-    for c, s, n, files, size in vol:
-        by.setdefault((c, s), dict(blank)).update({"volumes": int(n or 0), "volume_files": int(files or 0),
-                                                    "volume_bytes": int(size or 0)})
+    width = 1 if level == "catalog" else 2
+
+    def key(parts):
+        return parts[0] if width == 1 else tuple(parts[:2])
+
+    blank = {"schemas": 0, "tables": 0, "views": 0, "table_columns": 0, "view_columns": 0, "size_in_bytes": 0,
+             "volumes": 0, "volume_files": 0, "volume_bytes": 0, "reads": 0, "writes": 0, "last_read": None,
+             "last_write": None, "sensitive_tables": 0, "unread_bytes": 0, "queries": 0}
+    by: dict = {}
+    for r in tbl:
+        if usage.skipped_catalog(r[0]):
+            continue
+        n_schemas, t, v, tc, vc, size = r[width:]
+        by.setdefault(key(r), {**blank, "classes": {}}).update(
+            {"schemas": int(n_schemas or 0), "tables": int(t or 0), "views": int(v or 0), "table_columns": int(tc or 0),
+             "view_columns": int(vc or 0), "size_in_bytes": int(size or 0)})
+    for r in vol:
+        if usage.skipped_catalog(r[0]):
+            continue
+        n_schemas, n, files, size = r[width:]
+        m = by.setdefault(key(r), {**blank, "classes": {}})
+        m.update({"schemas": max(m["schemas"], int(n_schemas or 0)), "volumes": int(n or 0),
+                  "volume_files": int(files or 0), "volume_bytes": int(size or 0)})
+
+    def of(full):
+        parts = str(full).split(".")
+        return key(parts) if len(parts) == 3 else None
+
     for name, t in classes.items():
-        parts = name.split(".")
-        if len(parts) == 3 and (parts[0], parts[1]) in by and not t["view"]:
-            mix = by[(parts[0], parts[1])].setdefault("classes", {})
-            mix[t["usage_class"]] = mix.get(t["usage_class"], 0) + 1
-    schemas = [{"table_catalog": c, "table_schema": s, "classes": {}, "workspace_name": names.get(homes.get(c), homes.get(c)), **r}
-               for (c, s), r in by.items()]
-    schemas.sort(key=lambda r: (-(r["size_in_bytes"] + r["volume_bytes"]), r["table_catalog"], r["table_schema"]))
-    total = len(schemas)
-    if workspace_id is None:
-        schemas = schemas[:top]
-    return {"outcome": "ok_rows" if schemas else "ok_empty", "catalogs": catalogs, "schemas": schemas, "total": total,
-            "classes": [k for k, _l, _m in usage.CLASSES]}
+        m = by.get(of(name))
+        if m is None or t["view"]:
+            continue
+        m["classes"][t["usage_class"]] = m["classes"].get(t["usage_class"], 0) + 1
+        if t["usage_class"] in usage.UNREAD_CLASSES:
+            m["unread_bytes"] += int(t["size_in_bytes"] or 0)
+        m["reads"] += t["reads"]
+        m["writes"] += t["writes"]
+        m["last_read"] = max(filter(None, [m["last_read"], t["last_read"]]), default=None)
+        m["last_write"] = max(filter(None, [m["last_write"], t["last_write"]]), default=None)
+        m["sensitive_tables"] += 1 if name in sensitive else 0
+    people: dict = {}
+    for name, ident in who:
+        if of(name) in by:
+            people.setdefault(of(name), set()).add(ident)
+    for name, n in queries:
+        if of(name) in by:
+            by[of(name)]["queries"] += int(n or 0)
+    active: dict = {}
+    for name, day in days:
+        if of(name) in by:
+            active.setdefault(of(name), set()).add(day)
+    rows = []
+    for k, m in by.items():
+        cat = k if width == 1 else k[0]
+        ws = home.get(cat)
+        kinds = [_identity_kind(p) for p in people.get(k, ())]
+        rows.append({"table_catalog": cat, **({} if width == 1 else {"table_schema": k[1]}),
+                     "workspace_id": ws, "workspace_name": names.get(ws, ws) if ws else None, "env": envs.get(ws),
+                     **m, "active_people": kinds.count("Person"),
+                     "active_service_principals": kinds.count("Service principal"),
+                     "active_days": len(active.get(k, ()))})
+    # indexes over every row of the level, before any filter, so a filter never moves them
+    for r, c, u, cp, up in zip(rows, usage.complexity_index(rows), usage.usage_index(rows, window),
+                               usage.index_parts(rows, usage.COMPLEXITY_WEIGHTS),
+                               usage.index_parts(rows, usage.USAGE_WEIGHTS, window)):
+        r.update({"complexity_index": c, "usage_index": u, "complexity_parts": {k: round(v, 1) for k, v in cp.items()},
+                  "usage_parts": {k: round(v, 1) for k, v in up.items()},
+                  "signal": usage.signal(c, u)})
+    rows = [r for r in rows if (workspace_scope is None or r["workspace_id"] in workspace_scope)
+            and (kept is None or r["workspace_id"] in kept)]
+    rows.sort(key=lambda r: (-r["complexity_index"], r["table_catalog"], r.get("table_schema") or ""))
+    return {"outcome": "ok_rows" if rows else "ok_empty", "level": level, "window_days": used or window, "rows": rows}
 
 
 def read_person_tables(identity: str, window: int = 30) -> dict:

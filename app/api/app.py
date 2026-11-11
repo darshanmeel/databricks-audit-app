@@ -154,6 +154,7 @@ import json
 import mimetypes
 import sys
 from pathlib import Path
+from typing import Literal
 
 import duckdb
 import yaml
@@ -849,10 +850,17 @@ def get_workspace_usage(
     return app_core_data.read_workspaces(window, scope, _parse_tag_filter(None, None, tag))
 
 
-@app.get("/api/workspace_schemas")
-def get_workspace_schemas(workspace_id: str | None = Query(default=None), window: int | None = Query(default=None)) -> dict:
+@app.get("/api/data_levels")
+def get_data_levels(
+    level: Literal["catalog", "schema"],
+    window: int | None = Query(default=None),
+    workspace_ids: list[str] = Query(default=[]),
+    env: list[str] = Query(default=[]),
+    tag: list[str] = Query(default=[]),
+) -> dict:
     window = window if window is not None else app_config.load_settings()["default_window"]
-    return app_core_data.read_workspace_schemas(workspace_id, window)
+    scope = app_rollup._resolve_workspace_scope(workspace_ids or None, env or None)
+    return app_core_data.read_data_levels(level, window, scope, _parse_tag_filter(None, None, tag))
 
 
 @app.get("/api/activity")

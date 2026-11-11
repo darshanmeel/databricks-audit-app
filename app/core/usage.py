@@ -1,5 +1,5 @@
 """Data usage: the usage class of a table or volume, the complexity and usage index of a workspace,
-and its signal. The one place these rules and weights live; the Data usage screens and the AI/BI
+catalog or schema, and its signal. The one place these rules and weights live; the Data usage screens and the AI/BI
 Workspace Usage dashboard follow them.
 """
 from __future__ import annotations
@@ -26,7 +26,7 @@ def skipped_catalog(catalog: str | None) -> bool:
     """System and sample catalogs, and Databricks' own (__databricks_internal, __databricks_internal_catalog_*)."""
     return not catalog or catalog in SKIP_CATALOGS or catalog.startswith("__databricks_internal")
 
-# each input on a log scale against the largest workspace shown; the weights sum to 1
+# each input on a log scale against the largest row of its level; the weights sum to 1
 COMPLEXITY_WEIGHTS = {"views": 0.20, "view_columns": 0.15, "tables": 0.20, "table_columns": 0.15,
                       "volume_files": 0.10, "size_in_bytes": 0.20}
 USAGE_WEIGHTS = {"active_people": 0.35, "active_service_principals": 0.15, "queries": 0.30}
@@ -70,17 +70,26 @@ def scale(values: list) -> list[float]:
     return [100 * math.log1p(v or 0) / top if top else 0.0 for v in values]
 
 
+def index_parts(rows: list[dict], weights: dict, window_days: int | None = None) -> list[dict]:
+    """Per row, each input's points in the index (weight x scaled value), unrounded; with window_days,
+    active days too, linear against the window."""
+    scaled = {k: scale([r.get(k) or 0 for r in rows]) for k in weights}
+    days = max(int(window_days or 1), 1)
+    out = []
+    for i, r in enumerate(rows):
+        parts = {k: w * scaled[k][i] for k, w in weights.items()}
+        if window_days is not None:
+            parts["active_days"] = ACTIVE_DAYS_WEIGHT * 100 * min(int(r.get("active_days") or 0), days) / days
+        out.append(parts)
+    return out
+
+
 def complexity_index(rows: list[dict]) -> list[float]:
-    scaled = {k: scale([r.get(k) or 0 for r in rows]) for k in COMPLEXITY_WEIGHTS}
-    return [round(sum(w * scaled[k][i] for k, w in COMPLEXITY_WEIGHTS.items()), 1) for i in range(len(rows))]
+    return [round(sum(p.values()), 1) for p in index_parts(rows, COMPLEXITY_WEIGHTS)]
 
 
 def usage_index(rows: list[dict], window_days: int) -> list[float]:
-    scaled = {k: scale([r.get(k) or 0 for r in rows]) for k in USAGE_WEIGHTS}
-    days = max(int(window_days or 1), 1)
-    return [round(sum(w * scaled[k][i] for k, w in USAGE_WEIGHTS.items())
-                  + ACTIVE_DAYS_WEIGHT * 100 * min(int(r.get("active_days") or 0), days) / days, 1)
-            for i, r in enumerate(rows)]
+    return [round(sum(p.values()), 1) for p in index_parts(rows, USAGE_WEIGHTS, window_days)]
 
 
 def signal(complexity: float | None, usage: float | None) -> str:

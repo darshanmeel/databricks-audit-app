@@ -1,4 +1,4 @@
-// Data usage: Workspaces, Tables (click one for its detail), Volumes (click one for who used it) and
+// Data usage: Workspaces, Catalogs and Schemas (the workspace's indexes one and two levels down), Tables (click one for its detail), Volumes (click one for who used it) and
 // People. Every table and volume falls in one usage class (app/core/usage.py): written never read,
 // idle 90d+, cooling or active. Reads and writes come from lineage, volume use from the audit log's
 // file events, sizes from DESCRIBE DETAIL and volume listings.
@@ -25,8 +25,10 @@ const CLASS_ORDER = ["written_never_read", "idle_90d", "cooling", "active"];
 const PAGE = 50;
 
 // Sub-tab to sub-tab hand-off: a workspace or class picked on Workspaces opens Tables filtered by it;
-// a person or volume picked on Activity opens it on People or Volumes.
-export const handoff: { workspace?: string | null; cls?: string | null; table?: string | null; person?: string | null; volume?: string | null } = {};
+// a catalog opens Schemas, a schema opens Tables searched for it; a person or volume picked on
+// Activity opens it on People or Volumes.
+export const handoff: { workspace?: string | null; cls?: string | null; table?: string | null; person?: string | null; volume?: string | null;
+  catalog?: string | null; q?: string | null } = {};
 
 function useApi(fn: () => Promise<any>, key: string) {
   const [state, setState] = React.useState<{ phase: string; data: any }>({ phase: "loading", data: null });
@@ -142,8 +144,9 @@ export function envColors(rows: any[]): Record<string, string> {
   return Object.fromEntries(envs.map((e, i) => [e, paletteColor(i)]));
 }
 
-// Each workspace by complexity (x) and usage (y), bubble = data it holds, colour = env; a click picks it.
-export function Scatter({ rows, onPick }: { rows: any[]; onPick?: (workspaceId: string) => void }) {
+// Each workspace, catalog or schema by complexity (x) and usage (y), bubble = data it holds, colour = env; a click picks it.
+export function Scatter({ rows, onPick, id = (r) => String(r.workspace_id), label = (r) => r.workspace_name }:
+  { rows: any[]; onPick?: (id: string) => void; id?: (r: any) => string; label?: (r: any) => string }) {
   const W = 960, H = 320, P = 40;
   const colors = envColors(rows);
   const held = (r: any) => (r.size_in_bytes || 0) + (r.volume_bytes || 0);
@@ -164,10 +167,10 @@ export function Scatter({ rows, onPick }: { rows: any[]; onPick?: (workspaceId: 
         <text x={x(98)} y={y(4)} textAnchor="end" fontSize={10} fill="currentColor" opacity={0.5}>built, little used</text>
         <text x={x(2)} y={y(4)} fontSize={10} fill="currentColor" opacity={0.5}>small, little used</text>
         {rows.map((r) => (
-          <circle key={r.workspace_id} cx={x(r.complexity_index || 0)} cy={y(r.usage_index || 0)} r={rad(held(r))}
+          <circle key={id(r)} cx={x(r.complexity_index || 0)} cy={y(r.usage_index || 0)} r={rad(held(r))}
             fill={colors[r.env || "unknown"]} fillOpacity={0.55} stroke={colors[r.env || "unknown"]}
-            style={onPick ? { cursor: "pointer" } : undefined} onClick={onPick ? () => onPick(String(r.workspace_id)) : undefined}>
-            <title>{`${r.workspace_name}${r.env ? ` · ${r.env}` : ""}: complexity ${r.complexity_index ?? "-"}, usage ${r.usage_index}, ${fmtBytes(held(r))} in tables and volumes, ${r.signal}`}</title>
+            style={onPick ? { cursor: "pointer" } : undefined} onClick={onPick ? () => onPick(id(r)) : undefined}>
+            <title>{`${label(r)}${r.env ? ` · ${r.env}` : ""}: complexity ${r.complexity_index ?? "-"}, usage ${r.usage_index}, ${fmtBytes(held(r))} in tables and volumes, ${r.signal}`}</title>
           </circle>
         ))}
       </svg>
@@ -396,6 +399,125 @@ function UsageWorkspacesContent({ filters, goTo, onVerdict }: LooseProps) {
   );
 }
 
+// ─────────── Catalogs · Schemas ───────────
+const PART_LABEL: Record<string, string> = {
+  views: "views", view_columns: "view columns", tables: "tables", table_columns: "table columns", volume_files: "volume files",
+  size_in_bytes: "size", active_people: "people", active_service_principals: "service principals", queries: "queries", active_days: "active days",
+};
+const parts = (p: Record<string, number> | undefined) =>
+  Object.entries(p || {}).map(([k, v]) => `${PART_LABEL[k] || k} ${v}`).join(" + ");
+
+// One row per catalog or schema with the workspace's indexes, scaled against every catalog (or
+// schema) in the export, so the filters below only pick rows and never move a number.
+function UsageLevelContent({ filters, goTo, onVerdict, level }: LooseProps) {
+  const isCat = level === "catalog";
+  const noun = isCat ? "catalog" : "schema";
+  const key = JSON.stringify([level, filters.window, filters.workspaceIds, filters.envs, Api.tagParams()]);
+  const st = useApi(() => Api.dataLevels(level, filters.window, filters.workspaceIds, filters.envs), key);
+  const [ws, setWs] = React.useState("");
+  const [cat, setCat] = React.useState(isCat ? "" : handoff.catalog || "");
+  const [q, setQ] = React.useState("");
+  const [sort, setSort] = React.useState<{ k: string; dir: number }>({ k: "complexity_index", dir: -1 });
+  React.useEffect(() => { handoff.catalog = null; }, []);
+  const d = st.phase === "ready" ? st.data : null;
+  const all: any[] = d && d.outcome !== "not_assessed" ? d.rows || [] : [];
+  const name = (r: any) => (isCat ? r.table_catalog : `${r.table_catalog}.${r.table_schema}`);
+  const rows = all.filter((r) => (!ws || String(r.workspace_id) === ws) && (!cat || r.table_catalog === cat)
+    && (!q || name(r).toLowerCase().includes(q.toLowerCase())));
+  const top = rows[0] && [...rows].sort((a, b) => b.complexity_index - a.complexity_index)[0];
+  const flagged = rows.filter((r) => r.signal === "Review" || r.signal === "Retire candidate");
+  const verdict = !d ? "Loading..." : !rows.length ? `No ${noun}s match.`
+    : `${fmtInt(rows.length)} ${noun}s. Most complex: ${name(top)} (complexity ${top.complexity_index}, usage ${top.usage_index}).`
+      + (flagged.length ? ` ${fmtInt(flagged.length)} built but little used: Review or Retire candidate.` : "");
+  React.useEffect(() => { if (onVerdict) onVerdict(verdict); }, [verdict, onVerdict]);
+  if (st.phase === "loading") return <span className="muted">{`Loading ${noun}s...`}</span>;
+  if (!d || d.outcome === "not_assessed") return <span className="muted">Table sizes are not in this export: export again.</span>;
+  const wsOpts = Array.from(new Map(all.filter((r) => r.workspace_id).map((r) => [String(r.workspace_id), r.workspace_name])).entries())
+    .sort((a, b) => String(a[1]).localeCompare(String(b[1])));
+  const catOpts = Array.from(new Set(all.filter((r) => !ws || String(r.workspace_id) === ws).map((r) => r.table_catalog))).sort();
+  const sorted = [...rows].sort((a, b) => sort.dir * ((a[sort.k] ?? -1) > (b[sort.k] ?? -1) ? 1 : (a[sort.k] ?? -1) < (b[sort.k] ?? -1) ? -1 : 0));
+  const th = (label: string, k: string, num = true) => (
+    <th className={num ? "num" : ""} style={{ cursor: "pointer", whiteSpace: "nowrap" }} onClick={() => setSort({ k, dir: sort.k === k ? -sort.dir : -1 })}>
+      {label}{sort.k === k ? (sort.dir < 0 ? " ▾" : " ▴") : ""}
+    </th>
+  );
+  const down = (r: any) => {
+    if (isCat) { handoff.catalog = r.table_catalog; goTo({ tab: "usage", subtab: "schemas" }); }
+    else { Object.assign(handoff, { workspace: null, cls: null, table: null, q: `${name(r)}.` }); goTo({ tab: "usage", subtab: "tables" }); }
+  };
+  const sel = { padding: "6px 8px", borderRadius: 8 };
+  return (
+    <div>
+      <div className="ws-actions" style={{ flexWrap: "wrap" }}>
+        <select value={ws} onChange={(e) => { setWs(e.target.value); setCat(""); }} aria-label="Workspace" style={sel}>
+          <option value="">Workspace: all</option>
+          {wsOpts.map(([id, n]) => <option key={id} value={id}>{n}</option>)}
+        </select>
+        {isCat ? null : <select value={cat} onChange={(e) => setCat(e.target.value)} aria-label="Catalog" style={sel}>
+          <option value="">Catalog: all</option>
+          {catOpts.map((c) => <option key={c} value={c}>{c}</option>)}
+        </select>}
+        <input type="search" placeholder={isCat ? "Search catalog" : "Search catalog.schema"} value={q} onChange={(e) => setQ(e.target.value)}
+          style={{ marginLeft: 8, padding: "6px 10px", borderRadius: 8, border: "1px solid var(--border)", minWidth: 200 }} aria-label={`Search ${noun}s`} />
+      </div>
+      {rows.length > 1 && (
+        <Card title="Complexity against usage" right={<span className="muted">{`bubble = data held · right and low: built, little used · click one for its ${isCat ? "schemas" : "tables"}`}</span>}>
+          <Scatter rows={rows} id={name} label={(r) => `${name(r)}${r.workspace_name ? ` · ${r.workspace_name}` : ""}`}
+            onPick={(id) => { const r = rows.find((x) => name(x) === id); if (r) down(r); }} />
+        </Card>
+      )}
+      <Card title={isCat ? "Every catalog" : "Every schema"} right={<span className="muted">{`click one for its ${isCat ? "schemas" : "tables"} · hover an index for how it was made`}</span>}>
+        <ClassLegend />
+        <div className="data-table-wrap">
+          <table className="data">
+            <thead>
+              <tr>
+                {th(isCat ? "Catalog" : "Schema", isCat ? "table_catalog" : "table_schema", false)}{th("Workspace", "workspace_name", false)}
+                {isCat ? th("Schemas", "schemas") : null}{th("Tables", "tables")}{th("Views", "views")}{th("Size", "size_in_bytes")}
+                <th>Tables by class</th>{th("Reads", "reads")}{th("Writes", "writes")}{th("Queries", "queries")}{th("People", "active_people")}
+                {th("Days", "active_days")}{th("PII tables", "sensitive_tables")}{th("Unread", "unread_bytes")}
+                {th("Complexity", "complexity_index")}{th("Usage", "usage_index")}<th>Signal</th>
+              </tr>
+            </thead>
+            <tbody>
+              {sorted.slice(0, 500).map((r) => {
+                const mix = r.classes || {};
+                const n = CLASS_ORDER.reduce((a, k) => a + (mix[k] || 0), 0);
+                return (
+                  <tr key={name(r)} className="ba-row" onClick={() => down(r)} style={{ cursor: "pointer" }}>
+                    <td className="mono"><button type="button" className="ba-pick">{name(r)}</button></td>
+                    <td>{r.workspace_name || <span className="muted">no home</span>}{r.env ? <span className="muted">{` · ${r.env}`}</span> : null}</td>
+                    {isCat ? <td className="num mono">{fmtInt(r.schemas)}</td> : null}
+                    <td className="num mono">{fmtInt(r.tables)}</td>
+                    <td className="num mono">{fmtInt(r.views)}</td>
+                    <td className="num mono">{fmtBytes(r.size_in_bytes + r.volume_bytes)}</td>
+                    <td style={{ minWidth: 120 }}>
+                      {n ? <div style={{ display: "flex", height: 10, borderRadius: 3, overflow: "hidden" }} title={CLASS_ORDER.map((k) => `${CLASS_META[k].label}: ${mix[k] || 0}`).join(" · ")}>
+                        {CLASS_ORDER.filter((k) => mix[k]).map((k) => <div key={k} style={{ width: `${(100 * mix[k]) / n}%`, background: CLASS_META[k].color }} />)}
+                      </div> : <span className="muted">-</span>}
+                    </td>
+                    <td className="num mono" style={{ color: READ }}>{fmtInt(r.reads)}</td>
+                    <td className="num mono" style={{ color: WRITE }}>{fmtInt(r.writes)}</td>
+                    <td className="num mono">{fmtInt(r.queries)}</td>
+                    <td className="num mono">{`${fmtInt(r.active_people)} · ${fmtInt(r.active_service_principals)} SP`}</td>
+                    <td className="num mono">{fmtInt(r.active_days)}</td>
+                    <td className="num mono">{fmtInt(r.sensitive_tables)}</td>
+                    <td className="num mono">{fmtBytes(r.unread_bytes)}</td>
+                    <td className="num mono" title={parts(r.complexity_parts)}>{r.complexity_index}</td>
+                    <td className="num mono" title={parts(r.usage_parts)}>{r.usage_index}</td>
+                    <td style={{ whiteSpace: "nowrap" }}>{r.signal}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+        <div className="metric-note">{`${rows.length > 500 ? `First 500 of ${fmtInt(rows.length)}; search to narrow. ` : ""}Indexes are 0-100 against the largest ${noun} in the export, same weights as Workspaces. Usage: people and service principals who read or wrote its tables, queries on them, and days with a read or write in the last ${d.window_days} days. A query touching several tables counts once per table.`}</div>
+      </Card>
+    </div>
+  );
+}
+
 // ─────────── Tables ───────────
 function UsageTablesContent({ filters, goTo, onVerdict }: LooseProps) {
   const key = JSON.stringify([filters.window, filters.workspaceIds, filters.envs, Api.tagParams()]);
@@ -405,10 +527,10 @@ function UsageTablesContent({ filters, goTo, onVerdict }: LooseProps) {
   // picked workspaces are counted by the server, so the class counts and largest tables cover all their tables
   const tp = useApi(() => (wsPick.length ? Api.tables(wsPick, filters.envs, filters.window) : Promise.resolve(null)),
     JSON.stringify([filters.window, wsPick, filters.envs, Api.tagParams()]));
-  const [q, setQ] = React.useState("");
+  const [q, setQ] = React.useState(handoff.q || "");
   const [page, setPage] = React.useState(1);
   const [open, setOpen] = React.useState<string | null>(handoff.table || null);
-  React.useEffect(() => { handoff.cls = null; handoff.workspace = null; handoff.table = null; }, []);
+  React.useEffect(() => { handoff.cls = null; handoff.workspace = null; handoff.table = null; handoff.q = null; }, []);
   const src = wsPick.length ? tp : tb;
   const t = src.phase === "ready" ? src.data : null;
   const base: any[] = tb.phase === "ready" && tb.data && tb.data.outcome !== "not_assessed" ? tb.data.rows || [] : [];
@@ -464,7 +586,6 @@ function UsageTablesContent({ filters, goTo, onVerdict }: LooseProps) {
       <Card title={`Most active tables · ${t.window_days}d`} right={<span className="muted">{cls !== "all" || q ? "the tables shown below · click one" : "every table · click one"}</span>}>
         <MostUsed open={setOpen} rows={topUsed(cls !== "all" || q ? rows : t.most_used || [], (r) => r.table_full_name, rwSub)} />
       </Card>
-      {wsPick.length < 2 && wsPick[0] !== "none" ? <SchemaBreakdown workspaceId={wsPick[0] || ""} name={(wsOptions.find(([id]) => id === wsPick[0]) || [])[1] || wsPick[0]} window={filters.window} /> : null}
       <Card title="Tables" right={<span className="muted">click one for its detail</span>}>
         <div className="data-table-wrap">
           <table className="data">
@@ -530,47 +651,6 @@ function WsMulti({ options, picked, onChange }: { options: [string, string][]; p
   );
 }
 
-// Schema by schema, for one workspace or the biggest of every workspace: what is built, what is served, how it is used.
-function SchemaBreakdown({ workspaceId, name, window }: { workspaceId: string; name: string; window: number }) {
-  const st = useApi(() => Api.workspaceSchemas(workspaceId, window), `${workspaceId}|${window}`);
-  const d = st.phase === "ready" ? st.data : null;
-  const rows: any[] = d ? d.schemas || [] : [];
-  if (st.phase === "loading" || !rows.length) return null;
-  const all = !workspaceId;
-  return (
-    <Card title={all ? `The biggest ${fmtInt(rows.length)} of ${fmtInt(d.total)} schemas, every workspace` : `${name} · by schema`}
-      right={<span className="muted">{all ? "pick a workspace for all its schemas" : `catalogs it holds: ${d.catalogs.join(", ")}`}</span>}>
-      <ClassLegend />
-      <div className="data-table-wrap" style={{ maxHeight: 420, overflowY: "auto" }}><table className="data">
-        <thead><tr><th>Schema</th>{all ? <th>Workspace</th> : null}<th className="num">Tables</th><th>Tables by class</th><th className="num">Columns</th><th className="num">Views</th>
-          <th className="num">View columns</th><th className="num">Volumes</th><th className="num">Volume files</th><th className="num">Size</th></tr></thead>
-        <tbody>{rows.map((r) => {
-          const n = CLASS_ORDER.reduce((a, k) => a + (r.classes[k] || 0), 0);
-          return (
-            <tr key={`${r.table_catalog}.${r.table_schema}`}>
-              <td className="mono">{`${r.table_catalog}.${r.table_schema}`}</td>
-              {all ? <td>{r.workspace_name || "-"}</td> : null}
-              <td className="num mono">{fmtInt(r.tables)}</td>
-              <td style={{ minWidth: 120 }}>{n ? <div style={{ display: "flex", height: 10, borderRadius: 3, overflow: "hidden" }} title={CLASS_ORDER.map((k) => `${CLASS_META[k].label}: ${r.classes[k] || 0}`).join(" · ")}>
-                {CLASS_ORDER.filter((k) => r.classes[k]).map((k) => <div key={k} style={{ width: `${(100 * r.classes[k]) / n}%`, background: CLASS_META[k].color }} />)}
-              </div> : <span className="muted">-</span>}</td>
-              <td className="num mono">{fmtInt(r.table_columns)}</td>
-              <td className="num mono">{fmtInt(r.views)}</td>
-              <td className="num mono">{fmtInt(r.view_columns)}</td>
-              <td className="num mono">{fmtInt(r.volumes)}</td>
-              <td className="num mono">{fmtInt(r.volume_files)}</td>
-              <td className="num mono">{fmtBytes(r.size_in_bytes + r.volume_bytes)}</td>
-            </tr>
-          );
-        })}</tbody>
-      </table></div>
-      <div className="metric-note">Views serve data from elsewhere; tables and volumes are built here. Size is tables plus volume files.</div>
-    </Card>
-  );
-}
-
-// ─────────── Table detail ───────────
-// every day of the window up to the export's last day; lineage only has the days with an event
 function windowDays(daily: any[], window: number): any[] {
   const byDay = new Map(daily.map((d) => [String(d.day).slice(0, 10), d]));
   const end = new Date(String(asOf || (daily.length ? daily[daily.length - 1].day : new Date().toISOString())).slice(0, 10) + "T00:00:00Z");
@@ -1146,6 +1226,8 @@ function PersonTables({ identity, window, goTo }: { identity: string; window: nu
 }
 
 AreaContent.register("usage", "workspaces", UsageWorkspacesContent);
+AreaContent.register("usage", "catalogs", (p: LooseProps) => <UsageLevelContent {...p} level="catalog" />);
+AreaContent.register("usage", "schemas", (p: LooseProps) => <UsageLevelContent {...p} level="schema" />);
 AreaContent.register("usage", "tables", UsageTablesContent);
 AreaContent.register("usage", "volumes", UsageVolumesContent);
 AreaContent.register("usage", "people", UsagePeopleContent);

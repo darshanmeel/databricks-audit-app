@@ -97,7 +97,7 @@ export const Api = {
   volumeUsers: (volume: string, window_ = 30) => getJson("/api/volume_users", { volume, window: window_ }),
   warehouses: (window_: number, workspaceIds: string[] | null, envs: string[] | null) => getJson("/api/warehouses", { window: window_, workspace_ids: workspaceIds, env: envs }),
   warehouse: (warehouseId: string, window_: number) => getJson("/api/warehouse", { warehouse_id: warehouseId, window: window_ }),
-  workspaceSchemas: (workspaceId: string, window: number) => getJson("/api/workspace_schemas", { ...(workspaceId ? { workspace_id: workspaceId } : {}), window }),
+  dataLevels: (level: "catalog" | "schema", window_: number, workspaceIds: string[] | null, envs: string[] | null) => getJson("/api/data_levels", { level, window: window_, workspace_ids: workspaceIds, env: envs, ..._tagParams() }),
   activity: (window_: number, workspaceIds: string[] | null, envs: string[] | null, workspaceId?: string | null) => getJson("/api/activity", { window: window_, workspace_ids: workspaceIds, env: envs, ...(workspaceId ? { workspace_id: workspaceId } : {}) }),
   personTables: (identity: string, window: number) => getJson("/api/person_tables", { identity, window }),
   workspaceUsage: (window_: number, workspaceIds: string[] | null, envs: string[] | null) => getJson("/api/workspace_usage", { window: window_, workspace_ids: workspaceIds, env: envs, ..._tagParams() }),
