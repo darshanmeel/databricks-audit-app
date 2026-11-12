@@ -2,7 +2,8 @@
 
 python merge.py
 - Nodes dedupe by id; keep the entry with the best status, then the most filled fields
-  (ties go to the earlier file, base first). Tags are unioned.
+  (ties go to the earlier file, base first). An extra entry with "override": true wins unless its
+  status is worse. Tags are unioned.
 - Edges dedupe by (from, to, type); keep the best status.
 - A dangling edge endpoint is first matched to an existing id by normalizing it (function<->class,
   function<->test_case, endpoint path params, tab_x plural/singular, e.g. tab_queries -> tab_query). Only if that fails does it get
@@ -49,9 +50,11 @@ def main():
         for n in read(f):
             old = nodes.get(n["id"])
             if old is None:
+                n.pop("override", None)
                 nodes[n["id"]] = n
                 continue
-            keep = n if better(n, old) else old
+            forced = n.pop("override", False) and RANK.get(n.get("status"), 3) <= RANK.get(old.get("status"), 3)
+            keep = n if forced or better(n, old) else old
             keep["tags"] = sorted(set(old.get("tags") or []) | set(n.get("tags") or []))
             nodes[n["id"]] = keep
 

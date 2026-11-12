@@ -1,6 +1,6 @@
 {
  "built_at": "2026-11-10",
- "commit": "0425164cecc5918a9cad625fad84d32400fdcf2d",
+ "commit": "c2e5f91663b3acd1cbed753b86980e479c9532d9",
  "file_hashes": {
   ".env.example": "2719f58e5b7ab458b5fe834ccc1639c0375f3c6e71a36412ce4a77f124e41fc1",
   ".gitattributes": "e4a7df06e844cc4c57a405be863981539f890b8ae3ca55ed0b5765f7151d5467",
@@ -524,7 +524,7 @@
   "databricks_dashboards/system_tables_direct/dashboard_load_summary.html": "d40603f2bfbca57908106c4b8e3260dcc3da7db2008ba32aa92ffc9e40443ad3",
   "databricks_dashboards/system_tables_direct/data_usage.html": "ab08a19abbc74ddb333fdac31d17ac62f9a4ad808d3e596d5756c03759744c54",
   "databricks_dashboards/system_tables_direct/data_usage.lvdash.json": "98913f998404333401d1eb90884337abba0a3f7c70bb08c7428cee02c330534b",
-  "databricks_dashboards/system_tables_direct/data_usage_sizes.py": "c845807d0fc8d5a69c6859e2642ff5cf6d6a051f90cf69a00e007a0469201715",
+  "databricks_dashboards/system_tables_direct/data_usage_sizes.py": "3d4ddc20f8dd69b6ad7272bbb3b2e58e87c8c6e28cbffd5b905003a4df33b14c",
   "databricks_dashboards/system_tables_direct/data_usage_summary.html": "668f318ab639c2a3eb00a39f3ea450520f10a46824845ccee750af0d98f4792c",
   "databricks_dashboards/system_tables_direct/jobs_health.html": "131b22b2351b55109f78b2886ac74952e36c2fbc40395cf4017a8ece15b5eaa3",
   "databricks_dashboards/system_tables_direct/jobs_health.lvdash.json": "7e917af18c63f672a03b0ac33baba83ac97bdf0e908d1538d47ba75ec6739491",
@@ -903,12 +903,12 @@
   "dbt/seeds/workspace_env_overrides.csv": "ff9313a4b36e02f695867f1ee4f046a3764cd8a44277f9d0db56adee31156e25",
   "dbt/tests/generic/test_unique_grain.sql": "ce283491a522d3729d81aa1c678f338b2db6f10757a0479be34841c40f1c6a68",
   "dbt/tests/tags_cost_reconciles.sql": "42796a8d58f13329f4cd31ef16c5c590bf36ec3e96130960006e76b2fd0ec6ed",
-  "docs/build_overview.py": "94c584927ce36db48cc97ae65a0427c58831bbf43326b81a4ecaea3dcc5a0916",
-  "docs/build_technical.py": "3b8124c9fdd0a291474292f796734516f95d7cca385e3cc5d1279bce661c5cef",
+  "docs/build_overview.py": "412b45c67e8a94b30e44088c2dd754e8218c19d413622f9ded1ece17484617ec",
+  "docs/build_technical.py": "a466130c86421d96732473c02eb917373aabde667997a468c474473adc99de21",
   "docs/databricks-app.md": "c56f3eda513e1e7d24dc1ede36d0ab454259957cf13092f2b54d2d021ec251fd",
   "docs/lakeview-dashboard-format.md": "4d226c63dedfac79b2c9a1f33d28853a291cde006997a4cec03924b24cd47f9f",
-  "docs/overview.html": "2e4d431f2e8c9a898b21fdbf7a63db0648a923eb2e86d0d9579cf49d514fd4bb",
-  "docs/technical.html": "7962301910523170b9caba506c6dad87a6586fa61ac76e25ebe2b1536f50c932",
+  "docs/overview.html": "72766f5569f9a808c8e5bf2da999a70ea39890b2454030465ce3cf40e0467f61",
+  "docs/technical.html": "51082789c7d489e411e1742c17e40424b6861a71b1ac5af4e40f063dcf2f6191",
   "docs/waste-dashboard-queries.html": "f73a7ae3f79822b540785c33a4fb184d1d918dd0d9465668d2d72a79ad363850",
   "pytest.ini": "cfa9fda1e9eb67699363f69fe62dba597df6e4c932209f0eb1f0bea19c0bb44f",
   "requirements-dbt.txt": "e0040ceee4016db2007ec248c025efb58dc3303d86311d81510bd045f5922b21",
@@ -970,7 +970,7 @@
   "tests/test_dbt_skeleton.py": "e30598954369d0f333cf87b219dc09a84eda2d02388d7c7f7b90ab1e2506fdf5",
   "tests/test_ddl.py": "131636c484cd58e218b25a23c44ca768606bd56f45e4c6406c32af5a53017d35",
   "tests/test_deploy_app.py": "1fef6194ff96faa860334dd99d4318edca757dd10c81edb12a301c146b5a7141",
-  "tests/test_direct_dashboards.py": "06b80dd0da179d548a3d6fd97130aa3b8fa1ff28752e6240fe291508f0a11929",
+  "tests/test_direct_dashboards.py": "70983ef1101dffece507728881413c0c49c9095528ef5b5f4eaf84a9ae455e4e",
   "tests/test_direct_models.py": "bb9d99183617fc65239f4f7abf1d8837d87ca483fa421e4b2e3805ff666d8b29",
   "tests/test_envmap.py": "0a5af1b45069e2abed9f96b05228e04fa15f7eaaa7746e1fbbfca526db182f4a",
   "tests/test_export_direct_results.py": "d3ac06a2298ff48cc16a6f5e5acfe17cc05e77650469d15076d5ad852c5f2537",
@@ -1115,7 +1115,7 @@
   "tools/deploy_app.py": "7574aebd4a2145f9e9a92df1ab58a827317f23aa95c80a86317dc4b8481fb80d",
   "tools/direct_dashboard_doc.py": "eee528c4b6ec06954e4bcc4db845f60bd4898174bd8abfb8bb8ff4b0285a3374",
   "tools/direct_dashboard_load.py": "2d9d01f78ecffd075a30d83be95abafb236ad3887ec0ace6f3d0f4ef8e5aa58f",
-  "tools/direct_data_usage.py": "d14cd4cf8afefad84cbd044d218ed04b6c413e46d2e7cd2cfe0c8317e20590ea",
+  "tools/direct_data_usage.py": "e977b6468bc9e5f044bbc42cd15a0e5987744e869f6b394996debd89606bb27f",
   "tools/direct_governance.py": "c29a3fa780f9465dda65eed9fbd168c5edf885179dddadc8bc5d280415ba6376",
   "tools/direct_guides.py": "3d61f13dbe23c2d41d3be8ee3e4dab87b60efcf075dcec421978e9512248377d",
   "tools/direct_jobs_health.py": "20b40492a3a62e97a8f513c607b6429b4749c8f22dbc14f9294501a39efdd94a",
@@ -1236,8 +1236,8 @@
   "web/vite.config.ts": "acdb75c7a7ab6d8616fa43ef2db9d0ea89de524a9bbcd06ec5d3f34165be6a80"
  },
  "counts": {
-  "nodes": 8356,
-  "edges": 23475,
+  "nodes": 8358,
+  "edges": 23485,
   "nodes_by_type": {
    "business_rule": 40,
    "class": 98,
@@ -1263,24 +1263,24 @@
    "repo": 1,
    "secret_ref": 6,
    "table": 252,
-   "test_case": 1562,
+   "test_case": 1564,
    "ui_screen": 189
   },
   "edges_by_type": {
-   "part_of": 1387,
-   "contains": 6270,
-   "calls": 6725,
+   "part_of": 1389,
+   "contains": 6272,
+   "calls": 6727,
    "implements": 261,
    "fk": 17,
    "configures": 913,
-   "reads": 3265,
+   "reads": 3266,
    "ref": 16,
    "derived_from": 1186,
    "depends_on": 808,
    "documents": 414,
-   "illustrates": 793,
+   "illustrates": 795,
    "triggers": 8,
-   "imports": 903,
+   "imports": 904,
    "exposes": 68,
    "writes": 415,
    "grants": 2,
@@ -1288,11 +1288,11 @@
    "schedules": 1
   },
   "node_status": {
-   "extracted": 8313,
+   "extracted": 8315,
    "inferred": 43
   },
   "edge_status": {
-   "extracted": 22730,
+   "extracted": 22740,
    "inferred": 745
   },
   "tracked_files": 1232
@@ -1410,8 +1410,8 @@
   ]
  },
  "updated_from": {
-  "previous_commit": "f3d2565a9ae1e2b1a57983b8bc996372c0dfe8de",
-  "note": "incremental update for 0425164 (Data usage: Catalogs and Schemas sub-tabs, complexity and usage index)"
+  "previous_commit": "0425164cecc5918a9cad625fad84d32400fdcf2d",
+  "note": "incremental update for c2e5f91 (Data usage sizes notebook: os.scandir volume walk, describes only tables altered since the last run)"
  },
  "updated_at": "2026-11-12"
 }

@@ -1784,7 +1784,7 @@ def s_tests():
         ("pytest", "both", "python -m pytest -q"), ("build_fixtures", "full", "tests/fixtures/build_fixtures.py"),
         ("dbt_build_test", "full", "dbt_run.py build --target test"), ("fixture_coverage", "full", "fixture_coverage.py --check")], mono=(0, 2))
     body = d_t1() + bullets([
-        "54 tests/test_*.py modules plus 75 per-check files in tests/test_findings/. [directory listing; pytest.ini:1-3]",
+        "55 tests/test_*.py modules plus 75 per-check files in tests/test_findings/. [directory listing; pytest.ini:1-3]",
         "Fixed fixture instant 2026-09-21T12:00:00. [tests/conftest.py:68-69]",
         "conftest copies config to a tmp AUDIT_CONFIG_DIR; repo config never written. [tests/conftest.py:145-151]",
         "Stale DB rebuilt only with AUDIT_BUILD_FIXTURES=1; else a warning, tests go on. [tests/conftest.py:10-16,262-267]",
@@ -1833,9 +1833,9 @@ TOC = [("orientation", "1 Orientation"), ("architecture", "2 Architecture"), ("f
 
 def build():
     toc = "".join(f'<a class="chip" href="#{i}">{e(t)}</a>' for i, t in TOC)
-    chips = "".join(f'<span class="chip">{e(c)}</span>' for c in ["commit 0425164", "Python 3.11+", "duckdb 1.5.1", "fastapi 0.138.2", "React 18.3.1 + Vite"])
+    chips = "".join(f'<span class="chip">{e(c)}</span>' for c in ["commit c2e5f91", "Python 3.11+", "duckdb 1.5.1", "fastapi 0.138.2", "React 18.3.1 + Vite"])
     body = f"""
-<div class="eyebrow">TECHNICAL VIEW · commit 0425164</div>
+<div class="eyebrow">TECHNICAL VIEW · commit c2e5f91</div>
 <h1>Crosshire: technical view</h1>
 <p class="deck">Read-only audit of a Databricks account: 160 SQL checks on system.* tables. <span class="cite">[README.md:1-6]</span></p>
 <div class="chips">{chips}</div><p class="cite">[README.md:31; requirements.txt:1,6; web/package.json:11-14]</p>

@@ -517,7 +517,7 @@ TOC = [("glance", "At a glance"), ("learn", "What you learn"), ("how", "How a re
 def build():
     toc = "".join(f'<a class="chip" href="#{i}">{e(t)}</a>' for i, t in TOC)
     meta = "".join(f'<span class="chip">{e(c)}</span>' for c in
-                   ["160 checks", "read-only", "3 ways to use it", "repo commit 0425164"])
+                   ["160 checks", "read-only", "3 ways to use it", "repo commit c2e5f91"])
     body = f"""
 <div class="eyebrow">Functional view · for business, management and newcomers</div>
 <h1>Crosshire overview</h1>
@@ -536,7 +536,7 @@ def build():
 {section("terms", "10. Terms in plain words", table(*TERMS_T))}
 <section id="sources"><h2>11. Where these facts come from</h2><details><summary>Where these facts come from</summary>
 <ul class="cl">{"".join(f"<li>{e(s)}</li>" for s in SOURCES)}</ul></details>
-<p class="cite">Built from the repo at commit 0425164. Demo figures come from the test suite, not a real account.</p></section>
+<p class="cite">Built from the repo at commit c2e5f91. Demo figures come from the test suite, not a real account.</p></section>
 """
     OUT.write_text(f'<!doctype html><html lang="en"><head><meta charset="utf-8">'
                    f'<meta name="viewport" content="width=device-width, initial-scale=1">'

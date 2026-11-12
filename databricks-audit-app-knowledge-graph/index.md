@@ -2,7 +2,7 @@
 
 Crosshire is a read-only audit of a Databricks account: about 160 SQL checks on `system.*` tables are exported to a local DuckDB file (`README.md:6`), served by a FastAPI app (`app/api/app.py`) to a React UI (`web/src`), and also shipped as Lakeview dashboards (`databricks_dashboards/`).
 
-Start here, then open a page from the table below. Every fact on a page cites `path:line` in the repo at commit `0425164`. Graph data is in `graph/nodes.jsonl` and `graph/edges.jsonl`; see [README.md](README.md).
+Start here, then open a page from the table below. Every fact on a page cites `path:line` in the repo at commit `c2e5f91`. Graph data is in `graph/nodes.jsonl` and `graph/edges.jsonl`; see [README.md](README.md).
 
 ## Big picture
 

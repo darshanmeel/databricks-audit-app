@@ -1,10 +1,10 @@
 # databricks-audit-app knowledge graph
 
-A committed map of the Crosshire repo: 8356 nodes and 23475 edges, each pointing at `path:line` in the code, plus hand-written pages on modules, flows, rules, data and processes.
+A committed map of the Crosshire repo: 8358 nodes and 23485 edges, each pointing at `path:line` in the code, plus hand-written pages on modules, flows, rules, data and processes.
 
 - Built: 2026-11-10
-- Commit: `0425164` (`0425164cecc5918a9cad625fad84d32400fdcf2d`); first built at `b8d2db1`, updated incrementally for the 2026-11-10 16:00 review fixes (`f3d2565`) and the Data usage Catalogs and Schemas sub-tabs (`0425164`, 2026-11-12)
-- Per-file SHA-256 of the 1232 tracked files at build time: `meta.json` (`file_hashes`).
+- Commit: `c2e5f91` (`c2e5f91663b3acd1cbed753b86980e479c9532d9`); first built at `b8d2db1`, updated incrementally for the 2026-11-10 16:00 review fixes (`f3d2565`) and the Data usage Catalogs and Schemas sub-tabs (`0425164`, 2026-11-12) and the Data usage sizes notebook (`c2e5f91`, 2026-11-12)
+- Per-file SHA-256 of the 1232 tracked files outside this graph folder at build time: `meta.json` (`file_hashes`).
 
 ## How to use it
 
@@ -53,12 +53,12 @@ Status: `extracted` = read straight from code; `inferred` = derived (e.g. fixtur
 
 ## Stats (merged graph)
 
-Nodes: 8356 (extracted 8313, inferred 43). Edges: 23475 (extracted 22730, inferred 745).
+Nodes: 8358 (extracted 8315, inferred 43). Edges: 23485 (extracted 22740, inferred 745).
 
 | Node type | Count |
 |---|---|
 | function | 2723 |
-| test_case | 1562 |
+| test_case | 1564 |
 | file | 958 |
 | column | 880 |
 | dbt_test | 645 |
@@ -86,15 +86,15 @@ Nodes: 8356 (extracted 8313, inferred 43). Edges: 23475 (extracted 22730, inferr
 
 | Edge type | Count |
 |---|---|
-| calls | 6725 |
-| contains | 6270 |
-| reads | 3265 |
-| part_of | 1387 |
+| calls | 6727 |
+| contains | 6272 |
+| reads | 3266 |
+| part_of | 1389 |
 | derived_from | 1186 |
 | configures | 913 |
-| imports | 903 |
+| imports | 904 |
 | depends_on | 808 |
-| illustrates | 793 |
+| illustrates | 795 |
 | writes | 415 |
 | documents | 414 |
 | implements | 261 |
