@@ -118,3 +118,67 @@ def test_sizes_notebook_walks_volumes_without_dbutils(tmp_path):
 
     assert run(10)[3:7] == (2, 150, False, "listed")
     assert run(1)[5] is True
+
+
+def test_sizes_notebook_describes_only_changed_tables():
+    import datetime
+    import re
+    from collections import namedtuple
+
+    from tools import direct_data_usage as wdata
+
+    nb = wdata.collect_sizes_notebook()
+    cell = re.search(r"^tables = spark\.sql\(.*?^print\(f\"\{len\(rows\)\}", nb, re.M | re.S).group(0)
+    cell = cell[:cell.rindex("\nprint(")]
+    T = namedtuple("T", "table_catalog table_schema table_name last_altered")
+    S = namedtuple("S", "catalog schema table_name size_in_bytes num_files last_modified detail collected_at last_altered")
+    Detail = namedtuple("Detail", "sizeInBytes numFiles lastModified")
+    then = datetime.datetime(2026, 1, 1)
+    stored = [S("c", "s", "same", 10, 1, "x", "described", then, "2026-01-01"),
+              S("c", "s", "new", 20, 2, "x", "described", then, "2026-01-01")]
+    sent, written = [], {}
+
+    class DF:
+        def __init__(self, rows, cols=None):
+            self.rows, self.columns = rows, cols or list(S._fields)
+        def where(self, _):
+            return self
+        def collect(self):
+            return self.rows
+        def join(self, keep, on, how):
+            keys = {tuple(r) for r in keep.rows}
+            return DF([r for r in self.rows if tuple(r[:3]) in keys])
+        def unionByName(self, other):
+            return DF(self.rows + other.rows)
+        @property
+        def write(self):
+            df = self
+            class W:
+                def mode(self, _): return self
+                def option(self, *_): return self
+                def saveAsTable(self, name): written[name] = df.rows
+            return W()
+
+    class Spark:
+        class catalog:
+            tableExists = staticmethod(lambda name: True)
+        def sql(self, text, args=None):
+            sent.append(text)
+            if text.startswith("SELECT"):
+                return DF([T("c", "s", "same", "2026-01-01"), T("c", "s", "new", "2026-02-01")])
+            if text.startswith("DESCRIBE DETAIL"):
+                return DF([Detail(99, 9, "y")])
+            return DF([])
+        def table(self, name):
+            return DF(stored if name.endswith("sizes") else [("c", "s", "same", 1), ("c", "s", "new", 1)])
+        def createDataFrame(self, rows, schema):
+            return DF(list(rows))
+
+    ns = {"spark": Spark(), "out": "o", "q": lambda x: x, "max_tables": 10, "cats": ["c"], "now": then,
+          "threads": 2, "ThreadPoolExecutor": __import__("concurrent.futures").futures.ThreadPoolExecutor}
+    exec(cell, ns)
+    assert [t for t in sent if t.startswith("DESCRIBE")] == ["DESCRIBE DETAIL c.s.new", "DESCRIBE HISTORY c.s.new LIMIT 100"]
+    sizes = {r[2]: r for r in next(v for k, v in written.items() if "sizes" in k)}
+    assert sizes["same"][3] == 10 and sizes["new"][3] == 99 and sizes["new"][8] == "2026-02-01"
+    hist = next(v for k, v in written.items() if "history" in k)
+    assert [r[2] for r in hist] == ["same"]  # the changed table's old history is dropped, its new one comes from DESCRIBE

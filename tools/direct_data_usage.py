@@ -1673,8 +1673,8 @@ def collect_sizes_notebook() -> str:
     return f'''# Databricks notebook source
 # MAGIC %md
 # MAGIC # Collect table and volume sizes
-# MAGIC DESCRIBE DETAIL and DESCRIBE HISTORY on every Delta table and a file listing of every volume the
-# MAGIC job can read, many at once. Writes `table_sizes`, `table_history` and `volume_sizes`, read by the
+# MAGIC DESCRIBE DETAIL and DESCRIBE HISTORY on every Delta table changed since the last run and a file
+# MAGIC listing of every volume the job can read, many at once. Writes `table_sizes`, `table_history` and `volume_sizes`, read by the
 # MAGIC "{TITLE}" dashboard. Empty `catalogs` = every catalog.
 
 # COMMAND ----------
@@ -1705,11 +1705,26 @@ print(f"{{len(cats)}} catalogs")
 # COMMAND ----------
 
 tables = spark.sql(
-    "SELECT table_catalog, table_schema, table_name FROM {LIST_FROM['tables_from']} "
+    "SELECT table_catalog, table_schema, table_name, CAST(last_altered AS STRING) AS last_altered "
+    "FROM {LIST_FROM['tables_from']} "
     "WHERE table_type <> 'VIEW' AND (data_source_format IS NULL OR data_source_format = 'DELTA') "
     "AND table_schema <> 'information_schema' AND array_contains(:cats, table_catalog) "
     "ORDER BY last_altered DESC NULLS LAST LIMIT :n",  # the most recently changed first
     args={{"cats": cats, "n": max_tables}}).collect()
+
+# a table not altered since the last run keeps its size and history rows: no DESCRIBE for it
+sizes_t, hist_t = f"{{out}}.{SIZES_TABLES['table_sizes']}", f"{{out}}.{SIZES_TABLES['table_history']}"
+old = {{}}
+if spark.catalog.tableExists(sizes_t) and "last_altered" in spark.table(sizes_t).columns:
+    old = {{(r.catalog, r.schema, r.table_name): r for r in spark.table(sizes_t).where("detail = 'described'").collect()}}
+reused, todo = [], []
+for t in tables:
+    o = old.get((t.table_catalog, t.table_schema, t.table_name))
+    if o is not None and t.last_altered and o.last_altered == t.last_altered:
+        reused.append(o)
+    else:
+        todo.append(t)
+print(f"{{len(todo)}} tables to describe, {{len(reused)}} unchanged since the last run")
 
 ROW_KEYS = ("numTargetRowsInserted", "numTargetRowsUpdated", "numTargetRowsDeleted", "numDeletedRows")
 history_rows = []
@@ -1719,7 +1734,8 @@ def describe(t):
     try:
         d = spark.sql(f"DESCRIBE DETAIL {{name}}").collect()[0]
     except Exception as e:  # no access: kept with its error
-        return (t.table_catalog, t.table_schema, t.table_name, None, None, None, "failed: " + str(e).splitlines()[0][:200], now)
+        return (t.table_catalog, t.table_schema, t.table_name, None, None, None, "failed: " + str(e).splitlines()[0][:200], now,
+                t.last_altered)
     try:  # the last {HISTORY_VERSIONS} versions: what changed, when, how many rows
         for h in spark.sql(f"DESCRIBE HISTORY {{name}} LIMIT {HISTORY_VERSIONS}").collect():
             m = {{k: int(v) for k, v in (h.operationMetrics or {{}}).items() if str(v).isdigit()}}
@@ -1734,19 +1750,23 @@ def describe(t):
                                  m.get("sizeOfDataToDelete") if str(h.operation).startswith("VACUUM") else None))
     except Exception:  # the size is still worth keeping
         pass
-    return (t.table_catalog, t.table_schema, t.table_name, d.sizeInBytes, d.numFiles, str(d.lastModified), "described", now)
+    return (t.table_catalog, t.table_schema, t.table_name, d.sizeInBytes, d.numFiles, str(d.lastModified), "described", now,
+            t.last_altered)
 
 with ThreadPoolExecutor(threads) as pool:
-    rows = list(pool.map(describe, tables))
+    rows = list(pool.map(describe, todo)) + [tuple(o) for o in reused]
 (spark.createDataFrame(rows, "catalog string, schema string, table_name string, size_in_bytes bigint, num_files bigint, "
-                             "last_modified string, detail string, collected_at timestamp")
-      .write.mode("overwrite").option("overwriteSchema", "true").saveAsTable(f"{{out}}.{SIZES_TABLES['table_sizes']}"))
-(spark.createDataFrame(history_rows, "catalog string, schema string, table_name string, version bigint, timestamp timestamp, "
-                                     "operation string, user_name string, rows_changed bigint, bytes_written bigint, "
-                                     "files_added bigint, files_removed bigint, bytes_added bigint, bytes_removed bigint, "
-                                     "freed_bytes bigint")
-      .write.mode("overwrite").option("overwriteSchema", "true").saveAsTable(f"{{out}}.{SIZES_TABLES['table_history']}"))
-print(f"{{len(rows)}} tables, {{sum(1 for r in rows if r[6] == 'described')}} described, {{len(history_rows)}} history rows")
+                             "last_modified string, detail string, collected_at timestamp, last_altered string")
+      .write.mode("overwrite").option("overwriteSchema", "true").saveAsTable(sizes_t))
+hist = spark.createDataFrame(history_rows, "catalog string, schema string, table_name string, version bigint, timestamp timestamp, "
+                                           "operation string, user_name string, rows_changed bigint, bytes_written bigint, "
+                                           "files_added bigint, files_removed bigint, bytes_added bigint, bytes_removed bigint, "
+                                           "freed_bytes bigint")
+if reused and spark.catalog.tableExists(hist_t):  # Delta reads the old version while it overwrites
+    keep = spark.createDataFrame([(o.catalog, o.schema, o.table_name) for o in reused], "catalog string, schema string, table_name string")
+    hist = spark.table(hist_t).join(keep, ["catalog", "schema", "table_name"], "left_semi").unionByName(hist)
+hist.write.mode("overwrite").option("overwriteSchema", "true").saveAsTable(hist_t)
+print(f"{{len(rows)}} tables, {{sum(1 for r in rows if r[6] == 'described')}} described, {{len(history_rows)}} new history rows")
 
 # COMMAND ----------
 
