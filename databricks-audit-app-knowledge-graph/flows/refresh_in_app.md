@@ -44,7 +44,7 @@ sequenceDiagram
 
 1. Refresh control lists `REFRESH_DAYS = [7, 15, 30, 60, 90]` (`web/src/api.ts:7-8`); top bar `RefreshControl` (`web/src/App.tsx:212-232`) and empty-app `GetData` (`web/src/components/first_run.tsx:25-47`) both use `useRefresh` (`web/src/components/first_run.tsx:9-23`).
 2. `Api.refreshStart(days)` → `POST /api/refresh?days=N` (`web/src/api.ts:78`).
-3. `post_refresh(days: int = Query(30, ge=1, le=90))` → `refresh.start(days)` (`app/api/app.py:401-411`). In a Databricks App with rls on, only emails in `refresh.admins` (config/app.yml, app.local.yml wins) or users whose grants cover everything may start it; others get 403 (`app/api/app.py:390-398`, `app/api/app.py:404-409`, `config/app.yml:23-26`).
+3. `post_refresh(days: int = Query(30, ge=1, le=90))` → `refresh.start(days)` (`app/api/app.py:402-412`). In a Databricks App with rls on, only emails in `refresh.admins` (config/app.yml, app.local.yml wins) or users whose grants cover everything may start it; others get 403 (`app/api/app.py:391-399`, `app/api/app.py:405-410`, `config/app.yml:23-26`).
 4. `start` returns current status if one is running; else sets `{running: True, step: "export", days, started_at}` under a lock and starts `_run` in a daemon thread (`app/api/refresh.py:34-41`).
 5. `_run` names `stamp = %Y%m%d-%H%M%S` (local time), `out = <data>/results/<stamp>`, `db = <data>/audit-<stamp>.duckdb` (`app/api/refresh.py:51-55`).
 6. Export: `python tools/export_direct_results.py --windows N --max-rows 500000 --out <out>` with `cwd=ROOT`; non-zero → `RuntimeError` with last 3 output lines; killed after `EXPORT_TIMEOUT_S` = 4 h (`app/api/refresh.py:57-58`, `app/api/refresh.py:44-48`, `app/api/refresh.py:20-21`). Export internals: `flows/export_load_serve.md` steps 4-9.
@@ -55,9 +55,9 @@ sequenceDiagram
 11. `os.environ["AUDIT_DB"] = db` switches this process (`app/api/refresh.py:68`); `_base_db_path` reads `AUDIT_DB` first on every call (`app/core/data.py:203-209`).
 12. Cleanup: every `audit-*.duckdb` except the new and the previous db (plus RLS set files) and orphan sidecars deleted; only the newest two `results/<stamp>` folders kept (`app/api/refresh.py:69-70`, `app/api/refresh.py:76-99`).
 13. State → `{running: False, step: "done"}`; any exception → `step: "failed"`, `error: str(exc)`; old data stays (`app/api/refresh.py:71-73`, `README.md:100`).
-14. UI polls `GET /api/refresh` every 3 s while running and reloads the page on `done` (`web/src/components/first_run.tsx:13-20`, `app/api/app.py:385-387`, `app/api/refresh.py:28-31`).
+14. UI polls `GET /api/refresh` every 3 s while running and reloads the page on `done` (`web/src/components/first_run.tsx:13-20`, `app/api/app.py:386-388`, `app/api/refresh.py:28-31`).
 15. Next request: `_connect` sees a new file identity, opens a new shared connection and retires handles of old db versions: `_retire` parks them and closes them after 120 s (or past 32 parked), so requests still reading through them finish and Windows can then delete the file (`app/core/data.py:304-329`, `app/core/data.py:332-339`, `app/core/data.py:283-290`).
-16. Caches invalidate: `_data_version()` includes the db identity (`app/api/app.py:1010-1015`).
+16. Caches invalidate: `_data_version()` includes the db identity (`app/api/app.py:1018-1023`).
 
 ## Status payload
 

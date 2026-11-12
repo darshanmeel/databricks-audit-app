@@ -1,6 +1,6 @@
 # Data usage: table class, workspace indexes and signal
 
-Each table/volume gets exactly one usage class (first rule wins: written-never-read, idle 90d+, cooling, active); each workspace gets a log-scaled complexity index and usage index (0-100 against the largest workspace) and a signal from the two.
+Each table/volume gets exactly one usage class (first rule wins: written-never-read, idle 90d+, cooling, active); each workspace, catalog or schema gets a log-scaled complexity index and usage index (0-100 against the largest row of its level) and a signal from the two.
 
 ```mermaid
 flowchart TD
@@ -13,7 +13,7 @@ flowchart TD
   I -- no --> C{reads = 0?}
   C -- yes --> COOL[cooling]
   C -- no --> ACT[active]
-  W[workspace indexes] --> S{"usage < 10 -> Retire candidate; complexity >= 50 and usage < 50 -> Review; complexity < 50 -> Light; else Healthy"}
+  W["workspace / catalog / schema indexes"] --> S{"usage < 10 -> Retire candidate; complexity >= 50 and usage < 50 -> Review; complexity < 50 -> Light; else Healthy"}
 ```
 
 ## Rule in plain words
@@ -21,10 +21,12 @@ flowchart TD
 - `IDLE_DAYS` 90, `NEW_DAYS` 7 - `app/core/usage.py:10-11`.
 - System, samples, hive_metastore and `__databricks_internal*` catalogs are skipped - `app/core/usage.py:22-27`.
 - `scale`: `100 x log1p(v) / log1p(max)`, all 0 when max is 0 - `app/core/usage.py:67-70`.
-- Complexity weights: views .20, view columns .15, tables .20, table columns .15, volume files .10, size .20 - `app/core/usage.py:30-31`, index `app/core/usage.py:73-75`.
-- Usage weights: active people .35, service principals .15, queries .30, plus active days .20 linear - `app/core/usage.py:32-33`, index `app/core/usage.py:78-83`.
-- Signal - `app/core/usage.py:86-95`.
-- Clean-up order: unread sensitive tables first, then class rank, then biggest - `app/core/usage.py:98-101`.
+- `index_parts`: per row, each input's points (weight x scaled value), plus active days when a window is given; both indexes are the rounded sum - `app/core/usage.py:73-84`.
+- Complexity weights: views .20, view columns .15, tables .20, table columns .15, volume files .10, size .20 - `app/core/usage.py:30-31`, index `app/core/usage.py:87-88`.
+- Usage weights: active people .35, service principals .15, queries .30, plus active days .20 linear - `app/core/usage.py:32-33`, index `app/core/usage.py:91-92`.
+- Signal - `app/core/usage.py:95-104`.
+- Clean-up order: unread sensitive tables first, then class rank, then biggest - `app/core/usage.py:107-110`.
+- Catalog and schema level: `read_data_levels` scales every catalog (or schema) of the export before the workspace, env and tag filters, so a filter never moves a row's index; returns the per-input parts for the hover - `app/core/data.py:2089-2098`.
 - Used by Data usage screens and the workspace usage dashboard - `app/core/data.py:1692-1725`, `tools/direct_data_usage.py:13`.
 
 ## Formula
@@ -42,9 +44,11 @@ usage      = SUM w_k * scale(k) + 0.20 * 100 * min(active_days, window) / window
 ## Edge / rejected cases
 - New tables are "not shamed" - `app/core/usage.py:56-58`.
 - Weights sum to 1 - `tests/test_usage.py:42-43`.
+- Schema indexes are the same with and without a workspace filter - `tests/test_workspace_activity.py:172-174`.
 
 ## Implementing code
-- `app/core/usage.py:1-101`
+- `app/core/usage.py:1-110`
+- `app/core/data.py:1982-2099` (`read_data_levels`, catalog/schema rows)
 
 ## Config knobs
 - None in config files (constants in code); `idle_days` is a function argument - `app/core/usage.py:50`.

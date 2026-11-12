@@ -4,9 +4,9 @@ One FastAPI process (`app/api/app.py`) that serves read-only JSON under `/api/*`
 
 ```mermaid
 flowchart LR
-  main["__main__.py main()<br/>app/api/__main__.py:14-25"] -->|uvicorn.run| app["app.py FastAPI app<br/>app/api/app.py:184"]
-  main -->|thread| warm["warm_findings()<br/>app/api/app.py:1110-1118"]
-  app --> mw["_PrincipalMiddleware<br/>app/api/app.py:187-205"]
+  main["__main__.py main()<br/>app/api/__main__.py:14-25"] -->|uvicorn.run| app["app.py FastAPI app<br/>app/api/app.py:185"]
+  main -->|thread| warm["warm_findings()<br/>app/api/app.py:1118-1126"]
+  app --> mw["_PrincipalMiddleware<br/>app/api/app.py:188-206"]
   app --> svc["service.py<br/>load_outcome / list_findings / load_aggregate"]
   app --> guide["guide.py<br/>build_guide / runnable_sql"]
   app --> refresh["refresh.py<br/>start / status"]
@@ -23,7 +23,7 @@ flowchart LR
 |---|---|---|
 | `app/api/__init__.py` | Package docstring: read-only JSON over app/core | `app/api/__init__.py:1-10` |
 | `app/api/__main__.py` | `python -m app.api` entry: picks host/port, starts uvicorn | `app/api/__main__.py:1-29` |
-| `app/api/app.py` | FastAPI app, middleware, every route, caches, static page | `app/api/app.py:1-1488` |
+| `app/api/app.py` | FastAPI app, middleware, every route, caches, static page | `app/api/app.py:1-1496` |
 | `app/api/service.py` | Four-outcome "honesty rule" per check, findings list, aggregates, JSON shaping | `app/api/service.py:1-76` |
 | `app/api/guide.py` | Guide tab feed and runnable Databricks SQL per check | `app/api/guide.py:1-3`, `app/api/guide.py:182-202`, `app/api/guide.py:566` |
 | `app/api/refresh.py` | In-app Refresh: export + load in a background thread, then switch db | `app/api/refresh.py:1-99` |
@@ -39,21 +39,21 @@ flowchart LR
 
 ## `app.py` — app wiring
 
-- `app = FastAPI(title="Crosshire API")` — `app/api/app.py:184`.
-- `_PrincipalMiddleware` — pure ASGI middleware; reads header `x-forwarded-email` (set by Databricks Apps) and binds it with `rls.set_principal` for the request (`app/api/app.py:187-205`, `app/core/rls.py:434-443`).
-- `library_corrections.load_corrections()` at import: a broken `config/library_corrections.yml` stops the app from serving (`app/api/app.py:207-211`).
-- `_config_error_handler` — any `ConfigError` (bad `config/settings.yml`, bad `rls:` block) becomes a structured 503 `{detail, state: "settings_invalid", key, line}` (`app/api/app.py:221-231`).
+- `app = FastAPI(title="Crosshire API")` — `app/api/app.py:185`.
+- `_PrincipalMiddleware` — pure ASGI middleware; reads header `x-forwarded-email` (set by Databricks Apps) and binds it with `rls.set_principal` for the request (`app/api/app.py:188-206`, `app/core/rls.py:434-443`).
+- `library_corrections.load_corrections()` at import: a broken `config/library_corrections.yml` stops the app from serving (`app/api/app.py:208-212`).
+- `_config_error_handler` — any `ConfigError` (bad `config/settings.yml`, bad `rls:` block) becomes a structured 503 `{detail, state: "settings_invalid", key, line}` (`app/api/app.py:222-232`).
 - Helpers:
-  - `_validate_window(window)` — 422 unless 7/30/90 (`app/api/app.py:234-238`, `app/api/service.py:110`).
-  - `_resolve_window(window, settings)` — missing window → `settings["default_window"]` (`app/api/app.py:241-244`).
-  - `_open_window(default_window, windows)` — the window the UI opens on: default if the db has it, else the largest available (`app/api/app.py:247-253`).
-  - `_validate_statuses(statuses)` — closed set `CRITICAL/WARN/NOT_ASSESSED/OK` (`app/api/app.py:260-263`, `app/api/service.py:109`).
-  - `_parse_tag_filter(tag_key, tag_value, tag)` → `TagFilterSet`; bad combination → 422 (`app/api/app.py:266-279`).
-  - `_tag_json(tag)` — the echoed `"tag"` object (`app/api/app.py:282-308`).
-  - `_populated_attribute_keys(keys)` — top tags at least one workspace carries (`app/api/app.py:324-339`).
-- Caches (keyed by `_data_version()` = db identity + config mtimes + sidecars + `rls.scope_key()`): `_FINDINGS_CACHE` (32 entries) and `_ANSWER_CACHE` (64) (`app/api/app.py:1004-1015`, `app/api/app.py:1122-1138`).
-- `warm_findings()` — computes the unfiltered findings summary for the default window at start-up; skipped in rls `query` mode (`app/api/app.py:1110-1118`).
-- Static page: `index_page()` injects the brand name into `<title>` and `window.APP_BRAND`, 404 with a build hint when `app/web/dist/index.html` is missing (`app/api/app.py:1453-1471`); `/assets` mounted from `app/web/dist/assets` (`app/api/app.py:1479-1480`); `spa_fallback` returns the page for any non-`/api` path (`app/api/app.py:1483-1488`). JS/CSS MIME types forced for Windows (`app/api/app.py:1474-1477`).
+  - `_validate_window(window)` — 422 unless 7/30/90 (`app/api/app.py:235-239`, `app/api/service.py:110`).
+  - `_resolve_window(window, settings)` — missing window → `settings["default_window"]` (`app/api/app.py:242-245`).
+  - `_open_window(default_window, windows)` — the window the UI opens on: default if the db has it, else the largest available (`app/api/app.py:248-254`).
+  - `_validate_statuses(statuses)` — closed set `CRITICAL/WARN/NOT_ASSESSED/OK` (`app/api/app.py:261-264`, `app/api/service.py:109`).
+  - `_parse_tag_filter(tag_key, tag_value, tag)` → `TagFilterSet`; bad combination → 422 (`app/api/app.py:267-280`).
+  - `_tag_json(tag)` — the echoed `"tag"` object (`app/api/app.py:283-309`).
+  - `_populated_attribute_keys(keys)` — top tags at least one workspace carries (`app/api/app.py:325-340`).
+- Caches (keyed by `_data_version()` = db identity + config mtimes + sidecars + `rls.scope_key()`): `_FINDINGS_CACHE` (32 entries) and `_ANSWER_CACHE` (64) (`app/api/app.py:1012-1023`, `app/api/app.py:1130-1146`).
+- `warm_findings()` — computes the unfiltered findings summary for the default window at start-up; skipped in rls `query` mode (`app/api/app.py:1118-1126`).
+- Static page: `index_page()` injects the brand name into `<title>` and `window.APP_BRAND`, 404 with a build hint when `app/web/dist/index.html` is missing (`app/api/app.py:1461-1479`); `/assets` mounted from `app/web/dist/assets` (`app/api/app.py:1487-1488`); `spa_fallback` returns the page for any non-`/api` path (`app/api/app.py:1491-1496`). JS/CSS MIME types forced for Windows (`app/api/app.py:1482-1485`).
 
 ## Endpoints
 
@@ -61,42 +61,42 @@ All `GET` unless stated; all return JSON. "core" = function called in `app/core`
 
 | Endpoint | Handler | Calls | Main params | Evidence |
 |---|---|---|---|---|
-| `GET /api/status` | `get_status` | `config.load_settings`, `data.db_state` | — | `app/api/app.py:349-377` |
-| `GET /api/refresh` | `get_refresh` | `refresh.status` | — | `app/api/app.py:385-387` |
-| `POST /api/refresh` | `post_refresh` | `refresh.start(days)`; in the app with rls on, 403 unless the user is in `refresh.admins` (`_refresh_admins`, config/app.yml + app.local.yml) or `rls.unrestricted` | `days` 1-90, default 30 | `app/api/app.py:390-411` |
-| `GET /api/meta` | `get_meta` | `data.snapshot_manifest`, `data.run_results`, `data.direct_export_info`, `data.window_status`, `data.cost_cutoff`, `rls.meta`, `registry.load_registry` | — | `app/api/app.py:417-495` |
-| `GET /api/workspaces` | `get_workspaces` | `data.read_dim_workspace`, `service.workspace_region` | — (503 if dims unreadable) | `app/api/app.py:509-544` |
-| `GET /api/dims` | `get_dims` | `data.read_dim_job/cluster/warehouse/pipeline/notebook` | — | `app/api/app.py:600-641` |
-| `GET /api/coverage` | `get_coverage` | `data.snapshot_manifest`, `data.run_results`, `data.direct_source_states`, `data.checks_not_ok`, `data.truncated_query_ids`, `service.region_split_or_none` | — | `app/api/app.py:658-723` |
-| `GET /api/guide` | `get_guide` | `guide.build_guide` | — | `app/api/app.py:731-733` |
-| `GET /api/guide/sql/{query_id}` | `get_guide_sql` | `guide.runnable_sql` | `window` | `app/api/app.py:736-743` |
-| `GET /api/rollup` | `get_rollup` | `rollup.rollup` | `area`, `tag_key` (req.), `window`, `tag_value[]`, `workspace_ids[]`, `env[]`, `tag[]` | `app/api/app.py:754-780` |
-| `GET /api/rollup/top` | `get_rollup_top` | `rollup.by_tag_top` | `area`, `tag_key`, `top` 1-100 | `app/api/app.py:783-803` |
-| `GET /api/rollup/keys` | `get_rollup_keys` | `rollup.rollup_keys` | `area`, `window` | `app/api/app.py:964-974` |
-| `GET /api/tag_origins` | `get_tag_origins` | `data.read_tag_origins` | `window`, `workspace_ids[]`, `env[]`, `tag[]` | `app/api/app.py:806-817` |
-| `GET /api/workspace_tags` | `get_workspace_tags` | `data.read_workspace_tags` | `workspace_ids[]`, `env[]`, `tag[]` | `app/api/app.py:820-832` |
-| `GET /api/abac_policies` | `get_abac_policies` | `data.read_abac_policies` | — | `app/api/app.py:835-837` |
-| `GET /api/workspace_usage` | `get_workspace_usage` | `data.read_workspaces` | `window`, scope, `tag[]` | `app/api/app.py:840-849` |
-| `GET /api/workspace_schemas` | `get_workspace_schemas` | `data.read_workspace_schemas` | `workspace_id`, `window` | `app/api/app.py:852-855` |
-| `GET /api/activity` | `get_activity` | `data.read_activity` | `window`, scope, `workspace_id` | `app/api/app.py:858-867` |
-| `GET /api/person_tables` | `get_person_tables` | `data.read_person_tables` | `identity` (req.), `window` | `app/api/app.py:870-873` |
-| `GET /api/volumes` | `get_volumes` | `data.read_volumes` | `window`, scope, `tag[]` | `app/api/app.py:876-885` |
-| `GET /api/volume_users` | `get_volume_users` | `data.read_volume_users` | `volume` (req.), `window` | `app/api/app.py:888-891` |
-| `GET /api/tables` | `get_tables` | `data.read_tables` | `window`, scope (`none` = no home workspace), `tag[]` | `app/api/app.py:894-908` |
-| `GET /api/table` | `get_table` | `data.read_table` | `name` (req.), `window` | `app/api/app.py:938-941` |
-| `GET /api/table_sizes` | `get_table_sizes` | `data.read_table_sizes` | — | `app/api/app.py:945-947` |
-| `GET /api/people` | `get_people` | `data.read_people` | `window`, scope | `app/api/app.py:911-919` |
-| `GET /api/warehouses` | `get_warehouses` | `data.read_warehouses` | `window`, scope | `app/api/app.py:921-929` |
-| `GET /api/warehouse` | `get_warehouse` | `data.read_warehouse` | `warehouse_id` (req.), `window` | `app/api/app.py:932-935` |
-| `GET /api/tag_compliance` | `get_tag_compliance` | `data.read_tag_compliance` (cached) | `window`, scope, `tag[]` | `app/api/app.py:950-961` |
-| `GET /api/tags` | `get_tags` | `tags.read_tag_index` (cached); 503 if tag models not built | `search`, `tag_key`, `limit_keys` 1-200, `limit_values` 1-500 | `app/api/app.py:983-994` |
-| `GET /api/findings` | `get_findings` → `_findings_answer` | `service.list_findings`, `service.region_gap`, `service.library_corrections_for`, `materiality.severity_cap` | `window`, `workspace_ids[]`, `env[]`, `tag_key`, `tag_value`, `tag[]` | `app/api/app.py:1018-1107` |
-| `GET /api/finding/{query_id}` | `get_finding` | `service.load_outcome`, `pricing.apply`, `service.classify_columns`, `service.records`, `service.floor_json`, `service.row_cap` | `window`, scope, `limit` 1-5000 (200), `offset`, `job_id`, `status[]`, tag params, `columns[]` | `app/api/app.py:1156-1313` |
-| `GET /api/finding/{query_id}/aggregate` | `get_finding_aggregate` | `service.load_aggregate`, `service.aggregate_group_json` | `group[]`, `agg` (sum), `value`, `status[]`, `top` 1-10000, tag params, `below_floor` | `app/api/app.py:1325-1445` |
-| `GET /`, `/index.html`, `/{path}` | `index_page`, `spa_fallback` | reads `app/web/dist/index.html` | — | `app/api/app.py:1453-1488` |
+| `GET /api/status` | `get_status` | `config.load_settings`, `data.db_state` | — | `app/api/app.py:350-378` |
+| `GET /api/refresh` | `get_refresh` | `refresh.status` | — | `app/api/app.py:386-388` |
+| `POST /api/refresh` | `post_refresh` | `refresh.start(days)`; in the app with rls on, 403 unless the user is in `refresh.admins` (`_refresh_admins`, config/app.yml + app.local.yml) or `rls.unrestricted` | `days` 1-90, default 30 | `app/api/app.py:391-412` |
+| `GET /api/meta` | `get_meta` | `data.snapshot_manifest`, `data.run_results`, `data.direct_export_info`, `data.window_status`, `data.cost_cutoff`, `rls.meta`, `registry.load_registry` | — | `app/api/app.py:418-496` |
+| `GET /api/workspaces` | `get_workspaces` | `data.read_dim_workspace`, `service.workspace_region` | — (503 if dims unreadable) | `app/api/app.py:510-545` |
+| `GET /api/dims` | `get_dims` | `data.read_dim_job/cluster/warehouse/pipeline/notebook` | — | `app/api/app.py:601-642` |
+| `GET /api/coverage` | `get_coverage` | `data.snapshot_manifest`, `data.run_results`, `data.direct_source_states`, `data.checks_not_ok`, `data.truncated_query_ids`, `service.region_split_or_none` | — | `app/api/app.py:659-724` |
+| `GET /api/guide` | `get_guide` | `guide.build_guide` | — | `app/api/app.py:732-734` |
+| `GET /api/guide/sql/{query_id}` | `get_guide_sql` | `guide.runnable_sql` | `window` | `app/api/app.py:737-744` |
+| `GET /api/rollup` | `get_rollup` | `rollup.rollup` | `area`, `tag_key` (req.), `window`, `tag_value[]`, `workspace_ids[]`, `env[]`, `tag[]` | `app/api/app.py:755-781` |
+| `GET /api/rollup/top` | `get_rollup_top` | `rollup.by_tag_top` | `area`, `tag_key`, `top` 1-100 | `app/api/app.py:784-804` |
+| `GET /api/rollup/keys` | `get_rollup_keys` | `rollup.rollup_keys` | `area`, `window` | `app/api/app.py:972-982` |
+| `GET /api/tag_origins` | `get_tag_origins` | `data.read_tag_origins` | `window`, `workspace_ids[]`, `env[]`, `tag[]` | `app/api/app.py:807-818` |
+| `GET /api/workspace_tags` | `get_workspace_tags` | `data.read_workspace_tags` | `workspace_ids[]`, `env[]`, `tag[]` | `app/api/app.py:821-833` |
+| `GET /api/abac_policies` | `get_abac_policies` | `data.read_abac_policies` | — | `app/api/app.py:836-838` |
+| `GET /api/workspace_usage` | `get_workspace_usage` | `data.read_workspaces` | `window`, scope, `tag[]` | `app/api/app.py:841-850` |
+| `GET /api/data_levels` | `get_data_levels` | `data.read_data_levels` | `level` (catalog/schema), `window`, scope, `tag[]` | `app/api/app.py:853-863` |
+| `GET /api/activity` | `get_activity` | `data.read_activity` | `window`, scope, `workspace_id` | `app/api/app.py:866-875` |
+| `GET /api/person_tables` | `get_person_tables` | `data.read_person_tables` | `identity` (req.), `window` | `app/api/app.py:878-881` |
+| `GET /api/volumes` | `get_volumes` | `data.read_volumes` | `window`, scope, `tag[]` | `app/api/app.py:884-893` |
+| `GET /api/volume_users` | `get_volume_users` | `data.read_volume_users` | `volume` (req.), `window` | `app/api/app.py:896-899` |
+| `GET /api/tables` | `get_tables` | `data.read_tables` | `window`, scope (`none` = no home workspace), `tag[]` | `app/api/app.py:902-916` |
+| `GET /api/table` | `get_table` | `data.read_table` | `name` (req.), `window` | `app/api/app.py:946-949` |
+| `GET /api/table_sizes` | `get_table_sizes` | `data.read_table_sizes` | — | `app/api/app.py:953-955` |
+| `GET /api/people` | `get_people` | `data.read_people` | `window`, scope | `app/api/app.py:919-927` |
+| `GET /api/warehouses` | `get_warehouses` | `data.read_warehouses` | `window`, scope | `app/api/app.py:929-937` |
+| `GET /api/warehouse` | `get_warehouse` | `data.read_warehouse` | `warehouse_id` (req.), `window` | `app/api/app.py:940-943` |
+| `GET /api/tag_compliance` | `get_tag_compliance` | `data.read_tag_compliance` (cached) | `window`, scope, `tag[]` | `app/api/app.py:958-969` |
+| `GET /api/tags` | `get_tags` | `tags.read_tag_index` (cached); 503 if tag models not built | `search`, `tag_key`, `limit_keys` 1-200, `limit_values` 1-500 | `app/api/app.py:991-1002` |
+| `GET /api/findings` | `get_findings` → `_findings_answer` | `service.list_findings`, `service.region_gap`, `service.library_corrections_for`, `materiality.severity_cap` | `window`, `workspace_ids[]`, `env[]`, `tag_key`, `tag_value`, `tag[]` | `app/api/app.py:1026-1115` |
+| `GET /api/finding/{query_id}` | `get_finding` | `service.load_outcome`, `pricing.apply`, `service.classify_columns`, `service.records`, `service.floor_json`, `service.row_cap` | `window`, scope, `limit` 1-5000 (200), `offset`, `job_id`, `status[]`, tag params, `columns[]` | `app/api/app.py:1164-1321` |
+| `GET /api/finding/{query_id}/aggregate` | `get_finding_aggregate` | `service.load_aggregate`, `service.aggregate_group_json` | `group[]`, `agg` (sum), `value`, `status[]`, `top` 1-10000, tag params, `below_floor` | `app/api/app.py:1333-1453` |
+| `GET /`, `/index.html`, `/{path}` | `index_page`, `spa_fallback` | reads `app/web/dist/index.html` | — | `app/api/app.py:1461-1496` |
 
-- "scope" = `workspace_ids[]` + `env[]`, resolved by `rollup._resolve_workspace_scope` (`app/api/app.py:815`, `app/core/rollup.py:482`).
-- Error mapping: unknown `query_id` → 404 (`app/api/app.py:1197-1198`); bad window/status/tag/aggregate arg → 422 (`app/api/app.py:234-279`, `app/api/app.py:1360-1361`); `ConfigError` → 503 (`app/api/app.py:221-231`); store read failure → 200 with `outcome: "error"` (`app/api/service.py:521-524`).
+- "scope" = `workspace_ids[]` + `env[]`, resolved by `rollup._resolve_workspace_scope` (`app/api/app.py:816`, `app/core/rollup.py:482`).
+- Error mapping: unknown `query_id` → 404 (`app/api/app.py:1205-1206`); bad window/status/tag/aggregate arg → 422 (`app/api/app.py:235-280`, `app/api/app.py:1368-1369`); `ConfigError` → 503 (`app/api/app.py:222-232`); store read failure → 200 with `outcome: "error"` (`app/api/service.py:521-524`).
 
 ## `service.py` — the honesty rule
 
@@ -133,4 +133,4 @@ All `GET` unless stated; all return JSON. "core" = function called in `app/core`
 ## Calls in / out
 
 - In: `python -m app.api` (`app/api/__main__.py:28-29`), `tools/app_start.py` via `runpy.run_module("app.api")` (`tools/app_start.py:39`), browser via `web/src/api.ts` (`web/src/api.ts:24-37`, `web/src/api.ts:68-135`), tests via `TestClient(app)` (`tests/test_api.py:46`).
-- Out: `app/core/*` (imports `app/api/app.py:168-180`, `app/api/service.py:95-101`, `app/api/guide.py:11-20`, `app/api/refresh.py:17`); subprocesses `tools/export_direct_results.py`, `tools/load_direct_results.py` (`app/api/refresh.py:57-60`).
+- Out: `app/core/*` (imports `app/api/app.py:169-181`, `app/api/service.py:95-101`, `app/api/guide.py:11-20`, `app/api/refresh.py:17`); subprocesses `tools/export_direct_results.py`, `tools/load_direct_results.py` (`app/api/refresh.py:57-60`).

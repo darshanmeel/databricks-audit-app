@@ -1,14 +1,14 @@
 {"from": "function:tools/export_direct_results.py:window_plan", "to": "business_rule:window_plan_and_aliases", "type": "implements", "evidence": "tools/export_direct_results.py:222-225", "status": "extracted"}
 {"from": "function:tools/export_direct_results.py:window_aliases_map", "to": "business_rule:window_plan_and_aliases", "type": "implements", "evidence": "tools/export_direct_results.py:236-243", "status": "extracted"}
 {"from": "function:tools/load_direct_results.py:_infer_window_aliases", "to": "business_rule:window_plan_and_aliases", "type": "implements", "evidence": "tools/load_direct_results.py:447-461", "status": "extracted"}
-{"from": "function:app/core/data.py:window_status", "to": "business_rule:window_plan_and_aliases", "type": "implements", "evidence": "app/core/data.py:3428-3446", "status": "extracted"}
+{"from": "function:app/core/data.py:window_status", "to": "business_rule:window_plan_and_aliases", "type": "implements", "evidence": "app/core/data.py:3493-3511", "status": "extracted"}
 {"from": "test_case:tests/test_export_direct_results.py:test_window_sources_and_aliases_examples", "to": "business_rule:window_plan_and_aliases", "type": "illustrates", "evidence": "tests/test_export_direct_results.py:305-316", "status": "extracted"}
 {"from": "function:tools/export_direct_results.py:_cutoff", "to": "business_rule:as_of_cutoff", "type": "implements", "evidence": "tools/export_direct_results.py:332-334", "status": "extracted"}
 {"from": "dbt_macro:audit_today", "to": "business_rule:as_of_cutoff", "type": "implements", "evidence": "dbt/macros/audit_time.sql:12-26", "status": "extracted"}
 {"from": "function:app/core/translate.py:pin_time", "to": "business_rule:as_of_cutoff", "type": "implements", "evidence": "app/core/translate.py:700-706", "status": "extracted"}
 {"from": "config:config/settings.yml", "to": "business_rule:as_of_cutoff", "type": "configures", "evidence": "config/settings.yml:22", "status": "extracted"}
 {"from": "function:tools/export_direct_results.py:_run_capped_query", "to": "business_rule:export_row_cap", "type": "implements", "evidence": "tools/export_direct_results.py:406-420", "status": "extracted"}
-{"from": "function:app/core/data.py:truncation_info", "to": "business_rule:export_row_cap", "type": "implements", "evidence": "app/core/data.py:3453-3487", "status": "extracted"}
+{"from": "function:app/core/data.py:truncation_info", "to": "business_rule:export_row_cap", "type": "implements", "evidence": "app/core/data.py:3518-3552", "status": "extracted"}
 {"from": "test_case:tests/test_export_direct_results.py:test_run_capped_query_reports_truncated", "to": "business_rule:export_row_cap", "type": "illustrates", "evidence": "tests/test_export_direct_results.py:237-250", "status": "extracted"}
 {"from": "process:load_direct_results_internals", "to": "flow:export_load_serve", "type": "part_of", "evidence": "tools/load_direct_results.py:486", "status": "extracted"}
 {"from": "function:app/core/tag_bill.py:apply_bill_to_perf", "to": "process:load_direct_results_internals", "type": "part_of", "evidence": "tools/load_direct_results.py:716-718", "status": "extracted"}

@@ -12,7 +12,7 @@ flowchart LR
 
 ## Rule in plain words
 - Only columns matching `^(?:est_(?:[a-z]+_)?usd_list|net_list_cost(?:_usd)?)$` get a twin; `*_share` and DBU columns are never scaled - `app/core/pricing.py:21-26`, `app/core/pricing.py:48-57`.
-- `data.py` returns raw list-priced rows; the API applies the discount after reading - `app/core/pricing.py:10-11`, call site `app/api/app.py:1268`.
+- `data.py` returns raw list-priced rows; the API applies the discount after reading - `app/core/pricing.py:10-11`, call site `app/api/app.py:1276`.
 - Label text: `"list price (effective)"` at 0, else `"what-if: list price (effective), -X%"`, X = `round(d*100, 1)` with trailing zeros dropped (no banker's-rounding bug) - `app/api/service.py:972-982`.
 - The raw column is always labelled at 0%; only the `_disc` twin carries the real discount - `app/api/service.py:985-993`.
 - No "own-basis" money columns remain (the dict that held them is empty) - `app/core/pricing.py:28-45`.

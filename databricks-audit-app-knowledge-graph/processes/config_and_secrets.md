@@ -26,7 +26,7 @@ flowchart LR
 - `config/settings.yml` is tracked; put changes in `config/settings.local.yml` (git-ignored); local values win key by key; a block (`ui`, `brand`, `privacy`, `load`…) in the local file replaces the whole block (`config/settings.yml:1-5`, `README.md:422-424`, `README.md:450-451`, `app/core/config.py:567`).
 - Config dir = `AUDIT_CONFIG_DIR` or `<repo>/config`, re-read on every call (`app/core/config.py:127-129`).
 - Missing `settings.yml` is seeded from `DEFAULT_SETTINGS` (`app/core/config.py:547-557`).
-- Unknown keys / wrong types raise `SettingsError(key, line)`; the API answers 503 and `/api/status` shows the key and line (`app/core/config.py:101-119`, `app/core/config.py:374-506`, `app/api/app.py:221-231`, `app/api/app.py:349-377`).
+- Unknown keys / wrong types raise `SettingsError(key, line)`; the API answers 503 and `/api/status` shows the key and line (`app/core/config.py:101-119`, `app/core/config.py:374-506`, `app/api/app.py:222-232`, `app/api/app.py:350-378`).
 
 ## settings.yml keys
 
@@ -34,28 +34,28 @@ Default = `DEFAULT_SETTINGS` (`app/core/config.py:187-219`); "shipped" = value i
 
 | Key | Default (code) | Shipped | Validation | Read by | Takes effect |
 |---|---|---|---|---|---|
-| `discount_pct` | 0.0 | 0.0 (`config/settings.yml:15`) | number in [0,1) (`app/core/config.py:387-388`) | `app/api/app.py:463`, `app/api/app.py:1268-1273`, `app/api/app.py:1298`, `app/api/app.py:1437`, `app/api/guide.py:597` | page refresh |
+| `discount_pct` | 0.0 | 0.0 (`config/settings.yml:15`) | number in [0,1) (`app/core/config.py:387-388`) | `app/api/app.py:464`, `app/api/app.py:1276-1281`, `app/api/app.py:1306`, `app/api/app.py:1445`, `app/api/guide.py:597` | page refresh |
 | `dbt_target` | "dev" | not set | non-empty string (`app/core/config.py:389-390`) | no reader found in app/ or tools/ (unclear) | — |
-| `default_window` | 30 | 30 (`config/settings.yml:18`) | 7/30/90 (`app/core/config.py:430-431`) | `app/api/app.py:241-244`, `app/api/app.py:458-462`, `app/api/app.py:847-940`, `tools/export_direct_results.py:211-216` | next export / page |
+| `default_window` | 30 | 30 (`config/settings.yml:18`) | 7/30/90 (`app/core/config.py:430-431`) | `app/api/app.py:242-245`, `app/api/app.py:459-463`, `app/api/app.py:848-948`, `tools/export_direct_results.py:211-216` | next export / page |
 | `include_today` | true | true (`config/settings.yml:22`) | bool (`app/core/config.py:428-429`) | `tools/export_direct_results.py:203-208`, `app/api/guide.py:76` | next export |
 | `ui.max_rows` | 500 | 500 (`config/settings.yml:27`) | positive int (`app/core/config.py:446-447`) | `app/core/data.py:898` (default page LIMIT) | page refresh |
-| `ui.max_chart_categories` | 8 | 8 (`config/settings.yml:28`) | positive int | `app/api/app.py:477` | page refresh |
-| `mandatory_tag_keys` | `[cost_center, domain, env]` (`app/core/config.py:206`) | `[cost_center, domain, environment]` (`config/settings.yml:36`) | list of 1-5 (`app/core/config.py:419-422`) | `app/api/app.py:466`, `app/core/data.py:1537`, `app/core/rollup.py:1035`, `app/api/guide.py:83`, `tools/export_direct_results.py:624`, `tools/load_direct_results.py:184` | page refresh |
+| `ui.max_chart_categories` | 8 | 8 (`config/settings.yml:28`) | positive int | `app/api/app.py:478` | page refresh |
+| `mandatory_tag_keys` | `[cost_center, domain, env]` (`app/core/config.py:206`) | `[cost_center, domain, environment]` (`config/settings.yml:36`) | list of 1-5 (`app/core/config.py:419-422`) | `app/api/app.py:467`, `app/core/data.py:1537`, `app/core/rollup.py:1035`, `app/api/guide.py:83`, `tools/export_direct_results.py:624`, `tools/load_direct_results.py:184` | page refresh |
 | `export_tag_keys` | None (all) | commented (`config/settings.yml:42`) | list of names (`app/core/config.py:413-417`) | `tools/export_direct_results.py:621` | next export |
 | `load.memory_limit` | "1GB" | 1GB (`config/settings.yml:53`) | `\d+(MB|GB)` (`app/core/config.py:493-494`) | `app/core/data.py:297-299`, `tools/load_direct_results.py:560-562` | next load / app restart |
 | `load.threads` | 4 | 4 (`config/settings.yml:54`) | int range (`app/core/config.py:497-498`) | same as above | next load / app restart |
 | `load.top_tag_keys` | 10 | 10 (`config/settings.yml:55`) | int range | `tools/load_direct_results.py:162-182` | next load |
 | `load.tag_keys` | None | commented (`config/settings.yml:56`) | list (`app/core/config.py:500-504`) | `tools/load_direct_results.py:174-175` | next load |
-| `tag_coverage_floor` | 0.5 | 0.5 (`config/settings.yml:61`) | [0,1] (`app/core/config.py:434-435`) | `app/api/app.py:829`, `app/api/guide.py:659`; export via `tools/dbt_run.py:144-146` (`tools/export_direct_results.py:646-664`) | next export |
-| `tag_share_floor` | 0.6 | 0.6 (`config/settings.yml:62`) | [0,1] (`app/core/config.py:432-433`) | `app/api/app.py:829`, `app/api/guide.py:658`; export via `tools/dbt_run.py:139-141` | next export |
+| `tag_coverage_floor` | 0.5 | 0.5 (`config/settings.yml:61`) | [0,1] (`app/core/config.py:434-435`) | `app/api/app.py:830`, `app/api/guide.py:659`; export via `tools/dbt_run.py:144-146` (`tools/export_direct_results.py:646-664`) | next export |
+| `tag_share_floor` | 0.6 | 0.6 (`config/settings.yml:62`) | [0,1] (`app/core/config.py:432-433`) | `app/api/app.py:830`, `app/api/guide.py:658`; export via `tools/dbt_run.py:139-141` | next export |
 | `admin_groups` | [] | commented (`config/settings.yml:66`) | ≤ 50 names (`app/core/config.py:424-427`) | `app/core/materiality.py:81` | page refresh |
-| `brand.name/url/contact_name/contact_email` | Crosshire defaults (`app/core/config.py:194-199`) | `config/settings.yml:69-73` | strings (`app/core/config.py:450-464`) | `app/api/app.py:376`, `app/api/app.py:464`, `app/api/app.py:1458`, `app/core/config.py:673` (query_source fallback), `tools/build_databricks_dashboards.py:121` | page refresh |
-| `privacy.mask_user_identities` | false | false (`config/settings.yml:80`) | bool (`app/core/config.py:477-478`) | `app/core/identity.py:63-65`, `app/api/app.py:465`, `tools/export_direct_results.py:1548`, `tools/dbt_run.py:154-159` | next export / load |
+| `brand.name/url/contact_name/contact_email` | Crosshire defaults (`app/core/config.py:194-199`) | `config/settings.yml:69-73` | strings (`app/core/config.py:450-464`) | `app/api/app.py:377`, `app/api/app.py:465`, `app/api/app.py:1466`, `app/core/config.py:673` (query_source fallback), `tools/build_databricks_dashboards.py:121` | page refresh |
+| `privacy.mask_user_identities` | false | false (`config/settings.yml:80`) | bool (`app/core/config.py:477-478`) | `app/core/identity.py:63-65`, `app/api/app.py:466`, `tools/export_direct_results.py:1548`, `tools/dbt_run.py:154-159` | next export / load |
 | `query_source` | None → brand name | commented (`config/settings.yml:85`) | 1-40 `[A-Za-z0-9_-]` (`app/core/config.py:392-395`) | `app/core/config.py:664-674` → `tools/snapshot.py:156-161`, `tools/snapshot.py:81`, `tools/snapshot.py:544-546`, `tools/export_direct_results.py:367`, `app/api/guide.py:201` | next export |
 | `query_tags` | `{cost_center: lakehouse_health, domain: lakehouse_health}` | same (`config/settings.yml:92-94`) | ≤10, `[A-Za-z0-9_]{1,64}`, not `audit_app/dashboard/tab` (`app/core/config.py:183-185`, `app/core/config.py:399-405`) | `app/core/config.py:636-642` → `tools/snapshot.py:102-107`, `tools/build_databricks_dashboards.py:187` | next export; rebuild dashboards |
 | `table_sizes.*` (`enabled, source, threads, max_tables, volumes, volume_max_entries, volume_full_days, tables_from, columns_from, volumes_from`) | `app/core/config.py:209-213` | `config/settings.yml:99-112` | `app/core/config.py:310-339` | `tools/export_direct_results.py:1230-1231`, `tools/export_direct_results.py:1427`, `tools/table_detail.py:90-104`, `tools/direct_data_usage.py:25` | next export |
 | `sources` | {} | commented (`config/settings.yml:117-119`) | `app/core/config.py:263-277` | `app/core/config.py:653-656` → `tools/snapshot.py:110-115`, `tools/snapshot.py:549-552`, `tools/build_databricks_dashboards.py:100` | next export; rebuild dashboards |
-| `contract.start/end/commit_usd` | None | commented (`config/settings.yml:124-127`) | `app/core/config.py:292-308` | `app/api/app.py:467` (UI burndown) | page load |
+| `contract.start/end/commit_usd` | None | commented (`config/settings.yml:124-127`) | `app/core/config.py:292-308` | `app/api/app.py:468` (UI burndown) | page load |
 | `dashboards.*` (`snapshot_catalog, snapshot_schema, sizes_schema, sizes_tables`) | `app/core/config.py:215-218` | commented (`config/settings.yml:135-142`) | `app/core/config.py:234-261` | `tools/build_databricks_dashboards.py:36`, `tools/build_databricks_dashboards.py:1458-1472`, `tools/direct_data_usage.py:23-24`, `tools/table_detail.py:104`, `tools/dashboard_query_doc.py:21` | rebuild dashboards |
 
 ## config/app.yml (Databricks App + row-level access)

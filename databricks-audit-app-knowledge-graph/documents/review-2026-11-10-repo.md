@@ -49,7 +49,7 @@ Line numbers in this table are as of `dda0df6`, not re-checked against `b8d2db1`
 
 - Visual: month labels, axis collision, table overflow, narrow text, dark-mode contrast.
 - Code size/obvious: duplicate dict key in `tools/direct_guides.py:1157,1174`, unused import `app/core/rls.py:19`, Streamlit leftovers, unused helpers.
-- Correctness: cache eviction race (`app/api/app.py:1135,1162`), routes ignoring `default_window` (`app/api/app.py:864`), `--sizes-only --mask-users` ignored, unredacted error strings (`tools/export_direct_results.py:1425,488,813`).
+- Correctness: cache eviction race (`app/api/app.py:1142`), routes ignoring `default_window` (`app/api/app.py:872`), `--sizes-only --mask-users` ignored, unredacted error strings (`tools/export_direct_results.py:1425,488,813`).
 - Design: materiality floor hard-coded in dashboards (`tools/build_direct_dashboards.py:176`, `tools/build_databricks_dashboards.py:465`); gate existence probes dead, duplicated `.env`/redact helpers (`tools/gate.py:63`).
 - Areas with no issues: API injection, query tags on direct SQL, customer names, type safety (`reviews/review-2026-11-10-repo.html:89`).
 

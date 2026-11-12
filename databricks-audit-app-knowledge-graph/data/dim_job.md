@@ -23,8 +23,8 @@ flowchart LR
 | run_as, run_as_user_name, creator_user_name | yes (raw, unmasked in table) | `dbt/models/dims/dim_job.sql:11-18,39-41` |
 | delete_time | no | `dbt/models/dims/dim_job.sql:42` |
 
-- Identity columns are masked on read (`app/core/data.py:3157-3177`, `_mask_dim_job` at `app/core/data.py:3122`).
+- Identity columns are masked on read (`app/core/data.py:3222-3242`, `_mask_dim_job` at `app/core/data.py:3187`).
 
 ## Read by
 
-- `app/core/data.py:3172` (`read_dim_job`), `GET /api/dims` (`app/api/app.py:618`).
+- `app/core/data.py:3237` (`read_dim_job`), `GET /api/dims` (`app/api/app.py:619`).

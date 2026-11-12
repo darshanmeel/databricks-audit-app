@@ -42,11 +42,11 @@ flowchart LR
 
 ### How the app serves it
 
-- `WEB_DIR = app/web/dist` (app/api/app.py:182).
-- `GET /` and `/index.html` -> `index_page()`: reads `dist/index.html`, swaps `<title>Crosshire</title>` for the settings brand and injects `window.APP_BRAND`; 404 with the build command if missing; `Cache-Control: no-cache` (app/api/app.py:1453-1471).
-- `.js/.css/.woff2` MIME types forced (Windows registry can map `.js` to text/plain) (app/api/app.py:1474-1477).
-- `/assets` mounted as StaticFiles when present (app/api/app.py:1479-1480).
-- Any other non-`/api` path returns the page (SPA fallback); unknown `/api/*` stays 404 (app/api/app.py:1483-1488).
+- `WEB_DIR = app/web/dist` (app/api/app.py:183).
+- `GET /` and `/index.html` -> `index_page()`: reads `dist/index.html`, swaps `<title>Crosshire</title>` for the settings brand and injects `window.APP_BRAND`; 404 with the build command if missing; `Cache-Control: no-cache` (app/api/app.py:1461-1479).
+- `.js/.css/.woff2` MIME types forced (Windows registry can map `.js` to text/plain) (app/api/app.py:1482-1485).
+- `/assets` mounted as StaticFiles when present (app/api/app.py:1487-1488).
+- Any other non-`/api` path returns the page (SPA fallback); unknown `/api/*` stays 404 (app/api/app.py:1491-1496).
 - The page reads `window.APP_BRAND` for its name before `/api/meta` answers (web/src/globals.d.ts:1-4; web/src/App.tsx:150).
 
 ### Build checks (tests/test_web_dist.py)
@@ -61,7 +61,7 @@ flowchart LR
 
 - `main.tsx` imports CSS (web/src/main.tsx:4-18), then every tab module **for its side effect**: each calls `AreaContent.register(area, subtab, Component)` at load (web/src/main.tsx:20-41), then `components/job_panel` which mounts its own overlay root (web/src/main.tsx:42; web/src/components/job_panel.tsx:577), then renders `<App/>` (web/src/main.tsx:43-45).
 - `AreaContent` is a plain map `"area::subtab" -> Component` (web/src/components/primitives.tsx:604-611).
-- `AREA_REGISTRY` (data only) maps area -> label, scope, sub-tabs -> owned `ids` and `refIds` (query_ids) (web/src/components/tab_registry.ts:314-341); sidebar order `AREA_ORDER` (web/src/components/tab_registry.ts:342).
+- `AREA_REGISTRY` (data only) maps area -> label, scope, sub-tabs -> owned `ids` and `refIds` (query_ids) (web/src/components/tab_registry.ts:316-343); sidebar order `AREA_ORDER` (web/src/components/tab_registry.ts:344).
 
 ## App shell (App.tsx)
 
@@ -113,7 +113,7 @@ All views are linkable. `HashState` is the one reader/writer of `location.hash` 
 - `readNavHash(validTabs)` rejects unknown tabs and odd tokens (`/^[A-Za-z0-9_.:-]{1,200}$/`) (web/src/components/nav_hash.ts:27-43).
 - `navHref(patch)` builds a hash, merging; accepts field name or short key (web/src/components/nav_hash.ts:59-71).
 - `guideLinkProps(focus)` real hash change into the Guide (web/src/components/nav_hash.ts:75-85).
-- `applyOldKeyRedirects` maps old keys: `query->queries`, `lineage->governance/lineage`, `domains->findings`, old sub-tabs (`timing->slow`, ...) unless the key is now a live sub-tab (web/src/components/nav_hash.ts:112-128; web/src/components/tab_registry.ts:380-388).
+- `applyOldKeyRedirects` maps old keys: `query->queries`, `lineage->governance/lineage`, `domains->findings`, old sub-tabs (`timing->slow`, ...) unless the key is now a live sub-tab (web/src/components/nav_hash.ts:112-128; web/src/components/tab_registry.ts:382-390).
 - Example: `#tab=query` -> Queries tab (web/src/components/nav_hash.test.ts:50); `#tab=jobs&subtab=timing` -> Jobs > Slow & queued, sub-tab `slow` (web/src/components/nav_hash.test.ts:57-59).
 
 ### Filters
@@ -174,36 +174,36 @@ flowchart LR
 
 | Api member | Endpoint | Params | Line | Backend route |
 |---|---|---|---|---|
-| `status` | GET /api/status | - | web/src/api.ts:70 | app/api/app.py:349 |
-| `meta` | GET /api/meta | - | web/src/api.ts:71 | app/api/app.py:417 |
-| `workspaces` | GET /api/workspaces | - | web/src/api.ts:72 | app/api/app.py:509 |
-| `dims` | GET /api/dims | - | web/src/api.ts:75 | app/api/app.py:600 |
-| `coverage` | GET /api/coverage | - | web/src/api.ts:76 | app/api/app.py:658 |
-| `refreshStatus` | GET /api/refresh | - | web/src/api.ts:77 | app/api/app.py:385 |
-| `refreshStart` | POST /api/refresh | days | web/src/api.ts:78 | app/api/app.py:401 |
-| `guide` | GET /api/guide | - | web/src/api.ts:80 | app/api/app.py:731 |
-| `guideSql` | GET /api/guide/sql/{query_id} | window | web/src/api.ts:81 | app/api/app.py:736 |
-| `tags` | GET /api/tags | search, tag_key, limit_keys, limit_values | web/src/api.ts:86 | app/api/app.py:983 |
-| `tagOrigins` | GET /api/tag_origins | window, workspace_ids, env, tag | web/src/api.ts:88-89 | app/api/app.py:806 |
-| `tagCompliance` | GET /api/tag_compliance | window, workspace_ids, env, tag | web/src/api.ts:90 | app/api/app.py:950 |
-| `abacPolicies` | GET /api/abac_policies | - | web/src/api.ts:91 | app/api/app.py:835 |
-| `tableSizes` | GET /api/table_sizes | - | web/src/api.ts:92 | app/api/app.py:945 |
-| `tables` | GET /api/tables | workspace_ids, env, window?, tag | web/src/api.ts:93 | app/api/app.py:894 |
-| `table` | GET /api/table | name, window? | web/src/api.ts:94 | app/api/app.py:938 |
-| `people` | GET /api/people | window, workspace_ids, env | web/src/api.ts:95 | app/api/app.py:911 |
-| `volumes` | GET /api/volumes | window (30), workspace_ids, env, tag | web/src/api.ts:96 | app/api/app.py:876 |
-| `volumeUsers` | GET /api/volume_users | volume, window | web/src/api.ts:97 | app/api/app.py:888 |
-| `warehouses` | GET /api/warehouses | window, workspace_ids, env | web/src/api.ts:98 | app/api/app.py:921 |
-| `warehouse` | GET /api/warehouse | warehouse_id, window | web/src/api.ts:99 | app/api/app.py:932 |
-| `workspaceSchemas` | GET /api/workspace_schemas | workspace_id?, window | web/src/api.ts:100 | app/api/app.py:852 |
-| `activity` | GET /api/activity | window, workspace_ids, env, workspace_id? | web/src/api.ts:101 | app/api/app.py:858 |
-| `personTables` | GET /api/person_tables | identity, window | web/src/api.ts:102 | app/api/app.py:870 |
-| `workspaceUsage` | GET /api/workspace_usage | window, workspace_ids, env, tag | web/src/api.ts:103 | app/api/app.py:840 |
-| `workspaceTags` | GET /api/workspace_tags | workspace_ids, env, tag | web/src/api.ts:104 | app/api/app.py:820 |
-| `findings` | GET /api/findings | window, workspace_ids, env, tag | web/src/api.ts:105-108 | app/api/app.py:1018 |
-| `finding` | GET /api/finding/{query_id} | window, workspace_ids, env, limit, offset, job_id, status, columns, tag (not with job_id) | web/src/api.ts:111-123 | app/api/app.py:1156 |
-| `aggregate` | GET /api/finding/{query_id}/aggregate | window, workspace_ids, env, group, agg, value, status, top, below_floor, tag (+extraTags replace same-key tags; noTagFilter drops) | web/src/api.ts:125-147 | app/api/app.py:1325 |
-| (outside Api) `tagRollupFetch` | GET /api/rollup/keys, /api/rollup, /api/rollup/top | area, tag_key, window, tag_value, workspace_ids, env, tag | web/src/components/tag_rollup.tsx:115-128, 135, 150, 170, 259 | app/api/app.py:964, 735, 764 |
+| `status` | GET /api/status | - | web/src/api.ts:70 | app/api/app.py:350 |
+| `meta` | GET /api/meta | - | web/src/api.ts:71 | app/api/app.py:418 |
+| `workspaces` | GET /api/workspaces | - | web/src/api.ts:72 | app/api/app.py:510 |
+| `dims` | GET /api/dims | - | web/src/api.ts:75 | app/api/app.py:601 |
+| `coverage` | GET /api/coverage | - | web/src/api.ts:76 | app/api/app.py:659 |
+| `refreshStatus` | GET /api/refresh | - | web/src/api.ts:77 | app/api/app.py:386 |
+| `refreshStart` | POST /api/refresh | days | web/src/api.ts:78 | app/api/app.py:402 |
+| `guide` | GET /api/guide | - | web/src/api.ts:80 | app/api/app.py:732 |
+| `guideSql` | GET /api/guide/sql/{query_id} | window | web/src/api.ts:81 | app/api/app.py:737 |
+| `tags` | GET /api/tags | search, tag_key, limit_keys, limit_values | web/src/api.ts:86 | app/api/app.py:991 |
+| `tagOrigins` | GET /api/tag_origins | window, workspace_ids, env, tag | web/src/api.ts:88-89 | app/api/app.py:807 |
+| `tagCompliance` | GET /api/tag_compliance | window, workspace_ids, env, tag | web/src/api.ts:90 | app/api/app.py:958 |
+| `abacPolicies` | GET /api/abac_policies | - | web/src/api.ts:91 | app/api/app.py:836 |
+| `tableSizes` | GET /api/table_sizes | - | web/src/api.ts:92 | app/api/app.py:953 |
+| `tables` | GET /api/tables | workspace_ids, env, window?, tag | web/src/api.ts:93 | app/api/app.py:902 |
+| `table` | GET /api/table | name, window? | web/src/api.ts:94 | app/api/app.py:946 |
+| `people` | GET /api/people | window, workspace_ids, env | web/src/api.ts:95 | app/api/app.py:919 |
+| `volumes` | GET /api/volumes | window (30), workspace_ids, env, tag | web/src/api.ts:96 | app/api/app.py:884 |
+| `volumeUsers` | GET /api/volume_users | volume, window | web/src/api.ts:97 | app/api/app.py:896 |
+| `warehouses` | GET /api/warehouses | window, workspace_ids, env | web/src/api.ts:98 | app/api/app.py:929 |
+| `warehouse` | GET /api/warehouse | warehouse_id, window | web/src/api.ts:99 | app/api/app.py:940 |
+| `dataLevels` | GET /api/data_levels | level, window, workspace_ids, env, tag | web/src/api.ts:100 | app/api/app.py:853 |
+| `activity` | GET /api/activity | window, workspace_ids, env, workspace_id? | web/src/api.ts:101 | app/api/app.py:866 |
+| `personTables` | GET /api/person_tables | identity, window | web/src/api.ts:102 | app/api/app.py:878 |
+| `workspaceUsage` | GET /api/workspace_usage | window, workspace_ids, env, tag | web/src/api.ts:103 | app/api/app.py:841 |
+| `workspaceTags` | GET /api/workspace_tags | workspace_ids, env, tag | web/src/api.ts:104 | app/api/app.py:821 |
+| `findings` | GET /api/findings | window, workspace_ids, env, tag | web/src/api.ts:105-108 | app/api/app.py:1026 |
+| `finding` | GET /api/finding/{query_id} | window, workspace_ids, env, limit, offset, job_id, status, columns, tag (not with job_id) | web/src/api.ts:111-123 | app/api/app.py:1164 |
+| `aggregate` | GET /api/finding/{query_id}/aggregate | window, workspace_ids, env, group, agg, value, status, top, below_floor, tag (+extraTags replace same-key tags; noTagFilter drops) | web/src/api.ts:125-147 | app/api/app.py:1333 |
+| (outside Api) `tagRollupFetch` | GET /api/rollup/keys, /api/rollup, /api/rollup/top | area, tag_key, window, tag_value, workspace_ids, env, tag | web/src/components/tag_rollup.tsx:115-128, 135, 150, 170, 259 | app/api/app.py:972, 755, 784 |
 
 - The `dims` comment mentions a PUT for the Settings cost-center picker (web/src/api.ts:73-74); no client call and no `@app.put` route found in app/api/app.py -> unclear / not wired.
 - Example request (inferred from qs + params): `GET /api/finding/cost_daily_spikes/aggregate?window=30&workspace_ids=123&env=prod&agg=count_distinct&value=usage_date&status=CRITICAL&status=WARN&tag=cost_center:finance` (web/src/tabs/tab_cost.tsx:310; web/src/api.ts:125-147).

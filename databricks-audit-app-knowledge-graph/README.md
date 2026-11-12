@@ -1,9 +1,9 @@
 # databricks-audit-app knowledge graph
 
-A committed map of the Crosshire repo: 8352 nodes and 23453 edges, each pointing at `path:line` in the code, plus hand-written pages on modules, flows, rules, data and processes.
+A committed map of the Crosshire repo: 8356 nodes and 23475 edges, each pointing at `path:line` in the code, plus hand-written pages on modules, flows, rules, data and processes.
 
 - Built: 2026-11-10
-- Commit: `f3d2565` (`f3d2565a9ae1e2b1a57983b8bc996372c0dfe8de`); first built at `b8d2db1`, updated incrementally for the 2026-11-10 16:00 review fixes
+- Commit: `0425164` (`0425164cecc5918a9cad625fad84d32400fdcf2d`); first built at `b8d2db1`, updated incrementally for the 2026-11-10 16:00 review fixes (`f3d2565`) and the Data usage Catalogs and Schemas sub-tabs (`0425164`, 2026-11-12)
 - Per-file SHA-256 of the 1232 tracked files at build time: `meta.json` (`file_hashes`).
 
 ## How to use it
@@ -53,11 +53,11 @@ Status: `extracted` = read straight from code; `inferred` = derived (e.g. fixtur
 
 ## Stats (merged graph)
 
-Nodes: 8352 (extracted 8309, inferred 43). Edges: 23453 (extracted 22708, inferred 745).
+Nodes: 8356 (extracted 8313, inferred 43). Edges: 23475 (extracted 22730, inferred 745).
 
 | Node type | Count |
 |---|---|
-| function | 2721 |
+| function | 2723 |
 | test_case | 1562 |
 | file | 958 |
 | column | 880 |
@@ -65,7 +65,7 @@ Nodes: 8352 (extracted 8309, inferred 43). Edges: 23453 (extracted 22708, inferr
 | dbt_model | 340 |
 | table | 252 |
 | module | 248 |
-| ui_screen | 187 |
+| ui_screen | 189 |
 | config | 144 |
 | class | 98 |
 | folder | 71 |
@@ -86,18 +86,18 @@ Nodes: 8352 (extracted 8309, inferred 43). Edges: 23453 (extracted 22708, inferr
 
 | Edge type | Count |
 |---|---|
-| calls | 6712 |
-| contains | 6268 |
+| calls | 6725 |
+| contains | 6270 |
 | reads | 3265 |
-| part_of | 1385 |
+| part_of | 1387 |
 | derived_from | 1186 |
 | configures | 913 |
 | imports | 903 |
 | depends_on | 808 |
-| illustrates | 792 |
+| illustrates | 793 |
 | writes | 415 |
 | documents | 414 |
-| implements | 257 |
+| implements | 261 |
 | exposes | 68 |
 | deploys | 23 |
 | fk | 17 |

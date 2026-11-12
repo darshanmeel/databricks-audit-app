@@ -18,8 +18,8 @@ flowchart LR
 
 `workspace_id, warehouse_id, warehouse_name, created_by (PII, raw), delete_time` (`dbt/models/dims/dim_warehouse.sql:36-41`).
 
-- `created_by` masked on read (`app/core/data.py:3199-3216`).
+- `created_by` masked on read (`app/core/data.py:3264-3281`).
 
 ## Read by
 
-- `app/core/data.py:3211` (`read_dim_warehouse`), `app/core/data.py:523-524,537` (scope), `app/core/data.py:2572,2899,2977` (warehouse names), `GET /api/dims` (`app/api/app.py:621`).
+- `app/core/data.py:3276` (`read_dim_warehouse`), `app/core/data.py:523-524,537` (scope), `app/core/data.py:2637,2964,3042` (warehouse names), `GET /api/dims` (`app/api/app.py:622`).

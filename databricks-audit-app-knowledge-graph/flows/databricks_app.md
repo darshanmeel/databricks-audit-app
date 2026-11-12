@@ -1,6 +1,6 @@
 # Flow: running as a Databricks App
 
-The same FastAPI app runs inside Databricks Apps: `tools/app_start.py` unpacks DuckDB and starts `app.api` on `0.0.0.0:$DATABRICKS_APP_PORT`; the warehouse queries run either as the `.env` token's owner (`run_as: user`) or as the app's own service principal via OAuth M2M (`run_as: app`); the signed-in viewer's email (`X-Forwarded-Email`) is used only for optional row-level access (`docs/databricks-app.md:26-35`, `tools/app_start.py:1-7`, `app/api/app.py:187-202`).
+The same FastAPI app runs inside Databricks Apps: `tools/app_start.py` unpacks DuckDB and starts `app.api` on `0.0.0.0:$DATABRICKS_APP_PORT`; the warehouse queries run either as the `.env` token's owner (`run_as: user`) or as the app's own service principal via OAuth M2M (`run_as: app`); the signed-in viewer's email (`X-Forwarded-Email`) is used only for optional row-level access (`docs/databricks-app.md:26-35`, `tools/app_start.py:1-7`, `app/api/app.py:188-203`).
 
 ```mermaid
 sequenceDiagram
@@ -43,9 +43,9 @@ sequenceDiagram
 2. Platform starts the command; `app_start.unpack` joins `wheels/*.whl.part*` and extracts DuckDB to `.pydeps` once; `main` prepends `.pydeps` and the root to `sys.path` and `PYTHONPATH` so child processes (the export) inherit it, then `runpy.run_module("app.api")` (`tools/app_start.py:21-39`).
 3. `__main__.main` sees `DATABRICKS_APP_PORT`: host `0.0.0.0`, port `DATABRICKS_APP_PORT` (`app/api/__main__.py:15-17`). `rls.is_app()` is true for the whole process (`app/core/rls.py:106-107`).
 4. Data folder: `AUDIT_DATA_DIR` or the Linux default `~/.local/share/databricks-audit` (inferred: Apps run Linux per `tools/deploy_app.py:44-46`; `app/core/datasource.py:25-31`). The disk is wiped on restart/redeploy (`docs/databricks-app.md:134`).
-5. Each request: `_PrincipalMiddleware` reads `x-forwarded-email` ("set by Databricks Apps", per the code comment) and binds it (`app/api/app.py:187-202`, `app/core/rls.py:434-443`).
+5. Each request: `_PrincipalMiddleware` reads `x-forwarded-email` ("set by Databricks Apps", per the code comment) and binds it (`app/api/app.py:188-203`, `app/core/rls.py:434-443`).
 6. Empty disk → `GET /api/status` returns `no_database` (`app/core/data.py:397-399`); `FirstRunScreen` shows `GetData` ("Pulls data from the app itself, so a Databricks App (no terminal) can fill an empty database") (`web/src/components/first_run.tsx:25-47`).
-7. "Get" → `POST /api/refresh?days=N` → `refresh._run` spawns the export and load as subprocesses (`app/api/app.py:401-411`, `app/api/refresh.py:51-60`). With rls on, only `refresh.admins` or users granted everything may start it (403 otherwise). Same as `flows/refresh_in_app.md`.
+7. "Get" → `POST /api/refresh?days=N` → `refresh._run` spawns the export and load as subprocesses (`app/api/app.py:402-412`, `app/api/refresh.py:51-60`). With rls on, only `refresh.admins` or users granted everything may start it (403 otherwise). Same as `flows/refresh_in_app.md`.
 8. The export's `_preflight_env` requires host + HTTP path, and the token only when `uses_app_principal` is false (`tools/export_direct_results.py:886-895`).
 9. `snapshot.connect` picks auth:
    - **run_as user**: `DATABRICKS_TOKEN` present → `access_token=token` (`tools/snapshot.py:535`). Queries run as the token's owner (`docs/databricks-app.md:28-30`).
@@ -56,8 +56,8 @@ sequenceDiagram
     - `off`: everyone reads the full db (`docs/databricks-app.md:101`).
     - `query`: `_connect` returns `rls.scoped_connection(base, principal)` — in-memory views over the full db limited to the principal's grants (`app/core/data.py:308-309`, `app/core/rls.py:587-612`).
     - `export`: `_db_path` → `rls.resolve` → that user's grant-set file, else the empty set, else a non-existent file (fail closed) (`app/core/data.py:198-200`, `app/core/rls.py:481-491`).
-13. Caches are per user in `query` mode (`rls.scope_key`) and the start-up warm-up is skipped (`app/core/rls.py:464-466`, `app/api/app.py:1114-1115`).
-14. `/api/meta.rls` reports `{enabled, apply, user, granted, error}` (`app/api/app.py:486`, `app/core/rls.py:655-683`).
+13. Caches are per user in `query` mode (`rls.scope_key`) and the start-up warm-up is skipped (`app/core/rls.py:464-466`, `app/api/app.py:1122-1123`).
+14. `/api/meta.rls` reports `{enabled, apply, user, granted, error}` (`app/api/app.py:487`, `app/core/rls.py:655-683`).
 
 ## Auth: user vs service principal
 

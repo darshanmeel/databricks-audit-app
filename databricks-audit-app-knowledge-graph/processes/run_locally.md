@@ -52,5 +52,5 @@ flowchart TD
 | Step 2 fails / Windows permission error | Stop the app, rerun the load | `README.md:713-714`, `tools/first_run.py:151-156` |
 | Out of Memory in load | Lower `load.threads` / `load.top_tag_keys` | `README.md:715` |
 | Folder refused (exit 2) | Pick a folder outside the repo | `README.md:716`, `tools/export_direct_results.py:1154-1158` |
-| "config/settings.yml needs a fix" | Fix the named key/line | `README.md:718`, `app/api/app.py:349-377` |
+| "config/settings.yml needs a fix" | Fix the named key/line | `README.md:718`, `app/api/app.py:350-378` |
 | Git Bash rewrites `/sql/1.0/...` | Use PowerShell or `.env` | `README.md:723`, `tools/snapshot.py:526-530` |

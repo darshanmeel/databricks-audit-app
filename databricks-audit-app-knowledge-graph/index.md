@@ -2,7 +2,7 @@
 
 Crosshire is a read-only audit of a Databricks account: about 160 SQL checks on `system.*` tables are exported to a local DuckDB file (`README.md:6`), served by a FastAPI app (`app/api/app.py`) to a React UI (`web/src`), and also shipped as Lakeview dashboards (`databricks_dashboards/`).
 
-Start here, then open a page from the table below. Every fact on a page cites `path:line` in the repo at commit `f3d2565`. Graph data is in `graph/nodes.jsonl` and `graph/edges.jsonl`; see [README.md](README.md).
+Start here, then open a page from the table below. Every fact on a page cites `path:line` in the repo at commit `0425164`. Graph data is in `graph/nodes.jsonl` and `graph/edges.jsonl`; see [README.md](README.md).
 
 ## Big picture
 
@@ -23,7 +23,7 @@ flowchart LR
 
 - Export path: `tools/first_run.py:162-194` runs the export (`tools/export_direct_results.py:1508`) and the load (`tools/load_direct_results.py:931`, writes the DuckDB in `_load_root` at `tools/load_direct_results.py:486`). See [flows/export_load_serve.md](flows/export_load_serve.md).
 - dbt path: `python tools/snapshot.py` then `python tools/dbt_run.py build --target dev` writes `data/db_audit.duckdb` (`README.md:689-690`). See [flows/dbt_lineage.md](flows/dbt_lineage.md).
-- The app opens DuckDB read-only (`app/core/data.py:233`) and serves `/api/*` (e.g. `app/api/app.py:349`). See [flows/api_request.md](flows/api_request.md).
+- The app opens DuckDB read-only (`app/core/data.py:233`) and serves `/api/*` (e.g. `app/api/app.py:350`). See [flows/api_request.md](flows/api_request.md).
 - Lakeview: the notebook `databricks_dashboards/Lakehouse Health 00 - Snapshot.py` fills a snapshot schema the 14 dashboards read; 7 more dashboards read `system.*` live. See [flows/dashboards_snapshot.md](flows/dashboards_snapshot.md).
 
 ## Entry points
@@ -107,7 +107,7 @@ flowchart LR
 | Workspace -> prod/uat/dev mapping | [logic/workspace_env_mapping.md](logic/workspace_env_mapping.md) |
 | Masking user identities | [logic/identity_masking.md](logic/identity_masking.md) |
 | Row-level security | [logic/row_level_security.md](logic/row_level_security.md) |
-| Table usage class, workspace indexes | [logic/data_usage_class_and_index.md](logic/data_usage_class_and_index.md) |
+| Table usage class, workspace / catalog / schema indexes | [logic/data_usage_class_and_index.md](logic/data_usage_class_and_index.md) |
 | Databricks SQL -> DuckDB translation | [logic/sql_translation.md](logic/sql_translation.md) |
 | Query registry and library corrections | [logic/query_library_registry_and_corrections.md](logic/query_library_registry_and_corrections.md) |
 

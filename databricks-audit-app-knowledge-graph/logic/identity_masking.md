@@ -20,7 +20,7 @@ flowchart TD
 - Vendored inline CASE masks are rewritten into one macro call, keeping a coalesced real id - `app/core/translate.py:285-292`.
 - Masking is idempotent so dims masked at export are not re-hashed - `app/core/identity.py:56-58`, `app/core/identity.py:92-93`.
 - Groups, service principals and resource names stay readable; takes effect at the next export or reload; data loaded while on stays masked - `config/settings.yml:76-78`.
-- Data readers apply it to identity columns and job dims - `app/core/data.py:3103-3146`.
+- Data readers apply it to identity columns and job dims - `app/core/data.py:3168-3211`.
 - The load masks people columns in place when the setting is on, so an export made with masking off shows no raw emails: `storage.table_detail.owner`, `storage.table_history.user_name`, `usage.*` `identity`/`grantee`, `warehouse.*` `identity` (`_mask_people`, each distinct value once) - `tools/load_direct_results.py:147-159`, `tools/load_direct_results.py:508`, `tools/load_direct_results.py:756-772`, `tools/load_direct_results.py:802-827`.
 
 ## Formula

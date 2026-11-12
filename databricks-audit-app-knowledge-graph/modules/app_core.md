@@ -107,37 +107,37 @@ Check (finding) reads:
 | `finding_columns` | `(query_id) -> list[str]` | `app/core/data.py:990` |
 | `finding_window_counts` | `(specs: list[tuple[str,int]], workspace_ids=None, env=None, *, tag_filter=None)` — batch counts for `/api/findings` | `app/core/data.py:1043-1048` |
 | `aggregate_finding` | `(query_id, window_days, group, agg, value=None, *, workspace_ids, env, statuses, top, tag_filter, below_floor)` | `app/core/data.py:1315-1326` |
-| `finding_status` | `(query_id, results=None, manifest=None) -> dict` — run_results + manifest verdict | `app/core/data.py:3825-3828` |
-| `not_assessed_status` | plain code/label/fix for a not-assessed check | `app/core/data.py:3947` |
-| `window_coverage` | `(query_id, window_days, exported=…) -> dict` | `app/core/data.py:4037` |
-| `truncation_info` | `(query_id, window_days=None) -> dict` — from `direct_export_findings_meta` | `app/core/data.py:3453`, `app/core/data.py:3465` |
+| `finding_status` | `(query_id, results=None, manifest=None) -> dict` — run_results + manifest verdict | `app/core/data.py:3890-3893` |
+| `not_assessed_status` | plain code/label/fix for a not-assessed check | `app/core/data.py:4012` |
+| `window_coverage` | `(query_id, window_days, exported=…) -> dict` | `app/core/data.py:4102` |
+| `truncation_info` | `(query_id, window_days=None) -> dict` — from `direct_export_findings_meta` | `app/core/data.py:3518`, `app/core/data.py:3530` |
 
 Metadata and screen reads (table evidence = first reference line):
 
 | Function | Tables read | Evidence |
 |---|---|---|
-| `snapshot_manifest`, `run_results` | JSON sidecars (no DuckDB) | `app/core/data.py:3296`, `app/core/data.py:3522` |
-| `direct_export_info` | `main.direct_export_meta` | `app/core/data.py:3322-3341` |
-| `exported_window_coverage`, `window_status` | via `direct_export_info` | `app/core/data.py:3407`, `app/core/data.py:3428` |
-| `direct_source_states`, `checks_not_ok`, `truncated_query_ids` | run_results; `main.direct_export_findings_meta` | `app/core/data.py:3616`, `app/core/data.py:3695`, `app/core/data.py:3735-3743` |
-| `cost_cutoff` | manifest / direct export as_of | `app/core/data.py:4092-4096` |
+| `snapshot_manifest`, `run_results` | JSON sidecars (no DuckDB) | `app/core/data.py:3361`, `app/core/data.py:3587` |
+| `direct_export_info` | `main.direct_export_meta` | `app/core/data.py:3387-3406` |
+| `exported_window_coverage`, `window_status` | via `direct_export_info` | `app/core/data.py:3472`, `app/core/data.py:3493` |
+| `direct_source_states`, `checks_not_ok`, `truncated_query_ids` | run_results; `main.direct_export_findings_meta` | `app/core/data.py:3681`, `app/core/data.py:3760`, `app/core/data.py:3800-3808` |
+| `cost_cutoff` | manifest / direct export as_of | `app/core/data.py:4157-4161` |
 | `read_dim_workspace` | `dims.dim_workspace` | `app/core/data.py:1502-1511` |
-| `read_dim_job/cluster/warehouse/pipeline/notebook` | `dims.dim_job`, `dims.dim_cluster`, `dims.dim_warehouse`, `dims.dim_pipeline`, `dims.dim_notebook` (identity masking applied) | `app/core/data.py:3157-3246` |
+| `read_dim_job/cluster/warehouse/pipeline/notebook` | `dims.dim_job`, `dims.dim_cluster`, `dims.dim_warehouse`, `dims.dim_pipeline`, `dims.dim_notebook` (identity masking applied) | `app/core/data.py:3222-3311` |
 | `tag_spend_ready` | `tags.cost_day` | `app/core/data.py:1516-1517` |
 | `read_tag_origins`, `read_tag_compliance` | via `tag_spend` / `tag_compliance` | `app/core/data.py:1525`, `app/core/data.py:1534` |
 | `read_abac_policies` | `governance.abac_policies`, `governance.abac_policies_info` | `app/core/data.py:1545-1566` |
 | `read_table_sizes` | `storage.table_detail`, `storage.table_detail_info`, `storage.volume_detail_info` | `app/core/data.py:1579-1592` |
 | `read_workspaces` | `usage.workspace_activity`, `usage.workspace_activity_info`, `storage.*`, `tags.tag_workspace` | `app/core/data.py:1762-1778` |
-| `read_workspace_schemas` | `storage.table_detail`, `storage.volume_detail` | `app/core/data.py:1982-2007` |
-| `read_person_tables` | `usage.*` (inferred from `usage.workspace_activity_info` at `app/core/data.py:2047`) | `app/core/data.py:2037` |
-| `read_activity` | `usage.table_daily`, `usage.user_last_seen`, `storage.*` | `app/core/data.py:2072-2111` |
-| `read_volumes`, `read_volume_users` | `storage.volume_detail`, `usage.volume_access` | `app/core/data.py:2303-2332`, `app/core/data.py:2409` |
-| `read_tables` | `storage.table_detail`, `usage.*` | `app/core/data.py:2445-2472` |
-| `read_table` | `storage.table_detail`, `storage.table_history`, `usage.table_maintenance`, `usage.table_query_daily`, `usage.table_access`, `usage.table_edges`, `usage.table_grants` | `app/core/data.py:2518-2585` |
-| `read_people` | `usage.user_last_seen`, `usage.table_grants` | `app/core/data.py:2754-2778` |
-| `read_warehouses`, `read_warehouse` | `warehouse.warehouse_daily`, `warehouse.warehouse_activity_info`, `dims.dim_warehouse` | `app/core/data.py:2875-2977` |
-| `read_workspace_tags` | `tags.tag_workspace` | `app/core/data.py:2999-3013` |
-| `region_split` | `dims.dim_workspace` | `app/core/data.py:3032-3061` |
+| `read_data_levels` | `storage.table_detail`, `storage.volume_detail`, `usage.user_tables`, `usage.table_query_daily`, `usage.table_daily` (one row per catalog or schema, indexes over every row before filters) | `app/core/data.py:1982-2099` |
+| `read_person_tables` | `usage.*` (inferred from `usage.workspace_activity_info` at `app/core/data.py:2112`) | `app/core/data.py:2102` |
+| `read_activity` | `usage.table_daily`, `usage.user_last_seen`, `storage.*` | `app/core/data.py:2137-2176` |
+| `read_volumes`, `read_volume_users` | `storage.volume_detail`, `usage.volume_access` | `app/core/data.py:2368-2397`, `app/core/data.py:2474` |
+| `read_tables` | `storage.table_detail`, `usage.*` | `app/core/data.py:2510-2537` |
+| `read_table` | `storage.table_detail`, `storage.table_history`, `usage.table_maintenance`, `usage.table_query_daily`, `usage.table_access`, `usage.table_edges`, `usage.table_grants` | `app/core/data.py:2583-2650` |
+| `read_people` | `usage.user_last_seen`, `usage.table_grants` | `app/core/data.py:2819-2843` |
+| `read_warehouses`, `read_warehouse` | `warehouse.warehouse_daily`, `warehouse.warehouse_activity_info`, `dims.dim_warehouse` | `app/core/data.py:2940-3042` |
+| `read_workspace_tags` | `tags.tag_workspace` | `app/core/data.py:3064-3078` |
+| `region_split` | `dims.dim_workspace` | `app/core/data.py:3097-3126` |
 
 - Errors: `FindingNotBuiltError` (`app/core/data.py:169-172`). Result type `FindingResult` (`app/core/data.py:175-187`).
 - Calls in: `app/api/app.py`, `app/api/service.py`, `app/api/guide.py`, `app/core/rollup.py`, `app/core/tags.py` (lazy), `app/core/rls.py` (lazy), `tools/export_direct_results.py:35`.
@@ -163,7 +163,7 @@ Purpose: parse query headers + manifests into typed `QuerySpec`; validates sourc
 
 - `QuerySpec` dataclass (`app/core/registry.py:188`); `load_registry() -> list[QuerySpec]` cached on file stamps (`app/core/registry.py:302-326`); `by_id(query_id) -> QuerySpec` (`app/core/registry.py:329`).
 - Reads `app/queries/vendored`, `app/queries/app` (`app/core/registry.py:33-34`). Error `RegistryError` (`app/core/registry.py:70`).
-- Calls in: `app/api/app.py:177`, `app/api/service.py:100`, `app/core/data.py:135`, `tools/export_direct_results.py:37`, `tools/generate_models.py:57`, `tools/generate_direct_models.py:50`.
+- Calls in: `app/api/app.py:178`, `app/api/service.py:100`, `app/core/data.py:135`, `tools/export_direct_results.py:37`, `tools/generate_models.py:57`, `tools/generate_direct_models.py:50`.
 
 ## rls.py — row-level access
 
@@ -188,7 +188,7 @@ Tables read: `rls.entitlements` (`app/core/rls.py:525`), `rls.status` (`app/core
 
 Purpose: request-time rollup for one tag key, work → compute → workspace (`app/core/rollup.py:1-16`).
 
-- `rollup(area, tag_key, window_days, *, tag_value, tag_values, workspace_ids, env, tag_filter)` (`app/core/rollup.py:583`); `rollup_keys(area, window_days)` (`app/core/rollup.py:1041`); `by_tag_top(area, tag_key, window_days, top, …)` (`app/core/rollup.py:1146`); `_resolve_workspace_scope(workspace_ids, env)` (`app/core/rollup.py:482`); `RollupError` → 422 (`app/core/rollup.py:71`, `app/api/app.py:779-780`).
+- `rollup(area, tag_key, window_days, *, tag_value, tag_values, workspace_ids, env, tag_filter)` (`app/core/rollup.py:583`); `rollup_keys(area, window_days)` (`app/core/rollup.py:1041`); `by_tag_top(area, tag_key, window_days, top, …)` (`app/core/rollup.py:1146`); `_resolve_workspace_scope(workspace_ids, env)` (`app/core/rollup.py:482`); `RollupError` → 422 (`app/core/rollup.py:71`, `app/api/app.py:780-781`).
 - Tables read: `tags.cost_unit`, `tags.cost_unit_tag`, `tags.cost_reconciliation`, `tags.tag_workspace` (`app/core/rollup.py:2-3`), `tags.tag_workspace_history` (`app/core/rollup.py:281`), `tags.perf_unit`, `tags.perf_unit_tag` (`app/core/rollup.py:396-397`).
 
 ## tags.py — tag index, tag chain, tag filter SQL
@@ -221,7 +221,7 @@ Purpose: request-time rollup for one tag key, work → compute → workspace (`a
 
 ## pricing.py — discount what-if
 
-- `apply(df, discount_pct) -> DataFrame` adds `<col>_disc` for every list-price column (`app/core/pricing.py:3-11`, `app/core/pricing.py:48`); regex `_LIST_COL_RE` (`app/core/pricing.py:26`). Called by `app/api/app.py:1268`.
+- `apply(df, discount_pct) -> DataFrame` adds `<col>_disc` for every list-price column (`app/core/pricing.py:3-11`, `app/core/pricing.py:48`); regex `_LIST_COL_RE` (`app/core/pricing.py:26`). Called by `app/api/app.py:1276`.
 
 ## materiality.py — per-check floors and severity cap
 
@@ -237,7 +237,7 @@ Purpose: request-time rollup for one tag key, work → compute → workspace (`a
 
 ## library_corrections.py — known-defect register
 
-- `load_corrections()` validates `config/library_corrections.yml` (`app/core/library_corrections.py:169`); `by_query_id()` (`app/core/library_corrections.py:187`). Repo-owned, never from `AUDIT_CONFIG_DIR` (`app/core/library_corrections.py:19-24`). Loaded at API import (`app/api/app.py:211`).
+- `load_corrections()` validates `config/library_corrections.yml` (`app/core/library_corrections.py:169`); `by_query_id()` (`app/core/library_corrections.py:187`). Repo-owned, never from `AUDIT_CONFIG_DIR` (`app/core/library_corrections.py:19-24`). Loaded at API import (`app/api/app.py:212`).
 
 ## databricks_docs.py — docs link map
 
@@ -253,7 +253,7 @@ Purpose: request-time rollup for one tag key, work → compute → workspace (`a
 
 ## usage.py — data usage rules
 
-- `usage_class(...)` (`app/core/usage.py:49`), `complexity_index` (`app/core/usage.py:73`), `usage_index` (`app/core/usage.py:78`), `signal` (`app/core/usage.py:86`), `cleanup_order` (`app/core/usage.py:98`), `skipped_catalog` (`app/core/usage.py:25`); constants `IDLE_DAYS=90`, `NEW_DAYS=7` (`app/core/usage.py:10-11`). Used lazily by `data.py` (`app/core/data.py:1692`) and by `tools/direct_data_usage.py:13`, `tools/table_detail.py:29`.
+- `usage_class(...)` (`app/core/usage.py:49`), `index_parts` (`app/core/usage.py:73`), `complexity_index` (`app/core/usage.py:87`), `usage_index` (`app/core/usage.py:91`), `signal` (`app/core/usage.py:95`), `cleanup_order` (`app/core/usage.py:107`), `skipped_catalog` (`app/core/usage.py:25`); constants `IDLE_DAYS=90`, `NEW_DAYS=7` (`app/core/usage.py:10-11`). Used lazily by `data.py` (`app/core/data.py:1692`) and by `tools/direct_data_usage.py:13`, `tools/table_detail.py:29`.
 
 ## translate.py — Databricks SQL → DuckDB SQL
 

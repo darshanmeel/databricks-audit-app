@@ -116,7 +116,7 @@ flowchart LR
 | 9. Write | one `findings/<id>.parquet` per check | `tools/export_direct_results.py:967-1014` |
 | 10. Load | `CREATE OR REPLACE TABLE findings."f_<id>"` in DuckDB; run_results-shaped status per id | `tools/load_direct_results.py:563`, `580`, `375-400` |
 | 11. Read | `read_finding(query_id, window_days, ...)` selects from `findings."f_<id>"` | `app/core/data.py:822-857` |
-| 12. Serve | `GET /api/findings`, `GET /api/finding/{query_id}` | `app/api/app.py:1018`, `1137` |
+| 12. Serve | `GET /api/findings`, `GET /api/finding/{query_id}` | `app/api/app.py:1026`, `1137` |
 | 13. Show | title/why in `labels.ts`, tab placement in `tab_registry.ts` | `web/src/components/labels.ts:67`, `web/src/components/tab_registry.ts:104`, `147` |
 | 14. Test | `tests/test_findings/test_<id>.py` asserts rows via `tests/dbutil.py rows()`; `fixture_coverage.py --check` requires grain + test per executable id | `tests/dbutil.py:4-6`, `tools/fixture_coverage.py:1-30` |
 

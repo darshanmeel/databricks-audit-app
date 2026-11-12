@@ -6,7 +6,7 @@ Every tab, what it shows, which API calls feed it and where the code is. Most ta
 flowchart TD
   APP["App.tsx nav.tab"] -->|area key| AP["AreaPage<br/>web/src/components/primitives.tsx:702-851"]
   APP -->|money / cto overview| MONEY["MoneyTab<br/>web/src/tabs/tab_money.tsx:435"]
-  APP -->|guide| GUIDE["GuideTab<br/>web/src/components/guide.tsx:2737"]
+  APP -->|guide| GUIDE["GuideTab<br/>web/src/components/guide.tsx:2739"]
   AP --> INTRO["PageIntro + WindowCoverageNote + FilterReachNote<br/>817-828"]
   AP --> TON["TagOriginNote (cost only) 829"]
   AP --> SUB["SubTabs (if >1, not CTO) 830"]
@@ -18,7 +18,7 @@ flowchart TD
 ## Shared rules for every area page
 
 - Data passed to Content (`TabProps`): `findings` scoped to the sub-tab's ids, `filters`, `dims`, `maxCat`, `meta`, `allFindingsIndex`, `goTo`, `onExternalJump`, `setVerdict/onVerdict`, `role`, `roleAreas`, `canDrill` (web/src/components/primitives.tsx:587-602, 796-805).
-- All findings for the window come from one `GET /api/findings` in App (web/src/App.tsx:905-915); sub-tab badges count CRITICAL/WARN via `countsForIds` (web/src/components/primitives.tsx:772-779; web/src/components/tab_registry.ts:354-376).
+- All findings for the window come from one `GET /api/findings` in App (web/src/App.tsx:905-915); sub-tab badges count CRITICAL/WARN via `countsForIds` (web/src/components/primitives.tsx:772-779; web/src/components/tab_registry.ts:356-378).
 - The checks table under each page lists owned `ids` + `refIds`; a row expands to `FindingDetail` which calls `GET /api/finding/{query_id}` (web/src/components/primitives.tsx:833-843; web/src/components/finding_detail.tsx:1223-1266).
 - `filters` (window, workspaceIds, envs) is passed to every hook; the tag filter rides along from module state (web/src/api.ts:39-57).
 - CTO lens: `summaryOnly` -> no sub-tab bar, no checks table, first sub-tab only, links open the Guide drawer (web/src/components/primitives.tsx:735-737, 787-805).
@@ -28,7 +28,7 @@ flowchart TD
 ## overview
 
 - Purpose: verdict sentence, KPI cards, ranked "Fix these first", coverage, account shape, spend in dollars (web/src/tabs/tab_overview.tsx:1-4).
-- Hash: `tab=overview`; area def web/src/components/tab_registry.ts:315; registered web/src/tabs/tab_overview.tsx:1033.
+- Hash: `tab=overview`; area def web/src/components/tab_registry.ts:317; registered web/src/tabs/tab_overview.tsx:1033.
 - Role switch: governance -> `GovernanceOverviewContent` (web/src/tabs/tab_overview.tsx:515-560); others -> `SpendOverviewContent` (web/src/tabs/tab_overview.tsx:592); CTO never sees this (App renders MoneyTab) (web/src/App.tsx:1150, 1175).
 - Data:
   - F(OVERVIEW_IDS minus overview_dbu_by_sku, overview_daily_dbu_trend) web/src/tabs/tab_overview.tsx:601-604; F(WASTE_IDS, CRITICAL/WARN) 605
@@ -46,7 +46,7 @@ flowchart TD
 ## actions
 
 - Purpose: flagged checks turned into a short fix list with impact, effort, team (web/src/tabs/tab_actions.tsx:1-4).
-- Hash `tab=actions`; area web/src/components/tab_registry.ts:316; registered web/src/tabs/tab_actions.tsx:293.
+- Hash `tab=actions`; area web/src/components/tab_registry.ts:318; registered web/src/tabs/tab_actions.tsx:293.
 - Data: F(WASTE_IDS, CRITICAL/WARN, 5000) web/src/tabs/tab_actions.tsx:169; `GET /api/rollup/top` cost_center untagged (175); per action F(action.main.query_id, flagged, 200) in `ActionEvidence` (86).
 - Logic: `buildActions` joins `ACTION_TEMPLATES` with the findings index and waste worklist; `roleSeesCheck` limits to the lens's areas (29-58; web/src/components/action_templates.ts:28).
 - Widgets: action list, `ActionDetail` (136-165) with "open check" -> `goTo(homeForQuery)` (158), `ActionEvidence` (84-134).
@@ -69,7 +69,7 @@ flowchart TD
 
 ## cost
 
-- Purpose: spend by trend, product, allocation, chargeback, resource, before/after and pricing (web/src/tabs/tab_cost.tsx:1-4). Area def web/src/components/tab_registry.ts:317; sub-tabs 52-99. Adds `TagOriginNote` (web/src/components/primitives.tsx:829).
+- Purpose: spend by trend, product, allocation, chargeback, resource, before/after and pricing (web/src/tabs/tab_cost.tsx:1-4). Area def web/src/components/tab_registry.ts:319; sub-tabs 52-99. Adds `TagOriginNote` (web/src/components/primitives.tsx:829).
 
 | Sub-tab (hash `subtab=`) | Content | Data | Key widgets |
 |---|---|---|---|
@@ -93,7 +93,7 @@ flowchart TD
 
 ## waste
 
-- Purpose: possible waste roll-up over checks homed on other tabs; no checks table of its own (web/src/tabs/tab_waste.tsx:1-3). Area def web/src/components/tab_registry.ts:318-322; `WASTE_ITEMS` 103-115.
+- Purpose: possible waste roll-up over checks homed on other tabs; no checks table of its own (web/src/tabs/tab_waste.tsx:1-3). Area def web/src/components/tab_registry.ts:320-324; `WASTE_ITEMS` 103-115.
 
 | Sub-tab | Content | Data | Widgets |
 |---|---|---|---|
@@ -105,7 +105,7 @@ flowchart TD
 
 ## compute
 
-- Purpose: SQL warehouses, clusters & pools, configuration (web/src/tabs/tab_compute.tsx:1-5). Area def web/src/components/tab_registry.ts:325; sub-tabs 142-165.
+- Purpose: SQL warehouses, clusters & pools, configuration (web/src/tabs/tab_compute.tsx:1-5). Area def web/src/components/tab_registry.ts:327; sub-tabs 142-165.
 
 | Sub-tab | Content | Data | Widgets |
 |---|---|---|---|
@@ -124,7 +124,7 @@ flowchart TD
 
 ## jobs
 
-- Purpose: Failures, Slow & queued, Hygiene, Compute fit, Pipelines; job rows open the run panel (`JobFocus.open`, job_panel.tsx) (web/src/tabs/tab_jobs.tsx:1-4). Area def web/src/components/tab_registry.ts:326; sub-tabs 169-195.
+- Purpose: Failures, Slow & queued, Hygiene, Compute fit, Pipelines; job rows open the run panel (`JobFocus.open`, job_panel.tsx) (web/src/tabs/tab_jobs.tsx:1-4). Area def web/src/components/tab_registry.ts:328; sub-tabs 169-195.
 
 | Sub-tab | Content | Data | Widgets |
 |---|---|---|---|
@@ -138,7 +138,7 @@ flowchart TD
 
 ## query
 
-- Hash area key is `queries` (old `query` redirects) (web/src/components/tab_registry.ts:327, 380). Sub-tabs 198-235.
+- Hash area key is `queries` (old `query` redirects) (web/src/components/tab_registry.ts:329, 382). Sub-tabs 198-235.
 
 | Sub-tab | Content | Data | Widgets |
 |---|---|---|---|
@@ -153,7 +153,7 @@ flowchart TD
 
 ## storage
 
-- Purpose: tables and maintenance; whole metastore (web/src/tabs/tab_storage.tsx:1-4). Area def web/src/components/tab_registry.ts:333; sub-tabs 269-284.
+- Purpose: tables and maintenance; whole metastore (web/src/tabs/tab_storage.tsx:1-4). Area def web/src/components/tab_registry.ts:335; sub-tabs 269-284.
 
 | Sub-tab | Content | Data | Widgets |
 |---|---|---|---|
@@ -162,7 +162,7 @@ flowchart TD
 
 ## mlai
 
-- Purpose: ML & AI spend, endpoints, AI Gateway (web/src/tabs/tab_mlai.tsx:1-3). Area def web/src/components/tab_registry.ts:323; sub-tabs 120-138.
+- Purpose: ML & AI spend, endpoints, AI Gateway (web/src/tabs/tab_mlai.tsx:1-3). Area def web/src/components/tab_registry.ts:325; sub-tabs 120-138.
 
 | Sub-tab | Content | Data | Widgets |
 |---|---|---|---|
@@ -173,18 +173,18 @@ flowchart TD
 ## genie
 
 - Purpose: who uses Genie, where and how (Genie Code, agents, One; built-in vs browser) (web/src/tabs/tab_genie.tsx:1-3).
-- Hash `tab=genie`; area web/src/components/tab_registry.ts:324 (refIds genie_usage); registered web/src/tabs/tab_genie.tsx:321.
+- Hash `tab=genie`; area web/src/components/tab_registry.ts:326 (refIds genie_usage); registered web/src/tabs/tab_genie.tsx:321.
 - Data: A(genie_usage) by period x surface x free ($, DBU) 96-97, by channel x identity 98-99, by workspace 100-101, by agent 102, by day 103, by identity x run_as 107, unpriced DBUs 108; A(cost_monthly_actuals by product) 105; F(genie_usage, 5000) 109; A(query_provenance_by_source) 110.
 - Widgets: "By kind of use" 202, "Built in or in the browser" 219, "Who uses Genie, where and how" 238, "By workspace" 274, "Top Genie agents" 280, "Genie spend per day/month" 299.
 - Filters: day/month grain 106, show all 111.
 
 ## governance
 
-- Purpose: access, admin, sensitive data, lineage, sharing; whole metastore (web/src/tabs/tab_governance.tsx:1-5). Area def web/src/components/tab_registry.ts:332; sub-tabs 240-266.
+- Purpose: access, admin, sensitive data, lineage, sharing; whole metastore (web/src/tabs/tab_governance.tsx:1-5). Area def web/src/components/tab_registry.ts:334; sub-tabs 240-266.
 
 | Sub-tab | Content | Data | Widgets |
 |---|---|---|---|
-| access | `GovAccessContent` web/src/tabs/tab_governance.tsx:102-248 (reg 681) | `GET /api/coverage` (useCoverage 69); F(access_broad_grants, access_grants_inventory, access_runas_escalation, access_login_concentration, access_network_inbound_denials, access_network_outbound_denials) 104-109; `ActivityByWorkspacePanel` `GET /api/workspace_usage` web/src/tabs/tab_usage.tsx:184 (245) | "Broad grants" 176, "Grants inventory" 192, "Run-as escalation" 203, "Network denials" 219 |
+| access | `GovAccessContent` web/src/tabs/tab_governance.tsx:102-248 (reg 681) | `GET /api/coverage` (useCoverage 69); F(access_broad_grants, access_grants_inventory, access_runas_escalation, access_login_concentration, access_network_inbound_denials, access_network_outbound_denials) 104-109; `ActivityByWorkspacePanel` `GET /api/workspace_usage` web/src/tabs/tab_usage.tsx:187 (245) | "Broad grants" 176, "Grants inventory" 192, "Run-as escalation" 203, "Network denials" 219 |
 | admin | `GovAdminContent` 253-305 (reg 682) | F(access_admin_role_change_events) 254; `LastActivityCard kind=workspace` (302) | "Admin and permission changes" 281 |
 | sensitive | `GovSensitiveContent` 368-524 (reg 683) | `GET /api/abac_policies` (329); F(access_pii_outside_tables, access_column_masks_inventory, access_row_filters_inventory, access_tags_inventory, access_classified_unmasked) 373-377 | "Classified, no mask" 431, "Volumes & schemas outside tagged tables" 439, "Column masks in place" 454, "Row filters in place" 470, "Tagged objects" 478, "ABAC policies" 501 |
 | lineage | `GovLineageContent` 527-637 (reg 684) | F(access_table_lineage_blast_radius, access_column_lineage_sensitive_reach, access_pii_propagation_untagged) 528-531 | "Table blast radius" 579, "Sensitive column reach" 594, "PII propagating untagged" 609 |
@@ -195,35 +195,37 @@ flowchart TD
 ## tags
 
 - Purpose: which queries, jobs, pipelines, notebooks, clusters, warehouses and workspaces miss the mandatory tags, and where each tag is found (web/src/tabs/tab_tags.tsx:1-4).
-- Hash `tab=tags`; area web/src/components/tab_registry.ts:334; registered web/src/tabs/tab_tags.tsx:484.
+- Hash `tab=tags`; area web/src/components/tab_registry.ts:336; registered web/src/tabs/tab_tags.tsx:484.
 - Data: `GET /api/tag_compliance` via `useTagCompliance` (53-66, call 59; key includes Api.tagFilterKey 54); `WorkspaceTagsCard` `GET /api/workspace_tags` (web/src/tabs/tab_cost.tsx:959; rendered web/src/tabs/tab_tags.tsx:480).
 - Widgets: `TagTypeCard` per object kind (358-435), `TagOrigins` (191), `TagOffenders` with CSV (231, 165), `TagConflicts` (300), `TagEnvTable` (329), `TagLevelBars` (135); `TagsOverviewCard` reused on Overview (487).
 
 ## usage
 
-- Purpose: data usage: Activity, Workspaces, Tables, Volumes, People; usage classes from app/core/usage.py (web/src/tabs/tab_usage.tsx:1-4). Area def web/src/components/tab_registry.ts:331; sub-tabs 288-294 (no checks of their own).
+- Purpose: data usage: Activity, Workspaces, Catalogs, Schemas, Tables, Volumes, People; usage classes from app/core/usage.py (web/src/tabs/tab_usage.tsx:1-4). Area def web/src/components/tab_registry.ts:333; sub-tabs 288-296 (no checks of their own).
 
 | Sub-tab | Content | Data | Widgets |
 |---|---|---|---|
 | activity | `UsageActivityContent` web/src/tabs/usage_activity.tsx:254-388 (reg 390) | `GET /api/activity` (useActivity 17-29, call 22; optional workspace_id); `GET /api/workspace_usage` 271 | "Most active workspaces" 308, "How much of each workspace is in use" 311, "Activity per workspace per day" 320, "Complexity against usage" 325, "Most used tables" 330, "Most active people" 333, "Read and write events per day" 366; picking a workspace calls `setManyWorkspaces([id])` 261 |
-| workspaces | `UsageWorkspacesContent` web/src/tabs/tab_usage.tsx:213-397 (reg 1148) | `GET /api/workspace_usage` 218; `GET /api/tables` and `GET /api/people` for the picked workspace 219-220 | "Every workspace" 313, "Clean up first" 360, "Sensitive data" 387, Scatter 146 |
-| tables | `UsageTablesContent` 400-502 (reg 1149) | `GET /api/tables` 402, 406; `TableDetail` `GET /api/table` 765; `SchemaBreakdown` `GET /api/workspace_schemas` 535 | "Tables by class" 454, "Largest tables" 459, "Most active tables" 464; detail: "Changes and maintenance" 625, "Slowest queries" 705, "Who reads and writes it" 818, "Sensitive columns" 840, "Where it comes from, where it goes" 850 |
-| volumes | `UsageVolumesContent` 878-949 (reg 1150) | `GET /api/volumes` 880; `VolumeDetail` `GET /api/volume_users` 983 | "File reads" 903, "File writes" 904, "People using volumes" 905, "Not read" 907 |
-| people | `UsagePeopleContent` 1012-1093 (reg 1151) | `GET /api/people` 1016; `GET /api/workspaces` 1017; `PersonTables` `GET /api/person_tables` 1120 | people list, seen bands 1098 |
+| workspaces | `UsageWorkspacesContent` web/src/tabs/tab_usage.tsx:216-400 (reg 1228) | `GET /api/workspace_usage` 221; `GET /api/tables` and `GET /api/people` for the picked workspace 222-223 | "Complexity against usage" 311, "Every workspace" 316, "Clean up first" 363, "Sensitive data" 390, Scatter 148 |
+| catalogs | `UsageLevelContent` level="catalog" web/src/tabs/tab_usage.tsx:412-519 (reg 1229) | `GET /api/data_levels` 416 | workspace and name filters (client-side), "Complexity against usage" 464, "Every catalog" 469 (index hover shows each input's points); click hands the catalog to Schemas 445 |
+| schemas | `UsageLevelContent` level="schema" 412-519 (reg 1230) | `GET /api/data_levels` 416 | workspace, catalog and name filters, "Complexity against usage" 464, "Every schema" 469; click opens Tables searched by `catalog.schema.` 446 |
+| tables | `UsageTablesContent` 522-623 (reg 1231) | `GET /api/tables` 524, 528; `TableDetail` `GET /api/table` 845 | "Tables by class" 576, "Largest tables" 581, "Most active tables" 586; detail: "Changes and maintenance" 705, "Slowest queries" 785, "Who reads and writes it" 898, "Sensitive columns" 920, "Where it comes from, where it goes" 930 |
+| volumes | `UsageVolumesContent` 958-1029 (reg 1232) | `GET /api/volumes` 960; `VolumeDetail` `GET /api/volume_users` 1063 | "File reads" 983, "File writes" 984, "People using volumes" 985, "Not read" 987 |
+| people | `UsagePeopleContent` 1092-1173 (reg 1233) | `GET /api/people` 1096; `GET /api/workspaces` 1097; `PersonTables` `GET /api/person_tables` 1200 | people list, seen bands 1178 |
 
-- Cross-sub-tab handoff: module object `handoff` {workspace, cls, table, person, volume} set before `goTo` (web/src/tabs/tab_usage.tsx:29; web/src/tabs/usage_activity.tsx:281-283).
+- Cross-sub-tab handoff: module object `handoff` {workspace, cls, table, person, volume, catalog, q} set before `goTo` (web/src/tabs/tab_usage.tsx:30; web/src/tabs/usage_activity.tsx:281-283).
 
 ## findings
 
 - Purpose: "All findings": every check, one row each, worst status, grouped by area/status/none; rows expand in place (web/src/tabs/tab_findings.tsx:1-7).
-- Hash `tab=findings` (old `domains` redirects); area web/src/components/tab_registry.ts:335; registered web/src/tabs/tab_findings.tsx:541.
+- Hash `tab=findings` (old `domains` redirects); area web/src/components/tab_registry.ts:337; registered web/src/tabs/tab_findings.tsx:541.
 - Data: reads `allFindingsIndex` (from `/api/findings`), limited to `roleAreas`; expanded row -> `FindingDetail` F(query_id) (97, 137; web/src/components/finding_detail.tsx:1238-1266).
 - Widgets: `CheckStatusTabs` status tabs (web/src/components/findings_table.tsx:151), `AfRow`/`AfCard` (68, 114; card view on narrow screens 27-40), group rows (210, 223), home-tab link `AfHomeLink` (50), CSV download (424).
 - Filters: search (262), area (263), status tab (266-269), group mode (271), show all rows (270).
 
 ## coverage
 
-- Purpose: Coverage & Gaps: what this audit covers; an empty panel is never a verified zero (web/src/tabs/tab_coverage.tsx:1-5). Area def web/src/components/tab_registry.ts:336-340.
+- Purpose: Coverage & Gaps: what this audit covers; an empty panel is never a verified zero (web/src/tabs/tab_coverage.tsx:1-5). Area def web/src/components/tab_registry.ts:338-342.
 
 | Sub-tab | Content | Data | Widgets |
 |---|---|---|---|
@@ -235,5 +237,5 @@ flowchart TD
 
 ## guide (not in the area list)
 
-- `tab=guide`: "How it works"; renders from `GET /api/guide` (cached, web/src/components/guide_drawer.tsx:20-29) and `GET /api/guide/sql/{query_id}` (web/src/components/guide.tsx:2321); deep links `#tab=guide&focus=<query_id | how-<slug> | how-area-<key> | how-troubleshooting | how-glossary | how-checks>` (web/src/components/guide.tsx:1-4).
+- `tab=guide`: "How it works"; renders from `GET /api/guide` (cached, web/src/components/guide_drawer.tsx:20-29) and `GET /api/guide/sql/{query_id}` (web/src/components/guide.tsx:2323); deep links `#tab=guide&focus=<query_id | how-<slug> | how-area-<key> | how-troubleshooting | how-glossary | how-checks>` (web/src/components/guide.tsx:1-4).
 - Also opens while the database is not ready (web/src/App.tsx:1015-1027).

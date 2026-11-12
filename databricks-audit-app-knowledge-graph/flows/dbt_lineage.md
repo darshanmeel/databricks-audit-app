@@ -106,7 +106,7 @@ flowchart LR
 1. Source SQL `app/queries/vendored/cost/cost_by_job.sql` -> `tools/generate_models.py` -> `dbt/models/findings/cost/f_cost_by_job.sql` (`:2`).
 2. Reads `billing.usage`, `list_prices()`, latest `lakeflow.jobs`, `workspaces_latest` (`dbt/models/findings/cost/f_cost_by_job.sql:31-45`), stacked for 7/30/90 (`:3-5,101-104`).
 3. Table `findings.f_cost_by_job`, grain from `config/grains/cost_usage_only.yml:69`.
-4. App reads it with `read_finding` (`app/core/data.py:857`), names from `dims.dim_job` (`app/api/app.py:618`).
+4. App reads it with `read_finding` (`app/core/data.py:857`), names from `dims.dim_job` (`app/api/app.py:619`).
 5. Direct road: `d_cost_by_job` -> `app/direct_sql/cost_by_job.sql` -> loader `findings."f_cost_by_job"` (`tools/load_direct_results.py:595`).
 
 ## Example 3: a workspace tag

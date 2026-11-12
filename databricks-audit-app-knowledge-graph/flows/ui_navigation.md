@@ -35,7 +35,7 @@ flowchart TD
   - `selectArea(key)` resets sub-tab, domain and focus (web/src/App.tsx:1009).
   - `onSubtabChange(key)` keeps the area and clears focus (web/src/App.tsx:1010).
   - `goTo(target)` sets tab/subtab/domain/focus; CTO + a check id opens the Guide drawer instead (web/src/App.tsx:988-1000).
-  - `onExternalJump(queryId)` -> `homeForQuery(row)` + focus (web/src/App.tsx:1002-1007; web/src/components/tab_registry.ts:394-414).
+  - `onExternalJump(queryId)` -> `homeForQuery(row)` + focus (web/src/App.tsx:1002-1007; web/src/components/tab_registry.ts:396-416).
 - Guards:
   - Tab outside the lens -> lens home (web/src/App.tsx:50-52, 802-808).
   - CFO outside money/guide/cost/waste/mlai -> money (web/src/App.tsx:797-801).
@@ -103,7 +103,7 @@ sequenceDiagram
 
 `http://127.0.0.1:8000/#tab=jobs&subtab=timing&w=7&ws=111,222&role=data_engineer&job=111:987`
 
-1. `subtab=timing` is an old key -> `slow` (web/src/components/tab_registry.ts:386; web/src/components/nav_hash.ts:126).
+1. `subtab=timing` is an old key -> `slow` (web/src/components/tab_registry.ts:388; web/src/components/nav_hash.ts:126).
 2. `role=data_engineer` is valid -> lens set; jobs is in that lens's sidebar (web/src/App.tsx:765-770; web/src/components/roles.ts:34).
 3. `w=7` overrides `meta.open_window` (web/src/App.tsx:855).
 4. `ws=111,222` is matched against `/api/workspaces`; unknown ids are dropped, and if none match every workspace is used (web/src/App.tsx:709-712).

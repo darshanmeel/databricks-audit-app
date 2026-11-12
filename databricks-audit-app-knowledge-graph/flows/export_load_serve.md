@@ -51,7 +51,7 @@ sequenceDiagram
 14. `first_run` prints `python -m app.api` and `http://127.0.0.1:8000/` (`tools/first_run.py:191-194`).
 15. `python -m app.api` picks host `127.0.0.1`, port `8000` (or `AUDIT_API_HOST`/`AUDIT_API_PORT`), prints the db, enables shared connections, warms the findings cache, starts uvicorn (`app/api/__main__.py:14-25`).
 16. Each request resolves the db: `AUDIT_DB` → `current_db.txt` → `<data>/audit.duckdb` → `data/db_audit.duckdb` (`app/core/data.py:203-216`, `README.md:196-201`).
-17. Browser loads `/` (built `app/web/dist/index.html`), then `GET /api/status` first; anything but `ready` shows the first-run screen (`app/api/app.py:1453-1471`, `web/src/App.tsx:841-843`, `web/src/components/first_run.tsx:1-2`).
+17. Browser loads `/` (built `app/web/dist/index.html`), then `GET /api/status` first; anything but `ready` shows the first-run screen (`app/api/app.py:1461-1479`, `web/src/App.tsx:841-843`, `web/src/components/first_run.tsx:1-2`).
 18. When `ready`, the UI calls `/api/meta`, `/api/workspaces`, `/api/findings` (`web/src/App.tsx:847-863`, `web/src/App.tsx:905-915`). Request detail: `flows/api_request.md`.
 
 ## Load internals (order inside `_load_root`)

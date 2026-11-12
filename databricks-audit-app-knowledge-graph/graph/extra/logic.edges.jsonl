@@ -187,10 +187,13 @@
 {"from": "config:app.rls", "to": "business_rule:row_level_security", "type": "configures", "evidence": "config/app.yml:14", "status": "extracted"}
 {"from": "function:app/core/usage.py:usage_class", "to": "business_rule:data_usage_class_and_index", "type": "implements", "evidence": "app/core/usage.py:49", "status": "extracted"}
 {"from": "function:app/core/usage.py:scale", "to": "business_rule:data_usage_class_and_index", "type": "implements", "evidence": "app/core/usage.py:67", "status": "extracted"}
-{"from": "function:app/core/usage.py:complexity_index", "to": "business_rule:data_usage_class_and_index", "type": "implements", "evidence": "app/core/usage.py:73", "status": "extracted"}
-{"from": "function:app/core/usage.py:usage_index", "to": "business_rule:data_usage_class_and_index", "type": "implements", "evidence": "app/core/usage.py:78", "status": "extracted"}
-{"from": "function:app/core/usage.py:signal", "to": "business_rule:data_usage_class_and_index", "type": "implements", "evidence": "app/core/usage.py:86", "status": "extracted"}
-{"from": "function:app/core/usage.py:cleanup_order", "to": "business_rule:data_usage_class_and_index", "type": "implements", "evidence": "app/core/usage.py:98", "status": "extracted"}
+{"from": "function:app/core/usage.py:complexity_index", "to": "business_rule:data_usage_class_and_index", "type": "implements", "evidence": "app/core/usage.py:87", "status": "extracted"}
+{"from": "function:app/core/usage.py:usage_index", "to": "business_rule:data_usage_class_and_index", "type": "implements", "evidence": "app/core/usage.py:91", "status": "extracted"}
+{"from": "function:app/core/usage.py:index_parts", "to": "business_rule:data_usage_class_and_index", "type": "implements", "evidence": "app/core/usage.py:73", "status": "extracted"}
+{"from": "function:app/core/data.py:read_data_levels", "to": "business_rule:data_usage_class_and_index", "type": "implements", "evidence": "app/core/data.py:2089", "status": "extracted"}
+{"from": "test_case:tests/test_workspace_activity.py:test_workspace_schemas_and_a_persons_tables", "to": "business_rule:data_usage_class_and_index", "type": "illustrates", "evidence": "tests/test_workspace_activity.py:172", "status": "extracted"}
+{"from": "function:app/core/usage.py:signal", "to": "business_rule:data_usage_class_and_index", "type": "implements", "evidence": "app/core/usage.py:95", "status": "extracted"}
+{"from": "function:app/core/usage.py:cleanup_order", "to": "business_rule:data_usage_class_and_index", "type": "implements", "evidence": "app/core/usage.py:107", "status": "extracted"}
 {"from": "test_case:tests/test_usage.py:test_usage_class", "to": "business_rule:data_usage_class_and_index", "type": "illustrates", "evidence": "tests/test_usage.py:25", "status": "extracted"}
 {"from": "test_case:tests/test_usage.py:test_indexes_reach_100_for_the_largest_and_count_active_days_linearly", "to": "business_rule:data_usage_class_and_index", "type": "illustrates", "evidence": "tests/test_usage.py:35", "status": "extracted"}
 {"from": "test_case:tests/test_usage.py:test_signal", "to": "business_rule:data_usage_class_and_index", "type": "illustrates", "evidence": "tests/test_usage.py:49", "status": "extracted"}

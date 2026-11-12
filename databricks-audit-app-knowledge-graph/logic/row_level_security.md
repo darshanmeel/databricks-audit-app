@@ -24,8 +24,8 @@ flowchart TD
 - Chargeback shares are recomputed over the user's rows so they sum to 100 - `app/core/rls.py:39-50`, `app/core/rls.py:310-316`.
 - Account-level ABAC policies only for a user who sees all workspaces - `app/core/rls.py:326-329`.
 - Export mode writes a fresh file per grant set, so other users' bytes are not present - `app/core/rls.py:387-423`.
-- Principal from `X-Forwarded-Email` - `app/api/app.py:188-202`.
-- `POST /api/refresh` with rls on: only `refresh.admins` (config/app.yml) or a user whose grants cover everything (`unrestricted`), else 403 - `app/api/app.py:401-411`, `app/core/rls.py:149`.
+- Principal from `X-Forwarded-Email` - `app/api/app.py:189-203`.
+- `POST /api/refresh` with rls on: only `refresh.admins` (config/app.yml) or a user whose grants cover everything (`unrestricted`), else 403 - `app/api/app.py:402-412`, `app/core/rls.py:149`.
 - Query mode: a newer db file retires the old per-user handle (closed after a grace, not at once) - `app/core/rls.py:587-612`, `app/core/data.py:332-339`.
 
 ## Formula

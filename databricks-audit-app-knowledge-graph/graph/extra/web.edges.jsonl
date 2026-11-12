@@ -83,8 +83,8 @@
 {"from": "function:web/src/api.ts:Api.warehouses", "to": "endpoint:GET /api/warehouses", "type": "calls", "evidence": "web/src/api.ts:98", "status": "extracted"}
 {"from": "file:web/src/api.ts", "to": "function:web/src/api.ts:Api.warehouse", "type": "contains", "evidence": "web/src/api.ts:99", "status": "extracted"}
 {"from": "function:web/src/api.ts:Api.warehouse", "to": "endpoint:GET /api/warehouse", "type": "calls", "evidence": "web/src/api.ts:99", "status": "extracted"}
-{"from": "file:web/src/api.ts", "to": "function:web/src/api.ts:Api.workspaceSchemas", "type": "contains", "evidence": "web/src/api.ts:100", "status": "extracted"}
-{"from": "function:web/src/api.ts:Api.workspaceSchemas", "to": "endpoint:GET /api/workspace_schemas", "type": "calls", "evidence": "web/src/api.ts:100", "status": "extracted"}
+{"from": "file:web/src/api.ts", "to": "function:web/src/api.ts:Api.dataLevels", "type": "contains", "evidence": "web/src/api.ts:100", "status": "extracted"}
+{"from": "function:web/src/api.ts:Api.dataLevels", "to": "endpoint:GET /api/data_levels", "type": "calls", "evidence": "web/src/api.ts:100", "status": "extracted"}
 {"from": "file:web/src/api.ts", "to": "function:web/src/api.ts:Api.activity", "type": "contains", "evidence": "web/src/api.ts:101", "status": "extracted"}
 {"from": "function:web/src/api.ts:Api.activity", "to": "endpoint:GET /api/activity", "type": "calls", "evidence": "web/src/api.ts:101", "status": "extracted"}
 {"from": "file:web/src/api.ts", "to": "function:web/src/api.ts:Api.personTables", "type": "contains", "evidence": "web/src/api.ts:102", "status": "extracted"}
@@ -152,9 +152,9 @@
 {"from": "file:web/src/components/roles.ts", "to": "function:web/src/components/roles.ts:sidebarKeysForRole", "type": "contains", "evidence": "web/src/components/roles.ts:48", "status": "extracted"}
 {"from": "file:web/src/components/primitives.tsx", "to": "function:web/src/components/primitives.tsx:AreaPage", "type": "contains", "evidence": "web/src/components/primitives.tsx:702", "status": "extracted"}
 {"from": "file:web/src/components/findings_table.tsx", "to": "function:web/src/components/findings_table.tsx:FindingsTable", "type": "contains", "evidence": "web/src/components/findings_table.tsx:252", "status": "extracted"}
-{"from": "file:web/src/components/tab_registry.ts", "to": "function:web/src/components/tab_registry.ts:homeForQuery", "type": "contains", "evidence": "web/src/components/tab_registry.ts:412", "status": "extracted"}
-{"from": "file:web/src/components/tab_registry.ts", "to": "function:web/src/components/tab_registry.ts:bandOf", "type": "contains", "evidence": "web/src/components/tab_registry.ts:440", "status": "extracted"}
-{"from": "file:web/src/components/tab_registry.ts", "to": "function:web/src/components/tab_registry.ts:countsForIds", "type": "contains", "evidence": "web/src/components/tab_registry.ts:354", "status": "extracted"}
+{"from": "file:web/src/components/tab_registry.ts", "to": "function:web/src/components/tab_registry.ts:homeForQuery", "type": "contains", "evidence": "web/src/components/tab_registry.ts:414", "status": "extracted"}
+{"from": "file:web/src/components/tab_registry.ts", "to": "function:web/src/components/tab_registry.ts:bandOf", "type": "contains", "evidence": "web/src/components/tab_registry.ts:442", "status": "extracted"}
+{"from": "file:web/src/components/tab_registry.ts", "to": "function:web/src/components/tab_registry.ts:countsForIds", "type": "contains", "evidence": "web/src/components/tab_registry.ts:356", "status": "extracted"}
 {"from": "file:web/src/components/tag_picker.tsx", "to": "function:web/src/components/tag_picker.tsx:TagPicker", "type": "contains", "evidence": "web/src/components/tag_picker.tsx:237", "status": "extracted"}
 {"from": "file:web/src/components/tag_picker.tsx", "to": "function:web/src/components/tag_picker.tsx:MandatoryTagPicker", "type": "contains", "evidence": "web/src/components/tag_picker.tsx:166", "status": "extracted"}
 {"from": "file:web/src/components/tag_picker.tsx", "to": "function:web/src/components/tag_picker.tsx:narrowingTag", "type": "contains", "evidence": "web/src/components/tag_picker.tsx:78", "status": "extracted"}
@@ -163,7 +163,7 @@
 {"from": "file:web/src/components/filters.tsx", "to": "function:web/src/components/filters.tsx:AttributeFilters", "type": "contains", "evidence": "web/src/components/filters.tsx:131", "status": "extracted"}
 {"from": "file:web/src/components/scope.tsx", "to": "function:web/src/components/scope.tsx:RegionScopeBanner", "type": "contains", "evidence": "web/src/components/scope.tsx:75", "status": "extracted"}
 {"from": "file:web/src/components/first_run.tsx", "to": "function:web/src/components/first_run.tsx:FirstRunScreen", "type": "contains", "evidence": "web/src/components/first_run.tsx:145", "status": "extracted"}
-{"from": "file:web/src/components/guide.tsx", "to": "function:web/src/components/guide.tsx:GuideTab", "type": "contains", "evidence": "web/src/components/guide.tsx:2737", "status": "extracted"}
+{"from": "file:web/src/components/guide.tsx", "to": "function:web/src/components/guide.tsx:GuideTab", "type": "contains", "evidence": "web/src/components/guide.tsx:2739", "status": "extracted"}
 {"from": "file:web/src/components/guide_drawer.tsx", "to": "function:web/src/components/guide_drawer.tsx:GuideDrawer", "type": "contains", "evidence": "web/src/components/guide_drawer.tsx:137", "status": "extracted"}
 {"from": "file:web/src/components/guide_drawer.tsx", "to": "function:web/src/components/guide_drawer.tsx:openGuideDrawer", "type": "contains", "evidence": "web/src/components/guide_drawer.tsx:109", "status": "extracted"}
 {"from": "file:web/src/components/tag_rollup.tsx", "to": "function:web/src/components/tag_rollup.tsx:TagRollupView", "type": "contains", "evidence": "web/src/components/tag_rollup.tsx:476", "status": "extracted"}
@@ -213,43 +213,43 @@
 {"from": "function:web/src/components/findings_table.tsx:FindingsTable", "to": "function:web/src/components/finding_detail.tsx:FindingDetail", "type": "calls", "evidence": "web/src/components/findings_table.tsx:235", "status": "extracted"}
 {"from": "function:web/src/components/findings_table.tsx:FindingsTable", "to": "function:web/src/components/hash_state.tsx:HashState", "type": "calls", "evidence": "web/src/components/findings_table.tsx:269", "status": "extracted"}
 {"from": "function:web/src/components/guide_drawer.tsx:GuideDrawer", "to": "function:web/src/components/guide_drawer.tsx:fetchGuideData", "type": "calls", "evidence": "web/src/components/guide_drawer.tsx:146", "status": "extracted"}
-{"from": "function:web/src/components/guide.tsx:GuideTab", "to": "endpoint:GET /api/guide/sql/{query_id}", "type": "calls", "evidence": "web/src/components/guide.tsx:2321", "status": "extracted"}
-{"from": "function:web/src/components/guide.tsx:GuideTab", "to": "function:web/src/components/guide_drawer.tsx:fetchGuideData", "type": "calls", "evidence": "web/src/components/guide.tsx:2771", "status": "extracted"}
+{"from": "function:web/src/components/guide.tsx:GuideTab", "to": "endpoint:GET /api/guide/sql/{query_id}", "type": "calls", "evidence": "web/src/components/guide.tsx:2323", "status": "extracted"}
+{"from": "function:web/src/components/guide.tsx:GuideTab", "to": "function:web/src/components/guide_drawer.tsx:fetchGuideData", "type": "calls", "evidence": "web/src/components/guide.tsx:2773", "status": "extracted"}
 {"from": "function:web/src/components/nav_hash.ts:applyOldKeyRedirects", "to": "file:web/src/components/tab_registry.ts", "type": "reads", "evidence": "web/src/components/nav_hash.ts:124", "status": "extracted"}
 {"from": "function:web/src/components/roles.ts:sidebarKeysForRole", "to": "function:web/src/components/roles.ts:roleAreasFor", "type": "calls", "evidence": "web/src/components/roles.ts:50", "status": "extracted"}
-{"from": "ui_screen:tab_overview", "to": "file:web/src/components/tab_registry.ts", "type": "configures", "evidence": "web/src/components/tab_registry.ts:315", "status": "extracted"}
+{"from": "ui_screen:tab_overview", "to": "file:web/src/components/tab_registry.ts", "type": "configures", "evidence": "web/src/components/tab_registry.ts:317", "status": "extracted"}
 {"from": "function:web/src/components/primitives.tsx:AreaPage", "to": "ui_screen:tab_overview", "type": "implements", "evidence": "web/src/components/primitives.tsx:702", "status": "extracted"}
-{"from": "ui_screen:tab_actions", "to": "file:web/src/components/tab_registry.ts", "type": "configures", "evidence": "web/src/components/tab_registry.ts:316", "status": "extracted"}
+{"from": "ui_screen:tab_actions", "to": "file:web/src/components/tab_registry.ts", "type": "configures", "evidence": "web/src/components/tab_registry.ts:318", "status": "extracted"}
 {"from": "function:web/src/components/primitives.tsx:AreaPage", "to": "ui_screen:tab_actions", "type": "implements", "evidence": "web/src/components/primitives.tsx:702", "status": "extracted"}
 {"from": "function:web/src/App.tsx:App", "to": "ui_screen:tab_money", "type": "calls", "evidence": "web/src/App.tsx:1177", "status": "extracted"}
-{"from": "ui_screen:tab_cost", "to": "file:web/src/components/tab_registry.ts", "type": "configures", "evidence": "web/src/components/tab_registry.ts:317", "status": "extracted"}
+{"from": "ui_screen:tab_cost", "to": "file:web/src/components/tab_registry.ts", "type": "configures", "evidence": "web/src/components/tab_registry.ts:319", "status": "extracted"}
 {"from": "function:web/src/components/primitives.tsx:AreaPage", "to": "ui_screen:tab_cost", "type": "implements", "evidence": "web/src/components/primitives.tsx:702", "status": "extracted"}
-{"from": "ui_screen:tab_waste", "to": "file:web/src/components/tab_registry.ts", "type": "configures", "evidence": "web/src/components/tab_registry.ts:318", "status": "extracted"}
+{"from": "ui_screen:tab_waste", "to": "file:web/src/components/tab_registry.ts", "type": "configures", "evidence": "web/src/components/tab_registry.ts:320", "status": "extracted"}
 {"from": "function:web/src/components/primitives.tsx:AreaPage", "to": "ui_screen:tab_waste", "type": "implements", "evidence": "web/src/components/primitives.tsx:702", "status": "extracted"}
-{"from": "ui_screen:tab_compute", "to": "file:web/src/components/tab_registry.ts", "type": "configures", "evidence": "web/src/components/tab_registry.ts:325", "status": "extracted"}
+{"from": "ui_screen:tab_compute", "to": "file:web/src/components/tab_registry.ts", "type": "configures", "evidence": "web/src/components/tab_registry.ts:327", "status": "extracted"}
 {"from": "function:web/src/components/primitives.tsx:AreaPage", "to": "ui_screen:tab_compute", "type": "implements", "evidence": "web/src/components/primitives.tsx:702", "status": "extracted"}
-{"from": "ui_screen:tab_jobs", "to": "file:web/src/components/tab_registry.ts", "type": "configures", "evidence": "web/src/components/tab_registry.ts:326", "status": "extracted"}
+{"from": "ui_screen:tab_jobs", "to": "file:web/src/components/tab_registry.ts", "type": "configures", "evidence": "web/src/components/tab_registry.ts:328", "status": "extracted"}
 {"from": "function:web/src/components/primitives.tsx:AreaPage", "to": "ui_screen:tab_jobs", "type": "implements", "evidence": "web/src/components/primitives.tsx:702", "status": "extracted"}
-{"from": "ui_screen:tab_query", "to": "file:web/src/components/tab_registry.ts", "type": "configures", "evidence": "web/src/components/tab_registry.ts:327", "status": "extracted"}
+{"from": "ui_screen:tab_query", "to": "file:web/src/components/tab_registry.ts", "type": "configures", "evidence": "web/src/components/tab_registry.ts:329", "status": "extracted"}
 {"from": "function:web/src/components/primitives.tsx:AreaPage", "to": "ui_screen:tab_query", "type": "implements", "evidence": "web/src/components/primitives.tsx:702", "status": "extracted"}
-{"from": "ui_screen:tab_storage", "to": "file:web/src/components/tab_registry.ts", "type": "configures", "evidence": "web/src/components/tab_registry.ts:333", "status": "extracted"}
+{"from": "ui_screen:tab_storage", "to": "file:web/src/components/tab_registry.ts", "type": "configures", "evidence": "web/src/components/tab_registry.ts:335", "status": "extracted"}
 {"from": "function:web/src/components/primitives.tsx:AreaPage", "to": "ui_screen:tab_storage", "type": "implements", "evidence": "web/src/components/primitives.tsx:702", "status": "extracted"}
-{"from": "ui_screen:tab_mlai", "to": "file:web/src/components/tab_registry.ts", "type": "configures", "evidence": "web/src/components/tab_registry.ts:323", "status": "extracted"}
+{"from": "ui_screen:tab_mlai", "to": "file:web/src/components/tab_registry.ts", "type": "configures", "evidence": "web/src/components/tab_registry.ts:325", "status": "extracted"}
 {"from": "function:web/src/components/primitives.tsx:AreaPage", "to": "ui_screen:tab_mlai", "type": "implements", "evidence": "web/src/components/primitives.tsx:702", "status": "extracted"}
-{"from": "ui_screen:tab_genie", "to": "file:web/src/components/tab_registry.ts", "type": "configures", "evidence": "web/src/components/tab_registry.ts:324", "status": "extracted"}
+{"from": "ui_screen:tab_genie", "to": "file:web/src/components/tab_registry.ts", "type": "configures", "evidence": "web/src/components/tab_registry.ts:326", "status": "extracted"}
 {"from": "function:web/src/components/primitives.tsx:AreaPage", "to": "ui_screen:tab_genie", "type": "implements", "evidence": "web/src/components/primitives.tsx:702", "status": "extracted"}
-{"from": "ui_screen:tab_governance", "to": "file:web/src/components/tab_registry.ts", "type": "configures", "evidence": "web/src/components/tab_registry.ts:332", "status": "extracted"}
+{"from": "ui_screen:tab_governance", "to": "file:web/src/components/tab_registry.ts", "type": "configures", "evidence": "web/src/components/tab_registry.ts:334", "status": "extracted"}
 {"from": "function:web/src/components/primitives.tsx:AreaPage", "to": "ui_screen:tab_governance", "type": "implements", "evidence": "web/src/components/primitives.tsx:702", "status": "extracted"}
-{"from": "ui_screen:tab_tags", "to": "file:web/src/components/tab_registry.ts", "type": "configures", "evidence": "web/src/components/tab_registry.ts:334", "status": "extracted"}
+{"from": "ui_screen:tab_tags", "to": "file:web/src/components/tab_registry.ts", "type": "configures", "evidence": "web/src/components/tab_registry.ts:336", "status": "extracted"}
 {"from": "function:web/src/components/primitives.tsx:AreaPage", "to": "ui_screen:tab_tags", "type": "implements", "evidence": "web/src/components/primitives.tsx:702", "status": "extracted"}
-{"from": "ui_screen:tab_usage", "to": "file:web/src/components/tab_registry.ts", "type": "configures", "evidence": "web/src/components/tab_registry.ts:331", "status": "extracted"}
+{"from": "ui_screen:tab_usage", "to": "file:web/src/components/tab_registry.ts", "type": "configures", "evidence": "web/src/components/tab_registry.ts:333", "status": "extracted"}
 {"from": "function:web/src/components/primitives.tsx:AreaPage", "to": "ui_screen:tab_usage", "type": "implements", "evidence": "web/src/components/primitives.tsx:702", "status": "extracted"}
-{"from": "ui_screen:tab_findings", "to": "file:web/src/components/tab_registry.ts", "type": "configures", "evidence": "web/src/components/tab_registry.ts:335", "status": "extracted"}
+{"from": "ui_screen:tab_findings", "to": "file:web/src/components/tab_registry.ts", "type": "configures", "evidence": "web/src/components/tab_registry.ts:337", "status": "extracted"}
 {"from": "function:web/src/components/primitives.tsx:AreaPage", "to": "ui_screen:tab_findings", "type": "implements", "evidence": "web/src/components/primitives.tsx:702", "status": "extracted"}
-{"from": "ui_screen:tab_coverage", "to": "file:web/src/components/tab_registry.ts", "type": "configures", "evidence": "web/src/components/tab_registry.ts:336", "status": "extracted"}
+{"from": "ui_screen:tab_coverage", "to": "file:web/src/components/tab_registry.ts", "type": "configures", "evidence": "web/src/components/tab_registry.ts:338", "status": "extracted"}
 {"from": "function:web/src/components/primitives.tsx:AreaPage", "to": "ui_screen:tab_coverage", "type": "implements", "evidence": "web/src/components/primitives.tsx:702", "status": "extracted"}
 {"from": "ui_screen:tab_guide", "to": "endpoint:GET /api/guide", "type": "calls", "evidence": "web/src/components/guide_drawer.tsx:22", "status": "extracted"}
-{"from": "ui_screen:tab_guide", "to": "endpoint:GET /api/guide/sql/{query_id}", "type": "calls", "evidence": "web/src/components/guide.tsx:2321", "status": "extracted"}
+{"from": "ui_screen:tab_guide", "to": "endpoint:GET /api/guide/sql/{query_id}", "type": "calls", "evidence": "web/src/components/guide.tsx:2323", "status": "extracted"}
 {"from": "ui_screen:first_run", "to": "endpoint:GET /api/refresh", "type": "calls", "evidence": "web/src/components/first_run.tsx:12", "status": "extracted"}
 {"from": "ui_screen:first_run", "to": "endpoint:POST /api/refresh", "type": "calls", "evidence": "web/src/components/first_run.tsx:21", "status": "extracted"}
 {"from": "ui_screen:shell", "to": "endpoint:GET /api/status", "type": "calls", "evidence": "web/src/App.tsx:842", "status": "extracted"}
@@ -281,7 +281,7 @@
 {"from": "ui_screen:tab_usage", "to": "ui_screen:shell", "type": "part_of", "evidence": "web/src/App.tsx:1149", "status": "extracted"}
 {"from": "ui_screen:tab_findings", "to": "ui_screen:shell", "type": "part_of", "evidence": "web/src/App.tsx:1149", "status": "extracted"}
 {"from": "ui_screen:tab_coverage", "to": "ui_screen:shell", "type": "part_of", "evidence": "web/src/App.tsx:1149", "status": "extracted"}
-{"from": "ui_screen:tab_query:trend", "to": "ui_screen:tab_query", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:327", "status": "extracted"}
+{"from": "ui_screen:tab_query:trend", "to": "ui_screen:tab_query", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:329", "status": "extracted"}
 {"from": "file:web/src/tabs/query_trend.tsx", "to": "function:web/src/tabs/query_trend.tsx:QueryTrendContent", "type": "contains", "evidence": "web/src/tabs/query_trend.tsx:92", "status": "extracted"}
 {"from": "function:web/src/tabs/query_trend.tsx:QueryTrendContent", "to": "ui_screen:tab_query:trend", "type": "implements", "evidence": "web/src/tabs/query_trend.tsx:387", "status": "extracted"}
 {"from": "function:web/src/tabs/query_trend.tsx:QueryTrendContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/query_trend.tsx:387", "status": "extracted"}
@@ -300,7 +300,7 @@
 {"from": "ui_screen:tab_actions", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_actions.tsx:169", "status": "extracted"}
 {"from": "ui_screen:tab_actions", "to": "endpoint:GET /api/rollup/top", "type": "calls", "evidence": "web/src/tabs/tab_actions.tsx:175", "status": "extracted"}
 {"from": "ui_screen:tab_actions", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_actions.tsx:86", "status": "extracted"}
-{"from": "ui_screen:tab_compute:warehouses", "to": "ui_screen:tab_compute", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:325", "status": "extracted"}
+{"from": "ui_screen:tab_compute:warehouses", "to": "ui_screen:tab_compute", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:327", "status": "extracted"}
 {"from": "file:web/src/tabs/tab_compute.tsx", "to": "function:web/src/tabs/tab_compute.tsx:ComputeWarehousesContent", "type": "contains", "evidence": "web/src/tabs/tab_compute.tsx:721", "status": "extracted"}
 {"from": "function:web/src/tabs/tab_compute.tsx:ComputeWarehousesContent", "to": "ui_screen:tab_compute:warehouses", "type": "implements", "evidence": "web/src/tabs/tab_compute.tsx:863", "status": "extracted"}
 {"from": "function:web/src/tabs/tab_compute.tsx:ComputeWarehousesContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_compute.tsx:863", "status": "extracted"}
@@ -315,7 +315,7 @@
 {"from": "ui_screen:tab_compute:warehouses", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_compute.tsx:730", "status": "extracted"}
 {"from": "ui_screen:tab_compute:warehouses", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_compute.tsx:741", "status": "extracted"}
 {"from": "ui_screen:tab_compute:warehouses", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/components/last_activity.tsx:39", "status": "extracted"}
-{"from": "ui_screen:tab_compute:clusters", "to": "ui_screen:tab_compute", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:325", "status": "extracted"}
+{"from": "ui_screen:tab_compute:clusters", "to": "ui_screen:tab_compute", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:327", "status": "extracted"}
 {"from": "file:web/src/tabs/tab_compute.tsx", "to": "function:web/src/tabs/tab_compute.tsx:ComputeClustersContent", "type": "contains", "evidence": "web/src/tabs/tab_compute.tsx:867", "status": "extracted"}
 {"from": "function:web/src/tabs/tab_compute.tsx:ComputeClustersContent", "to": "ui_screen:tab_compute:clusters", "type": "implements", "evidence": "web/src/tabs/tab_compute.tsx:981", "status": "extracted"}
 {"from": "function:web/src/tabs/tab_compute.tsx:ComputeClustersContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_compute.tsx:981", "status": "extracted"}
@@ -325,13 +325,13 @@
 {"from": "ui_screen:tab_compute:clusters", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_compute.tsx:873", "status": "extracted"}
 {"from": "ui_screen:tab_compute:clusters", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_compute.tsx:874", "status": "extracted"}
 {"from": "ui_screen:tab_compute:clusters", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/components/last_activity.tsx:39", "status": "extracted"}
-{"from": "ui_screen:tab_compute:config", "to": "ui_screen:tab_compute", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:325", "status": "extracted"}
+{"from": "ui_screen:tab_compute:config", "to": "ui_screen:tab_compute", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:327", "status": "extracted"}
 {"from": "file:web/src/tabs/tab_compute.tsx", "to": "function:web/src/tabs/tab_compute.tsx:ComputeConfigContent", "type": "contains", "evidence": "web/src/tabs/tab_compute.tsx:1039", "status": "extracted"}
 {"from": "function:web/src/tabs/tab_compute.tsx:ComputeConfigContent", "to": "ui_screen:tab_compute:config", "type": "implements", "evidence": "web/src/tabs/tab_compute.tsx:1110", "status": "extracted"}
 {"from": "function:web/src/tabs/tab_compute.tsx:ComputeConfigContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_compute.tsx:1110", "status": "extracted"}
 {"from": "ui_screen:tab_compute:config", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_compute.tsx:1040", "status": "extracted"}
 {"from": "ui_screen:tab_compute:config", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_compute.tsx:1042", "status": "extracted"}
-{"from": "ui_screen:tab_cost:trend", "to": "ui_screen:tab_cost", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:317", "status": "extracted"}
+{"from": "ui_screen:tab_cost:trend", "to": "ui_screen:tab_cost", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:319", "status": "extracted"}
 {"from": "file:web/src/tabs/tab_cost.tsx", "to": "function:web/src/tabs/tab_cost.tsx:CostTrendContent", "type": "contains", "evidence": "web/src/tabs/tab_cost.tsx:279", "status": "extracted"}
 {"from": "function:web/src/tabs/tab_cost.tsx:CostTrendContent", "to": "ui_screen:tab_cost:trend", "type": "implements", "evidence": "web/src/tabs/tab_cost.tsx:475", "status": "extracted"}
 {"from": "function:web/src/tabs/tab_cost.tsx:CostTrendContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_cost.tsx:475", "status": "extracted"}
@@ -344,7 +344,7 @@
 {"from": "ui_screen:tab_cost:trend", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_cost.tsx:211", "status": "extracted"}
 {"from": "ui_screen:tab_cost:trend", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/cost_trend_by.tsx:83", "status": "extracted"}
 {"from": "ui_screen:tab_cost:trend", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/cost_trend_by.tsx:84", "status": "extracted"}
-{"from": "ui_screen:tab_cost:product", "to": "ui_screen:tab_cost", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:317", "status": "extracted"}
+{"from": "ui_screen:tab_cost:product", "to": "ui_screen:tab_cost", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:319", "status": "extracted"}
 {"from": "file:web/src/tabs/tab_cost.tsx", "to": "function:web/src/tabs/tab_cost.tsx:CostProductContent", "type": "contains", "evidence": "web/src/tabs/tab_cost.tsx:478", "status": "extracted"}
 {"from": "function:web/src/tabs/tab_cost.tsx:CostProductContent", "to": "ui_screen:tab_cost:product", "type": "implements", "evidence": "web/src/tabs/tab_cost.tsx:629", "status": "extracted"}
 {"from": "function:web/src/tabs/tab_cost.tsx:CostProductContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_cost.tsx:629", "status": "extracted"}
@@ -353,7 +353,7 @@
 {"from": "ui_screen:tab_cost:product", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_cost.tsx:484", "status": "extracted"}
 {"from": "ui_screen:tab_cost:product", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_cost.tsx:485", "status": "extracted"}
 {"from": "ui_screen:tab_cost:product", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_cost.tsx:488", "status": "extracted"}
-{"from": "ui_screen:tab_cost:allocation", "to": "ui_screen:tab_cost", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:317", "status": "extracted"}
+{"from": "ui_screen:tab_cost:allocation", "to": "ui_screen:tab_cost", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:319", "status": "extracted"}
 {"from": "file:web/src/tabs/tab_cost.tsx", "to": "function:web/src/tabs/tab_cost.tsx:CostAllocationContent", "type": "contains", "evidence": "web/src/tabs/tab_cost.tsx:793", "status": "extracted"}
 {"from": "function:web/src/tabs/tab_cost.tsx:CostAllocationContent", "to": "ui_screen:tab_cost:allocation", "type": "implements", "evidence": "web/src/tabs/tab_cost.tsx:947", "status": "extracted"}
 {"from": "function:web/src/tabs/tab_cost.tsx:CostAllocationContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_cost.tsx:947", "status": "extracted"}
@@ -369,7 +369,7 @@
 {"from": "ui_screen:tab_cost:allocation", "to": "endpoint:GET /api/rollup/keys", "type": "calls", "evidence": "web/src/components/tag_rollup.tsx:482", "status": "extracted"}
 {"from": "ui_screen:tab_cost:allocation", "to": "endpoint:GET /api/rollup", "type": "calls", "evidence": "web/src/components/tag_rollup.tsx:150", "status": "extracted"}
 {"from": "ui_screen:tab_cost:allocation", "to": "endpoint:GET /api/workspace_tags", "type": "calls", "evidence": "web/src/tabs/tab_cost.tsx:959", "status": "extracted"}
-{"from": "ui_screen:tab_cost:resource", "to": "ui_screen:tab_cost", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:317", "status": "extracted"}
+{"from": "ui_screen:tab_cost:resource", "to": "ui_screen:tab_cost", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:319", "status": "extracted"}
 {"from": "file:web/src/tabs/tab_cost.tsx", "to": "function:web/src/tabs/tab_cost.tsx:CostResourceContent", "type": "contains", "evidence": "web/src/tabs/tab_cost.tsx:1068", "status": "extracted"}
 {"from": "function:web/src/tabs/tab_cost.tsx:CostResourceContent", "to": "ui_screen:tab_cost:resource", "type": "implements", "evidence": "web/src/tabs/tab_cost.tsx:1182", "status": "extracted"}
 {"from": "function:web/src/tabs/tab_cost.tsx:CostResourceContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_cost.tsx:1182", "status": "extracted"}
@@ -381,7 +381,7 @@
 {"from": "ui_screen:tab_cost:resource", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_cost.tsx:1076", "status": "extracted"}
 {"from": "ui_screen:tab_cost:resource", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_cost.tsx:1078", "status": "extracted"}
 {"from": "ui_screen:tab_cost:resource", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_cost.tsx:1079", "status": "extracted"}
-{"from": "ui_screen:tab_cost:pricing", "to": "ui_screen:tab_cost", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:317", "status": "extracted"}
+{"from": "ui_screen:tab_cost:pricing", "to": "ui_screen:tab_cost", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:319", "status": "extracted"}
 {"from": "file:web/src/tabs/tab_cost.tsx", "to": "function:web/src/tabs/tab_cost.tsx:CostPricingContent", "type": "contains", "evidence": "web/src/tabs/tab_cost.tsx:1253", "status": "extracted"}
 {"from": "function:web/src/tabs/tab_cost.tsx:CostPricingContent", "to": "ui_screen:tab_cost:pricing", "type": "implements", "evidence": "web/src/tabs/tab_cost.tsx:1349", "status": "extracted"}
 {"from": "function:web/src/tabs/tab_cost.tsx:CostPricingContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_cost.tsx:1349", "status": "extracted"}
@@ -393,14 +393,14 @@
 {"from": "ui_screen:tab_cost:pricing", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_cost.tsx:1261", "status": "extracted"}
 {"from": "ui_screen:tab_cost:pricing", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_cost.tsx:1196", "status": "extracted"}
 {"from": "ui_screen:tab_cost:pricing", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_cost.tsx:1197", "status": "extracted"}
-{"from": "ui_screen:tab_cost:chargeback", "to": "ui_screen:tab_cost", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:317", "status": "extracted"}
+{"from": "ui_screen:tab_cost:chargeback", "to": "ui_screen:tab_cost", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:319", "status": "extracted"}
 {"from": "file:web/src/tabs/tab_cost.tsx", "to": "function:web/src/tabs/tab_cost.tsx:CostChargebackContent", "type": "contains", "evidence": "web/src/tabs/tab_cost.tsx:1693", "status": "extracted"}
 {"from": "function:web/src/tabs/tab_cost.tsx:CostChargebackContent", "to": "ui_screen:tab_cost:chargeback", "type": "implements", "evidence": "web/src/tabs/tab_cost.tsx:1974", "status": "extracted"}
 {"from": "function:web/src/tabs/tab_cost.tsx:CostChargebackContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_cost.tsx:1974", "status": "extracted"}
 {"from": "ui_screen:tab_cost:chargeback", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_cost.tsx:1702", "status": "extracted"}
 {"from": "ui_screen:tab_cost:chargeback", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_cost.tsx:1704", "status": "extracted"}
 {"from": "ui_screen:tab_cost:chargeback", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_cost.tsx:1706", "status": "extracted"}
-{"from": "ui_screen:tab_cost_before_after", "to": "ui_screen:tab_cost", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:317", "status": "extracted"}
+{"from": "ui_screen:tab_cost_before_after", "to": "ui_screen:tab_cost", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:319", "status": "extracted"}
 {"from": "file:web/src/tabs/tab_cost_before_after.tsx", "to": "function:web/src/tabs/tab_cost_before_after.tsx:CostBeforeAfterContent", "type": "contains", "evidence": "web/src/tabs/tab_cost_before_after.tsx:337", "status": "extracted"}
 {"from": "function:web/src/tabs/tab_cost_before_after.tsx:CostBeforeAfterContent", "to": "ui_screen:tab_cost_before_after", "type": "implements", "evidence": "web/src/tabs/tab_cost_before_after.tsx:556", "status": "extracted"}
 {"from": "function:web/src/tabs/tab_cost_before_after.tsx:CostBeforeAfterContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_cost_before_after.tsx:556", "status": "extracted"}
@@ -409,14 +409,14 @@
 {"from": "ui_screen:tab_cost_before_after", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_cost_before_after.tsx:243", "status": "extracted"}
 {"from": "ui_screen:tab_cost_before_after", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_cost_before_after.tsx:244", "status": "extracted"}
 {"from": "ui_screen:tab_cost_before_after", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_cost_before_after.tsx:245", "status": "extracted"}
-{"from": "ui_screen:tab_coverage:sources", "to": "ui_screen:tab_coverage", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:336", "status": "extracted"}
+{"from": "ui_screen:tab_coverage:sources", "to": "ui_screen:tab_coverage", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:338", "status": "extracted"}
 {"from": "file:web/src/tabs/tab_coverage.tsx", "to": "function:web/src/tabs/tab_coverage.tsx:CoverageSourcesPanel", "type": "contains", "evidence": "web/src/tabs/tab_coverage.tsx:260", "status": "extracted"}
 {"from": "function:web/src/tabs/tab_coverage.tsx:CoverageSourcesPanel", "to": "ui_screen:tab_coverage:sources", "type": "implements", "evidence": "web/src/tabs/tab_coverage.tsx:634", "status": "extracted"}
 {"from": "function:web/src/tabs/tab_coverage.tsx:CoverageSourcesPanel", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_coverage.tsx:634", "status": "extracted"}
 {"from": "ui_screen:tab_coverage:sources", "to": "endpoint:GET /api/coverage", "type": "calls", "evidence": "web/src/tabs/tab_coverage.tsx:27", "status": "extracted"}
 {"from": "ui_screen:tab_coverage:sources", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_coverage.tsx:160", "status": "extracted"}
 {"from": "ui_screen:tab_coverage:sources", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_coverage.tsx:222", "status": "extracted"}
-{"from": "ui_screen:tab_coverage:couldnt", "to": "ui_screen:tab_coverage", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:336", "status": "extracted"}
+{"from": "ui_screen:tab_coverage:couldnt", "to": "ui_screen:tab_coverage", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:338", "status": "extracted"}
 {"from": "file:web/src/tabs/tab_coverage.tsx", "to": "function:web/src/tabs/tab_coverage.tsx:CoverageCouldntPanel", "type": "contains", "evidence": "web/src/tabs/tab_coverage.tsx:484", "status": "extracted"}
 {"from": "function:web/src/tabs/tab_coverage.tsx:CoverageCouldntPanel", "to": "ui_screen:tab_coverage:couldnt", "type": "implements", "evidence": "web/src/tabs/tab_coverage.tsx:635", "status": "extracted"}
 {"from": "function:web/src/tabs/tab_coverage.tsx:CoverageCouldntPanel", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_coverage.tsx:635", "status": "extracted"}
@@ -424,7 +424,7 @@
 {"from": "ui_screen:tab_coverage:couldnt", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/components/finding_detail.tsx:1238", "status": "extracted"}
 {"from": "ui_screen:tab_coverage:couldnt", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/components/finding_detail.tsx:1262", "status": "extracted"}
 {"from": "ui_screen:tab_coverage:couldnt", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/components/finding_detail.tsx:1266", "status": "extracted"}
-{"from": "ui_screen:tab_coverage:limits", "to": "ui_screen:tab_coverage", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:336", "status": "extracted"}
+{"from": "ui_screen:tab_coverage:limits", "to": "ui_screen:tab_coverage", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:338", "status": "extracted"}
 {"from": "file:web/src/tabs/tab_coverage.tsx", "to": "function:web/src/tabs/tab_coverage.tsx:CoverageLimitsPanel", "type": "contains", "evidence": "web/src/tabs/tab_coverage.tsx:546", "status": "extracted"}
 {"from": "function:web/src/tabs/tab_coverage.tsx:CoverageLimitsPanel", "to": "ui_screen:tab_coverage:limits", "type": "implements", "evidence": "web/src/tabs/tab_coverage.tsx:636", "status": "extracted"}
 {"from": "function:web/src/tabs/tab_coverage.tsx:CoverageLimitsPanel", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_coverage.tsx:636", "status": "extracted"}
@@ -451,7 +451,7 @@
 {"from": "ui_screen:tab_genie", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_genie.tsx:108", "status": "extracted"}
 {"from": "ui_screen:tab_genie", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_genie.tsx:109", "status": "extracted"}
 {"from": "ui_screen:tab_genie", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_genie.tsx:110", "status": "extracted"}
-{"from": "ui_screen:tab_governance:access", "to": "ui_screen:tab_governance", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:332", "status": "extracted"}
+{"from": "ui_screen:tab_governance:access", "to": "ui_screen:tab_governance", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:334", "status": "extracted"}
 {"from": "file:web/src/tabs/tab_governance.tsx", "to": "function:web/src/tabs/tab_governance.tsx:GovAccessContent", "type": "contains", "evidence": "web/src/tabs/tab_governance.tsx:102", "status": "extracted"}
 {"from": "function:web/src/tabs/tab_governance.tsx:GovAccessContent", "to": "ui_screen:tab_governance:access", "type": "implements", "evidence": "web/src/tabs/tab_governance.tsx:681", "status": "extracted"}
 {"from": "function:web/src/tabs/tab_governance.tsx:GovAccessContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_governance.tsx:681", "status": "extracted"}
@@ -462,14 +462,14 @@
 {"from": "ui_screen:tab_governance:access", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_governance.tsx:107", "status": "extracted"}
 {"from": "ui_screen:tab_governance:access", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_governance.tsx:108", "status": "extracted"}
 {"from": "ui_screen:tab_governance:access", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_governance.tsx:109", "status": "extracted"}
-{"from": "ui_screen:tab_governance:access", "to": "endpoint:GET /api/workspace_usage", "type": "calls", "evidence": "web/src/tabs/tab_usage.tsx:184", "status": "extracted"}
-{"from": "ui_screen:tab_governance:admin", "to": "ui_screen:tab_governance", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:332", "status": "extracted"}
+{"from": "ui_screen:tab_governance:access", "to": "endpoint:GET /api/workspace_usage", "type": "calls", "evidence": "web/src/tabs/tab_usage.tsx:187", "status": "extracted"}
+{"from": "ui_screen:tab_governance:admin", "to": "ui_screen:tab_governance", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:334", "status": "extracted"}
 {"from": "file:web/src/tabs/tab_governance.tsx", "to": "function:web/src/tabs/tab_governance.tsx:GovAdminContent", "type": "contains", "evidence": "web/src/tabs/tab_governance.tsx:253", "status": "extracted"}
 {"from": "function:web/src/tabs/tab_governance.tsx:GovAdminContent", "to": "ui_screen:tab_governance:admin", "type": "implements", "evidence": "web/src/tabs/tab_governance.tsx:682", "status": "extracted"}
 {"from": "function:web/src/tabs/tab_governance.tsx:GovAdminContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_governance.tsx:682", "status": "extracted"}
 {"from": "ui_screen:tab_governance:admin", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_governance.tsx:254", "status": "extracted"}
 {"from": "ui_screen:tab_governance:admin", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/components/last_activity.tsx:39", "status": "extracted"}
-{"from": "ui_screen:tab_governance:sensitive", "to": "ui_screen:tab_governance", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:332", "status": "extracted"}
+{"from": "ui_screen:tab_governance:sensitive", "to": "ui_screen:tab_governance", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:334", "status": "extracted"}
 {"from": "file:web/src/tabs/tab_governance.tsx", "to": "function:web/src/tabs/tab_governance.tsx:GovSensitiveContent", "type": "contains", "evidence": "web/src/tabs/tab_governance.tsx:368", "status": "extracted"}
 {"from": "function:web/src/tabs/tab_governance.tsx:GovSensitiveContent", "to": "ui_screen:tab_governance:sensitive", "type": "implements", "evidence": "web/src/tabs/tab_governance.tsx:683", "status": "extracted"}
 {"from": "function:web/src/tabs/tab_governance.tsx:GovSensitiveContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_governance.tsx:683", "status": "extracted"}
@@ -479,19 +479,19 @@
 {"from": "ui_screen:tab_governance:sensitive", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_governance.tsx:375", "status": "extracted"}
 {"from": "ui_screen:tab_governance:sensitive", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_governance.tsx:376", "status": "extracted"}
 {"from": "ui_screen:tab_governance:sensitive", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_governance.tsx:377", "status": "extracted"}
-{"from": "ui_screen:tab_governance:lineage", "to": "ui_screen:tab_governance", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:332", "status": "extracted"}
+{"from": "ui_screen:tab_governance:lineage", "to": "ui_screen:tab_governance", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:334", "status": "extracted"}
 {"from": "file:web/src/tabs/tab_governance.tsx", "to": "function:web/src/tabs/tab_governance.tsx:GovLineageContent", "type": "contains", "evidence": "web/src/tabs/tab_governance.tsx:527", "status": "extracted"}
 {"from": "function:web/src/tabs/tab_governance.tsx:GovLineageContent", "to": "ui_screen:tab_governance:lineage", "type": "implements", "evidence": "web/src/tabs/tab_governance.tsx:684", "status": "extracted"}
 {"from": "function:web/src/tabs/tab_governance.tsx:GovLineageContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_governance.tsx:684", "status": "extracted"}
 {"from": "ui_screen:tab_governance:lineage", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_governance.tsx:528", "status": "extracted"}
 {"from": "ui_screen:tab_governance:lineage", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_governance.tsx:530", "status": "extracted"}
 {"from": "ui_screen:tab_governance:lineage", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_governance.tsx:531", "status": "extracted"}
-{"from": "ui_screen:tab_governance:sharing", "to": "ui_screen:tab_governance", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:332", "status": "extracted"}
+{"from": "ui_screen:tab_governance:sharing", "to": "ui_screen:tab_governance", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:334", "status": "extracted"}
 {"from": "file:web/src/tabs/tab_governance.tsx", "to": "function:web/src/tabs/tab_governance.tsx:GovSharingContent", "type": "contains", "evidence": "web/src/tabs/tab_governance.tsx:640", "status": "extracted"}
 {"from": "function:web/src/tabs/tab_governance.tsx:GovSharingContent", "to": "ui_screen:tab_governance:sharing", "type": "implements", "evidence": "web/src/tabs/tab_governance.tsx:685", "status": "extracted"}
 {"from": "function:web/src/tabs/tab_governance.tsx:GovSharingContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_governance.tsx:685", "status": "extracted"}
 {"from": "ui_screen:tab_governance:sharing", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_governance.tsx:641", "status": "extracted"}
-{"from": "ui_screen:tab_jobs:failures", "to": "ui_screen:tab_jobs", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:326", "status": "extracted"}
+{"from": "ui_screen:tab_jobs:failures", "to": "ui_screen:tab_jobs", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:328", "status": "extracted"}
 {"from": "file:web/src/tabs/tab_jobs.tsx", "to": "function:web/src/tabs/tab_jobs.tsx:JobsFailuresContent", "type": "contains", "evidence": "web/src/tabs/tab_jobs.tsx:161", "status": "extracted"}
 {"from": "function:web/src/tabs/tab_jobs.tsx:JobsFailuresContent", "to": "ui_screen:tab_jobs:failures", "type": "implements", "evidence": "web/src/tabs/tab_jobs.tsx:339", "status": "extracted"}
 {"from": "function:web/src/tabs/tab_jobs.tsx:JobsFailuresContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_jobs.tsx:339", "status": "extracted"}
@@ -504,7 +504,7 @@
 {"from": "ui_screen:tab_jobs:failures", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_jobs.tsx:179", "status": "extracted"}
 {"from": "ui_screen:tab_jobs:failures", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/job_state.tsx:43", "status": "extracted"}
 {"from": "ui_screen:tab_jobs:failures", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/job_state.tsx:45", "status": "extracted"}
-{"from": "ui_screen:tab_jobs:slow", "to": "ui_screen:tab_jobs", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:326", "status": "extracted"}
+{"from": "ui_screen:tab_jobs:slow", "to": "ui_screen:tab_jobs", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:328", "status": "extracted"}
 {"from": "file:web/src/tabs/tab_jobs.tsx", "to": "function:web/src/tabs/tab_jobs.tsx:JobsSlowContent", "type": "contains", "evidence": "web/src/tabs/tab_jobs.tsx:373", "status": "extracted"}
 {"from": "function:web/src/tabs/tab_jobs.tsx:JobsSlowContent", "to": "ui_screen:tab_jobs:slow", "type": "implements", "evidence": "web/src/tabs/tab_jobs.tsx:497", "status": "extracted"}
 {"from": "function:web/src/tabs/tab_jobs.tsx:JobsSlowContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_jobs.tsx:497", "status": "extracted"}
@@ -517,7 +517,7 @@
 {"from": "ui_screen:tab_jobs:slow", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/job_state.tsx:158", "status": "extracted"}
 {"from": "ui_screen:tab_jobs:slow", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/job_state.tsx:159", "status": "extracted"}
 {"from": "ui_screen:tab_jobs:slow", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/job_state.tsx:160", "status": "extracted"}
-{"from": "ui_screen:tab_jobs:hygiene", "to": "ui_screen:tab_jobs", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:326", "status": "extracted"}
+{"from": "ui_screen:tab_jobs:hygiene", "to": "ui_screen:tab_jobs", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:328", "status": "extracted"}
 {"from": "file:web/src/tabs/tab_jobs.tsx", "to": "function:web/src/tabs/tab_jobs.tsx:JobsHygieneContent", "type": "contains", "evidence": "web/src/tabs/tab_jobs.tsx:563", "status": "extracted"}
 {"from": "function:web/src/tabs/tab_jobs.tsx:JobsHygieneContent", "to": "ui_screen:tab_jobs:hygiene", "type": "implements", "evidence": "web/src/tabs/tab_jobs.tsx:665", "status": "extracted"}
 {"from": "function:web/src/tabs/tab_jobs.tsx:JobsHygieneContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_jobs.tsx:665", "status": "extracted"}
@@ -527,7 +527,7 @@
 {"from": "ui_screen:tab_jobs:hygiene", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_jobs.tsx:567", "status": "extracted"}
 {"from": "ui_screen:tab_jobs:hygiene", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_jobs.tsx:568", "status": "extracted"}
 {"from": "ui_screen:tab_jobs:hygiene", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_jobs.tsx:569", "status": "extracted"}
-{"from": "ui_screen:tab_jobs:compute_fit", "to": "ui_screen:tab_jobs", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:326", "status": "extracted"}
+{"from": "ui_screen:tab_jobs:compute_fit", "to": "ui_screen:tab_jobs", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:328", "status": "extracted"}
 {"from": "file:web/src/tabs/tab_jobs.tsx", "to": "function:web/src/tabs/tab_jobs.tsx:JobsComputeFitContent", "type": "contains", "evidence": "web/src/tabs/tab_jobs.tsx:728", "status": "extracted"}
 {"from": "function:web/src/tabs/tab_jobs.tsx:JobsComputeFitContent", "to": "ui_screen:tab_jobs:compute_fit", "type": "implements", "evidence": "web/src/tabs/tab_jobs.tsx:849", "status": "extracted"}
 {"from": "function:web/src/tabs/tab_jobs.tsx:JobsComputeFitContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_jobs.tsx:849", "status": "extracted"}
@@ -535,14 +535,14 @@
 {"from": "ui_screen:tab_jobs:compute_fit", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_jobs.tsx:731", "status": "extracted"}
 {"from": "ui_screen:tab_jobs:compute_fit", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_jobs.tsx:733", "status": "extracted"}
 {"from": "ui_screen:tab_jobs:compute_fit", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_jobs.tsx:734", "status": "extracted"}
-{"from": "ui_screen:tab_jobs:pipelines", "to": "ui_screen:tab_jobs", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:326", "status": "extracted"}
+{"from": "ui_screen:tab_jobs:pipelines", "to": "ui_screen:tab_jobs", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:328", "status": "extracted"}
 {"from": "file:web/src/tabs/tab_jobs.tsx", "to": "function:web/src/tabs/tab_jobs.tsx:JobsPipelinesContent", "type": "contains", "evidence": "web/src/tabs/tab_jobs.tsx:866", "status": "extracted"}
 {"from": "function:web/src/tabs/tab_jobs.tsx:JobsPipelinesContent", "to": "ui_screen:tab_jobs:pipelines", "type": "implements", "evidence": "web/src/tabs/tab_jobs.tsx:914", "status": "extracted"}
 {"from": "function:web/src/tabs/tab_jobs.tsx:JobsPipelinesContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_jobs.tsx:914", "status": "extracted"}
 {"from": "ui_screen:tab_jobs:pipelines", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_jobs.tsx:867", "status": "extracted"}
 {"from": "ui_screen:tab_jobs:pipelines", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_jobs.tsx:868", "status": "extracted"}
 {"from": "ui_screen:tab_jobs:pipelines", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_jobs.tsx:869", "status": "extracted"}
-{"from": "ui_screen:tab_mlai:spend", "to": "ui_screen:tab_mlai", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:323", "status": "extracted"}
+{"from": "ui_screen:tab_mlai:spend", "to": "ui_screen:tab_mlai", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:325", "status": "extracted"}
 {"from": "file:web/src/tabs/tab_mlai.tsx", "to": "function:web/src/tabs/tab_mlai.tsx:MlaiSpendContent", "type": "contains", "evidence": "web/src/tabs/tab_mlai.tsx:27", "status": "extracted"}
 {"from": "function:web/src/tabs/tab_mlai.tsx:MlaiSpendContent", "to": "ui_screen:tab_mlai:spend", "type": "implements", "evidence": "web/src/tabs/tab_mlai.tsx:117", "status": "extracted"}
 {"from": "function:web/src/tabs/tab_mlai.tsx:MlaiSpendContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_mlai.tsx:117", "status": "extracted"}
@@ -552,7 +552,7 @@
 {"from": "ui_screen:tab_mlai:spend", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_mlai.tsx:36", "status": "extracted"}
 {"from": "ui_screen:tab_mlai:spend", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_mlai.tsx:37", "status": "extracted"}
 {"from": "ui_screen:tab_mlai:spend", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_mlai.tsx:40", "status": "extracted"}
-{"from": "ui_screen:tab_mlai:endpoints", "to": "ui_screen:tab_mlai", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:323", "status": "extracted"}
+{"from": "ui_screen:tab_mlai:endpoints", "to": "ui_screen:tab_mlai", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:325", "status": "extracted"}
 {"from": "file:web/src/tabs/tab_mlai.tsx", "to": "function:web/src/tabs/tab_mlai.tsx:MlaiEndpointsContent", "type": "contains", "evidence": "web/src/tabs/tab_mlai.tsx:227", "status": "extracted"}
 {"from": "function:web/src/tabs/tab_mlai.tsx:MlaiEndpointsContent", "to": "ui_screen:tab_mlai:endpoints", "type": "implements", "evidence": "web/src/tabs/tab_mlai.tsx:362", "status": "extracted"}
 {"from": "function:web/src/tabs/tab_mlai.tsx:MlaiEndpointsContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_mlai.tsx:362", "status": "extracted"}
@@ -561,7 +561,7 @@
 {"from": "ui_screen:tab_mlai:endpoints", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_mlai.tsx:231", "status": "extracted"}
 {"from": "ui_screen:tab_mlai:endpoints", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_mlai.tsx:233", "status": "extracted"}
 {"from": "ui_screen:tab_mlai:endpoints", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_mlai.tsx:236", "status": "extracted"}
-{"from": "ui_screen:tab_mlai:gateway", "to": "ui_screen:tab_mlai", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:323", "status": "extracted"}
+{"from": "ui_screen:tab_mlai:gateway", "to": "ui_screen:tab_mlai", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:325", "status": "extracted"}
 {"from": "file:web/src/tabs/tab_mlai.tsx", "to": "function:web/src/tabs/tab_mlai.tsx:MlaiGatewayContent", "type": "contains", "evidence": "web/src/tabs/tab_mlai.tsx:368", "status": "extracted"}
 {"from": "function:web/src/tabs/tab_mlai.tsx:MlaiGatewayContent", "to": "ui_screen:tab_mlai:gateway", "type": "implements", "evidence": "web/src/tabs/tab_mlai.tsx:435", "status": "extracted"}
 {"from": "function:web/src/tabs/tab_mlai.tsx:MlaiGatewayContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_mlai.tsx:435", "status": "extracted"}
@@ -596,7 +596,7 @@
 {"from": "ui_screen:tab_overview", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/query_queue.tsx:38", "status": "extracted"}
 {"from": "ui_screen:tab_overview", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/query_queue.tsx:40", "status": "extracted"}
 {"from": "ui_screen:tab_overview", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/query_queue.tsx:41", "status": "extracted"}
-{"from": "ui_screen:tab_query:heavy", "to": "ui_screen:tab_query", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:327", "status": "extracted"}
+{"from": "ui_screen:tab_query:heavy", "to": "ui_screen:tab_query", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:329", "status": "extracted"}
 {"from": "file:web/src/tabs/tab_query.tsx", "to": "function:web/src/tabs/tab_query.tsx:QueryHeavyContent", "type": "contains", "evidence": "web/src/tabs/tab_query.tsx:229", "status": "extracted"}
 {"from": "function:web/src/tabs/tab_query.tsx:QueryHeavyContent", "to": "ui_screen:tab_query:heavy", "type": "implements", "evidence": "web/src/tabs/tab_query.tsx:1065", "status": "extracted"}
 {"from": "function:web/src/tabs/tab_query.tsx:QueryHeavyContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_query.tsx:1065", "status": "extracted"}
@@ -606,7 +606,7 @@
 {"from": "ui_screen:tab_query:heavy", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_query.tsx:233", "status": "extracted"}
 {"from": "ui_screen:tab_query:heavy", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_query.tsx:236", "status": "extracted"}
 {"from": "ui_screen:tab_query:heavy", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_query.tsx:237", "status": "extracted"}
-{"from": "ui_screen:tab_query:efficiency", "to": "ui_screen:tab_query", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:327", "status": "extracted"}
+{"from": "ui_screen:tab_query:efficiency", "to": "ui_screen:tab_query", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:329", "status": "extracted"}
 {"from": "file:web/src/tabs/tab_query.tsx", "to": "function:web/src/tabs/tab_query.tsx:QueryEfficiencyContent", "type": "contains", "evidence": "web/src/tabs/tab_query.tsx:507", "status": "extracted"}
 {"from": "function:web/src/tabs/tab_query.tsx:QueryEfficiencyContent", "to": "ui_screen:tab_query:efficiency", "type": "implements", "evidence": "web/src/tabs/tab_query.tsx:1066", "status": "extracted"}
 {"from": "function:web/src/tabs/tab_query.tsx:QueryEfficiencyContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_query.tsx:1066", "status": "extracted"}
@@ -615,7 +615,7 @@
 {"from": "ui_screen:tab_query:efficiency", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_query.tsx:510", "status": "extracted"}
 {"from": "ui_screen:tab_query:efficiency", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_query.tsx:511", "status": "extracted"}
 {"from": "ui_screen:tab_query:efficiency", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_query.tsx:514", "status": "extracted"}
-{"from": "ui_screen:tab_query:reliability", "to": "ui_screen:tab_query", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:327", "status": "extracted"}
+{"from": "ui_screen:tab_query:reliability", "to": "ui_screen:tab_query", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:329", "status": "extracted"}
 {"from": "file:web/src/tabs/tab_query.tsx", "to": "function:web/src/tabs/tab_query.tsx:QueryReliabilityContent", "type": "contains", "evidence": "web/src/tabs/tab_query.tsx:691", "status": "extracted"}
 {"from": "function:web/src/tabs/tab_query.tsx:QueryReliabilityContent", "to": "ui_screen:tab_query:reliability", "type": "implements", "evidence": "web/src/tabs/tab_query.tsx:1067", "status": "extracted"}
 {"from": "function:web/src/tabs/tab_query.tsx:QueryReliabilityContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_query.tsx:1067", "status": "extracted"}
@@ -623,7 +623,7 @@
 {"from": "ui_screen:tab_query:reliability", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_query.tsx:693", "status": "extracted"}
 {"from": "ui_screen:tab_query:reliability", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_query.tsx:694", "status": "extracted"}
 {"from": "ui_screen:tab_query:reliability", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_query.tsx:695", "status": "extracted"}
-{"from": "ui_screen:tab_query:capacity", "to": "ui_screen:tab_query", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:327", "status": "extracted"}
+{"from": "ui_screen:tab_query:capacity", "to": "ui_screen:tab_query", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:329", "status": "extracted"}
 {"from": "file:web/src/tabs/tab_query.tsx", "to": "function:web/src/tabs/tab_query.tsx:QueryCapacityContent", "type": "contains", "evidence": "web/src/tabs/tab_query.tsx:881", "status": "extracted"}
 {"from": "function:web/src/tabs/tab_query.tsx:QueryCapacityContent", "to": "ui_screen:tab_query:capacity", "type": "implements", "evidence": "web/src/tabs/tab_query.tsx:1068", "status": "extracted"}
 {"from": "function:web/src/tabs/tab_query.tsx:QueryCapacityContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_query.tsx:1068", "status": "extracted"}
@@ -639,13 +639,13 @@
 {"from": "ui_screen:tab_query:capacity", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/query_queue.tsx:38", "status": "extracted"}
 {"from": "ui_screen:tab_query:capacity", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/query_queue.tsx:40", "status": "extracted"}
 {"from": "ui_screen:tab_query:capacity", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/query_queue.tsx:41", "status": "extracted"}
-{"from": "ui_screen:tab_query:team", "to": "ui_screen:tab_query", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:327", "status": "extracted"}
+{"from": "ui_screen:tab_query:team", "to": "ui_screen:tab_query", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:329", "status": "extracted"}
 {"from": "file:web/src/tabs/tab_query.tsx", "to": "function:web/src/tabs/tab_query.tsx:QueryTeamContent", "type": "contains", "evidence": "web/src/tabs/tab_query.tsx:1061", "status": "extracted"}
 {"from": "function:web/src/tabs/tab_query.tsx:QueryTeamContent", "to": "ui_screen:tab_query:team", "type": "implements", "evidence": "web/src/tabs/tab_query.tsx:1069", "status": "extracted"}
 {"from": "function:web/src/tabs/tab_query.tsx:QueryTeamContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_query.tsx:1069", "status": "extracted"}
 {"from": "ui_screen:tab_query:team", "to": "endpoint:GET /api/rollup/keys", "type": "calls", "evidence": "web/src/components/tag_rollup.tsx:482", "status": "extracted"}
 {"from": "ui_screen:tab_query:team", "to": "endpoint:GET /api/rollup", "type": "calls", "evidence": "web/src/components/tag_rollup.tsx:150", "status": "extracted"}
-{"from": "ui_screen:tab_storage:tables", "to": "ui_screen:tab_storage", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:333", "status": "extracted"}
+{"from": "ui_screen:tab_storage:tables", "to": "ui_screen:tab_storage", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:335", "status": "extracted"}
 {"from": "file:web/src/tabs/tab_storage.tsx", "to": "function:web/src/tabs/tab_storage.tsx:StorageTablesContent", "type": "contains", "evidence": "web/src/tabs/tab_storage.tsx:111", "status": "extracted"}
 {"from": "function:web/src/tabs/tab_storage.tsx:StorageTablesContent", "to": "ui_screen:tab_storage:tables", "type": "implements", "evidence": "web/src/tabs/tab_storage.tsx:661", "status": "extracted"}
 {"from": "function:web/src/tabs/tab_storage.tsx:StorageTablesContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_storage.tsx:661", "status": "extracted"}
@@ -656,7 +656,7 @@
 {"from": "ui_screen:tab_storage:tables", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_storage.tsx:24", "status": "extracted"}
 {"from": "ui_screen:tab_storage:tables", "to": "endpoint:GET /api/tables", "type": "calls", "evidence": "web/src/tabs/tab_storage.tsx:32", "status": "extracted"}
 {"from": "ui_screen:tab_storage:tables", "to": "endpoint:GET /api/table_sizes", "type": "calls", "evidence": "web/src/tabs/tab_storage.tsx:305", "status": "extracted"}
-{"from": "ui_screen:tab_storage:maintenance", "to": "ui_screen:tab_storage", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:333", "status": "extracted"}
+{"from": "ui_screen:tab_storage:maintenance", "to": "ui_screen:tab_storage", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:335", "status": "extracted"}
 {"from": "file:web/src/tabs/tab_storage.tsx", "to": "function:web/src/tabs/tab_storage.tsx:StorageMaintenanceContent", "type": "contains", "evidence": "web/src/tabs/tab_storage.tsx:546", "status": "extracted"}
 {"from": "function:web/src/tabs/tab_storage.tsx:StorageMaintenanceContent", "to": "ui_screen:tab_storage:maintenance", "type": "implements", "evidence": "web/src/tabs/tab_storage.tsx:662", "status": "extracted"}
 {"from": "function:web/src/tabs/tab_storage.tsx:StorageMaintenanceContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_storage.tsx:662", "status": "extracted"}
@@ -673,57 +673,64 @@
 {"from": "function:web/src/tabs/tab_tags.tsx:TagsPanel", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_tags.tsx:484", "status": "extracted"}
 {"from": "ui_screen:tab_tags", "to": "endpoint:GET /api/tag_compliance", "type": "calls", "evidence": "web/src/tabs/tab_tags.tsx:59", "status": "extracted"}
 {"from": "ui_screen:tab_tags", "to": "endpoint:GET /api/workspace_tags", "type": "calls", "evidence": "web/src/tabs/tab_cost.tsx:959", "status": "extracted"}
-{"from": "ui_screen:tab_usage:workspaces", "to": "ui_screen:tab_usage", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:331", "status": "extracted"}
-{"from": "file:web/src/tabs/tab_usage.tsx", "to": "function:web/src/tabs/tab_usage.tsx:UsageWorkspacesContent", "type": "contains", "evidence": "web/src/tabs/tab_usage.tsx:213", "status": "extracted"}
-{"from": "function:web/src/tabs/tab_usage.tsx:UsageWorkspacesContent", "to": "ui_screen:tab_usage:workspaces", "type": "implements", "evidence": "web/src/tabs/tab_usage.tsx:1148", "status": "extracted"}
-{"from": "function:web/src/tabs/tab_usage.tsx:UsageWorkspacesContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_usage.tsx:1148", "status": "extracted"}
-{"from": "ui_screen:tab_usage:workspaces", "to": "endpoint:GET /api/workspace_usage", "type": "calls", "evidence": "web/src/tabs/tab_usage.tsx:218", "status": "extracted"}
-{"from": "ui_screen:tab_usage:workspaces", "to": "endpoint:GET /api/tables", "type": "calls", "evidence": "web/src/tabs/tab_usage.tsx:219", "status": "extracted"}
-{"from": "ui_screen:tab_usage:workspaces", "to": "endpoint:GET /api/people", "type": "calls", "evidence": "web/src/tabs/tab_usage.tsx:220", "status": "extracted"}
-{"from": "ui_screen:tab_usage:tables", "to": "ui_screen:tab_usage", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:331", "status": "extracted"}
-{"from": "file:web/src/tabs/tab_usage.tsx", "to": "function:web/src/tabs/tab_usage.tsx:UsageTablesContent", "type": "contains", "evidence": "web/src/tabs/tab_usage.tsx:400", "status": "extracted"}
-{"from": "function:web/src/tabs/tab_usage.tsx:UsageTablesContent", "to": "ui_screen:tab_usage:tables", "type": "implements", "evidence": "web/src/tabs/tab_usage.tsx:1149", "status": "extracted"}
-{"from": "function:web/src/tabs/tab_usage.tsx:UsageTablesContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_usage.tsx:1149", "status": "extracted"}
-{"from": "ui_screen:tab_usage:tables", "to": "endpoint:GET /api/tables", "type": "calls", "evidence": "web/src/tabs/tab_usage.tsx:402", "status": "extracted"}
-{"from": "ui_screen:tab_usage:tables", "to": "endpoint:GET /api/tables", "type": "calls", "evidence": "web/src/tabs/tab_usage.tsx:406", "status": "extracted"}
-{"from": "ui_screen:tab_usage:tables", "to": "endpoint:GET /api/table", "type": "calls", "evidence": "web/src/tabs/tab_usage.tsx:765", "status": "extracted"}
-{"from": "ui_screen:tab_usage:tables", "to": "endpoint:GET /api/workspace_schemas", "type": "calls", "evidence": "web/src/tabs/tab_usage.tsx:535", "status": "extracted"}
-{"from": "ui_screen:tab_usage:volumes", "to": "ui_screen:tab_usage", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:331", "status": "extracted"}
-{"from": "file:web/src/tabs/tab_usage.tsx", "to": "function:web/src/tabs/tab_usage.tsx:UsageVolumesContent", "type": "contains", "evidence": "web/src/tabs/tab_usage.tsx:878", "status": "extracted"}
-{"from": "function:web/src/tabs/tab_usage.tsx:UsageVolumesContent", "to": "ui_screen:tab_usage:volumes", "type": "implements", "evidence": "web/src/tabs/tab_usage.tsx:1150", "status": "extracted"}
-{"from": "function:web/src/tabs/tab_usage.tsx:UsageVolumesContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_usage.tsx:1150", "status": "extracted"}
-{"from": "ui_screen:tab_usage:volumes", "to": "endpoint:GET /api/volumes", "type": "calls", "evidence": "web/src/tabs/tab_usage.tsx:880", "status": "extracted"}
-{"from": "ui_screen:tab_usage:volumes", "to": "endpoint:GET /api/volume_users", "type": "calls", "evidence": "web/src/tabs/tab_usage.tsx:983", "status": "extracted"}
-{"from": "ui_screen:tab_usage:people", "to": "ui_screen:tab_usage", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:331", "status": "extracted"}
-{"from": "file:web/src/tabs/tab_usage.tsx", "to": "function:web/src/tabs/tab_usage.tsx:UsagePeopleContent", "type": "contains", "evidence": "web/src/tabs/tab_usage.tsx:1012", "status": "extracted"}
-{"from": "function:web/src/tabs/tab_usage.tsx:UsagePeopleContent", "to": "ui_screen:tab_usage:people", "type": "implements", "evidence": "web/src/tabs/tab_usage.tsx:1151", "status": "extracted"}
-{"from": "function:web/src/tabs/tab_usage.tsx:UsagePeopleContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_usage.tsx:1151", "status": "extracted"}
-{"from": "ui_screen:tab_usage:people", "to": "endpoint:GET /api/people", "type": "calls", "evidence": "web/src/tabs/tab_usage.tsx:1016", "status": "extracted"}
-{"from": "ui_screen:tab_usage:people", "to": "endpoint:GET /api/workspaces", "type": "calls", "evidence": "web/src/tabs/tab_usage.tsx:1017", "status": "extracted"}
-{"from": "ui_screen:tab_usage:people", "to": "endpoint:GET /api/person_tables", "type": "calls", "evidence": "web/src/tabs/tab_usage.tsx:1120", "status": "extracted"}
-{"from": "ui_screen:tab_warehouse", "to": "ui_screen:tab_compute", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:325", "status": "extracted"}
+{"from": "ui_screen:tab_usage:workspaces", "to": "ui_screen:tab_usage", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:333", "status": "extracted"}
+{"from": "file:web/src/tabs/tab_usage.tsx", "to": "function:web/src/tabs/tab_usage.tsx:UsageWorkspacesContent", "type": "contains", "evidence": "web/src/tabs/tab_usage.tsx:216", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_usage.tsx:UsageWorkspacesContent", "to": "ui_screen:tab_usage:workspaces", "type": "implements", "evidence": "web/src/tabs/tab_usage.tsx:1228", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_usage.tsx:UsageWorkspacesContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_usage.tsx:1228", "status": "extracted"}
+{"from": "ui_screen:tab_usage:workspaces", "to": "endpoint:GET /api/workspace_usage", "type": "calls", "evidence": "web/src/tabs/tab_usage.tsx:221", "status": "extracted"}
+{"from": "ui_screen:tab_usage:workspaces", "to": "endpoint:GET /api/tables", "type": "calls", "evidence": "web/src/tabs/tab_usage.tsx:222", "status": "extracted"}
+{"from": "ui_screen:tab_usage:workspaces", "to": "endpoint:GET /api/people", "type": "calls", "evidence": "web/src/tabs/tab_usage.tsx:223", "status": "extracted"}
+{"from": "ui_screen:tab_usage:catalogs", "to": "ui_screen:tab_usage", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:333", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_usage.tsx:UsageLevelContent", "to": "ui_screen:tab_usage:catalogs", "type": "implements", "evidence": "web/src/tabs/tab_usage.tsx:1229", "status": "extracted"}
+{"from": "ui_screen:tab_usage:catalogs", "to": "endpoint:GET /api/data_levels", "type": "calls", "evidence": "web/src/tabs/tab_usage.tsx:416", "status": "extracted"}
+{"from": "ui_screen:tab_usage:schemas", "to": "ui_screen:tab_usage", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:333", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_usage.tsx:UsageLevelContent", "to": "ui_screen:tab_usage:schemas", "type": "implements", "evidence": "web/src/tabs/tab_usage.tsx:1230", "status": "extracted"}
+{"from": "ui_screen:tab_usage:schemas", "to": "endpoint:GET /api/data_levels", "type": "calls", "evidence": "web/src/tabs/tab_usage.tsx:416", "status": "extracted"}
+{"from": "ui_screen:tab_usage:tables", "to": "ui_screen:tab_usage", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:333", "status": "extracted"}
+{"from": "file:web/src/tabs/tab_usage.tsx", "to": "function:web/src/tabs/tab_usage.tsx:UsageLevelContent", "type": "contains", "evidence": "web/src/tabs/tab_usage.tsx:412", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_usage.tsx:UsageLevelContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_usage.tsx:1229", "status": "extracted"}
+{"from": "file:web/src/tabs/tab_usage.tsx", "to": "function:web/src/tabs/tab_usage.tsx:UsageTablesContent", "type": "contains", "evidence": "web/src/tabs/tab_usage.tsx:522", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_usage.tsx:UsageTablesContent", "to": "ui_screen:tab_usage:tables", "type": "implements", "evidence": "web/src/tabs/tab_usage.tsx:1231", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_usage.tsx:UsageTablesContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_usage.tsx:1231", "status": "extracted"}
+{"from": "ui_screen:tab_usage:tables", "to": "endpoint:GET /api/tables", "type": "calls", "evidence": "web/src/tabs/tab_usage.tsx:524", "status": "extracted"}
+{"from": "ui_screen:tab_usage:tables", "to": "endpoint:GET /api/tables", "type": "calls", "evidence": "web/src/tabs/tab_usage.tsx:528", "status": "extracted"}
+{"from": "ui_screen:tab_usage:tables", "to": "endpoint:GET /api/table", "type": "calls", "evidence": "web/src/tabs/tab_usage.tsx:845", "status": "extracted"}
+{"from": "ui_screen:tab_usage:volumes", "to": "ui_screen:tab_usage", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:333", "status": "extracted"}
+{"from": "file:web/src/tabs/tab_usage.tsx", "to": "function:web/src/tabs/tab_usage.tsx:UsageVolumesContent", "type": "contains", "evidence": "web/src/tabs/tab_usage.tsx:958", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_usage.tsx:UsageVolumesContent", "to": "ui_screen:tab_usage:volumes", "type": "implements", "evidence": "web/src/tabs/tab_usage.tsx:1232", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_usage.tsx:UsageVolumesContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_usage.tsx:1232", "status": "extracted"}
+{"from": "ui_screen:tab_usage:volumes", "to": "endpoint:GET /api/volumes", "type": "calls", "evidence": "web/src/tabs/tab_usage.tsx:960", "status": "extracted"}
+{"from": "ui_screen:tab_usage:volumes", "to": "endpoint:GET /api/volume_users", "type": "calls", "evidence": "web/src/tabs/tab_usage.tsx:1063", "status": "extracted"}
+{"from": "ui_screen:tab_usage:people", "to": "ui_screen:tab_usage", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:333", "status": "extracted"}
+{"from": "file:web/src/tabs/tab_usage.tsx", "to": "function:web/src/tabs/tab_usage.tsx:UsagePeopleContent", "type": "contains", "evidence": "web/src/tabs/tab_usage.tsx:1092", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_usage.tsx:UsagePeopleContent", "to": "ui_screen:tab_usage:people", "type": "implements", "evidence": "web/src/tabs/tab_usage.tsx:1233", "status": "extracted"}
+{"from": "function:web/src/tabs/tab_usage.tsx:UsagePeopleContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_usage.tsx:1233", "status": "extracted"}
+{"from": "ui_screen:tab_usage:people", "to": "endpoint:GET /api/people", "type": "calls", "evidence": "web/src/tabs/tab_usage.tsx:1096", "status": "extracted"}
+{"from": "ui_screen:tab_usage:people", "to": "endpoint:GET /api/workspaces", "type": "calls", "evidence": "web/src/tabs/tab_usage.tsx:1097", "status": "extracted"}
+{"from": "ui_screen:tab_usage:people", "to": "endpoint:GET /api/person_tables", "type": "calls", "evidence": "web/src/tabs/tab_usage.tsx:1200", "status": "extracted"}
+{"from": "ui_screen:tab_warehouse", "to": "ui_screen:tab_compute", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:327", "status": "extracted"}
 {"from": "file:web/src/tabs/tab_warehouse.tsx", "to": "function:web/src/tabs/tab_warehouse.tsx:WarehouseDetailContent", "type": "contains", "evidence": "web/src/tabs/tab_warehouse.tsx:36", "status": "extracted"}
 {"from": "function:web/src/tabs/tab_warehouse.tsx:WarehouseDetailContent", "to": "ui_screen:tab_warehouse", "type": "implements", "evidence": "web/src/tabs/tab_warehouse.tsx:210", "status": "extracted"}
 {"from": "function:web/src/tabs/tab_warehouse.tsx:WarehouseDetailContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_warehouse.tsx:210", "status": "extracted"}
 {"from": "ui_screen:tab_warehouse", "to": "endpoint:GET /api/warehouses", "type": "calls", "evidence": "web/src/tabs/tab_warehouse.tsx:38", "status": "extracted"}
 {"from": "ui_screen:tab_warehouse", "to": "endpoint:GET /api/warehouse", "type": "calls", "evidence": "web/src/tabs/tab_warehouse.tsx:94", "status": "extracted"}
-{"from": "ui_screen:tab_waste:priced", "to": "ui_screen:tab_waste", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:318", "status": "extracted"}
+{"from": "ui_screen:tab_waste:priced", "to": "ui_screen:tab_waste", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:320", "status": "extracted"}
 {"from": "file:web/src/tabs/tab_waste.tsx", "to": "function:web/src/tabs/tab_waste.tsx:WastePricedContent", "type": "contains", "evidence": "web/src/tabs/tab_waste.tsx:438", "status": "extracted"}
 {"from": "function:web/src/tabs/tab_waste.tsx:WastePricedContent", "to": "ui_screen:tab_waste:priced", "type": "implements", "evidence": "web/src/tabs/tab_waste.tsx:672", "status": "extracted"}
 {"from": "function:web/src/tabs/tab_waste.tsx:WastePricedContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_waste.tsx:672", "status": "extracted"}
 {"from": "ui_screen:tab_waste:priced", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_waste.tsx:440", "status": "extracted"}
 {"from": "ui_screen:tab_waste:priced", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_waste.tsx:441", "status": "extracted"}
 {"from": "ui_screen:tab_waste:priced", "to": "endpoint:GET /api/finding/{query_id}/aggregate", "type": "calls", "evidence": "web/src/tabs/tab_waste.tsx:450", "status": "extracted"}
-{"from": "ui_screen:tab_waste:unpriced", "to": "ui_screen:tab_waste", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:318", "status": "extracted"}
+{"from": "ui_screen:tab_waste:unpriced", "to": "ui_screen:tab_waste", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:320", "status": "extracted"}
 {"from": "file:web/src/tabs/tab_waste.tsx", "to": "function:web/src/tabs/tab_waste.tsx:WasteUnpricedContent", "type": "contains", "evidence": "web/src/tabs/tab_waste.tsx:580", "status": "extracted"}
 {"from": "function:web/src/tabs/tab_waste.tsx:WasteUnpricedContent", "to": "ui_screen:tab_waste:unpriced", "type": "implements", "evidence": "web/src/tabs/tab_waste.tsx:673", "status": "extracted"}
 {"from": "function:web/src/tabs/tab_waste.tsx:WasteUnpricedContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_waste.tsx:673", "status": "extracted"}
 {"from": "ui_screen:tab_waste:unpriced", "to": "endpoint:GET /api/finding/{query_id}", "type": "calls", "evidence": "web/src/tabs/tab_waste.tsx:584", "status": "extracted"}
-{"from": "ui_screen:tab_waste:method", "to": "ui_screen:tab_waste", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:318", "status": "extracted"}
+{"from": "ui_screen:tab_waste:method", "to": "ui_screen:tab_waste", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:320", "status": "extracted"}
 {"from": "file:web/src/tabs/tab_waste.tsx", "to": "function:web/src/tabs/tab_waste.tsx:WasteMethodContent", "type": "contains", "evidence": "web/src/tabs/tab_waste.tsx:641", "status": "extracted"}
 {"from": "function:web/src/tabs/tab_waste.tsx:WasteMethodContent", "to": "ui_screen:tab_waste:method", "type": "implements", "evidence": "web/src/tabs/tab_waste.tsx:674", "status": "extracted"}
 {"from": "function:web/src/tabs/tab_waste.tsx:WasteMethodContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/tab_waste.tsx:674", "status": "extracted"}
-{"from": "ui_screen:tab_usage:activity", "to": "ui_screen:tab_usage", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:331", "status": "extracted"}
+{"from": "ui_screen:tab_usage:activity", "to": "ui_screen:tab_usage", "type": "part_of", "evidence": "web/src/components/tab_registry.ts:333", "status": "extracted"}
 {"from": "file:web/src/tabs/usage_activity.tsx", "to": "function:web/src/tabs/usage_activity.tsx:UsageActivityContent", "type": "contains", "evidence": "web/src/tabs/usage_activity.tsx:254", "status": "extracted"}
 {"from": "function:web/src/tabs/usage_activity.tsx:UsageActivityContent", "to": "ui_screen:tab_usage:activity", "type": "implements", "evidence": "web/src/tabs/usage_activity.tsx:390", "status": "extracted"}
 {"from": "function:web/src/tabs/usage_activity.tsx:UsageActivityContent", "to": "function:web/src/components/primitives.tsx:AreaContent", "type": "calls", "evidence": "web/src/tabs/usage_activity.tsx:390", "status": "extracted"}
@@ -973,7 +980,7 @@
 {"from": "ui_screen:tab_overview", "to": "ui_screen:tab_money", "type": "depends_on", "evidence": "web/src/App.tsx:1175", "status": "extracted"}
 {"from": "process:build_web", "to": "file:web/vite.config.ts", "type": "depends_on", "evidence": "web/package.json:7", "status": "extracted"}
 {"from": "process:build_web", "to": "file:web/src/main.tsx", "type": "depends_on", "evidence": "web/index.html:27", "status": "inferred"}
-{"from": "process:serve_web", "to": "process:build_web", "type": "depends_on", "evidence": "app/api/app.py:1463", "status": "extracted"}
+{"from": "process:serve_web", "to": "process:build_web", "type": "depends_on", "evidence": "app/api/app.py:1471", "status": "extracted"}
 {"from": "function:web/src/components/nav_hash.ts:readNavHash", "to": "flow:ui_navigation", "type": "part_of", "evidence": "web/src/components/nav_hash.ts:29", "status": "extracted"}
 {"from": "function:web/src/components/nav_hash.ts:filtersFromHash", "to": "flow:ui_navigation", "type": "part_of", "evidence": "web/src/components/nav_hash.ts:88", "status": "extracted"}
 {"from": "function:web/src/components/hash_state.tsx:HashState", "to": "flow:ui_navigation", "type": "part_of", "evidence": "web/src/components/hash_state.tsx:6", "status": "extracted"}
