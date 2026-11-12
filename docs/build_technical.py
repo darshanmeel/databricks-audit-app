@@ -739,7 +739,7 @@ def d_l2a():
     d.edge("A10", "A12", "build", True, color=GREY, num="D3")
     d.edge("A8", "A9", "", True, color=GREY)
     return d.render("dashed frame = platform · teal = code · grey = data · solid = calls · dashed = data · D# and grey = dev road",
-                    "Both roads write the same findings/tags/dims schemas; the app opens one file. [tools/first_run.py:162-194; tools/export_direct_results.py:1179-1215; tools/load_direct_results.py:471,516-547,853; app/core/data.py:301-323]")
+                    "Both roads write the same findings/tags/dims schemas; the app opens one file. [tools/first_run.py:162-194; tools/export_direct_results.py:1179-1215; tools/load_direct_results.py:471,516-547,853; app/core/data.py:304-329]")
 
 
 
@@ -844,7 +844,7 @@ def d_f2():
     d.edge("4", "f404", **RD)
     d.edge("6", "ferr", **RD)
     return d.render("lane = layer · diamond = outcome decision · red dashed = error path",
-                    "The route never builds SQL; not_assessed and empty-window are decided before rows are read. [app/api/service.py:427-608; app/api/app.py:1137-1294]")
+                    "The route never builds SQL; not_assessed and empty-window are decided before rows are read. [app/api/service.py:427-608; app/api/app.py:1164-1321]")
 
 
 def d_f3():
@@ -864,7 +864,7 @@ def d_f3():
         d.edge(str(a), str(b))
     d.edge("4", "f", **RD)
     return d.render("lane = actor or system · STEP n = order · red dashed = failure",
-                    "Refresh never replaces the open file; old handles close after a 120 s grace. Export times out at 4 h, load at 30 min; with rls on only refresh.admins or unrestricted users may start it (else 403). [app/api/refresh.py:20-22,31-95; app/core/data.py:279-339; app/api/app.py:390-409]")
+                    "Refresh never replaces the open file; old handles close after a 120 s grace. Export times out at 4 h, load at 30 min; with rls on only refresh.admins or unrestricted users may start it (else 403). [app/api/refresh.py:20-22,31-95; app/core/data.py:279-339; app/api/app.py:391-412]")
 
 
 def d_f4():
@@ -1016,10 +1016,10 @@ def d_er_b():
         ("pu", "put", "1", "N", "window_days, unit_id", "1:N", "app/core/rollup.py:396-399"),
         ("pu", "qk", "1", "N", "window_days, unit_id", "1:N", "app/core/tag_compliance.py:344"),
         ("put", "th", "N", "N", "workspace_id, query_date range (inferred)", "N:N", "dbt/models/tags/perf_unit_tag.sql:162-176"),
-        ("f", "dw", "N", "1", "workspace_id (app filter)", "N:1", "app/core/data.py:501-509"),
-        ("f", "dj", "N", "1", "workspace_id, job_id (names)", "N:1", "app/api/app.py:599"),
-        ("f", "dwh", "N", "1", "warehouse_id", "N:1", "app/core/data.py:507"),
-        ("f", "dc", "N", "1", "cluster_id", "N:1", "app/core/data.py:509"),
+        ("f", "dw", "N", "1", "workspace_id (app filter)", "N:1", "app/core/data.py:517-525"),
+        ("f", "dj", "N", "1", "workspace_id, job_id (names)", "N:1", "app/api/app.py:619"),
+        ("f", "dwh", "N", "1", "warehouse_id", "N:1", "app/core/data.py:524"),
+        ("f", "dc", "N", "1", "cluster_id", "N:1", "app/core/data.py:525"),
     ]
     return er("ERB", ents, rels, "same as the previous diagram · standalone cards have no key to others (listed below)",
               "Findings join dims only by ids at read time; tag tables join on workspace and key.")
@@ -1271,10 +1271,10 @@ def s_orientation():
 
 def s_arch():
     b = bullets([
-        "One FastAPI process serves /api/* JSON and the built React page. [app/api/app.py:1434-1469]",
+        "One FastAPI process serves /api/* JSON and the built React page. [app/api/app.py:1461-1496]",
         "app/api never builds SQL; every read goes through app/core. [app/api/__init__.py:1-10]",
-        "DuckDB opened read-only; one shared connection per db file. [app/core/data.py:301-323; app/api/__main__.py:21]",
-        "Db order: AUDIT_DB, current_db.txt, <data dir>/audit.duckdb, data/db_audit.duckdb. [app/core/data.py:202-215]",
+        "DuckDB opened read-only; one shared connection per db file. [app/core/data.py:304-329; app/api/__main__.py:21]",
+        "Db order: AUDIT_DB, current_db.txt, <data dir>/audit.duckdb, data/db_audit.duckdb. [app/core/data.py:203-216]",
         "UI fetches via web/src/api.ts (getJson, refresh POST) and tag_rollup.tsx. [web/src/api.ts:24-37,78; web/src/components/tag_rollup.tsx:116]",
         "Built UI is committed in app/web/dist; running needs no Node. [README.md:44; web/vite.config.ts:37]",
         "dbt road targets DuckDB only (dev, test); d_* models are never built. [tools/dbt_run.py:4; tools/generate_direct_models.py:15-24]",
@@ -1296,7 +1296,7 @@ def s_flows():
         ("7", "os.replace + sidecar + pointer", ".tmp", "audit.duckdb, audit.run_results.json, current_db.txt", "Pointer only inside data dir [tools/load_direct_results.py:853,863-864,927-932]"),
         ("8", "prints next command", "rc 0", "python -m app.api + URL", "[tools/first_run.py:191-194]"),
         ("9", "python -m app.api", "AUDIT_API_HOST/PORT", "uvicorn running", "Host 127.0.0.1, port 8000, warms findings cache [app/api/__main__.py:14-25]"),
-        ("10", "GET / then GET /api/status", "none", 'state "ready"', "Ready: /api/meta, /api/workspaces, /api/findings [app/api/app.py:348-376; web/src/App.tsx:841-863]"),
+        ("10", "GET / then GET /api/status", "none", 'state "ready"', "Ready: /api/meta, /api/workspaces, /api/findings [app/api/app.py:350-378; web/src/App.tsx:841-863]"),
     ]
     steps_tbl = ('<div class="tblwrap"><table class="steps"><tr><th>#</th><th>Step</th><th>In</th><th>Out</th><th>Notes</th></tr>' +
                  "".join(f'<tr><td><span class="n">{a}</span></td><td class="m">{e(b)}</td><td class="m">{e(c)}</td><td class="m">{e(dd)}</td><td>{txt(n)}</td></tr>'
@@ -1343,16 +1343,16 @@ def s_flows():
         ex("ok", "Typical ok_rows", "window=30, limit=5", ["200, outcome ok_rows, 5 rows, returned 5, rows_total > 5",
            "header has read_this, healthy, investigate_if, actions, next, caveats", 'workspace_id kind "id", a string'], "from tests/test_api.py:1133-1153"),
         ex("edge", "ok_empty_filters", "workspace_ids=not-a-real-workspace", "rows_in_window > 0, no \"rows\" key", "from tests/test_api.py:1205-1211"),
-        ex("bad", "Rejected window", "window=14", '422 "window must be one of [7, 30, 90], got 14"', "derived from app/api/app.py:232-243"),
-        ex("bad", "Rejected id", "/api/finding/no_such_check", "404", "derived from app/api/app.py:1178-1179"),
+        ex("bad", "Rejected window", "window=14", '422 "window must be one of [7, 30, 90], got 14"', "derived from app/api/app.py:235-239"),
+        ex("bad", "Rejected id", "/api/finding/no_such_check", "404", "derived from app/api/app.py:1205-1206"),
     )
     s32 = ("<h3 id=\"flow-api\">3.2 API request: tab to JSON</h3>" + d_f2() +
            payloads(payload("GET /api/finding/cost_by_job", inp, "IN", "text"),
-                    payload("200 application/json (shape from app/api/app.py:1182-1220,1259-1292; values illustrative)", out, "OUT")) + c32 +
+                    payload("200 application/json (shape from app/api/app.py:1209-1247,1286-1321; values illustrative)", out, "OUT")) + c32 +
            "<h4>Bootstrap on every page load</h4>" + bullets([
                "GET /api/status first; anything but ready shows the first-run screen. [web/src/App.tsx:841-843]",
                "Then /api/meta and /api/workspaces; meta lists window_options [7, 30, 90]. [tests/test_api.py:444-468]",
-               "Then /api/findings (cached by data version, window, scope, tag). [app/api/app.py:991-1088]",
+               "Then /api/findings (cached by data version, window, scope, tag). [app/api/app.py:1026-1115]",
                "findings row status_counts keys are CRITICAL, WARN, OK, NOT_ASSESSED. [tests/test_api.py:1059-1073]"]))
     # ---------- 3.3
     ref = '{"running": true, "step": "export", "days": 15, "started_at": 1762762500.0, "finished_at": null, "error": null, "elapsed_s": 42}'
@@ -1385,7 +1385,7 @@ def s_flows():
     )
     s34 = ("<h3 id=\"flow-app\">3.4 Databricks App: auth and run-as</h3>" + d_f4() + "<h4>run_as user vs app</h4>" + ras + bullets([
         "rls modes: off when disabled; query or export on an App; export locally. [app/core/rls.py:451-456]",
-        "Query mode caches per user; start-up warm-up is skipped. [app/core/rls.py:459-461; app/api/app.py:1095-1096]",
+        "Query mode caches per user; start-up warm-up is skipped. [app/core/rls.py:459-461; app/api/app.py:1122-1123]",
         "/api/meta.rls reports enabled, apply, user, granted, error. [app/core/rls.py:651-679]"]) + c34 +
         payload("app.yaml (run_as user), illustrative placeholders", yml, "", "text"))
     return section("flows", "3. Main flows", s31 + s32 + s33 + s34)
@@ -1422,7 +1422,7 @@ END AS status'''
         (9, "Export", "direct SQL per window [tools/export_direct_results.py:938-985]", "findings/cost_period_over_period.parquet"),
         (10, "Load", "parquet [tools/load_direct_results.py:575-591]", 'findings."f_cost_period_over_period" + alias copies'),
         (11, "Read-time status", "in REPORT_IDS_CAPPED_AT_WARN [app/core/materiality.py:49-52]", "CRITICAL reads WARN"),
-        (12, "API", "GET /api/finding/cost_period_over_period?window=30 [app/api/app.py:1137]", "JSON"),
+        (12, "API", "GET /api/finding/cost_period_over_period?window=30 [app/api/app.py:1164]", "JSON"),
         (13, "Tab", "Cost > Trend sub-tab ids; used by Cost and Money tabs [web/src/components/tab_registry.ts:53-56; web/src/tabs/tab_cost.tsx:282; web/src/tabs/tab_money.tsx:444]", "Change vs previous period"),
         (14, "Test", "tests/test_findings/test_cost_period_over_period.py:104-115; fixture_coverage needs grain + test [tools/fixture_coverage.py:1-30]", "gate result"),
     ], "steps", mono=(1,))
@@ -1644,10 +1644,11 @@ def s_components():
         ("tools/snapshot.py connect()", "SQL connector: token or OAuth M2M, query tags, UTC", "tools/snapshot.py:485-555"),
         ("tools/load_direct_results.py", "Builds DuckDB from an export folder; atomic replace", "tools/load_direct_results.py:471,516-547,908"),
         ("app/api/__main__.py", "Host/port, cache warm-up, uvicorn start", "app/api/__main__.py:14-25"),
-        ("app/api/app.py", "Routes, principal middleware, caches, static page", "app/api/app.py:186-204,348-1469"),
+        ("app/api/app.py", "Routes, principal middleware, caches, static page", "app/api/app.py:188-206,350-1496"),
         ("app/api/service.py", "Per-check outcome; rows to JSON-safe records", "app/api/service.py:427-608,996,1053"),
         ("app/api/refresh.py", "Background export + load into a new db", "app/api/refresh.py:31-95"),
-        ("app/core/data.py", "Read-only store, db resolution, read_finding", "app/core/data.py:202-215,301-323,806-888"),
+        ("app/core/data.py", "Read-only store, db resolution, read_finding, read_data_levels", "app/core/data.py:203-216,304-329,822-929,1982-2099"),
+        ("app/core/usage.py", "Table usage class; complexity and usage index (0-100, log scale) and signal per workspace, catalog, schema", "app/core/usage.py:13-19,30-33,67-104"),
         ("app/core/config.py", "Load and validate settings with local overlay", "app/core/config.py:374-506,534-573"),
         ("app/core/registry.py", "Check specs; is_finding and executable flags", "app/core/registry.py:179-246,314"),
         ("app/core/materiality.py", "Effective status: admin, floor, WARN cap", "app/core/materiality.py:142-178"),
@@ -1703,11 +1704,11 @@ def s_config():
     body = (d_cfg() + bullets([
         "Put changes in config/settings.local.yml; a block replaces the whole block. [config/settings.yml:1-5; app/core/config.py:567]",
         "Config folder = AUDIT_CONFIG_DIR or config/, re-read every call. [app/core/config.py:127-129]",
-        "Unknown key or bad type -> SettingsError; API 503; /api/status names key and line. [app/core/config.py:101-119; app/api/app.py:220-230,348-376]",
+        "Unknown key or bad type -> SettingsError; API 503; /api/status names key and line. [app/core/config.py:101-119; app/api/app.py:222-232,348-376]",
         "Missing settings.yml is seeded from DEFAULT_SETTINGS. [app/core/config.py:547-557]",
         "Brand keys: brand.name, brand.url, brand.contact_name, brand.contact_email. [config/settings.yml]"]) +
         table(["Setting", "Default", "Purpose", "Takes effect"], st, mono=(0, 1)) +
-        details("Environment variables and secret names", env + sec + '<p class="cite">[app/core/data.py:206-220; app/core/datasource.py:29-31; app/core/config.py:127-129; app/api/__main__.py:15-17; tools/export_direct_results.py:187-200; .env.example:1-20; tools/snapshot.py:166-177,526-530]</p>'))
+        details("Environment variables and secret names", env + sec + '<p class="cite">[app/core/data.py:207-221; app/core/datasource.py:29-31; app/core/config.py:127-129; app/api/__main__.py:15-17; tools/export_direct_results.py:187-200; .env.example:1-20; tools/snapshot.py:166-177,526-530]</p>'))
     return section("config", "9. Configuration", body)
 
 
@@ -1755,12 +1756,12 @@ def s_deploy():
         payload("GRANT SQL printed for run_as app (illustrative; principal placeholder)", grant, "", "sql", "tools/deploy_app.py:95-97") + \
         "<h4>Health checks</h4>" + bullets([
             'App start prints "database: <path>" and the URL. [app/api/__main__.py:18-20]',
-            "GET /api/status: ready, no_database, build_incomplete or settings_invalid. [app/api/app.py:348-376; app/core/data.py:367-393]",
+            "GET /api/status: ready, no_database, build_incomplete or settings_invalid. [app/api/app.py:350-378; app/core/data.py:383-409]",
             "results/<stamp>/report.md lists failed checks. [README.md:706]",
-            "/api/coverage lists truncated_query_ids on a direct export. [app/api/app.py:639,687]",
+            "/api/coverage lists truncated_query_ids on a direct export. [app/api/app.py:659,707]",
             "/api/rollup reconciliation.reconciled: rollup within $0.005 of the bill. [app/core/rollup.py:700,805]",
             "Gate: python tools/gate.py --quick (needs the test DB), or full. [tools/gate.py:4-7; README.md:742-747]"]) + \
-        payload("Quick verification (shape from app/api/app.py:370-375; values illustrative)", status, "", "json")
+        payload("Quick verification (shape from app/api/app.py:373-378; values illustrative)", status, "", "json")
     return section("deploy", "10. Deploy & access", body)
 
 
@@ -1797,7 +1798,7 @@ def s_risks():
     r = [
         "run_as user stores the PAT in synced app.yaml; folder readers can read it. [tools/deploy_app.py:148-149; docs/databricks-app.md:129-130]",
         "App has no login; a non-local AUDIT_API_HOST exposes all data. [README.md:508]",
-        "Row-level access trusts X-Forwarded-Email; safe only behind the Apps proxy (unclear: verify direct reachability). [app/api/app.py:186-201]",
+        "Row-level access trusts X-Forwarded-Email; safe only behind the Apps proxy (unclear: verify direct reachability). [app/api/app.py:188-203]",
         "Export folder on the App disk is unfiltered even with rls on. [docs/databricks-app.md:122-123]",
         "101 of 163 check files say confidence: needs_confirmation (not run live). [app/queries/app/cost/cost_period_over_period.sql:15-16]",
         "Row cap truncates big checks; their totals are a lower bound. [tools/export_direct_results.py:183,397-420]",
@@ -1816,7 +1817,7 @@ def s_other():
         "mandatory_tag_keys default differs · code says env, file says environment · align; low impact, avoids reseed confusion. [app/core/config.py:206; config/settings.yml:36; app/core/tag_compliance.py:41; app/core/config.py:547-557]",
         "dbt_target has no reader · validated, never read · remove or wire it; else a dead setting misleads. [app/core/config.py:16,189,389-390]",
         "Stale counts in docstrings · say 113 and 109 (actual 160); build_fixtures says 47 sources (ddl has 49) · drop the numbers. [tools/generate_models.py:4; tools/fixture_coverage.py:9; tests/fixtures/build_fixtures.py:11-13]",
-        "Endpoints without tests · 14 of 32 /api routes never called by a test · one smoke test per route; else regressions ship unnoticed. Also no reader test: /api/activity, /api/people, /api/warehouses, /api/warehouse, /api/workspace_tags, /api/guide/sql/{query_id}. [app/api/app.py:717,801,839,892,902,913]",
+        "Endpoints without tests · 14 of 32 /api routes never called by a test · one smoke test per route; else regressions ship unnoticed. Also no reader test: /api/activity, /api/people, /api/warehouses, /api/warehouse, /api/workspace_tags, /api/guide/sql/{query_id}. [app/api/app.py:866,919,929,940,821,737]",
         "Restricted users see no table sizes or lineage · storage.table_detail has no workspace, so rows need a grant to every workspace · fill workspace_id from the catalog's home workspace; else sizes read empty for them. [app/core/rls.py:1-9,29]",
         "storage.table_detail_info is shown to every user · it holds account-wide table and failure counts · drop it from REFERENCE if that leaks; else /api/table_sizes shows not exported to restricted users. [app/core/rls.py:32-38]",
         "Waste headline sum has no unit test · only column-contract tests exist · test once-per-resource, NULL, discount; else it can regress silently. [web/src/components/waste_total.ts:48-221; tests/test_waste_contract.py:54-88]",
@@ -1832,9 +1833,9 @@ TOC = [("orientation", "1 Orientation"), ("architecture", "2 Architecture"), ("f
 
 def build():
     toc = "".join(f'<a class="chip" href="#{i}">{e(t)}</a>' for i, t in TOC)
-    chips = "".join(f'<span class="chip">{e(c)}</span>' for c in ["commit b8d2db1", "Python 3.11+", "duckdb 1.5.1", "fastapi 0.138.2", "React 18.3.1 + Vite"])
+    chips = "".join(f'<span class="chip">{e(c)}</span>' for c in ["commit 0425164", "Python 3.11+", "duckdb 1.5.1", "fastapi 0.138.2", "React 18.3.1 + Vite"])
     body = f"""
-<div class="eyebrow">TECHNICAL VIEW · commit b8d2db1</div>
+<div class="eyebrow">TECHNICAL VIEW · commit 0425164</div>
 <h1>Crosshire: technical view</h1>
 <p class="deck">Read-only audit of a Databricks account: 160 SQL checks on system.* tables. <span class="cite">[README.md:1-6]</span></p>
 <div class="chips">{chips}</div><p class="cite">[README.md:31; requirements.txt:1,6; web/package.json:11-14]</p>

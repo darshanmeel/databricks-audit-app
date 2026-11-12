@@ -215,7 +215,7 @@ TILES = [
      "Job failed its last 3 runs: Critical", "from tests/test_fake_account.py:109"),
     ("Queries", "Queries", "Which SQL queries cost most, fail, or wait for a slot?", "amber",
      "BI warehouse: 2 failed queries on each of 3 days: Warn", "from tests/test_fake_account.py:207-208"),
-    ("Storage · Data usage", "Storage and data use", "Which tables are unused, have many small files, or miss maintenance?", "",
+    ("Storage · Data usage", "Storage and data use", "Which tables are unused, have many small files, or miss maintenance; which catalogs and schemas are complex but little used?", "",
      "A dropped table is not a small-files or optimization to-do", "from tests/test_fake_account.py:280-282"),
     ("ML & AI", "Model serving and AI", "Which model serving endpoints are billed with no requests?", "amber",
      "Vector search endpoint: $30 in one day, over the $25 line: Warn", "from tests/test_fake_account.py:259-261"),
@@ -502,7 +502,7 @@ TERMS_T = (["Term", "Meaning"], [
 SOURCES = [
     "At a glance: README.md:1-19, 283-292, 348-350; web/src/tabs/tab_actions.tsx:1-4; app/core/pricing.py:24-26",
     "What you learn: README.md:266-280, 352-377; web/src/tabs/tab_cost.tsx:1355-1365; web/src/components/tab_registry.ts:102-115; web/src/components/roles.ts:32-39; web/src/tabs/tab_actions.tsx:25-57; config/settings.yml:36; tests/test_fake_account.py:62-64, 93, 109, 159-165, 207-208, 259-261, 268-270, 280-282",
-    "How a report gets made: README.md:67-102, 177-202, 297-338, 412; app/core/data.py:1-6, 301-311; web/src/api.ts:8; app/api/refresh.py:48-69; tools/load_direct_results.py:516-547",
+    "How a report gets made: README.md:67-102, 177-202, 297-338, 412; app/core/data.py:1-6, 304-329; web/src/api.ts:8; app/api/refresh.py:48-69; tools/load_direct_results.py:516-547",
     "Demo account: tests/fake_account/build.py:1-36, 73-77, 170-221; tests/test_fake_account.py:53-100; tests/test_waste_contract.py:82-85",
     "Three ways: README.md:10-19, 204-244; docs/databricks-app.md:1-35, 127-132; databricks_dashboards/README.md:42-60, 79-83",
     "Costs, risks, decisions: README.md:33, 76-77, 202, 404-413, 435, 508, 755-758; config/settings.yml:13-15, 80, 87-94; config/app.yml:10; docs/databricks-app.md:21-31, 151-165; web/src/tabs/tab_query.tsx:319",
@@ -517,7 +517,7 @@ TOC = [("glance", "At a glance"), ("learn", "What you learn"), ("how", "How a re
 def build():
     toc = "".join(f'<a class="chip" href="#{i}">{e(t)}</a>' for i, t in TOC)
     meta = "".join(f'<span class="chip">{e(c)}</span>' for c in
-                   ["160 checks", "read-only", "3 ways to use it", "repo commit b8d2db1"])
+                   ["160 checks", "read-only", "3 ways to use it", "repo commit 0425164"])
     body = f"""
 <div class="eyebrow">Functional view · for business, management and newcomers</div>
 <h1>Crosshire overview</h1>
@@ -536,7 +536,7 @@ def build():
 {section("terms", "10. Terms in plain words", table(*TERMS_T))}
 <section id="sources"><h2>11. Where these facts come from</h2><details><summary>Where these facts come from</summary>
 <ul class="cl">{"".join(f"<li>{e(s)}</li>" for s in SOURCES)}</ul></details>
-<p class="cite">Built from the repo at commit b8d2db1. Demo figures come from the test suite, not a real account.</p></section>
+<p class="cite">Built from the repo at commit 0425164. Demo figures come from the test suite, not a real account.</p></section>
 """
     OUT.write_text(f'<!doctype html><html lang="en"><head><meta charset="utf-8">'
                    f'<meta name="viewport" content="width=device-width, initial-scale=1">'
