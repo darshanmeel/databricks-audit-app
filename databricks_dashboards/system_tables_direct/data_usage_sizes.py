@@ -16,6 +16,7 @@ dbutils.widgets.text("max_entries_per_volume", "50000")
 # COMMAND ----------
 
 import datetime
+import os
 from concurrent.futures import ThreadPoolExecutor
 
 out = dbutils.widgets.get("sizes_schema")
@@ -87,16 +88,18 @@ def walk(v):
     todo, cut = [root], False
     try:
         while todo and not cut:
-            for f in dbutils.fs.ls(todo.pop(0)):
-                seen += 1
-                if f.isDir():
-                    todo.append(f.path)
-                else:
-                    files += 1
-                    size += f.size
-                if seen >= cap:
-                    cut = True
-                    break
+            # os.scandir on the /Volumes mount: dbutils.fs.ls starts a Spark job per folder on serverless
+            with os.scandir(todo.pop(0)) as entries:
+                for f in entries:
+                    seen += 1
+                    if f.is_dir(follow_symlinks=False):
+                        todo.append(f.path)
+                    else:
+                        files += 1
+                        size += f.stat(follow_symlinks=False).st_size
+                    if seen >= cap:
+                        cut = True
+                        break
         return (v.volume_catalog, v.volume_schema, v.volume_name, files, size, cut, "listed", now)
     except Exception as e:
         return (v.volume_catalog, v.volume_schema, v.volume_name, None, None, False, "failed: " + str(e).splitlines()[0][:200], now)

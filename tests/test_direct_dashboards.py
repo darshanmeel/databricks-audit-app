@@ -90,3 +90,31 @@ def test_summary_main_queries_parse():
 
     for stem, short in guides.SHORT.items():
         assert [e for e in sqlglot.parse(short["sql"], read="databricks") if e is not None], stem
+
+
+def test_sizes_notebook_walks_volumes_without_dbutils(tmp_path):
+    import os
+    import re
+    import types
+
+    from tools import direct_data_usage as wdata
+
+    nb = wdata.collect_sizes_notebook()
+    assert "dbutils.fs.ls(" not in nb
+    walk_src = re.search(r"^def walk\(v\):\n(?:(?:    .*)?\n)+", nb, re.M).group(0)
+    (tmp_path / "c/s/v/sub").mkdir(parents=True)
+    (tmp_path / "c/s/v/a.csv").write_bytes(b"x" * 100)
+    (tmp_path / "c/s/v/sub/b.csv").write_bytes(b"x" * 50)
+    def scandir(p):  # stands in for the /Volumes mount
+        return os.scandir(str(tmp_path) + p[len("/Volumes"):] if p.startswith("/Volumes/") else p)
+
+    fake_os = types.SimpleNamespace(scandir=scandir)
+    v = types.SimpleNamespace(volume_catalog="c", volume_schema="s", volume_name="v")
+
+    def run(cap):
+        ns = {"os": fake_os, "cap": cap, "now": None}
+        exec(walk_src, ns)
+        return ns["walk"](v)
+
+    assert run(10)[3:7] == (2, 150, False, "listed")
+    assert run(1)[5] is True
